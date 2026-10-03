@@ -1,0 +1,1 @@
+cc2422843f7f9bc6897acdcae6d2a4d55586ed3ccf9da35fca303cfaab51d65f  scripts/architecture/stage0-baseline.mjs

@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "stage": "stage-0-reference-freeze",
+  "baselineId": "2026-10-03T22-44-28Z",
+  "generatedAtUtc": "2026-10-03T22:44:28.564Z",
+  "projectRoot": "C:\\Users\\Alexandre\\projeto1",
+  "repository": {
+    "branch": "main",
+    "head": null,
+    "hasCommits": false,
+    "wasDirtyBeforeBaselineWrite": true,
+    "gitVersion": "git version 2.52.0.windows.1"
+  },
+  "runtime": {
+    "nodeVersion": "v24.21.0",
+    "platform": "win32",
+    "arch": "x64"
+  },
+  "hashing": {
+    "algorithm": "sha256",
+    "fileCount": 387,
+    "totalBytes": 4421723,
+    "treeSha256": "c75f48c3a023d7adbdd9ea98486d211737eca03b8cb95cb460136e38a387ade5",
+    "followsSymlinks": false,
+    "symlinkCount": 0,
+    "excludedTopLevelDirectories": [
+      ".git",
+      ".migration",
+      "coverage",
+      "dist",
+      "node_modules",
+      "target"
+    ],
+    "excludedRelativePrefixes": [
+      ".cache/",
+      ".turbo/",
+      ".vite/",
+      "src-tauri/target/"
+    ]
+  },
+  "freezeLocks": [
+    {
+      "path": ".freeze-lock.json",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "tests/.freeze-lock.json",
+      "exists": true,
+      "sha256": "22159f7bd802c3a329ab06870a250f42a726b3c3a6aa1d61be2f132fbacceb83"
+    }
+  ],
+  "artifacts": {
+    "directory": ".migration/stage0/2026-10-03T22-44-28Z",
+    "sha256Manifest": "project-files.sha256",
+    "gitStatus": "git-status.txt",
+    "gitStatusShortBranch": "git-status-short-branch.txt",
+    "gitStatusPorcelainV1": "git-status-porcelain-v1.txt",
+    "symlinks": "symlinks.json"
+  },
+  "notes": [
+    "O status Git foi capturado antes da criação dos artefatos de baseline.",
+    "A pasta .migration é excluída da árvore de hashes para evitar autorreferência.",
+    "Symlinks não são seguidos; seus destinos são registrados separadamente.",
+    "Nenhum arquivo de src/, src-tauri/, tests/, package.json, tsconfig.json ou configuração da engine é modificado por este script."
+  ]
+}

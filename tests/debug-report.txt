@@ -1,0 +1,17 @@
+============================================================
+ DIAGNÓSTICO E AUDITORIA DE DEBUG - 2026-10-02T02:49:33.355Z
+============================================================
+
+Node version: v24.21.0
+Platform: win32 (x64)
+Cargo version: cargo 1.99.0 (5f94df478 2026-08-27)
+NPM version: 11.19.0
+
+--- Auditando src-tauri/Cargo.toml ---
+Cargo.toml Encontrado (588 bytes)
+[OK]: Dependência tauri-plugin-opener detectada em Cargo.toml
+
+--- Auditando src-tauri/tauri.conf.json ---
+[OK]: JSON de tauri.conf.json é válido
+ProductName: projeto1
+Identifier: com.projeto1.game
