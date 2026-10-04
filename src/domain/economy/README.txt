@@ -2,58 +2,203 @@ PROJETO1 — CAMADA 2 / ECONOMY
 
 Path: src/domain/economy
 Camada arquitetural: Camada 2 — Domínio
-Status: implementação real em andamento; Etapas 44.1 e 44.2 aplicadas.
+Status: Item/Inventory desde Etapas 44.1/44.2; economia expandida na Etapa 56.
 
 FUNÇÃO
-Concentrar regras puras de itens, inventário, economia, recompensas, moedas,
-custos e progressão sem conhecimento de loja, plataforma ou persistência
-concreta.
+Modelar economia lógica independente de apresentação e infraestrutura:
+- Item;
+- Inventory;
+- CurrencyId;
+- CurrencyAccount;
+- Cost;
+- Reward;
+- RewardPolicy;
+- LootEntry;
+- LootTable;
+- CraftingRecipe.
 
-REGRA L2-DIMENSION-AGNOSTIC
-Item e Inventory são modelos de gameplay. Não contêm posição, sprite, mesh,
-modelo 3D, collider, material, texture handle, camera ou qualquer representação
-visual. Os mesmos modelos podem ser utilizados por jogos 2D, 2.5D ou 3D.
+CurrencyId.ts
+Identificador nominal de moeda.
 
-IMPLEMENTAÇÃO ATUAL
-- Item.ts
-  Definição imutável com ItemId, nome, descrição opcional e maxStack.
-- Inventory.ts
-  Inventário por Map<ItemId, entry>, lookup O(1) médio, quantidade agregada,
-  capacidade opcional por slots e ocupação calculada através de maxStack.
-- index.ts
-  Fachada da área economy.
+Exemplos:
+- currency.gold;
+- currency.credits;
+- currency.guild-token.
 
-MODELO DE STACK
-Inventory não materializa um array de stacks. Para um Item com maxStack=20:
-- quantity 1..20 ocupa 1 slot;
-- quantity 21..40 ocupa 2 slots;
-- quantity 41..60 ocupa 3 slots.
+CurrencyAccount.ts
+Conta runtime de uma única CurrencyId.
 
-Isso permite respeitar stack size sem criar objetos de stack em cada mutação.
+Invariantes:
+- balance inteiro seguro >= 0;
+- credit estrito;
+- tryDebit atômico;
+- tryTransferTo valida saldo, CurrencyId e overflow antes de mutar.
+
+Não representa:
+- carteira de plataforma;
+- pagamento real;
+- loja;
+- microtransação;
+- conta externa.
+
+Cost.ts
+Custo imutável composto por uma ou mais moedas.
+
+Invariantes:
+- ao menos uma entrada;
+- amount >= 1;
+- CurrencyId não pode repetir;
+- entradas ordenadas por CurrencyId.
+
+Cost.canAfford(accounts):
+- valida cobertura sem mutação.
+
+Cost.tryPay(accounts):
+- indexa contas por CurrencyId;
+- rejeita contas duplicadas;
+- verifica TODAS as moedas/saldos primeiro;
+- só então executa débitos;
+- false = nenhuma mutação.
+
+Portanto, um custo multi-moeda nunca fica parcialmente pago por insuficiência
+de saldo.
+
+Reward.ts
+Descrição imutável de recompensa.
+
+Pode declarar:
+- moedas;
+- itens.
+
+Reward NÃO aplica automaticamente nada.
+
+A conexão:
+Reward -> CurrencyAccount
+Reward -> Inventory
+permanece para a Etapa 62 — Cross-domain integration.
+
+RewardPolicy.ts
+Política de resolução de tabela ponderada:
+- rolls;
+- with-replacement;
+- without-replacement.
+
+Default:
+- 1 roll;
+- with-replacement.
+
+A policy não possui RNG e não executa grants.
+
+LootEntry.ts
+Entrada ponderada:
+- LootEntryId;
+- weight inteiro seguro >= 1;
+- Reward.
+
+LootTable.ts
+Tabela ponderada com:
+- LootTableId;
+- entradas únicas;
+- ordem canônica por LootEntryId;
+- soma de pesos validada;
+- snapshot/restore.
+
+DETERMINISMO
+LootTable nunca acessa uma fonte aleatória global.
+
+A API exige:
+LootRandomSource {
+  nextFloat(): number
+}
+
+Contrato:
+- valor finito;
+- intervalo [0, 1).
+
+Isso permite:
+- testes headless com sequência fixa;
+- replay determinístico;
+- futuro RNG oficial da Etapa 64;
+- mesma LootTable em 2D/2.5D/3D.
+
+A Etapa 56 NÃO implementa o RNG oficial da Etapa 64.
+Ela apenas recebe a dependência.
+
+RewardPolicy:
+with-replacement:
+- cada roll considera todas as entradas.
+
+without-replacement:
+- uma entrada selecionada não participa dos próximos rolls;
+- solicitar mais rolls que entradas é erro.
+
+CraftingRecipe.ts
+Definição imutável:
+- CraftingRecipeId;
+- ingredientes ItemId + quantity;
+- Cost opcional;
+- Reward de saída.
+
+Recipe precisa de:
+- pelo menos um ingrediente; OU
+- um Cost.
+
+CraftingRecipe NÃO:
+- consulta Inventory;
+- remove ingredientes;
+- paga Cost;
+- adiciona Reward.
+
+A execução atômica completa de crafting fica para orquestração/integracão
+cross-domain posterior.
 
 PERFORMANCE
-- getQuantity()/has()/getItem(): O(1) médio.
-- add()/remove(): O(1) médio.
-- occupiedSlots e totalUnits são incrementais.
-- adicionar novamente o mesmo ItemId apenas muta a entrada existente.
-- toSnapshot() é a operação deliberadamente alocadora e ordena por ItemId para
-  serialização determinística; não deve ser chamada por frame.
+CurrencyAccount:
+- O(1), sem arrays em mutações.
 
-INVARIANTES
-- quantity é inteiro seguro >= 1.
-- maxSlots é null ou inteiro seguro >= 1.
-- o mesmo ItemId não pode entrar com duas definições conflitantes.
-- operações que excedem capacidade falham sem mutar estado.
-- remover mais do que existe satura a quantidade em zero.
+Cost:
+- construção ordena uma vez;
+- pagamento cria Map apenas na operação discreta;
+- valida tudo antes de mutar.
 
-DEPENDÊNCIAS PERMITIDAS
-- Entidades, value objects e ports de src/domain/**.
-- Funções e tipos puros sem efeitos de infraestrutura.
+Reward:
+- construção normaliza/ordena uma vez;
+- getters retornam referências readonly.
+
+LootTable:
+- construção ordena uma vez;
+- weighted selection O(n);
+- with-replacement aloca apenas resultados;
+- without-replacement usa Set de selecionados;
+- nenhuma execução automática por frame.
+
+CraftingRecipe:
+- construção normaliza/ordena ingredientes;
+- runtime somente leitura.
+
+LIMITE DE ETAPA
+Etapa 57 — Progression NÃO é implementada aqui:
+- ProgressionCurve;
+- ExperiencePool;
+- LevelProgression;
+- UnlockSet;
+- ProgressionSnapshot.
+
+Também NÃO implementado:
+- RNG determinístico oficial;
+- tags;
+- definitions registry;
+- gameplay-rule integration;
+- reward grant execution;
+- crafting execution.
 
 DEPENDÊNCIAS PROIBIDAS
-- src/engine/**, src/services/**, src/app/** e src/plugins/**.
-- Steam MicroTxn, monetização concreta, Tauri, banco de dados, rede, Three.js,
-  Babylon.js, Rapier, DOM ou APIs de plataforma.
+- src/core/**
+- src/engine/**
+- src/services/**
+- src/app/**
+- src/plugins/**
+- stack gráfica/física/nativa concreta.
 
-PRÓXIMA SUBETAPA
-AbilityAction e SkillTreeGraph entram somente na Etapa 44.3.
+PRÓXIMA ETAPA
+Etapa 57 — Progression.

@@ -1,0 +1,68 @@
+{
+  "stage": "56",
+  "name": "Economy complete",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51",
+    "52",
+    "53",
+    "54",
+    "55"
+  ],
+  "implemented": [
+    "CurrencyId",
+    "CurrencyAccount",
+    "Cost",
+    "Reward",
+    "RewardPolicy",
+    "LootEntry",
+    "LootTable",
+    "CraftingRecipe"
+  ],
+  "preserved": [
+    "Item",
+    "Inventory"
+  ],
+  "economyRules": [
+    "Currency balances are non-negative safe integers.",
+    "tryDebit is atomic.",
+    "Currency transfer validates source and destination before mutation.",
+    "Cost payment is all-or-nothing across multiple currencies.",
+    "Reward is declarative and does not grant automatically.",
+    "LootTable requires an injected random source and never uses global randomness.",
+    "CraftingRecipe declares requirements/output but does not mutate Inventory.",
+    "Stage 57 Progression is not anticipated."
+  ],
+  "deferred": [
+    "Reward -> Inventory execution",
+    "Reward -> CurrencyAccount execution",
+    "Crafting execution",
+    "official deterministic RNG implementation",
+    "ProgressionCurve",
+    "ExperiencePool",
+    "LevelProgression",
+    "UnlockSet",
+    "ProgressionSnapshot"
+  ],
+  "files": [
+    "scripts/architecture/stage56-validate-economy.mjs",
+    "src/domain/economy/Cost.ts",
+    "src/domain/economy/CraftingRecipe.ts",
+    "src/domain/economy/CurrencyAccount.ts",
+    "src/domain/economy/CurrencyId.ts",
+    "src/domain/economy/LootEntry.ts",
+    "src/domain/economy/LootTable.ts",
+    "src/domain/economy/README.txt",
+    "src/domain/economy/Reward.ts",
+    "src/domain/economy/RewardPolicy.ts",
+    "src/domain/economy/index.ts",
+    "tests/domain-economy-complete-purity.test.ts",
+    "tests/domain-economy-complete.test.ts"
+  ]
+}
