@@ -1,0 +1,113 @@
+{
+  "stage": "64",
+  "name": "Deterministic RNG",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51",
+    "52",
+    "53",
+    "54",
+    "55",
+    "56",
+    "57",
+    "58",
+    "59",
+    "60",
+    "61",
+    "62",
+    "63"
+  ],
+  "implemented": [
+    "RandomSeed 128-bit",
+    "seed creation from uint32",
+    "seed creation from deterministic string hash",
+    "deterministic seed derivation",
+    "xoshiro128** v1",
+    "nextUint32",
+    "nextFloat",
+    "unbiased nextInt",
+    "nextFloatRange",
+    "nextBoolean",
+    "RNG snapshot/restore",
+    "RandomStream",
+    "RandomStreamFactory",
+    "stream fork",
+    "RNG snapshot codecs for Stage 63 coordinator",
+    "LootTable integration by structural LootRandomSource compatibility"
+  ],
+  "algorithm": {
+    "id": "xoshiro128ss-v1",
+    "stateBits": 128,
+    "stateWords": 4,
+    "wordBits": 32,
+    "goldenSeed": 42,
+    "goldenFirst8Uint32": [
+      660444221,
+      3652823732,
+      77672526,
+      910233633,
+      2297337756,
+      3786072677,
+      3123505064,
+      1891482476
+    ]
+  },
+  "determinismRules": [
+    "No implicit entropy source exists.",
+    "Same seed plus same call sequence yields the same values.",
+    "Named stream seed depends only on root seed plus stream id.",
+    "Consuming one named stream does not alter another stream.",
+    "Forking a stream does not consume the parent and does not depend on parent drawCount.",
+    "RNG snapshot restore continues from the exact next sample.",
+    "nextInt uses rejection sampling rather than biased modulo reduction.",
+    "LootTable consumes DeterministicRng/RandomStream through existing nextFloat structural contract."
+  ],
+  "snapshotIntegration": [
+    "runtime.deterministic-rng codec",
+    "runtime.random-stream codec",
+    "codecs are additive and do not modify Stage 63 standard 19-codec registry"
+  ],
+  "explicitlyForbidden": [
+    "Math.random",
+    "crypto RNG",
+    "Date.now",
+    "performance.now",
+    "platform entropy",
+    "Core/engine/services/app/plugins dependencies"
+  ],
+  "explicitlyDeferred": [
+    "Stage 65 Ports Review",
+    "RandomPort/RngPort",
+    "changes to ClockPort",
+    "changes to SaveGamePort",
+    "changes to ModdingPort"
+  ],
+  "validation": [
+    "node --check Stage 64 validator passed",
+    "strict TypeScript compile for accumulated Layer 2 through Stage 64 passed",
+    "strict TypeScript compile for functional Stage 64 tests passed",
+    "Stage 64 purity scan passed",
+    "golden sequence runtime smoke passed",
+    "stream isolation runtime smoke passed",
+    "LootTable deterministic integration runtime smoke passed",
+    "SnapshotCoordinator RNG continuation runtime smoke passed"
+  ],
+  "files": [
+    "scripts/architecture/stage64-validate-deterministic-rng.mjs",
+    "src/domain/random/DeterministicRng.ts",
+    "src/domain/random/README.txt",
+    "src/domain/random/RandomSeed.ts",
+    "src/domain/random/RandomSnapshotCodecs.ts",
+    "src/domain/random/RandomStream.ts",
+    "src/domain/random/index.ts",
+    "tests/domain-deterministic-rng-loot.test.ts",
+    "tests/domain-deterministic-rng-purity.test.ts",
+    "tests/domain-deterministic-rng.test.ts"
+  ]
+}
