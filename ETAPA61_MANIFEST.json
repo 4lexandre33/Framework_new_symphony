@@ -1,0 +1,70 @@
+{
+  "stage": "61",
+  "name": "Tags",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51",
+    "52",
+    "53",
+    "54",
+    "55",
+    "56",
+    "57",
+    "58",
+    "59",
+    "60"
+  ],
+  "implemented": [
+    "DomainTag",
+    "DomainTag normalization",
+    "TagSet"
+  ],
+  "normalization": [
+    "Unicode NFKC",
+    "trim",
+    "lowercase",
+    "underscores to hyphens",
+    "intra-segment whitespace to hyphens",
+    "collapse repeated hyphens",
+    "dot-separated semantic segments",
+    "ASCII canonical validation"
+  ],
+  "setOperations": [
+    "has",
+    "add",
+    "delete",
+    "containsAll",
+    "containsAny",
+    "equals",
+    "union",
+    "intersection",
+    "difference",
+    "deterministic snapshot/restore"
+  ],
+  "explicitlyDeferred": [
+    "automatic tags on Definitions",
+    "automatic tags on Item/Inventory",
+    "automatic tags on Agent",
+    "automatic tags on Quest/Narrative",
+    "automatic tags on Relations",
+    "automatic tags on Conditions",
+    "automatic tags on Gameplay Rules",
+    "automatic tags on DomainEvents",
+    "cross-domain integration"
+  ],
+  "files": [
+    "scripts/architecture/stage61-validate-tags.mjs",
+    "src/domain/tags/DomainTag.ts",
+    "src/domain/tags/README.txt",
+    "src/domain/tags/TagSet.ts",
+    "src/domain/tags/index.ts",
+    "tests/domain-tags-purity.test.ts",
+    "tests/domain-tags.test.ts"
+  ]
+}
