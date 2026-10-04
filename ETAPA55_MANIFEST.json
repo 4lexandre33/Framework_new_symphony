@@ -1,0 +1,84 @@
+{
+  "stage": "55",
+  "name": "Relations / Factions / Reputation",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51",
+    "52",
+    "53",
+    "54"
+  ],
+  "roadmapSource": "Camada 2 roadmap stages 45-70",
+  "scope": {
+    "implemented": [
+      "FactionId",
+      "FactionRelation",
+      "FactionMatrix",
+      "Reputation",
+      "Relationship"
+    ],
+    "explicitlyDeferred": [
+      "CurrencyId",
+      "CurrencyAccount",
+      "Cost",
+      "Reward",
+      "RewardPolicy",
+      "LootTable",
+      "LootEntry",
+      "CraftingRecipe",
+      "Conditions integration",
+      "Dialogue integration",
+      "AI integration"
+    ]
+  },
+  "factions": {
+    "directional": true,
+    "dispositions": [
+      "hostile",
+      "unfriendly",
+      "neutral",
+      "friendly",
+      "allied"
+    ],
+    "matrixStorage": "Map<FactionId, Map<FactionId, FactionDisposition>>",
+    "defaultDisposition": "neutral by default, configurable"
+  },
+  "reputation": {
+    "subject": "opaque semantic ReputationSubjectRef",
+    "defaultRange": "-100..100",
+    "adjust": "saturating and returns applied delta",
+    "set": "strict"
+  },
+  "relationship": {
+    "directional": true,
+    "type": "opaque RelationshipTypeId",
+    "strengthRange": "-100..100",
+    "selfRelationship": "rejected"
+  },
+  "rules": [
+    "No relation symmetry is inferred.",
+    "FactionRelation and Reputation are distinct concepts.",
+    "No concrete Agent/WorldObject dependency.",
+    "No Conditions/Dialogue/AI cross-domain integration before Stage 62.",
+    "No Economy Stage 56 files are anticipated.",
+    "Compatible with 2D, 2.5D, 3D and headless execution."
+  ],
+  "files": [
+    "scripts/architecture/stage55-validate-relations.mjs",
+    "src/domain/relations/FactionId.ts",
+    "src/domain/relations/FactionMatrix.ts",
+    "src/domain/relations/FactionRelation.ts",
+    "src/domain/relations/README.txt",
+    "src/domain/relations/Relationship.ts",
+    "src/domain/relations/Reputation.ts",
+    "src/domain/relations/index.ts",
+    "tests/domain-relations-purity.test.ts",
+    "tests/domain-relations.test.ts"
+  ]
+}
