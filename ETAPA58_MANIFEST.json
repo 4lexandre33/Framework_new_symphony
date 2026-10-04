@@ -1,0 +1,69 @@
+{
+  "stage": "58",
+  "name": "Narrative",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51",
+    "52",
+    "53",
+    "54",
+    "55",
+    "56",
+    "57"
+  ],
+  "implemented": [
+    "QuestId",
+    "QuestDefinition",
+    "QuestState",
+    "StoryFlagSet",
+    "NarrativeState"
+  ],
+  "preserved": [
+    "DialogueGraph",
+    "QuestGoal"
+  ],
+  "questPolicy": {
+    "allGoalsRequired": true,
+    "activation": "all goals become active",
+    "completion": "all goals completed => quest completed",
+    "failure": "any failed goal => quest failed; remaining active goals fail"
+  },
+  "snapshotRules": [
+    "QuestState restore requires external QuestDefinition.",
+    "Quest goal IDs/kinds/targets/requiredProgress must match definition.",
+    "Quest and goal statuses must be internally consistent.",
+    "NarrativeState snapshots quests sorted by QuestId.",
+    "StoryFlagSet snapshots flags sorted by StoryFlagId."
+  ],
+  "explicitlyDeferred": [
+    "Quest optional goals",
+    "Quest branching rules",
+    "Quest -> DomainEvents integration",
+    "Quest -> State integration",
+    "Narrative -> Conditions integration",
+    "Reward execution",
+    "DamageRule",
+    "HealingRule",
+    "TraversalRule",
+    "MovementRule",
+    "RequirementRule"
+  ],
+  "files": [
+    "scripts/architecture/stage58-validate-narrative.mjs",
+    "src/domain/narrative/NarrativeState.ts",
+    "src/domain/narrative/QuestDefinition.ts",
+    "src/domain/narrative/QuestId.ts",
+    "src/domain/narrative/QuestState.ts",
+    "src/domain/narrative/README.txt",
+    "src/domain/narrative/StoryFlagSet.ts",
+    "src/domain/narrative/index.ts",
+    "tests/domain-narrative-state-purity.test.ts",
+    "tests/domain-narrative-state.test.ts"
+  ]
+}
