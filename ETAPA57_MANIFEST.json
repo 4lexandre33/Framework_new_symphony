@@ -1,0 +1,60 @@
+{
+  "stage": "57",
+  "name": "Progression",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51",
+    "52",
+    "53",
+    "54",
+    "55",
+    "56"
+  ],
+  "implemented": [
+    "ProgressionCurve",
+    "ExperiencePool",
+    "LevelProgression",
+    "UnlockSet",
+    "ProgressionSnapshot"
+  ],
+  "coreRules": [
+    "Level is derived from total XP and is never stored independently in LevelProgression.",
+    "ProgressionCurve uses cumulative strictly increasing safe-integer thresholds.",
+    "Level lookup uses binary search.",
+    "ExperiencePool is cumulative and protects against safe-integer overflow.",
+    "UnlockSet stores opaque semantic unlock IDs and does not integrate SkillTreeGraph automatically.",
+    "ProgressionSnapshot stores mutable state only; ProgressionCurve is provided externally on restore.",
+    "Agent level/experience is not migrated or synchronized automatically.",
+    "Stage 58 Narrative expansion is not anticipated."
+  ],
+  "explicitlyDeferred": [
+    "Agent progression synchronization",
+    "SkillTreeGraph unlock integration",
+    "DomainEvent emission",
+    "Reward integration",
+    "Quest progression integration",
+    "QuestId",
+    "QuestDefinition",
+    "QuestState",
+    "NarrativeState",
+    "StoryFlagSet"
+  ],
+  "files": [
+    "scripts/architecture/stage57-validate-progression.mjs",
+    "src/domain/progression/ExperiencePool.ts",
+    "src/domain/progression/LevelProgression.ts",
+    "src/domain/progression/ProgressionCurve.ts",
+    "src/domain/progression/ProgressionSnapshot.ts",
+    "src/domain/progression/README.txt",
+    "src/domain/progression/UnlockSet.ts",
+    "src/domain/progression/index.ts",
+    "tests/domain-progression-purity.test.ts",
+    "tests/domain-progression.test.ts"
+  ]
+}
