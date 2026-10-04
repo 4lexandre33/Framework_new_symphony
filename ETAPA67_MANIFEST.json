@@ -1,0 +1,85 @@
+{
+  "stage": "67",
+  "name": "Performance Audit",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51",
+    "52",
+    "53",
+    "54",
+    "55",
+    "56",
+    "57",
+    "58",
+    "59",
+    "60",
+    "61",
+    "62",
+    "63",
+    "64",
+    "65",
+    "66"
+  ],
+  "auditVersion": "1.0.0",
+  "policyVersion": "1.0.0",
+  "rules": {
+    "PERF001": "all declared hot-path targets must exist",
+    "PERF002": "normal hot paths cannot allocate object/array/closure/spread",
+    "PERF003": "normal hot paths cannot materialize collections/snapshots",
+    "PERF004": "hot-path loop nesting must stay within explicit budget",
+    "PERF005": "hot paths remain synchronous without await/yield",
+    "PERF006": "mutable runtime collections expose lifecycle release APIs",
+    "PERF007": "audited TypeScript parses cleanly"
+  },
+  "hotPathCoverage": {
+    "sourceFiles": 12,
+    "hotMethods": 43,
+    "lifecycleMethods": 16,
+    "maxObservedLoopDepth": 1,
+    "violations": 0
+  },
+  "runtimePolicy": {
+    "stressThresholdMsPerScenario": 8000,
+    "stressThresholdMsTotal": 20000,
+    "purpose": "catastrophic regression guard, not hardware microbenchmark"
+  },
+  "lifecycleChecks": [
+    "StateStore read reference reuse",
+    "ModifierSet bucket reference reuse until mutation",
+    "StatusEffectSet terminal retention plus explicit prune",
+    "CooldownSet completion plus explicit clear",
+    "Inventory clear resets logical retention/counters",
+    "TagSet clear releases logical tags"
+  ],
+  "explicitlyDeferred": [
+    "Stage 68 cross-domain invariants",
+    "semantic reward/quest/progression invariant gate",
+    "hardware-specific microbenchmark tuning",
+    "renderer/physics profiling",
+    "GC forcing and heap-size gates"
+  ],
+  "localValidation": [
+    "node --check all Stage 67 mjs passed",
+    "AST performance audit passed with zero violations",
+    "strict TypeScript Layer 2 compile through Stage 67 passed",
+    "runtime stress/lifecycle smoke passed",
+    "negative AST fixture detected PERF002/PERF003/PERF004/PERF006"
+  ],
+  "files": [
+    "ETAPA67_PERFORMANCE_AUDIT.txt",
+    "scripts/architecture/lib/domain-performance-policy-v1.mjs",
+    "scripts/architecture/lib/domain-performance-v1.mjs",
+    "scripts/architecture/stage67-audit-domain-performance.mjs",
+    "scripts/architecture/stage67-validate-performance-audit.mjs",
+    "tests/domain-performance-audit-selftest.test.ts",
+    "tests/domain-performance-audit.test.ts",
+    "tests/domain-performance-lifecycle.test.ts",
+    "tests/domain-performance-stress.test.ts"
+  ]
+}

@@ -1,0 +1,243 @@
+PROJETO1 — ETAPA 67 / PERFORMANCE AUDIT
+
+OBJETIVO
+Criar um gate executável de performance/lifecycle para a Camada 2 sem misturar
+gameplay com profiler, renderer ou plataforma.
+
+A Etapa 67 não adiciona mecânicas.
+
+CAMADAS DO GATE
+
+1. STATIC HOT-PATH AUDIT
+Usa TypeScript Compiler API.
+
+Política:
+scripts/architecture/lib/domain-performance-policy-v1.mjs
+
+Auditor:
+scripts/architecture/lib/domain-performance-v1.mjs
+
+CLI:
+scripts/architecture/stage67-audit-domain-performance.mjs
+
+HOT PATHS
+A política v1 cobre métodos críticos de:
+- StateStore;
+- TagSet;
+- Inventory;
+- ResourcePool;
+- ModifierSet;
+- CooldownSet;
+- StatusEffectSet;
+- FactionMatrix;
+- ProgressionCurve;
+- DeterministicRng.
+
+A lista é explícita e versionada.
+Adicionar/remover um hot path exige mudança consciente na política.
+
+PERF001 — TARGET EXISTENCE
+Todo hot path declarado precisa continuar existindo.
+
+Isso evita que refactors silenciosamente removam a proteção do gate.
+
+PERF002 — NORMAL-PATH ALLOCATION
+Hot paths não podem criar no caminho normal:
+- new expression;
+- array literal;
+- object literal;
+- closure;
+- spread.
+
+Alocações exclusivamente dentro de `throw` são permitidas porque failure paths
+não pertencem ao throughput normal.
+
+Exemplo permitido:
+if (invalid) {
+  throw new DomainError(...)
+}
+
+Exemplo proibido:
+const temporary = []
+
+PERF003 — MATERIALIZATION
+Hot paths não podem chamar:
+- map/filter/reduce;
+- sort/slice/concat;
+- flat/flatMap;
+- Array.from/Array.of;
+- Object.keys/values/entries/fromEntries;
+- toSnapshot();
+- toArray();
+- JSON stringify/parse;
+- structuredClone.
+
+Objetivo:
+snapshot/materialização continua explícita e discreta.
+
+PERF004 — LOOP DEPTH
+Cada hot path possui budget de loop nesting.
+
+Política v1:
+- lookups escalares: 0;
+- scans/binary search/rejection sampling: máximo 1.
+
+Um O(n²) acidental dentro de método marcado falha o gate.
+
+PERF005 — SYNC HOT PATHS
+Hot paths não podem usar:
+- async;
+- await;
+- yield.
+
+Infraestrutura assíncrona continua fora do domínio/hot loop.
+
+PERF006 — LIFECYCLE RELEASE
+Coleções mutáveis críticas devem manter operações explícitas de release.
+
+Fiscalizadas:
+StateStore
+- delete
+- clear
+
+TagSet
+- delete
+- clear
+
+Inventory
+- remove
+- clear
+
+ModifierSet
+- remove
+- clear
+
+CooldownSet
+- remove
+- clear
+
+StatusEffectSet
+- remove
+- pruneTerminal
+- clear
+
+StoryFlagSet
+- clear
+
+UnlockSet
+- lock
+- clear
+
+A finalidade é evitar retenção lógica ilimitada de referências.
+
+PERF007 — PARSE INTEGRITY
+Arquivos auditados precisam parsear corretamente pelo TypeScript Compiler API.
+
+LIFECYCLE TESTS
+Testes verificam comportamento real:
+- StateStore.read reutiliza referência readonly já armazenada;
+- ModifierSet reutiliza bucket readonly até mutação;
+- StatusEffectSet mantém terminal observável e pruneTerminal libera;
+- CooldownSet completa e clear libera;
+- Inventory.clear remove referências/counters;
+- TagSet.clear remove tags.
+
+STRESS TEST
+Há benchmark headless de regressão catastrófica para:
+- 500k RNG draws;
+- 500k StateStore has/read;
+- 500k TagSet.has;
+- 1.28 milhão de aplicações de Modifier.
+
+IMPORTANTE
+Os thresholds de tempo são deliberadamente largos:
+- 8 segundos por cenário;
+- 20 segundos total.
+
+Eles NÃO são microbenchmarks de hardware.
+Não tentam provar diferença de 5% ou 10%.
+
+Servem somente para detectar regressões de ordem de magnitude:
+- loop acidental enorme;
+- materialização massiva;
+- implementação que ficou impraticável.
+
+A regra arquitetural forte continua sendo o AST audit.
+
+MEMÓRIA
+A Etapa 67 não usa process.memoryUsage/GC forcing como gate porque:
+- GC é não determinístico;
+- heaps variam entre Node/OS;
+- forçar --expose-gc tornaria CI frágil.
+
+Em vez disso, o gate fiscaliza:
+- criação sintática nos hot paths;
+- materialização;
+- lifecycle release;
+- reutilização de referências internas em APIs críticas.
+
+SNAPSHOTS
+Snapshots são operações discretas.
+Eles PODEM alocar.
+
+Logo:
+- SnapshotCoordinator;
+- toSnapshot();
+- toArray();
+- union/intersection/difference;
+- construção de definitions;
+não são tratados como allocation-free hot paths.
+
+MODIFIERSET
+add/remove podem reconstruir buckets.
+São mutações discretas, não evaluate hot path.
+
+evaluate():
+- usa bucket pré-ordenado;
+- zero sort;
+- zero snapshot;
+- zero array temporário.
+
+STATUS EFFECTS
+advance():
+- itera Map diretamente;
+- não materializa arrays.
+
+Effects terminais permanecem por design até:
+pruneTerminal()
+
+Isso é lifecycle explícito, não leak oculto.
+
+COOLDOWNS
+advance():
+- itera Map diretamente.
+
+Cooldown concluído continua registrado por design, pois o ID pode ser
+reiniciado/reutilizado.
+clear()/remove() encerram retenção quando o owner termina.
+
+RNG
+nextUint32/nextFloat/nextInt:
+- sem allocation normal;
+- nextInt tem rejection sampling com loop depth 1;
+- nenhum array/snapshot/materialização.
+
+PORTABILIDADE
+A Etapa 66 continua sendo executada no validator.
+
+Performance Audit não enfraquece:
+2D / 2.5D / 3D / headless.
+
+ETAPA 68
+Cross-domain invariants NÃO são antecipados.
+
+Nenhuma regra semântica nova entre:
+- Quest;
+- Reward;
+- Progression;
+- Events;
+- State;
+é adicionada aqui.
+
+PRÓXIMA ETAPA
+68 — Cross-domain invariants.
