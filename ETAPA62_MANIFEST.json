@@ -1,0 +1,74 @@
+{
+  "stage": "62",
+  "name": "Cross-domain integration",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51",
+    "52",
+    "53",
+    "54",
+    "55",
+    "56",
+    "57",
+    "58",
+    "59",
+    "60",
+    "61"
+  ],
+  "implemented": [
+    "Location -> DomainEvent",
+    "Conditions -> StateStore evaluation",
+    "Interaction -> Conditions -> StateStore",
+    "StatusEffectSet -> DomainDuration",
+    "QuestState -> StateStore",
+    "QuestState -> DomainEvent",
+    "Reward -> Inventory/Currency",
+    "LevelProgression -> UnlockSet",
+    "headless cross-domain scenarios"
+  ],
+  "rules": [
+    "Cross-domain dependencies are concentrated under src/domain/integration.",
+    "Events are created but never published.",
+    "Event id, sequence and tick are supplied by the caller.",
+    "Reward grants use preflight before any mutation.",
+    "Rejected reward grants leave currency accounts and inventory unchanged.",
+    "Interaction authorization executes no concrete interaction action.",
+    "Status effect time integration never prunes terminal effects implicitly.",
+    "Progression unlock integration never adds XP.",
+    "Stage 63 general snapshot/restore framework is not anticipated."
+  ],
+  "explicitlyDeferred": [
+    "global snapshot registry",
+    "global save-state bundle",
+    "restore coordinator",
+    "snapshot migration framework",
+    "official deterministic RNG"
+  ],
+  "files": [
+    "scripts/architecture/stage62-validate-cross-domain.mjs",
+    "src/domain/integration/ConditionStateIntegration.ts",
+    "src/domain/integration/InteractionConditionIntegration.ts",
+    "src/domain/integration/LocationEventIntegration.ts",
+    "src/domain/integration/ProgressionUnlockIntegration.ts",
+    "src/domain/integration/QuestIntegration.ts",
+    "src/domain/integration/README.txt",
+    "src/domain/integration/RewardGrantIntegration.ts",
+    "src/domain/integration/StatusEffectTimeIntegration.ts",
+    "src/domain/integration/index.ts",
+    "tests/domain-cross-integration-headless.test.ts",
+    "tests/domain-cross-integration-purity.test.ts",
+    "tests/domain-cross-integration.test.ts"
+  ],
+  "validationNotes": [
+    "Condition comparison tests use the canonical ComparisonOperator value 'equals'.",
+    "Layer 2 strict TypeScript compile through Stage 62 passed.",
+    "Cross-domain test sources type-check with the canonical comparison operator.",
+    "Runtime smoke covering all Stage 62 integration paths passed."
+  ]
+}
