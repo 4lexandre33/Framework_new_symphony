@@ -1,0 +1,91 @@
+{
+  "stage": "65",
+  "name": "Ports Review",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51",
+    "52",
+    "53",
+    "54",
+    "55",
+    "56",
+    "57",
+    "58",
+    "59",
+    "60",
+    "61",
+    "62",
+    "63",
+    "64"
+  ],
+  "approvedPorts": {
+    "ClockPort": {
+      "decision": "keep",
+      "reason": "civil epoch time is external to deterministic gameplay time"
+    },
+    "SaveGamePort<TState>": {
+      "decision": "keep generic",
+      "reason": "external persistence boundary and backward compatibility"
+    },
+    "DomainSaveGamePort": {
+      "decision": "add specialization",
+      "state": "SnapshotBundleSnapshot",
+      "reason": "canonical Layer 2 runtime save state after Stage 63"
+    },
+    "ModdingPort": {
+      "decision": "keep",
+      "reason": "installed/remote mod management depends on external infrastructure"
+    }
+  },
+  "rejectedSpeculativePorts": [
+    "RandomPort",
+    "RngPort",
+    "EventBusPort",
+    "EventPublisherPort",
+    "InputPort",
+    "RendererPort",
+    "PhysicsPort",
+    "AudioPort",
+    "SnapshotPort",
+    "TagPort",
+    "QuestPort",
+    "InventoryPort",
+    "ProgressionPort"
+  ],
+  "versioning": {
+    "saveEnvelope": "VersionedSnapshot.schemaVersion",
+    "runtimeBundle": "SnapshotBundleSnapshot.schemaVersion",
+    "aggregateCodec": "SnapshotBundleEntry.schemaVersion"
+  },
+  "rules": [
+    "Deterministic RNG remains pure domain and is not hidden behind a port.",
+    "SimulationTick/DomainDuration remain independent from ClockPort.",
+    "Domain events remain data; event publication is outside Layer 2.",
+    "Snapshot capture/restore remains in-memory domain logic; persistence uses SaveGamePort.",
+    "No port exposes renderer, physics, DOM, Tauri, Steamworks, filesystem or engine internals.",
+    "Existing SaveLoadUseCase and ModdingAppService contracts remain backward compatible.",
+    "Stage 66 global portability gate is not anticipated."
+  ],
+  "validation": [
+    "node --check Stage 65 validator passed",
+    "strict TypeScript compile for accumulated Layer 2 through Stage 65 passed",
+    "strict TypeScript compile for Stage 65 functional port test passed"
+  ],
+  "files": [
+    "scripts/architecture/stage65-validate-ports-review.mjs",
+    "src/domain/ports/ClockPort.ts",
+    "src/domain/ports/DomainSaveGamePort.ts",
+    "src/domain/ports/ModdingPort.ts",
+    "src/domain/ports/README.txt",
+    "src/domain/ports/SaveGamePort.ts",
+    "src/domain/ports/index.ts",
+    "tests/domain-ports-review-boundaries.test.ts",
+    "tests/domain-ports-review.test.ts"
+  ]
+}

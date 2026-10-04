@@ -15,6 +15,13 @@ export type {
   SaveSlotId,
 } from "./SaveGamePort";
 
+export type {
+  DomainSaveGamePort,
+  DomainSaveGameRecord,
+  DomainSaveSnapshot,
+  DomainSaveState,
+} from "./DomainSaveGamePort";
+
 export {
   createModId,
 } from "./ModdingPort";
