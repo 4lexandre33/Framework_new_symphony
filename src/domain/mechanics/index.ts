@@ -180,3 +180,95 @@ export type {
   StatusEffectSetSnapshot,
   StatusEffectSetSnapshotEntry,
 } from "./StatusEffectSet";
+
+export {
+  acceptGameplayRule,
+  rejectGameplayRule,
+} from "./GameplayRuleOutcome";
+
+export type {
+  AcceptedGameplayRule,
+  GameplayRuleOutcome,
+  RejectedGameplayRule,
+} from "./GameplayRuleOutcome";
+
+export {
+  DamageRule,
+  DamageRuleError,
+  DEFAULT_DAMAGE_RULE,
+} from "./DamageRule";
+
+export type {
+  DamageRuleErrorCode,
+  DamageRuleInput,
+  DamageRuleOutcome,
+  DamageRuleRejectionReason,
+  DamageRuleResult,
+} from "./DamageRule";
+
+export {
+  DEFAULT_HEALING_RULE,
+  HealingRule,
+  HealingRuleError,
+} from "./HealingRule";
+
+export type {
+  HealingRuleErrorCode,
+  HealingRuleInput,
+  HealingRuleOutcome,
+  HealingRuleRejectionReason,
+  HealingRuleResult,
+} from "./HealingRule";
+
+export {
+  createMovementEndpointId,
+  createMovementIntent,
+  createMovementModeId,
+  MovementRuleError,
+} from "./MovementRule";
+
+export type {
+  MovementEndpointId,
+  MovementIntent,
+  MovementModeId,
+  MovementRuleErrorCode,
+} from "./MovementRule";
+
+export {
+  createTraversalCapabilityId,
+  createTraversalRuleId,
+  TraversalRule,
+  TraversalRuleError,
+} from "./TraversalRule";
+
+export type {
+  MissingTraversalCapabilityDetails,
+  TraversalCapabilityId,
+  TraversalRuleCreateOptions,
+  TraversalRuleErrorCode,
+  TraversalRuleId,
+  TraversalRuleOutcome,
+  TraversalRuleRejectionDetails,
+  TraversalRuleRejectionReason,
+  TraversalRuleResult,
+  UnsupportedMovementModeDetails,
+} from "./TraversalRule";
+
+export {
+  createRequirementId,
+  createRequirementRuleId,
+  RequirementRule,
+  RequirementRuleError,
+} from "./RequirementRule";
+
+export type {
+  RequirementId,
+  RequirementRuleCreateOptions,
+  RequirementRuleErrorCode,
+  RequirementRuleId,
+  RequirementRuleMode,
+  RequirementRuleOutcome,
+  RequirementRuleRejectionDetails,
+  RequirementRuleRejectionReason,
+  RequirementRuleResult,
+} from "./RequirementRule";

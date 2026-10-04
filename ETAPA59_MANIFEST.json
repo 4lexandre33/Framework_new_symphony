@@ -1,0 +1,77 @@
+{
+  "stage": "59",
+  "name": "Gameplay Rules",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51",
+    "52",
+    "53",
+    "54",
+    "55",
+    "56",
+    "57",
+    "58"
+  ],
+  "implemented": [
+    "GameplayRuleOutcome",
+    "DamageRule",
+    "HealingRule",
+    "MovementIntent",
+    "TraversalRule",
+    "RequirementRule"
+  ],
+  "rules": {
+    "damage": [
+      "flat mitigation precedes multiplier",
+      "effective damage is clamped by available health",
+      "already defeated target is rejected",
+      "no Agent mutation"
+    ],
+    "healing": [
+      "healing is clamped by missing health",
+      "defeated target is rejected instead of revived",
+      "no Agent mutation"
+    ],
+    "movementTraversal": [
+      "endpoints and movement modes are opaque semantic IDs",
+      "same endpoint intent is rejected",
+      "traversal checks allowed modes and required capabilities",
+      "no pathfinding or physical movement"
+    ],
+    "requirements": [
+      "all/any modes",
+      "all declared requirements must have resolutions",
+      "unknown resolutions are structural errors",
+      "resolution source remains external"
+    ]
+  },
+  "explicitlyDeferred": [
+    "DamageRule -> Agent integration",
+    "HealingRule -> Agent integration",
+    "ModifierSet integration",
+    "TraversalRule -> LocationGraph integration",
+    "RequirementRule -> condition evaluation integration",
+    "Gameplay Rules -> DomainEvent integration",
+    "Definitions",
+    "Tags"
+  ],
+  "files": [
+    "scripts/architecture/stage59-validate-gameplay-rules.mjs",
+    "src/domain/mechanics/DamageRule.ts",
+    "src/domain/mechanics/GameplayRuleOutcome.ts",
+    "src/domain/mechanics/HealingRule.ts",
+    "src/domain/mechanics/MovementRule.ts",
+    "src/domain/mechanics/README.txt",
+    "src/domain/mechanics/RequirementRule.ts",
+    "src/domain/mechanics/TraversalRule.ts",
+    "src/domain/mechanics/index.ts",
+    "tests/domain-gameplay-rules-purity.test.ts",
+    "tests/domain-gameplay-rules.test.ts"
+  ]
+}
