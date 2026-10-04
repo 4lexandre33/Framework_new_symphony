@@ -1,0 +1,189 @@
+PROJETO1 — ETAPA 70 / FINAL LAYER 2 GATE
+
+OBJETIVO
+Encerrar formalmente a construção da Camada 2 iniciada na Etapa 44.
+
+A Etapa 70 NÃO adiciona:
+- gameplay;
+- novos aggregates;
+- novos domain roots;
+- novos ports;
+- novas integrações;
+- novos snapshot codecs;
+- novos invariants;
+- novos hot paths.
+
+Ela somente compõe e certifica o estado final já construído.
+
+ESCOPO CERTIFICADO
+Stages:
+44 → 69
+
+Total:
+26 checkpoints de etapa.
+
+ROOTS FINAIS DE src/domain
+18 roots:
+
+definitions
+economy
+entities
+evaluation
+events
+integration
+interaction
+location
+mechanics
+narrative
+ports
+progression
+random
+relations
+snapshots
+state
+tags
+time
+
+GATE 1 — COMPLETUDE
+O catálogo final verifica arquivos-chave de cada Stage 44–69.
+
+Objetivo:
+impedir PASS final quando uma parte histórica essencial da Layer 2 tiver sido
+removida acidentalmente.
+
+GATE 2 — PORTABILITY
+Reutiliza integralmente o Portability Gate v2 da Etapa 66.
+
+Obrigatório:
+PRT001 → PRT008
+zero violações.
+
+Certifica:
+- zero engine/stack técnica no domínio;
+- zero DOM/Tauri/Steamworks;
+- zero renderer/physics concrete types;
+- zero wall-clock;
+- zero global entropy;
+- zero model duplication 2D/3D.
+
+GATE 3 — PERFORMANCE / LIFECYCLE
+Reutiliza integralmente o Performance Audit da Etapa 67.
+
+Obrigatório:
+PERF001 → PERF007
+zero violações.
+
+Certifica:
+- hot paths governados;
+- normal-path allocation/materialization policy;
+- loop-depth budgets;
+- synchronous hot paths;
+- lifecycle release explícito.
+
+GATE 4 — CROSS-DOMAIN INVARIANTS
+Reutiliza integralmente o catálogo da Etapa 68.
+
+Obrigatório:
+XINV001 → XINV010
+cobertura completa.
+
+Certifica:
+- reward atomicity;
+- reward exact deltas;
+- interaction authorization side-effect freedom;
+- quest State/Event coherence;
+- progression unlock idempotency;
+- status-effect time lifecycle;
+- location event identity;
+- snapshot state/instance isolation;
+- RNG stream isolation + restore continuation;
+- deterministic cross-domain replay.
+
+GATE 5 — DOCUMENTATION
+Reutiliza integralmente a auditoria da Etapa 69.
+
+Obrigatório:
+- 8 documentos Layer 2;
+- 18/18 roots documentados;
+- 7 integrações documentadas;
+- 10 invariants documentados;
+- PRT001–PRT008 documentados;
+- PERF001–PERF007 documentados;
+- 19 standard snapshot codecs documentados;
+- 2 RNG codecs documentados;
+- links relativos válidos.
+
+GATES DE PROJETO EXECUTADOS PELO VALIDATOR FINAL
+1. Final Layer 2 Audit
+2. Stage 69 Documentation Audit
+3. Stage 68 Cross-domain Invariant Audit
+4. Stage 67 Performance Audit
+5. Stage 66 Portability Gate v2
+6. npm run arch:check
+7. npx tsc --noEmit
+8. targeted Layer 2 final tests
+9. npx vitest run
+10. npm run build
+
+O validator não usa bypass e não reduz critérios de gates anteriores.
+
+HARD INVARIANT FINAL
+
+L2-DIMENSION-AGNOSTIC
+
+Camada 2:
+ZERO Three.js
+ZERO Babylon.js
+ZERO Rapier
+ZERO WebGL
+ZERO DOM
+ZERO Tauri
+ZERO Steamworks
+ZERO src/engine/**
+ZERO src/services/** a partir de src/domain
+ZERO src/app/** a partir de src/domain
+ZERO src/plugins/** a partir de src/domain
+
+Mesmo modelo semântico:
+2D
+2.5D
+3D
+headless
+
+DETERMINISMO FINAL
+Gameplay time:
+SimulationTick / DomainDuration
+
+RNG:
+xoshiro128ss-v1
+explicit seed
+named isolated streams
+snapshot/restore continuation
+
+Persistence:
+SnapshotCoordinator
+SnapshotBundleSnapshot
+DomainSaveGamePort
+
+CROSS-DOMAIN:
+explicit integrations
+versioned semantic invariants
+
+AUTORIDADE
+Após a Etapa 70, a Camada 2 é considerada concluída quando o validator oficial
+terminar com:
+
+ETAPA 70: PASS
+
+Mudanças futuras na Layer 2 devem manter verdes:
+- architecture boundaries;
+- portability;
+- performance;
+- cross-domain invariants;
+- documentation;
+- full TypeScript/tests/build.
+
+Nenhum arquivo ZIP faz parte do commit.
+
+FIM DA CAMADA 2
+Stage 70 é o gate terminal do roadmap atual da Layer 2.
