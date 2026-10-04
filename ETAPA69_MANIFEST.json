@@ -1,0 +1,87 @@
+{
+  "stage": "69",
+  "name": "Documentation",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51",
+    "52",
+    "53",
+    "54",
+    "55",
+    "56",
+    "57",
+    "58",
+    "59",
+    "60",
+    "61",
+    "62",
+    "63",
+    "64",
+    "65",
+    "66",
+    "67",
+    "68"
+  ],
+  "documentationCatalogVersion": "1.0.0",
+  "documents": [
+    "docs/layer2/README.md",
+    "docs/layer2/architecture.md",
+    "docs/layer2/domain-reference.md",
+    "docs/layer2/integration-contracts.md",
+    "docs/layer2/state-persistence-determinism.md",
+    "docs/layer2/performance-portability.md",
+    "docs/layer2/extension-guide.md",
+    "docs/layer2/stage-history.md"
+  ],
+  "coverage": {
+    "domainRoots": 18,
+    "crossDomainIntegrations": 7,
+    "crossDomainInvariants": 10,
+    "portabilityRules": 8,
+    "performanceRules": 7,
+    "standardSnapshotCodecs": 19,
+    "randomSnapshotCodecs": 2,
+    "stagesDocumented": "44-69"
+  },
+  "governance": [
+    "documentation catalog v1",
+    "required token coverage",
+    "all current src/domain roots must be documented",
+    "relative markdown links are validated",
+    "Stage 66/67/68 executable rule sets are documented",
+    "Stage 70 artifacts must remain absent"
+  ],
+  "regression": {
+    "documentationAudit": "PASS",
+    "stage68InvariantCoverage": "PASS",
+    "stage67PerformanceAudit": "PASS",
+    "stage66PortabilityGate": "PASS",
+    "strictTypeScriptLayer2": "PASS"
+  },
+  "explicitlyDeferred": [
+    "Stage 70 FINAL LAYER 2 GATE",
+    "new gameplay behavior",
+    "new domain modules",
+    "new cross-domain integrations"
+  ],
+  "files": [
+    "docs/layer2/README.md",
+    "docs/layer2/architecture.md",
+    "docs/layer2/domain-reference.md",
+    "docs/layer2/extension-guide.md",
+    "docs/layer2/integration-contracts.md",
+    "docs/layer2/performance-portability.md",
+    "docs/layer2/stage-history.md",
+    "docs/layer2/state-persistence-determinism.md",
+    "scripts/architecture/lib/layer2-documentation-catalog-v1.mjs",
+    "scripts/architecture/stage69-audit-documentation.mjs",
+    "scripts/architecture/stage69-validate-documentation.mjs",
+    "tests/domain-documentation.test.ts"
+  ]
+}
