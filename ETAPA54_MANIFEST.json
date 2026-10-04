@@ -1,0 +1,74 @@
+{
+  "stage": "54",
+  "name": "Interaction / Affordances",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51",
+    "52",
+    "53"
+  ],
+  "roadmapSource": "Camada 2 roadmap stages 45-70",
+  "scope": {
+    "implemented": [
+      "InteractionId",
+      "InteractionIntent",
+      "InteractionActorRef",
+      "InteractionTargetRef",
+      "Affordance",
+      "InteractionRequirement",
+      "InteractionRequirementResolution",
+      "InteractionOutcome"
+    ],
+    "explicitlyDeferred": [
+      "ConditionEvaluator integration",
+      "Inventory integration",
+      "Dialogue integration",
+      "State mutation",
+      "DomainEvent emission",
+      "physical interaction detection",
+      "FactionId",
+      "FactionRelation",
+      "FactionMatrix",
+      "Reputation",
+      "Relationship"
+    ]
+  },
+  "interactionModel": {
+    "intent": "actor + semantic interaction + logical target",
+    "affordance": "target + supported interaction + opaque requirement tokens",
+    "requirement": "opaque semantic prerequisite resolved externally",
+    "outcome": [
+      "accepted",
+      "unsupported-interaction",
+      "requirements-unresolved",
+      "requirements-unsatisfied"
+    ]
+  },
+  "rules": [
+    "No coordinates, raycasts, colliders or transforms.",
+    "Accepted outcome means authorized, not executed.",
+    "Requirements do not duplicate Conditions.",
+    "Condition integration remains deferred to Stage 62.",
+    "No side effects on Inventory/Dialogue/State/Events.",
+    "Compatible with 2D, 2.5D, 3D and headless execution.",
+    "Stage 55 Relations/Factions is not anticipated."
+  ],
+  "files": [
+    "scripts/architecture/stage54-validate-interaction-affordances.mjs",
+    "src/domain/interaction/Affordance.ts",
+    "src/domain/interaction/InteractionId.ts",
+    "src/domain/interaction/InteractionIntent.ts",
+    "src/domain/interaction/InteractionOutcome.ts",
+    "src/domain/interaction/InteractionRequirement.ts",
+    "src/domain/interaction/README.txt",
+    "src/domain/interaction/index.ts",
+    "tests/domain-interaction-purity.test.ts",
+    "tests/domain-interaction.test.ts"
+  ]
+}

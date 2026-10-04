@@ -11,7 +11,7 @@ import {
 
 import {
   InputManager,
-} from "../src/engine/input/InputManager";
+} from "../src/engine/input/internal/InputManager";
 
 import {
   createInputPlugin,

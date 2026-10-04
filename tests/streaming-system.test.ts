@@ -7,19 +7,19 @@ import {
 
 import {
   DistanceLODManager,
-} from "../src/engine/streaming/DistanceLODManager";
+} from "../src/engine/streaming/internal/DistanceLODManager";
 
 import {
   WorldStreamingSectorManager,
-} from "../src/engine/streaming/WorldStreamingSectorManager";
+} from "../src/engine/streaming/internal/WorldStreamingSectorManager";
 
 import {
   HLODBuilder,
-} from "../src/engine/streaming/HLODBuilder";
+} from "../src/engine/streaming/internal/HLODBuilder";
 
 import {
   StreamingWorkerPool,
-} from "../src/engine/streaming/StreamingWorkerPool";
+} from "../src/engine/streaming/internal/StreamingWorkerPool";
 
 import {
   createStreamingPlugin,

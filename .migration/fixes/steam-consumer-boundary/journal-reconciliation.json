@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "kind": "post-stage-journal-reconciliation",
+  "id": "steam-consumer-boundary-journal-reconciliation",
+  "status": "completed",
+  "completedAtUtc": "2026-10-04T03:42:26.668Z",
+  "target": "src/engine/net/internal/SteamP2PTransport.ts",
+  "sourceFixReport": ".migration/fixes/steam-consumer-boundary/report.json",
+  "sourceFixBeforeSha256": "7d8db18ed4a3708e17ab2f334ca32c31c83950db2f366f4d0e66bddd1dd5cd7d",
+  "fixedSourceSha256": "3b69e161e9130677713c1fe5b7b4f43651efc0bd3eb8b6ee819e3599affdb7c8",
+  "fixedSourceBytes": 5006,
+  "stage13": {
+    "journal": ".migration/stage13/rewrite-journal.json",
+    "operationSequence": 148,
+    "previousExpectedSha256": "7d8db18ed4a3708e17ab2f334ca32c31c83950db2f366f4d0e66bddd1dd5cd7d",
+    "reconciledExpectedSha256": "3b69e161e9130677713c1fe5b7b4f43651efc0bd3eb8b6ee819e3599affdb7c8",
+    "reconciledExpectedBytes": 5006,
+    "reconciledAfterBackup": ".migration/fixes/steam-consumer-boundary/SteamP2PTransport.reconciled-after.ts",
+    "operationsIdentitySha256": "4679beb5612acc532b141200f269fb208aa9ab7c48147698a7bf16f531ec0770"
+  },
+  "global": {
+    "journal": ".migration/v20-journal.json",
+    "schemaVersion": 5,
+    "totalOperations": 247,
+    "operationsIdentitySha256": "15eb3a50ff45cf89ea3e9314ef53a47abc1c06647e7cd94ba66fc5c86f2d1208"
+  },
+  "rollbackDryRun": {
+    "command": "node scripts/architecture/rollback-migration.mjs --dry-run",
+    "passed": true
+  },
+  "protectedDigest": {
+    "before": "cf440bcc30fc6f3a55c7217d26ec3538891fce252be6bc0ab760663a837ca2a9",
+    "after": "cf440bcc30fc6f3a55c7217d26ec3538891fce252be6bc0ab760663a837ca2a9"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "stage": "48",
+  "name": "Domain Time",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47"
+  ],
+  "roadmapSource": "Camada 2 roadmap stages 45-70",
+  "scope": {
+    "implemented": [
+      "SimulationTick",
+      "DomainDuration",
+      "SimulationTimer",
+      "TimerSnapshot"
+    ],
+    "explicitlyDeferred": [
+      "DomainEventId",
+      "DomainEventTypeId",
+      "DomainEvent",
+      "DomainEventMetadata",
+      "DomainEventBatch"
+    ]
+  },
+  "timeModel": {
+    "simulationTick": "safe integer >= 0",
+    "domainDuration": "safe integer ticks >= 0",
+    "timerDuration": "strictly > 0",
+    "timerStatus": [
+      "idle",
+      "running",
+      "paused",
+      "completed"
+    ],
+    "timeSource": "always supplied externally"
+  },
+  "rules": [
+    "No Date.now/performance.now/requestAnimationFrame or wall-clock reads.",
+    "No direct GameLoop import.",
+    "SimulationTimer advance mutates numeric state in-place.",
+    "Snapshots are allocated only on explicit request.",
+    "ClockPort remains separate for civil/application timestamps.",
+    "Compatible with 2D, 2.5D, 3D and headless execution.",
+    "Stage 49 Domain Events is not anticipated."
+  ],
+  "files": [
+    "scripts/architecture/stage48-validate-domain-time.mjs",
+    "src/domain/time/DomainDuration.ts",
+    "src/domain/time/README.txt",
+    "src/domain/time/SimulationTick.ts",
+    "src/domain/time/SimulationTimer.ts",
+    "src/domain/time/TimerSnapshot.ts",
+    "src/domain/time/index.ts",
+    "tests/domain-time-purity.test.ts",
+    "tests/domain-time.test.ts"
+  ]
+}

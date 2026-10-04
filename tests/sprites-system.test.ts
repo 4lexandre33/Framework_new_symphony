@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import * as THREE from "three";
-import { TextureAtlasParser } from "../src/engine/sprites/TextureAtlasParser";
-import { PixelArtScaler } from "../src/engine/sprites/PixelArtScaler";
-import { ParallaxController } from "../src/engine/sprites/ParallaxController";
+import { TextureAtlasParser } from "../src/engine/sprites/internal/TextureAtlasParser";
+import { PixelArtScaler } from "../src/engine/sprites/internal/PixelArtScaler";
+import { ParallaxController } from "../src/engine/sprites/internal/ParallaxController";
 import type { TextureAtlasJSON } from "../src/contracts/sprites/types";
 
 describe("Camada de Sprites 2D, Tilemaps & Pixel Art (game.sprites)", () => {

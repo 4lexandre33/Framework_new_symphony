@@ -1,0 +1,74 @@
+{
+  "stage": "50",
+  "name": "Conditions / Predicates",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47",
+    "48",
+    "49"
+  ],
+  "roadmapSource": "Camada 2 roadmap stages 45-70",
+  "scope": {
+    "implemented": [
+      "ConditionId",
+      "ComparisonOperator",
+      "ConditionExpression",
+      "ConditionDefinition",
+      "ConditionEvaluator"
+    ],
+    "explicitlyDeferred": [
+      "DomainTag",
+      "TagSet",
+      "StatusEffect",
+      "StatusEffectInstance",
+      "StatusEffectSet",
+      "Interaction/Affordances"
+    ]
+  },
+  "expressionKinds": [
+    "literal",
+    "state-exists",
+    "state-compare",
+    "all",
+    "any",
+    "not"
+  ],
+  "comparisonOperators": [
+    "equals",
+    "not-equals",
+    "greater-than",
+    "greater-or-equal",
+    "less-than",
+    "less-or-equal",
+    "contains"
+  ],
+  "evaluation": {
+    "context": "StateStore only",
+    "result": "DomainResult<boolean, ConditionEvaluationError>",
+    "shortCircuit": "all/any",
+    "missingStateCompare": "false",
+    "incompatibleComparison": "explicit DomainResult failure"
+  },
+  "rules": [
+    "Conditions are immutable data, never closures or scripts.",
+    "Condition tree rejects cycles and empty all/any groups.",
+    "Maximum condition depth is 128.",
+    "No direct TagSet integration before Stage 61.",
+    "No Core/engine/services/app/plugins dependencies.",
+    "Compatible with 2D, 2.5D, 3D and headless execution.",
+    "Stage 51 Status Effects is not anticipated."
+  ],
+  "files": [
+    "scripts/architecture/stage50-validate-conditions.mjs",
+    "src/domain/evaluation/ComparisonOperator.ts",
+    "src/domain/evaluation/ConditionEvaluator.ts",
+    "src/domain/evaluation/ConditionExpression.ts",
+    "src/domain/evaluation/ConditionId.ts",
+    "src/domain/evaluation/README.txt",
+    "src/domain/evaluation/index.ts",
+    "tests/domain-conditions-purity.test.ts",
+    "tests/domain-conditions.test.ts"
+  ]
+}

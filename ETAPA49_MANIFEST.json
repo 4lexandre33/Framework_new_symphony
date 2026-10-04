@@ -1,0 +1,67 @@
+{
+  "stage": "49",
+  "name": "Domain Events",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47",
+    "48"
+  ],
+  "roadmapSource": "Camada 2 roadmap stages 45-70",
+  "scope": {
+    "implemented": [
+      "DomainEventId",
+      "DomainEventTypeId",
+      "DomainEventMetadata",
+      "DomainEventSourceRef",
+      "DomainEvent",
+      "DomainEventBatch"
+    ],
+    "explicitlyDeferred": [
+      "ConditionId",
+      "ConditionExpression",
+      "ConditionEvaluator",
+      "ComparisonOperator",
+      "Core/EventBus adapter",
+      "event dispatch/publish infrastructure"
+    ]
+  },
+  "eventModel": {
+    "identity": "DomainEventId",
+    "type": "DomainEventTypeId",
+    "ordering": "safe integer sequence",
+    "time": "SimulationTick",
+    "source": "optional opaque DomainEventSourceRef",
+    "payload": "typed StateValue-compatible serializable payload"
+  },
+  "batchRules": [
+    "Empty batch is valid.",
+    "Duplicate event IDs are rejected.",
+    "Duplicate sequences are rejected.",
+    "Events are sorted by sequence.",
+    "SimulationTick may stay equal but may not regress across sequence.",
+    "Sequence gaps are allowed.",
+    "Batch never dispatches or publishes."
+  ],
+  "rules": [
+    "DomainEvent is semantic data, not Core EventBus infrastructure.",
+    "Payload is deep-cloned/deep-frozen at creation.",
+    "No implicit sequence/tick/id generation.",
+    "No EventBus, DOM event, transport or networking dependency.",
+    "Compatible with 2D, 2.5D, 3D and headless execution.",
+    "Stage 50 Conditions is not anticipated."
+  ],
+  "files": [
+    "scripts/architecture/stage49-validate-domain-events.mjs",
+    "src/domain/events/DomainEvent.ts",
+    "src/domain/events/DomainEventBatch.ts",
+    "src/domain/events/DomainEventId.ts",
+    "src/domain/events/DomainEventMetadata.ts",
+    "src/domain/events/DomainEventTypeId.ts",
+    "src/domain/events/README.txt",
+    "src/domain/events/index.ts",
+    "tests/domain-events-purity.test.ts",
+    "tests/domain-events.test.ts"
+  ]
+}

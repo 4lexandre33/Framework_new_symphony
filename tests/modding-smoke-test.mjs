@@ -8,11 +8,11 @@ const successes = [];
 const REQUIRED_MODDING_FILES = [
   "src/contracts/modding/types.ts",
   "src/tokens/modding.ts",
-  "src/engine/modding/AssetOverrideRegistry.ts",
-  "src/engine/modding/DynamicPluginLoader.ts",
-  "src/engine/modding/ScriptSandbox.ts",
-  "src/engine/modding/SteamWorkshopDriver.ts",
-  "src/engine/modding/TauriModdingDriver.ts",
+  "src/engine/modding/internal/AssetOverrideRegistry.ts",
+  "src/engine/modding/internal/DynamicPluginLoader.ts",
+  "src/engine/modding/internal/ScriptSandbox.ts",
+  "src/engine/modding/internal/SteamWorkshopDriver.ts",
+  "src/engine/modding/internal/TauriModdingDriver.ts",
   "src-tauri/src/modding.rs",
   "src-tauri/src/lib.rs",
   "src/plugins/modding/plugin.ts",
@@ -63,37 +63,37 @@ console.log("============================================================\n");
 for (const file of REQUIRED_MODDING_FILES) checkFile(file);
 
 checkContains(
-  "src/engine/modding/AssetOverrideRegistry.ts",
+  "src/engine/modding/internal/AssetOverrideRegistry.ts",
   "list?.[0]?.realPath ?? null",
   "resolve o primeiro override da lista ordenada",
 );
 checkContains(
-  "src/engine/modding/DynamicPluginLoader.ts",
+  "src/engine/modding/internal/DynamicPluginLoader.ts",
   "Dependência cíclica entre mods",
   "detecta ciclos de dependência",
 );
 checkContains(
-  "src/engine/modding/DynamicPluginLoader.ts",
+  "src/engine/modding/internal/DynamicPluginLoader.ts",
   "Dependência ausente",
   "detecta dependências ausentes",
 );
 checkContains(
-  "src/engine/modding/DynamicPluginLoader.ts",
+  "src/engine/modding/internal/DynamicPluginLoader.ts",
   "satisfies(",
   "valida versões semanticamente",
 );
 checkContains(
-  "src/engine/modding/ScriptSandbox.ts",
+  "src/engine/modding/internal/ScriptSandbox.ts",
   "this.executionTimer = setTimeout",
   "aplica limite real de execução do sandbox",
 );
 checkContains(
-  "src/engine/modding/ScriptSandbox.ts",
+  "src/engine/modding/internal/ScriptSandbox.ts",
   "URL.revokeObjectURL",
   "libera Blob URL do worker",
 );
 checkDoesNotContain(
-  "src/engine/modding/TauriModdingDriver.ts",
+  "src/engine/modding/internal/TauriModdingDriver.ts",
   "published_sim_",
   "não mascara falha do backend com publicação simulada",
 );

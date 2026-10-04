@@ -59,3 +59,7 @@ export * from "./kernel-types";
 // Daqui saem `Plugin`, `PluginContext`, `PluginManifest`,
 // `KernelError`, `CapabilityToken`, `Envelope`, `Schema`, etc.
 export * from "./contracts";
+// ── Utilitário SemVer público ────────────────────────────────────────────
+// Exposto de forma explícita para validação de ranges de plugins/modding.
+// Não transforma `internal/*` em API pública genérica.
+export { satisfies } from "./internal/semver";

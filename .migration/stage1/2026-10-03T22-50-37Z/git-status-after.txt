@@ -1,0 +1,10 @@
+## main
+?? .migration/stage1/2026-10-03T22-50-37Z/commands/01-tsc.meta.json
+?? .migration/stage1/2026-10-03T22-50-37Z/commands/02-vitest.meta.json
+?? .migration/stage1/2026-10-03T22-50-37Z/commands/03-cargo-check.meta.json
+?? .migration/stage1/2026-10-03T22-50-37Z/commands/04-build.meta.json
+?? .migration/stage1/2026-10-03T22-50-37Z/commands/05-agents.meta.json
+?? .migration/stage1/2026-10-03T22-50-37Z/git-status-before.txt
+?? .migration/stage1/2026-10-03T22-50-37Z/stage0-anchor.json
+?? projeto1_stage1_functional_baseline.zip
+?? scripts/architecture/stage1-functional-baseline.mjs

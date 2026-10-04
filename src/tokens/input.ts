@@ -1,4 +1,4 @@
-import { defineCapability } from "../core/contracts/capability-token";
+import { defineCapability } from "@core";
 import type { InputDeviceType, Vector2D, InputBindingMap } from "../contracts/input/types";
 
 export interface InputApi {

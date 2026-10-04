@@ -34,10 +34,10 @@ console.log("============================================================\n");
 // 1. Arquivos da camada de Assets
 checkFileExists("src/contracts/assets/types.ts");
 checkFileExists("src/tokens/assets.ts");
-checkFileExists("src/engine/assets/AssetCache.ts");
-checkFileExists("src/engine/assets/GLTFLoaderService.ts");
-checkFileExists("src/engine/assets/TextureLoaderService.ts");
-checkFileExists("src/engine/assets/AudioLoaderService.ts");
+checkFileExists("src/engine/assets/internal/AssetCache.ts");
+checkFileExists("src/engine/assets/internal/GLTFLoaderService.ts");
+checkFileExists("src/engine/assets/internal/TextureLoaderService.ts");
+checkFileExists("src/engine/assets/internal/AudioLoaderService.ts");
 checkFileExists("src/plugins/assets/plugin.ts");
 
 // 2. Validação dos Contratos e Tipos
@@ -49,11 +49,11 @@ checkFileContains("src/tokens/assets.ts", "AssetsToken", "Capability Token Asset
 checkFileContains("src/tokens/assets.ts", "releaseAsset", "Método releaseAsset na interface AssetsApi");
 
 // 4. Validação dos Serviços de Carregamento e VRAM
-checkFileContains("src/engine/assets/AssetCache.ts", "refCount", "Contagem de Referências no AssetCache");
-checkFileContains("src/engine/assets/AssetCache.ts", "disposeResource", "Descarte automático de VRAM/GPU no AssetCache");
-checkFileContains("src/engine/assets/GLTFLoaderService.ts", "GLTFLoader", "Uso do GLTFLoader do Three.js");
-checkFileContains("src/engine/assets/TextureLoaderService.ts", "SRGBColorSpace", "Configuração de ColorSpace na Textura");
-checkFileContains("src/engine/assets/AudioLoaderService.ts", "decodeAudioData", "Decodificação de áudio via Web Audio API");
+checkFileContains("src/engine/assets/internal/AssetCache.ts", "refCount", "Contagem de Referências no AssetCache");
+checkFileContains("src/engine/assets/internal/AssetCache.ts", "disposeResource", "Descarte automático de VRAM/GPU no AssetCache");
+checkFileContains("src/engine/assets/internal/GLTFLoaderService.ts", "GLTFLoader", "Uso do GLTFLoader do Three.js");
+checkFileContains("src/engine/assets/internal/TextureLoaderService.ts", "SRGBColorSpace", "Configuração de ColorSpace na Textura");
+checkFileContains("src/engine/assets/internal/AudioLoaderService.ts", "decodeAudioData", "Decodificação de áudio via Web Audio API");
 
 // 5. Validação do Plugin Bridge
 checkFileContains("src/plugins/assets/plugin.ts", "AssetsToken", "Provedor da capability AssetsToken no plugin");

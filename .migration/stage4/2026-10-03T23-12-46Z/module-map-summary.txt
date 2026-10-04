@@ -1,0 +1,57 @@
+============================================================
+  PROJETO1 — ETAPA 4: MODULE MAP CANÔNICO
+============================================================
+
+Run ID: 2026-10-03T23-12-46Z
+Module Map Schema: 1
+Migração arquitetural: v20
+Etapa 3 usada: 2026-10-03T23-03-19Z
+Tree SHA-256 da Etapa 3: 494a49015ffb5b28b104fca79a634f8f81bbeda6ec15a71c039f906bef60781f
+
+Módulos funcionais: 20
+Runtimes fundamentais: 3
+Módulos canônicos first-party: 23
+Tooling plugins: 1
+Plugins experimentais/orphaned: 1
+Capabilities pertencentes ao mapa: 24
+
+Camadas funcionais:
+  01 — steam (game.steam)
+  02 — input (game.input)
+  03 — assets (game.assets)
+  04 — physics (game.physics)
+  05 — storage (game.storage)
+  06 — world (game.world)
+  07 — ui (game.ui)
+  08 — anim (game.anim)
+  09 — sprites (game.sprites)
+  10 — audio (game.audio)
+  11 — camera (game.camera)
+  12 — ai (game.ai)
+  13 — vfx (game.vfx)
+  14 — terrain (game.terrain)
+  15 — scripting (game.scripting)
+  16 — streaming (game.streaming)
+  17 — overlay (game.overlay)
+  18 — security (game.security)
+  19 — modding (game.modding)
+  20 — monetization (game.monetization)
+
+Runtimes fundamentais:
+  - game-loop (game.loop)
+  - render (game.render)
+  - net (game.net)
+
+Steam ownership adicional: game.steam.net pertence ao módulo steam.
+game.debug permanece tooling e participa do bootstrap.
+game.player permanece experimental/orphaned e fora do bootstrap canônico.
+
+Engine modules presentes na Etapa 3: 21
+Plugins presentes na Etapa 3: 25
+Tokens presentes na Etapa 3: 24
+Áreas de contracts presentes na Etapa 3: 23
+
+scripts/architecture/module-map.mjs é a fonte única canônica.
+module-map.snapshot.json é apenas cópia de auditoria da execução da Etapa 4.
+Esta etapa não move implementações e não cria ainda public/internal.
+

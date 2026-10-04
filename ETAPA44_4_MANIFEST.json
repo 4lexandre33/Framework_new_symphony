@@ -1,0 +1,65 @@
+{
+  "stage": "44.4",
+  "name": "DialogueGraph + QuestGoal dimension-agnostic",
+  "requires": [
+    "44.0",
+    "44.1",
+    "44.2",
+    "44.3"
+  ],
+  "scope": {
+    "implemented": [
+      "DialogueGraph",
+      "QuestGoal"
+    ],
+    "explicitlyDeferred": [
+      "SaveLoadUseCase",
+      "ModdingAppService",
+      "GameFlowFSM"
+    ]
+  },
+  "dialogueGraph": {
+    "nodeKinds": [
+      "line",
+      "choice",
+      "branch",
+      "end"
+    ],
+    "cycles": "allowed",
+    "validation": [
+      "non-empty graph",
+      "unique node ids",
+      "entry exists",
+      "valid text",
+      "choice nodes non-empty",
+      "unique choice ids per node",
+      "all targets exist",
+      "all nodes reachable from entry"
+    ],
+    "conditions": "opaque DialogueConditionId evaluated by upper layer"
+  },
+  "questGoal": {
+    "lifecycle": [
+      "inactive -> active -> completed",
+      "inactive -> active -> failed"
+    ],
+    "progress": "safe integer, saturated at requiredProgress",
+    "target": "opaque QuestGoalTargetId",
+    "restore": "QuestGoal.fromSnapshot with consistency validation"
+  },
+  "rules": [
+    "Compatível com 2D, 2.5D e 3D.",
+    "Sem UI, áudio, scripting concreto, renderer, física ou plataforma no domínio.",
+    "DialogueGraph é definição imutável; QuestGoal é estado event-driven.",
+    "Etapas 44.5+ não são antecipadas."
+  ],
+  "files": [
+    "scripts/architecture/stage44-4-validate-narrative.mjs",
+    "src/domain/narrative/DialogueGraph.ts",
+    "src/domain/narrative/QuestGoal.ts",
+    "src/domain/narrative/README.txt",
+    "src/domain/narrative/index.ts",
+    "tests/domain-dialogue-graph.test.ts",
+    "tests/domain-quest-goal.test.ts"
+  ]
+}

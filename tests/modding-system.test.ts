@@ -4,10 +4,10 @@ import {
   expect,
   it,
 } from "vitest";
-import { AssetOverrideRegistry } from "../src/engine/modding/AssetOverrideRegistry";
-import { DynamicPluginLoader } from "../src/engine/modding/DynamicPluginLoader";
-import { ScriptSandbox } from "../src/engine/modding/ScriptSandbox";
-import { SteamWorkshopDriver } from "../src/engine/modding/SteamWorkshopDriver";
+import { AssetOverrideRegistry } from "../src/engine/modding/internal/AssetOverrideRegistry";
+import { DynamicPluginLoader } from "../src/engine/modding/internal/DynamicPluginLoader";
+import { ScriptSandbox } from "../src/engine/modding/internal/ScriptSandbox";
+import { SteamWorkshopDriver } from "../src/engine/modding/internal/SteamWorkshopDriver";
 import { createModdingPlugin } from "../src/plugins/modding/plugin";
 import { ModdingToken } from "../src/tokens/modding";
 

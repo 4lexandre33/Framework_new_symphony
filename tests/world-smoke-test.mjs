@@ -6,12 +6,12 @@ const ROOT_DIR = process.cwd();
 const REQUIRED_WORLD_FILES = [
   "src/contracts/world/types.ts",
   "src/tokens/world.ts",
-  "src/engine/world/SceneManager.ts",
-  "src/engine/world/EntityManager.ts",
-  "src/engine/world/SpatialGrid.ts",
-  "src/engine/world/OctreeManager.ts",
-  "src/engine/world/WorldStateSerializer.ts",
-  "src/engine/world/SaveSystem.ts",
+  "src/engine/world/internal/SceneManager.ts",
+  "src/engine/world/internal/EntityManager.ts",
+  "src/engine/world/internal/SpatialGrid.ts",
+  "src/engine/world/internal/OctreeManager.ts",
+  "src/engine/world/internal/WorldStateSerializer.ts",
+  "src/engine/world/internal/SaveSystem.ts",
   "src/plugins/world/plugin.ts",
   "tests/world-system.test.ts",
 ];

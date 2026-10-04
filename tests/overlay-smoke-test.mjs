@@ -8,9 +8,9 @@ const successes = [];
 const REQUIRED_OVERLAY_FILES = [
   "src/contracts/overlay/types.ts",
   "src/tokens/overlay.ts",
-  "src/engine/overlay/RaycastHitTestPassthrough.ts",
-  "src/engine/overlay/OverlayWindowManager.ts",
-  "src/engine/overlay/TauriOverlayDriver.ts",
+  "src/engine/overlay/internal/RaycastHitTestPassthrough.ts",
+  "src/engine/overlay/internal/OverlayWindowManager.ts",
+  "src/engine/overlay/internal/TauriOverlayDriver.ts",
   "src-tauri/src/overlay.rs",
   "src-tauri/src/lib.rs",
   "src/plugins/overlay/plugin.ts",
@@ -48,7 +48,7 @@ console.log("============================================================\n");
 for (const file of REQUIRED_OVERLAY_FILES) checkFile(file);
 
 checkContains(
-  "src/engine/overlay/TauriOverlayDriver.ts",
+  "src/engine/overlay/internal/TauriOverlayDriver.ts",
   'invoke<TaskbarBounds>("overlay_dock_to_taskbar"',
   "driver envia posição de dock ao backend Tauri",
 );

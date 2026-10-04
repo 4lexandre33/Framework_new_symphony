@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { AudioMixer } from "../src/engine/audio/AudioMixer";
-import { PositionalAudio3D } from "../src/engine/audio/PositionalAudio3D";
-import { MusicCrossfader } from "../src/engine/audio/MusicCrossfader";
+import { AudioMixer } from "../src/engine/audio/internal/AudioMixer";
+import { PositionalAudio3D } from "../src/engine/audio/internal/PositionalAudio3D";
+import { MusicCrossfader } from "../src/engine/audio/internal/MusicCrossfader";
 
 // ── POLYFILL / MOCK DE WEB AUDIO API PARA AMBIENTE NODE.JS ────────────────
 class MockAudioParam {

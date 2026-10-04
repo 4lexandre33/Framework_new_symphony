@@ -1,0 +1,36 @@
+============================================================
+  PROJETO1 — ETAPA 1: BASELINE FUNCIONAL COMPLETO
+============================================================
+
+Run ID: 2026-10-03T22-50-37Z
+Início: 2026-10-03T22:50:37.949Z
+Fim: 2026-10-03T22:51:25.514Z
+Raiz: C:\Users\Alexandre\projeto1
+Branch: main
+HEAD: fcb03848fd1d36081ce72ef689e3ba4bfd58f857
+Baseline Etapa 0: 2026-10-03T22-44-28Z
+Status geral: PASSED
+
+Checks:
+  [PASS] TypeScript
+         npx tsc --noEmit
+         exit=0 timeout=false duração=4823ms
+  [PASS] Vitest
+         npx vitest run
+         exit=0 timeout=false duração=7565ms
+  [PASS] Cargo Check
+         cargo check --manifest-path src-tauri/Cargo.toml
+         exit=0 timeout=false duração=25433ms
+  [PASS] Build
+         npm run build
+         exit=0 timeout=false duração=8582ms
+  [PASS] AGENTS Guardrail
+         node agents.mjs
+         exit=0 timeout=false duração=374ms
+
+Integridade Etapa 0 antes: OK
+Integridade Etapa 0 depois: OK
+
+Classificação: baseline funcional pré-migração. Falhas registradas aqui
+são estado de referência e não devem ser atribuídas à reestruturação futura.
+

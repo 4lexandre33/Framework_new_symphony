@@ -7,12 +7,12 @@ const ROOT_DIR =
 const REQUIRED_TERRAIN_FILES = [
   "src/contracts/terrain/types.ts",
   "src/tokens/terrain.ts",
-  "src/engine/terrain/PerlinNoiseService.ts",
-  "src/engine/terrain/BiomeEvaluator.ts",
-  "src/engine/terrain/GreedyMesher.ts",
-  "src/engine/terrain/VoxelChunkManager.ts",
-  "src/engine/terrain/ProceduralWorkerPool.ts",
-  "src/engine/terrain/terrain.worker.ts",
+  "src/engine/terrain/internal/PerlinNoiseService.ts",
+  "src/engine/terrain/internal/BiomeEvaluator.ts",
+  "src/engine/terrain/internal/GreedyMesher.ts",
+  "src/engine/terrain/internal/VoxelChunkManager.ts",
+  "src/engine/terrain/internal/ProceduralWorkerPool.ts",
+  "src/engine/terrain/internal/terrain.worker.ts",
   "src/plugins/terrain/plugin.ts",
   "tests/terrain-system.test.ts",
 ];
@@ -210,25 +210,25 @@ function runSmokeTest() {
   );
 
   checkContains(
-    "src/engine/terrain/GreedyMesher.ts",
+    "src/engine/terrain/internal/GreedyMesher.ts",
     "new Int32Array",
     "GreedyMesher possui máscara para fusão de faces",
   );
 
   checkContains(
-    "src/engine/terrain/BiomeEvaluator.ts",
+    "src/engine/terrain/internal/BiomeEvaluator.ts",
     "reseed(",
     "BiomeEvaluator acompanha alterações de seed",
   );
 
   checkContains(
-    "src/engine/terrain/ProceduralWorkerPool.ts",
+    "src/engine/terrain/internal/ProceduralWorkerPool.ts",
     "./terrain.worker.ts",
     "WorkerPool referencia o Worker real de terreno",
   );
 
   checkContains(
-    "src/engine/terrain/terrain.worker.ts",
+    "src/engine/terrain/internal/terrain.worker.ts",
     "PerlinNoiseService",
     "Worker utiliza geração procedural baseada em seed",
   );

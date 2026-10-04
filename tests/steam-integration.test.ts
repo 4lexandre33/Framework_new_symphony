@@ -6,10 +6,9 @@ import {
   vi,
 } from "vitest";
 
-import {
-  SteamBridgeService,
-  createSteamPlugin,
-} from "../src/plugins/steam/plugin";
+import { SteamBridgeService } from "../src/engine/steam/internal/SteamBridgeService";
+
+import { createSteamPlugin } from "../src/plugins/steam/plugin";
 
 import {
   SteamToken,

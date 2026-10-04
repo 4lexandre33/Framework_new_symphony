@@ -5,9 +5,9 @@ import {
   it,
 } from "vitest";
 
-import { CrashReportDumper } from "../src/engine/security/CrashReportDumper";
-import { FrameProfiler } from "../src/engine/security/FrameProfiler";
-import { MemoryIntegrityGuard } from "../src/engine/security/MemoryIntegrityGuard";
+import { CrashReportDumper } from "../src/engine/security/internal/CrashReportDumper";
+import { FrameProfiler } from "../src/engine/security/internal/FrameProfiler";
+import { MemoryIntegrityGuard } from "../src/engine/security/internal/MemoryIntegrityGuard";
 import { securityManifest } from "../src/plugins/security/plugin";
 import { SecurityToken } from "../src/tokens/security";
 

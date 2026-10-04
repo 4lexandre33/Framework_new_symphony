@@ -47,7 +47,13 @@ export interface PluginSandbox {
 export interface PluginLifecycleHooks {
   onBoot?(ctx: import("./plugin-context").PluginContext): void | Promise<void>;
   onStop?(ctx: import("./plugin-context").PluginContext): void | Promise<void>;
+}/** Declara incompatibilidade com uma capability em determinada faixa semver. */
+export interface CapabilityConflict {
+  readonly id: string;
+  readonly range: string;
 }
+
+
 
 export interface PluginManifest {
   readonly id: string;
@@ -77,6 +83,7 @@ export interface PluginManifest {
   readonly capabilities?: {
     readonly provides?: readonly CapabilityProvision[];
     readonly consumes?: readonly CapabilityRequirement[];
+    readonly conflicts?: readonly CapabilityConflict[];
   };
 
   readonly configSchema?: ConfigSchema<Record<string, unknown>>;

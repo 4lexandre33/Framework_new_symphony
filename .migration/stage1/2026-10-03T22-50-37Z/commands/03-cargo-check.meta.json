@@ -1,0 +1,16 @@
+{
+  "id": "cargo-check",
+  "label": "Cargo Check",
+  "command": "cargo check --manifest-path src-tauri/Cargo.toml",
+  "startedAtUtc": "2026-10-03T22:50:50.732Z",
+  "finishedAtUtc": "2026-10-03T22:51:16.165Z",
+  "durationMs": 25433,
+  "timeoutMs": 1800000,
+  "passed": true,
+  "timedOut": false,
+  "exitCode": 0,
+  "signal": null,
+  "spawnError": null,
+  "stdoutFile": "commands/03-cargo-check.stdout.log",
+  "stderrFile": "commands/03-cargo-check.stderr.log"
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { PhysicsWorld } from "../src/engine/physics/PhysicsWorld";
+import { PhysicsWorld } from "../src/engine/physics/internal/PhysicsWorld";
 import type { RigidBodyDescriptor, ColliderDescriptor } from "../src/contracts/physics/types";
 
 describe("Camada de Física - Rapier WASM (PhysicsWorld)", () => {

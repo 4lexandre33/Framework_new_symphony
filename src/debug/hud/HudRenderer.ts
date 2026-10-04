@@ -4,9 +4,13 @@ import { DebugHud } from "./DebugHud";
 import { FpsMonitor } from "./FpsMonitor";
 import { InputDiagnostics } from "./InputDiagnostics";
 
+const DIAGNOSTIC_REFRESH_INTERVAL_MS = 500;
+
 export class HudRenderer {
   private animationFrameId: number | null = null;
   private eventsBound = false;
+  private lastDiagnosticRefreshMs = 0;
+  private readonly lastDiagnosticMessages = new Map<string, string>();
 
   private unbindPointerLockButton: (() => void) | null = null;
   private unbindClearVramButton: (() => void) | null = null;
@@ -28,6 +32,8 @@ export class HudRenderer {
 
     this.bindEvents();
     this.inputDiagnostics.reset();
+    this.lastDiagnosticMessages.clear();
+    this.lastDiagnosticRefreshMs = 0;
     this.fpsMonitor.reset(performance.now());
 
     this.animationFrameId = requestAnimationFrame(this.renderFrame);
@@ -51,24 +57,29 @@ export class HudRenderer {
       this.hud.setFps(fps.fps, fps.frameTimeMs, fps.totalFrames);
     }
 
-    this.updateSteamHud();
     this.updateInputHud();
-    this.updateAssetsHud();
-    this.updatePhysicsHud();
-    this.updateStorageHud();
-    this.updateWorldHud();
-    this.updateUIHud();
-    this.updateAudioHud();
-    this.updateCameraHud();
-    this.updateAiHud();
-    this.updateVfxHud();
-    this.updateTerrainHud();
-    this.updateScriptingHud();
-    this.updateStreamingHud();
-    this.updateOverlayHud();
-    this.updateSecurityHud();
-    this.updateModdingHud();
-    this.updateMonetizationHud();
+
+    if (now - this.lastDiagnosticRefreshMs >= DIAGNOSTIC_REFRESH_INTERVAL_MS) {
+      this.lastDiagnosticRefreshMs = now;
+
+      this.updateSteamHud();
+      this.updateAssetsHud();
+      this.updatePhysicsHud();
+      this.updateStorageHud();
+      this.updateWorldHud();
+      this.updateUIHud();
+      this.updateAudioHud();
+      this.updateCameraHud();
+      this.updateAiHud();
+      this.updateVfxHud();
+      this.updateTerrainHud();
+      this.updateScriptingHud();
+      this.updateStreamingHud();
+      this.updateOverlayHud();
+      this.updateSecurityHud();
+      this.updateModdingHud();
+      this.updateMonetizationHud();
+    }
 
     this.animationFrameId = requestAnimationFrame(this.renderFrame);
   };
@@ -117,7 +128,8 @@ export class HudRenderer {
 
     const stats = physics.getStats();
     if (stats.isWasmLoaded) {
-      this.hud.appendLog(
+      this.logDiagnosticIfChanged(
+        "physics",
         `[HUD Physics] Rapier WASM | 60 Ticks/s | Corpos: ${stats.rigidBodyCount} | Colisores: ${stats.colliderCount}`
       );
     }
@@ -127,14 +139,18 @@ export class HudRenderer {
     const storage = this.services.storage;
     if (!storage) return;
 
-    this.hud.appendLog(`[HUD Storage] Driver Ativo: ${storage.activeDriver}`);
+    this.logDiagnosticIfChanged(
+      "storage",
+      `[HUD Storage] Driver Ativo: ${storage.activeDriver}`
+    );
   }
 
   private updateWorldHud(): void {
     const world = this.services.world;
     if (!world) return;
 
-    this.hud.appendLog(
+    this.logDiagnosticIfChanged(
+      "world",
       `[HUD World] Cena: ${world.currentSceneId || "Nenhuma"} | Entidades ECS: ${world.activeEntityCount}`
     );
   }
@@ -143,7 +159,8 @@ export class HudRenderer {
     const ui = this.services.ui;
     if (!ui) return;
 
-    this.hud.appendLog(
+    this.logDiagnosticIfChanged(
+      "ui",
       `[HUD UI] Tela: ${ui.currentScreen} | Modais: ${ui.activeModalCount} | Idioma: ${ui.currentLocale}`
     );
   }
@@ -153,7 +170,10 @@ export class HudRenderer {
     if (!audio) return;
 
     const master = audio.getChannelVolume("master");
-    this.hud.appendLog(`[HUD Audio] Master: ${(master * 100).toFixed(0)}%`);
+    this.logDiagnosticIfChanged(
+      "audio",
+      `[HUD Audio] Master: ${(master * 100).toFixed(0)}%`
+    );
   }
 
   private updateCameraHud(): void {
@@ -162,7 +182,8 @@ export class HudRenderer {
 
     const snapshot = camera.getCurrentCameraSnapshot();
     if (snapshot) {
-      this.hud.appendLog(
+      this.logDiagnosticIfChanged(
+        "camera",
         `[HUD Camera] Ativa: ${camera.getActiveCameraId() || "Nenhuma"} | Haste: ${snapshot.currentArmLength.toFixed(2)}m`
       );
     }
@@ -170,7 +191,10 @@ export class HudRenderer {
 
   private updateAiHud(): void {
     if (this.services.ai) {
-      this.hud.appendLog(`[HUD AI] NavMesh & Behavior Trees | Status: Ativo`);
+      this.logDiagnosticIfChanged(
+        "ai",
+        "[HUD AI] NavMesh & Behavior Trees | Status: Ativo"
+      );
     }
   }
 
@@ -178,7 +202,8 @@ export class HudRenderer {
     const vfx = this.services.vfx;
     if (!vfx) return;
 
-    this.hud.appendLog(
+    this.logDiagnosticIfChanged(
+      "vfx",
       `[HUD VFX] Partículas: ${vfx.getActiveParticleCount()} | Decals: ${vfx.getActiveDecalCount()}`
     );
   }
@@ -187,7 +212,8 @@ export class HudRenderer {
     const terrain = this.services.terrain;
     if (!terrain) return;
 
-    this.hud.appendLog(
+    this.logDiagnosticIfChanged(
+      "terrain",
       `[HUD Terrain] Chunks Voxels: ${terrain.getActiveChunkCount()} | Seed: ${terrain.getSeed()}`
     );
   }
@@ -196,7 +222,8 @@ export class HudRenderer {
     const scripting = this.services.scripting;
     if (!scripting) return;
 
-    this.hud.appendLog(
+    this.logDiagnosticIfChanged(
+      "scripting",
       `[HUD Scripting] Cutscene: ${scripting.isCutscenePlaying() ? "EM EXECUÇÃO" : "Inativa"}`
     );
   }
@@ -207,7 +234,8 @@ export class HudRenderer {
 
     const active = streaming.getActiveSectors().length;
     const hlod = streaming.getHLODStats();
-    this.hud.appendLog(
+    this.logDiagnosticIfChanged(
+      "streaming",
       `[HUD Streaming] Setores VRAM: ${active} | HLOD Saved Calls: ${hlod.drawCallsSaved}`
     );
   }
@@ -216,7 +244,8 @@ export class HudRenderer {
     const overlay = this.services.overlay;
     if (!overlay) return;
 
-    this.hud.appendLog(
+    this.logDiagnosticIfChanged(
+      "overlay",
       `[HUD Overlay] Modo: ${overlay.currentMode} | Passthrough: ${overlay.isPassthroughActive ? "SIM" : "NÃO"}`
     );
   }
@@ -226,7 +255,8 @@ export class HudRenderer {
     if (!security) return;
 
     const metrics = security.getProfilerSnapshot();
-    this.hud.appendLog(
+    this.logDiagnosticIfChanged(
+      "security",
       `[HUD Security/Profiler] FPS Medido: ${metrics.fps} | Frame: ${metrics.totalFrameTimeMs.toFixed(2)}ms | Subsistemas: ${metrics.subsystems.length}`
     );
   }
@@ -236,7 +266,8 @@ export class HudRenderer {
     if (!modding) return;
 
     const loaded = modding.getLoadedMods().length;
-    this.hud.appendLog(
+    this.logDiagnosticIfChanged(
+      "modding",
       `[HUD Modding/Steam Workshop] Mods Ativos: ${loaded} | Override Engine Status: Pronta`
     );
   }
@@ -248,9 +279,20 @@ export class HudRenderer {
     const wallet = monetization.getWalletSnapshot();
     const gold = wallet.currencies["gold"] ?? 0;
     const invCount = monetization.getSteamInventory().length;
-    this.hud.appendLog(
+    this.logDiagnosticIfChanged(
+      "monetization",
       `[HUD Monetization/Steam MicroTxn] Ouro: ${gold} | Inventário Steam: ${invCount} item(ns)`
     );
+  }
+
+  private logDiagnosticIfChanged(
+    key: string,
+    message: string
+  ): void {
+    if (this.lastDiagnosticMessages.get(key) === message) return;
+
+    this.lastDiagnosticMessages.set(key, message);
+    this.hud.appendLog(message);
   }
 
   private bindEvents(): void {

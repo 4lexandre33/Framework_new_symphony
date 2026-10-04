@@ -1,4 +1,4 @@
-import { defineEvent, defineCommand } from "../../core/contracts";
+import { defineEvent, defineCommand } from "@core";
 
 export type OverlayMode = "desktop_pet" | "taskbar_dock" | "always_on_top_hud";
 

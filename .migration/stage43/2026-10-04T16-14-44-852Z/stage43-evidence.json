@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "stage": "stage-43-permanent-architecture-integration",
+  "architectureMigrationVersion": "v20",
+  "status": "completed",
+  "completedAtUtc": "2026-10-04T16:14:44.853Z",
+  "npmScripts": {
+    "arch:audit": "node agents.mjs",
+    "arch:check": "node scripts/architecture/check-boundaries.mjs && node scripts/architecture/check-dependencies.mjs",
+    "arch:dependencies": "node scripts/architecture/check-dependencies.mjs",
+    "arch:migrate": "node scripts/architecture/stage43-migration-status.mjs",
+    "build": "npm run arch:check && tsc && vite build"
+  },
+  "validation": {
+    "migrationStatus": "pass",
+    "archMigrate": "pass-read-only-postmigration-status",
+    "archCheck": "pass",
+    "archDependencies": "pass",
+    "archAudit": "pass",
+    "build": "pass"
+  },
+  "windowsRunner": {
+    "strategy": "cmd.exe /d /s /c",
+    "directNpmCmdSpawn": false,
+    "shellOption": false
+  },
+  "agents": {
+    "freezeInvariants": true,
+    "freezeLock": true,
+    "boundaries": true,
+    "dependencies": true,
+    "lockPreserved": true,
+    "unlockPreserved": true
+  },
+  "hashes": {
+    "packageJson": "e290fdccf35c9c2323b1f97c387817774cdf5f87975fc29ebb1fbf4e37a2176e",
+    "agents": "33a58b61cc0cca4724b835584a9115165055213dbb084ddb319ec1c6aedb6a07",
+    "stage43Main": "ddae248bfefee8a726954cc1bca6c4d393c3ae26cb0b7114af1e5d0345c714c7",
+    "migrationStatus": "e281a80dd604b5a76de2116cd146918dde09bc4d08e997db3131dfe884b8b073"
+  },
+  "pendingBlockingItems": [],
+  "nextStage": 44
+}

@@ -1,0 +1,53 @@
+{
+  "stage": "44.5",
+  "name": "SaveLoadUseCase",
+  "requires": [
+    "44.0",
+    "44.1",
+    "44.2",
+    "44.3",
+    "44.4"
+  ],
+  "scope": {
+    "implemented": [
+      "SaveLoadUseCase"
+    ],
+    "explicitlyDeferred": [
+      "ModdingAppService",
+      "GameFlowFSM"
+    ]
+  },
+  "dependencies": [
+    "ClockPort",
+    "SaveGamePort<TState>",
+    "VersionedSnapshot<TState>",
+    "DomainResult"
+  ],
+  "operations": [
+    "listSlots",
+    "save",
+    "load",
+    "delete"
+  ],
+  "applicationErrors": [
+    "port-error",
+    "slot-not-found",
+    "unsupported-schema",
+    "invalid-port-response"
+  ],
+  "rules": [
+    "Sem filesystem, IndexedDB, Tauri, Steamworks, plugins ou engine internals.",
+    "Snapshot criado com schemaVersion explícito e ClockPort.",
+    "Load rejeita schema incompatível.",
+    "TState genérico mantém compatibilidade 2D, 2.5D e 3D.",
+    "Operações são discretas/assíncronas, não per-frame.",
+    "Etapas 44.6+ não são antecipadas."
+  ],
+  "files": [
+    "scripts/architecture/stage44-5-validate-save-load.mjs",
+    "src/services/usecases/README.txt",
+    "src/services/usecases/SaveLoadUseCase.ts",
+    "src/services/usecases/index.ts",
+    "tests/save-load-usecase.test.ts"
+  ]
+}

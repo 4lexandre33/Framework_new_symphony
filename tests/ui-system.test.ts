@@ -12,19 +12,19 @@ import {
 import {
   UIManager,
   type UIManagerHooks,
-} from "../src/engine/ui/UIManager";
+} from "../src/engine/ui/internal/UIManager";
 
 import {
   HUDDataBinder,
-} from "../src/engine/ui/HUDDataBinder";
+} from "../src/engine/ui/internal/HUDDataBinder";
 
 import {
   LocalizationEngine,
-} from "../src/engine/ui/LocalizationEngine";
+} from "../src/engine/ui/internal/LocalizationEngine";
 
 import {
   UITemplateRegistry,
-} from "../src/engine/ui/UITemplateRegistry";
+} from "../src/engine/ui/internal/UITemplateRegistry";
 
 describe(
   "Camada de Interface de Usuário & HUD (game.ui)",

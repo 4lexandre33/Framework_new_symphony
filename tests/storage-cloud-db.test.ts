@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { CloudDatabaseDriver } from "../src/engine/storage/CloudDatabaseDriver";
-import { StorageService } from "../src/plugins/storage/plugin";
-import type { PluginContext } from "../src/core/contracts/plugin-context";
+import { CloudDatabaseDriver } from "../src/engine/storage/internal/CloudDatabaseDriver";
+import { StorageService } from "../src/engine/storage/internal/StorageService";
+import type { PluginContext } from "@core";
 import type { PlayerOnlineProfile } from "../src/contracts/storage/types";
 
 // ── CONTEXTO MOCKADO DO MICROKERNEL ───────────────────────────────────────

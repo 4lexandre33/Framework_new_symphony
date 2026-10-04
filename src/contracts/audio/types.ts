@@ -1,4 +1,4 @@
-import { defineEvent, defineCommand } from "../../core/contracts";
+import { defineEvent, defineCommand } from "@core";
 
 export type AudioChannelType = "master" | "bgm" | "sfx" | "voice" | "ui";
 

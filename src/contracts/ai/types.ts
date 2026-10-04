@@ -1,7 +1,7 @@
 import {
   defineCommand,
   defineEvent,
-} from "../../core/contracts";
+} from "@core";
 
 export type NodeStatus =
   | "SUCCESS"

@@ -1,4 +1,4 @@
-import type { Plugin } from "../core/contracts/plugin-context";
+import type { Plugin } from "@core";
 import { createSteamPlugin } from "../plugins/steam/plugin";
 import { createInputPlugin } from "../plugins/input/plugin";
 import { createAssetsPlugin } from "../plugins/assets/plugin";

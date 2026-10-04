@@ -1,0 +1,3922 @@
+[
+  {
+    "path": ".gitignore",
+    "bytes": 277,
+    "extension": "",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "d50ab07e11fa4bf3b1c7c3312e1d7baeab56cca756832ccf40476823ad2a38b7"
+  },
+  {
+    "path": ".snapshot-repository",
+    "bytes": 42,
+    "extension": "",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "937d2dca210d16f4d62ece93c728c3c3d1f747367993e6cd72e93403f0a0643a"
+  },
+  {
+    "path": ".vscode/extensions.json",
+    "bytes": 83,
+    "extension": ".json",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "cc7476def213e1bb55aab9a7a5dc38214c8f60ca1b8fd0be22980aa580e91533"
+  },
+  {
+    "path": "AGENTS.md",
+    "bytes": 8706,
+    "extension": ".md",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "4f932de5160f0f43e1817810de08e33e1f954b9d2660b946f7dd94ffa77c8123"
+  },
+  {
+    "path": "agents.mjs",
+    "bytes": 1162,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "9f23cc73411f0fb898070b2d82f8d94a70ab5f239bf10ef54d4fcfe1183f172d"
+  },
+  {
+    "path": "debug-execution.log",
+    "bytes": 1095,
+    "extension": ".log",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "e3fed5802e6d7a6254128ee8ae6971254a7922820e14d3959262800fe36dde18"
+  },
+  {
+    "path": "debug-report.txt",
+    "bytes": 634,
+    "extension": ".txt",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "6464e64e757041d64366360346e898dbaa0a0da380c840a6b79fbe70c95f458b"
+  },
+  {
+    "path": "debug-run.bat",
+    "bytes": 969,
+    "extension": ".bat",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "12744149c04f60560c8b14bbf1709b00d351b6c208f83137428cd091c0b7087d"
+  },
+  {
+    "path": "HUD_RENDERER_FIX_README.txt",
+    "bytes": 1153,
+    "extension": ".txt",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "48028d22fda4c1d82095e08313ffbf4efac59accdd1c1530333cde083a62edc5"
+  },
+  {
+    "path": "index.html",
+    "bytes": 434,
+    "extension": ".html",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "d05741397353938e49fb00ef5835d8bd399d120c98bceb26c7bcb1f0ec8f4a40"
+  },
+  {
+    "path": "MODDING_FIX_README.txt",
+    "bytes": 3166,
+    "extension": ".txt",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "34683a25b10be9b771818270892b9b38ce45dde2c38be70312d45f2e233bd703"
+  },
+  {
+    "path": "OVERLAY_RECT_FIX_README.txt",
+    "bytes": 569,
+    "extension": ".txt",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "d3bc11404f345e76ee1b8e53c5c1d5a3d385c45f8f505e3a09f483d30031d3ee"
+  },
+  {
+    "path": "package-lock.json",
+    "bytes": 88925,
+    "extension": ".json",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "e90b3983ad59bceb8cea442affe79e26dd864e12f18fd4ec53ce50e59e796d48"
+  },
+  {
+    "path": "package.json",
+    "bytes": 759,
+    "extension": ".json",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "ec42fa3d2ea5d62edb1080895602989558c6f9c3d70c9f99dc6c2bf9a8d6888f"
+  },
+  {
+    "path": "projeto1_stage0_baseline.zip",
+    "bytes": 6718,
+    "extension": ".zip",
+    "isText": false,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "11d4972a019cae9bd381e7cb2d2f00e5a4709549624a67d4e439d14ac39382df"
+  },
+  {
+    "path": "projeto1_stage1_functional_baseline.zip",
+    "bytes": 7187,
+    "extension": ".zip",
+    "isText": false,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "b7ae1fc350fa57212403c2a26946d9eed6d9725d8885ec5d683a4780cabf6367"
+  },
+  {
+    "path": "projeto1_stage2_unlock_freeze.zip",
+    "bytes": 4922,
+    "extension": ".zip",
+    "isText": false,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "5414a905df682fdfeaf8707fb7ac781e838ce5f3fd5075d162317667eebd3695"
+  },
+  {
+    "path": "projeto1_stage3_architecture_inventory.zip",
+    "bytes": 12291,
+    "extension": ".zip",
+    "isText": false,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "5e263112e8b3528bc6c6cdf15c4bbbc3a77b29c7856c62b153cc0058af16c91a"
+  },
+  {
+    "path": "README.md",
+    "bytes": 383,
+    "extension": ".md",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "a358d9ed707ff664e42f2b78725016dab646ffb13a54d82704be887abb47dd1b"
+  },
+  {
+    "path": "RUNTIME_BOOT_FIX_README.txt",
+    "bytes": 632,
+    "extension": ".txt",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "b6358c48e54abbd903f1eb1ada324907f4f65bcd938df3ce775ac404c8d9ab99"
+  },
+  {
+    "path": "scripts/architecture/audit-layout.mjs",
+    "bytes": 55659,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "scripts",
+    "module": null,
+    "sha256": "1dc6aa227e71cca4eca09bac7ebd4bc22465801924754c50f1f7e94807bd4573"
+  },
+  {
+    "path": "scripts/architecture/stage0-baseline.mjs",
+    "bytes": 20526,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "scripts",
+    "module": null,
+    "sha256": "cc2422843f7f9bc6897acdcae6d2a4d55586ed3ccf9da35fca303cfaab51d65f"
+  },
+  {
+    "path": "scripts/architecture/stage1-functional-baseline.mjs",
+    "bytes": 24133,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "scripts",
+    "module": null,
+    "sha256": "d405a2a3e8365dc1331b107b1c52e41d888aafd1f977ca94811825d4c4a785b3"
+  },
+  {
+    "path": "scripts/architecture/stage2-unlock-freeze.mjs",
+    "bytes": 17639,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "scripts",
+    "module": null,
+    "sha256": "37a8d558f5abbb91179785faf8f96aedd537925ac45ec8fa609322d14c6d8e61"
+  },
+  {
+    "path": "scripts/debug-diagnostics.mjs",
+    "bytes": 2440,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "scripts",
+    "module": null,
+    "sha256": "b9987e01cc397118ef4d5329cf257c21ce3e826bdcbc1d9f53a7fb0070801d51"
+  },
+  {
+    "path": "scripts/steam-smoke-test.mjs",
+    "bytes": 2199,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "scripts",
+    "module": null,
+    "sha256": "4473d501bc5d484a11d40db9ac1ec8ca2c6f3722fa6fad9ea4596bb3d86405ec"
+  },
+  {
+    "path": "SECURITY_FIX_README.txt",
+    "bytes": 2410,
+    "extension": ".txt",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "eba52a9d35a440bb57ee7726f583d789d2f6a2f21d368fa7c13ce4133fcd65a6"
+  },
+  {
+    "path": "SHA256SUMS.txt",
+    "bytes": 107,
+    "extension": ".txt",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "a2dc8396651ceb22745d0728799dfc39ed43074f544870d5d14d4a9942016096"
+  },
+  {
+    "path": "snapshot.bat",
+    "bytes": 453,
+    "extension": ".bat",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "b992f328faca67372ae32af9a024eea258b74b01818284cdd0857ba752103dce"
+  },
+  {
+    "path": "snapshot.mjs",
+    "bytes": 16047,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "306605cc2e35af2c0eea49d3c162a90d3c08996114afee77b7075af7aa050f39"
+  },
+  {
+    "path": "src-tauri/.gitignore",
+    "bytes": 173,
+    "extension": "",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "e1b11c0407131ad35a1f11d8ec2545c53de147a76f05e264e5b500a14b977332"
+  },
+  {
+    "path": "src-tauri/build.rs",
+    "bytes": 39,
+    "extension": ".rs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "3714a4f640fc4e11fc16ee62a4ee43888a5327114c769cf0d3f1b3e42df112e5"
+  },
+  {
+    "path": "src-tauri/capabilities/default.json",
+    "bytes": 241,
+    "extension": ".json",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "be7b3668ed23d4a8bae5405000f42ae0f045795711273e06dcc4d84caa50e15d"
+  },
+  {
+    "path": "src-tauri/Cargo.lock",
+    "bytes": 119064,
+    "extension": ".lock",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "2d8be6f90b1fad2afab76417504e598d0ff6d22e945f8c8ccdd768321878e5c3"
+  },
+  {
+    "path": "src-tauri/Cargo.toml",
+    "bytes": 726,
+    "extension": ".toml",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "cb373644603310a75fa5bdfc5a114bf538596da2c67459eec8a2385f4fdedb99"
+  },
+  {
+    "path": "src-tauri/gen/schemas/acl-manifests.json",
+    "bytes": 70285,
+    "extension": ".json",
+    "isText": true,
+    "isGenerated": true,
+    "area": "tauri",
+    "module": null,
+    "sha256": "7985a7fce6e3d243cc660c50dcd0a0cf452501a24b82439affdd9f4a5f3ebba5"
+  },
+  {
+    "path": "src-tauri/gen/schemas/capabilities.json",
+    "bytes": 185,
+    "extension": ".json",
+    "isText": true,
+    "isGenerated": true,
+    "area": "tauri",
+    "module": null,
+    "sha256": "251490ef9d616f3596c184eaf9ca77e1a52ddb1ee6a2d458efb3b6c1e02d4221"
+  },
+  {
+    "path": "src-tauri/gen/schemas/desktop-schema.json",
+    "bytes": 130343,
+    "extension": ".json",
+    "isText": true,
+    "isGenerated": true,
+    "area": "tauri",
+    "module": null,
+    "sha256": "2600849ddea8e3e9aba603f66af5e4897dadc19153c32954e53ed2b74193c43d"
+  },
+  {
+    "path": "src-tauri/gen/schemas/windows-schema.json",
+    "bytes": 130343,
+    "extension": ".json",
+    "isText": true,
+    "isGenerated": true,
+    "area": "tauri",
+    "module": null,
+    "sha256": "2600849ddea8e3e9aba603f66af5e4897dadc19153c32954e53ed2b74193c43d"
+  },
+  {
+    "path": "src-tauri/icons/128x128.png",
+    "bytes": 1593,
+    "extension": ".png",
+    "isText": false,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "1f3689f6374b0553996fdc99743799216703835070145d7f0e6ec11e6280139e"
+  },
+  {
+    "path": "src-tauri/icons/128x128@2x.png",
+    "bytes": 2861,
+    "extension": ".png",
+    "isText": false,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "69194785eef4323955af73b0c03362ac0804db056c2424f9715076cabc0ed103"
+  },
+  {
+    "path": "src-tauri/icons/32x32.png",
+    "bytes": 567,
+    "extension": ".png",
+    "isText": false,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "d151f11e325f7502de0c739a2e51697aa569fd4701ae6e11fae1a3b4c7d5f157"
+  },
+  {
+    "path": "src-tauri/icons/icon.icns",
+    "bytes": 98451,
+    "extension": ".icns",
+    "isText": false,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "3dc10493b7de48a61de58f768f8a5708d3a44a068c148cedf0502b9b9b71ba5d"
+  },
+  {
+    "path": "src-tauri/icons/icon.ico",
+    "bytes": 37710,
+    "extension": ".ico",
+    "isText": false,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "e38ca88e1d5490f3dcbc3c3fa525f7fcb7b80fff3cb2f3a4eb1b2d018c0915c1"
+  },
+  {
+    "path": "src-tauri/icons/icon.png",
+    "bytes": 5664,
+    "extension": ".png",
+    "isText": false,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "b5d93c8ec365c08b11bd006e46a46e227c681d30bb295af3d017573bfc752a83"
+  },
+  {
+    "path": "src-tauri/icons/Square107x107Logo.png",
+    "bytes": 1340,
+    "extension": ".png",
+    "isText": false,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "fd8658ff0e2c177ce0779d11fea1574e9d7d82a52a3a9197038f37b07fe24475"
+  },
+  {
+    "path": "src-tauri/icons/Square142x142Logo.png",
+    "bytes": 1691,
+    "extension": ".png",
+    "isText": false,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "c348fcf2d2f2f9714a41925184926f77f440676987d233ae1daf4fd94fda245f"
+  },
+  {
+    "path": "src-tauri/icons/Square150x150Logo.png",
+    "bytes": 1738,
+    "extension": ".png",
+    "isText": false,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "d46dc2bc568f911b9cb978de68b4a7e3ad458fbac15196597849c43c40f4b65a"
+  },
+  {
+    "path": "src-tauri/icons/Square284x284Logo.png",
+    "bytes": 3115,
+    "extension": ".png",
+    "isText": false,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "80d93a5257c89ea57023c30500c889b4df062430ffb0b4fed4ca4785d13e29ac"
+  },
+  {
+    "path": "src-tauri/icons/Square30x30Logo.png",
+    "bytes": 536,
+    "extension": ".png",
+    "isText": false,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "c3ce70e22ec2ed3ea2d0362a767d087e6cadb93ec71e80010649f892520175f4"
+  },
+  {
+    "path": "src-tauri/icons/Square310x310Logo.png",
+    "bytes": 3447,
+    "extension": ".png",
+    "isText": false,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "624dd93ddb1f0d69f2a4aa7af0b0646ae3ae6347cbb42dab56ef88dba7f38d07"
+  },
+  {
+    "path": "src-tauri/icons/Square44x44Logo.png",
+    "bytes": 777,
+    "extension": ".png",
+    "isText": false,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "f9eca6f00dba41cfecfedbc9a6f88014b4ee0f9dbf016e202c7ede09c60107ef"
+  },
+  {
+    "path": "src-tauri/icons/Square71x71Logo.png",
+    "bytes": 1020,
+    "extension": ".png",
+    "isText": false,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "66a6b51da8962a9472c9d29b1b08e3309561521bf7fbaac52b9f680df13ff487"
+  },
+  {
+    "path": "src-tauri/icons/Square89x89Logo.png",
+    "bytes": 1181,
+    "extension": ".png",
+    "isText": false,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "fe8da53273722bb6fd66e98bf6810e8a7db22aeff27c6c1a096d57ba556b9ef4"
+  },
+  {
+    "path": "src-tauri/icons/StoreLogo.png",
+    "bytes": 848,
+    "extension": ".png",
+    "isText": false,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "5412fce324344999aad82f6b69abcaa6c8792eac7b79a4b321aaaeacd0525eaf"
+  },
+  {
+    "path": "src-tauri/src/lib.rs",
+    "bytes": 3126,
+    "extension": ".rs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "bc91ad1022bbeff4ab736d01cc3133af49038a0470b25001dfb5bc0b827111c4"
+  },
+  {
+    "path": "src-tauri/src/main.rs",
+    "bytes": 106,
+    "extension": ".rs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "8f237bfa8a5b2da314aad22880f6bdc966a11ed7a0556c460974daec30f099c9"
+  },
+  {
+    "path": "src-tauri/src/modding.rs",
+    "bytes": 5189,
+    "extension": ".rs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "ec891dcc4cac9697c63edad825b9c0ae11c3dfcf75ed587c246884c168e3ef42"
+  },
+  {
+    "path": "src-tauri/src/monetization.rs",
+    "bytes": 2579,
+    "extension": ".rs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "de7c47cf4f5657db1e2d9e2df4ea0c6af640ba8a9f6c664e0818eb4a94103c8e"
+  },
+  {
+    "path": "src-tauri/src/overlay.rs",
+    "bytes": 4863,
+    "extension": ".rs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "55d102a854f344af9541737090a9087e25f380c4ce0db0327f5864fa1946e06b"
+  },
+  {
+    "path": "src-tauri/src/security.rs",
+    "bytes": 2198,
+    "extension": ".rs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "2f16d00ebdb29312d9bfaf6c6717cf0a8bf741cca2eb5657ab959f46e674411e"
+  },
+  {
+    "path": "src-tauri/src/steam.rs",
+    "bytes": 6377,
+    "extension": ".rs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "c08ad8b3d839f67f987e75b440853da4464c19529937e463ae19dc65d1b69f5a"
+  },
+  {
+    "path": "src-tauri/steam_appid.txt",
+    "bytes": 3,
+    "extension": ".txt",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "ddfe0e8d462af661f81db36589c39882dc0f2330785b5d80cd34f2f520ad618f"
+  },
+  {
+    "path": "src-tauri/tauri.conf.json",
+    "bytes": 850,
+    "extension": ".json",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tauri",
+    "module": null,
+    "sha256": "646c612552a7b040dcf267fea9567d4e091629ecf1921c5e6a4d7d8e42b5d67f"
+  },
+  {
+    "path": "src/app/bootstrap.ts",
+    "bytes": 4955,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "app",
+    "module": null,
+    "sha256": "0c4c5945e5fe9286671ca77e299b4aacc6f8a109a6f965c6b29f8d6ec152310d"
+  },
+  {
+    "path": "src/app/createEnginePlugins.ts",
+    "bytes": 2406,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "app",
+    "module": null,
+    "sha256": "b81f55f73c75d12901b3bbb4780d90eb936426b5c3dea53fc0996abdd766982c"
+  },
+  {
+    "path": "src/app/EngineServices.ts",
+    "bytes": 2673,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "app",
+    "module": null,
+    "sha256": "8e2433a58556ec6255e06ec16252557bc9f31813f23f85d664e41d5e1b0436ac"
+  },
+  {
+    "path": "src/app/errors.ts",
+    "bytes": 179,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "app",
+    "module": null,
+    "sha256": "20bee427692651c94d079cb6162a6fe19dab98ede87e8b1732ded551cec78c0d"
+  },
+  {
+    "path": "src/assets/tauri.svg",
+    "bytes": 2605,
+    "extension": ".svg",
+    "isText": true,
+    "isGenerated": false,
+    "area": "assets",
+    "module": null,
+    "sha256": "3f32698a9cb64f4d06d4df89ecb903418347589a17d297208a7f68741a8b5672"
+  },
+  {
+    "path": "src/assets/typescript.svg",
+    "bytes": 1502,
+    "extension": ".svg",
+    "isText": true,
+    "isGenerated": false,
+    "area": "assets",
+    "module": null,
+    "sha256": "83ddfc20a5c68632abf5bab6c9cacb2860d9d097c9a02908752a65dd05900aa7"
+  },
+  {
+    "path": "src/assets/vite.svg",
+    "bytes": 1497,
+    "extension": ".svg",
+    "isText": true,
+    "isGenerated": false,
+    "area": "assets",
+    "module": null,
+    "sha256": "4a748afd443918bb16591c834c401dae33e87861ab5dbad0811c3a3b4a9214fb"
+  },
+  {
+    "path": "src/components/SteamTestDashboard.ts",
+    "bytes": 6349,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "src-other",
+    "module": null,
+    "sha256": "d702edca2aad620cd9912bb9bf888ed762560dbe04571cf6036f75df62a7628d"
+  },
+  {
+    "path": "src/contracts/ai/types.ts",
+    "bytes": 4089,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "ai",
+    "sha256": "d301dc568fdfaf8d434c416561d86f54a0735a1f029200a3c72355d367c83aa3"
+  },
+  {
+    "path": "src/contracts/anim/types.ts",
+    "bytes": 3659,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "anim",
+    "sha256": "f1240e322cc2a5c8fa9d10f7e37aeb0f735174c2f86481e031dba823b1e833c1"
+  },
+  {
+    "path": "src/contracts/assets/types.ts",
+    "bytes": 985,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "assets",
+    "sha256": "6024933ea5b0dce42386ebebeee1b055e48a94c548e341b756208554bc515dff"
+  },
+  {
+    "path": "src/contracts/audio/types.ts",
+    "bytes": 3273,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "audio",
+    "sha256": "a47cd7a384b290b99b97aa4de90f991a806f5a8e9a228f050ce9e6931aeadd88"
+  },
+  {
+    "path": "src/contracts/camera/types.ts",
+    "bytes": 3515,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "camera",
+    "sha256": "f81a7fa977250ceef3e9f0a71f27e73d2a80b25826c731f535e991dbb05d7495"
+  },
+  {
+    "path": "src/contracts/game-loop/types.ts",
+    "bytes": 757,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "game-loop",
+    "sha256": "76bad6f8b23ddd77884944a1927469428c62d0f3eca17bd41c85a68a10382750"
+  },
+  {
+    "path": "src/contracts/input/types.ts",
+    "bytes": 1012,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "input",
+    "sha256": "1a789572c48c65f157bd8ae99ad5df71079c8a65c5e7b65fb971aee46e2ffffa"
+  },
+  {
+    "path": "src/contracts/modding/types.ts",
+    "bytes": 3529,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "modding",
+    "sha256": "9cdb6e2621be93cba76c4ad1bdfd87b46896178edbef8198b216a7cfad665962"
+  },
+  {
+    "path": "src/contracts/monetization/types.ts",
+    "bytes": 4226,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "monetization",
+    "sha256": "4218a082e6a23981efc1aa382823855b780b42472adb731a44811bf65b62e913"
+  },
+  {
+    "path": "src/contracts/net/types.ts",
+    "bytes": 3658,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "net",
+    "sha256": "c0417e130ad85fde331de6dd7212a971191ec281acf17be1612aaa1c754afb4f"
+  },
+  {
+    "path": "src/contracts/overlay/types.ts",
+    "bytes": 2150,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "overlay",
+    "sha256": "cd102775c8d3143daa18f6c2fef298900875f3b4e4c42b0b3250cfc82d9e222e"
+  },
+  {
+    "path": "src/contracts/physics/types.ts",
+    "bytes": 3727,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "physics",
+    "sha256": "5aa96e3da40e1d9ef743e80105387b6d8e2bbac8434f5091a2d9ac1f04209fe1"
+  },
+  {
+    "path": "src/contracts/render/types.ts",
+    "bytes": 1570,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "render",
+    "sha256": "7e62fed33feac2dee9426d4115a26af01009d98d7271381be6135d887ed79991"
+  },
+  {
+    "path": "src/contracts/scripting/types.ts",
+    "bytes": 5676,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "scripting",
+    "sha256": "c73b1eae55350d11eca4a5bf6be0678d3ef0293abc49f5bdaac62366631ecea2"
+  },
+  {
+    "path": "src/contracts/security/types.ts",
+    "bytes": 2432,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "security",
+    "sha256": "e11ac91813d6e2c1eecf3765e61aa00146d5810cda05e1b97a4f6c276e728139"
+  },
+  {
+    "path": "src/contracts/sprites/types.ts",
+    "bytes": 3951,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "sprites",
+    "sha256": "07b1e665abf520f25343ba275cdd8b4de8667151fc4e705405de75438d5f34a2"
+  },
+  {
+    "path": "src/contracts/steam/net-types.ts",
+    "bytes": 4164,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "steam",
+    "sha256": "e31b15ec8c9539c6ce2f3e3b613ada7cd731b05cffe68d9adfbfa85fa290bb35"
+  },
+  {
+    "path": "src/contracts/steam/types.ts",
+    "bytes": 557,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "steam",
+    "sha256": "86fd0dc37329d1c0676818f5833fa94f8a56cebf40b13cb53cbde7adde7336c3"
+  },
+  {
+    "path": "src/contracts/storage/types.ts",
+    "bytes": 2320,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "storage",
+    "sha256": "6626c41614d05fb9e89817b2520472ba1630b7a4b1aee2297e46ac75d287484c"
+  },
+  {
+    "path": "src/contracts/streaming/types.ts",
+    "bytes": 3287,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "streaming",
+    "sha256": "8617c2e1e9303640b6a0cd6fedb8f263777922b49db44908834bf6a9278ca278"
+  },
+  {
+    "path": "src/contracts/terrain/types.ts",
+    "bytes": 2860,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "terrain",
+    "sha256": "284586070b9cb59a734f25094043d4a81f1affa089527ab3b27a0ce888d4ead0"
+  },
+  {
+    "path": "src/contracts/ui/types.ts",
+    "bytes": 3055,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "ui",
+    "sha256": "1a837e570cb0d7bb78a1b24134acda98398aee3f420df0a181c4a5bbff0881e5"
+  },
+  {
+    "path": "src/contracts/vfx/types.ts",
+    "bytes": 3855,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "vfx",
+    "sha256": "ed3e31588efa1f38b02b55deed88e4e71132a6b7c19a9c4cc8750c10cc626035"
+  },
+  {
+    "path": "src/contracts/world/types.ts",
+    "bytes": 4931,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "contracts",
+    "module": "world",
+    "sha256": "a299188bb62d6e0b735d22f39f70098d660a78e818e85248ab428bf8ddb887c2"
+  },
+  {
+    "path": "src/core/api.ts",
+    "bytes": 1527,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "d4076e737dcff51ce39491877228db05d49aec04570acd32ec35be864fa97dc9"
+  },
+  {
+    "path": "src/core/api/devtools.ts",
+    "bytes": 2894,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "10aa12acd7c57b4a443a5fe68867260a7e01e9f6010ebd5ef1eb9813ecc4cf02"
+  },
+  {
+    "path": "src/core/api/plugin-conformance.ts",
+    "bytes": 1581,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "f9c8c9657e97cc18405f760ca06aee2442254ebc701c6f163a7f916927f04836"
+  },
+  {
+    "path": "src/core/api/testing.ts",
+    "bytes": 2983,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "bf0b3599d7f812875e0145b7935ab2a5446c07c87fdefa19381c6c7b7aa78a5c"
+  },
+  {
+    "path": "src/core/contracts/capability-token.ts",
+    "bytes": 2195,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "3062216a16546695d7dd169bc2f1966dce532234de609a9aecff0fd9f9899181"
+  },
+  {
+    "path": "src/core/contracts/clock.ts",
+    "bytes": 837,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "e9cde05334601b09060db1be688576fc3d31afc4e0e3e259df56dcf8d8330604"
+  },
+  {
+    "path": "src/core/contracts/commands/index.ts",
+    "bytes": 113,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "a13e53dc54b3f4ff83f0d47ebeb118d3a042fc21163b6239c543fa0faa373aba"
+  },
+  {
+    "path": "src/core/contracts/commands/registry.test.ts",
+    "bytes": 1585,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "47376ac5b79a0be7a2b6da8f8d1212b683cbeaece7e03dd2057f44ae08643759"
+  },
+  {
+    "path": "src/core/contracts/commands/registry.ts",
+    "bytes": 2035,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "d5502c2a7f239864759772faeff04dc4f5d56b444a837d0a0f4cb7b256b08259"
+  },
+  {
+    "path": "src/core/contracts/dispatch-envelope.ts",
+    "bytes": 777,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "1a36a1472ee2f69ec6efcdb4309eb5b858925228a48108d36637c85e12e467c2"
+  },
+  {
+    "path": "src/core/contracts/envelope.ts",
+    "bytes": 4312,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "1f93cac3a200384ad62f49efa11eca6f811e776088e89e67a4cb75d2b5b4379c"
+  },
+  {
+    "path": "src/core/contracts/errors.ts",
+    "bytes": 1857,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "6ca94de2c6fe15ac6e33fa0bc0596cee29003c39996a3e30f55b770196c96977"
+  },
+  {
+    "path": "src/core/contracts/events/index.ts",
+    "bytes": 177,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "a71d26c5cd5efb5531ea0ade232771ab3cb1b944ba85a16f4b77c872525845c1"
+  },
+  {
+    "path": "src/core/contracts/events/registry.test.ts",
+    "bytes": 1758,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "9b67e9f393ef24008735cca7eb83536f2282f63f3aec0e150664298759fe003e"
+  },
+  {
+    "path": "src/core/contracts/events/registry.ts",
+    "bytes": 2210,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "83393de82b7a551f4317b8cee1256ae0b90da4e2297561d82808e0aba20e2bc7"
+  },
+  {
+    "path": "src/core/contracts/events/system-events.ts",
+    "bytes": 3758,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "b8de56af161d72271f676f01eb91d61d603387afe394a17798f7815277046ab3"
+  },
+  {
+    "path": "src/core/contracts/index.ts",
+    "bytes": 2077,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "3ddc02f4694f5bf6f7f76ec1487d16a3c4eb87cc4b2f3ed7106347e844845ec0"
+  },
+  {
+    "path": "src/core/contracts/kernel-options.ts",
+    "bytes": 1764,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "6bb21563490db02f5dc0ad9b62022332d827bc2516bfaa40f758061ebc4c4a90"
+  },
+  {
+    "path": "src/core/contracts/kernel-state.ts",
+    "bytes": 593,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "5a53d6f02bf8c75af47d7645367ea2b439613a85b631f71274b13b5b6e9bc53c"
+  },
+  {
+    "path": "src/core/contracts/kernel-version.ts",
+    "bytes": 109,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "60eb2cc795e327c619d8abb15aee4775100af25e83099ec085d1cbb45ab51ae4"
+  },
+  {
+    "path": "src/core/contracts/logger.ts",
+    "bytes": 790,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "ad49676a1b1504abf0b3833abb309a4eaa4495a4f20d02e159b4256709cdc68d"
+  },
+  {
+    "path": "src/core/contracts/middleware.ts",
+    "bytes": 507,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "752da1c628b1226cad4f52565db7ff87cd3779a9e84f049a41f921d60fd3d1e5"
+  },
+  {
+    "path": "src/core/contracts/plugin-config.ts",
+    "bytes": 818,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "88fa3e9442fed8ad130e7a7bc328c53268c12272aab882234c29001822b17792"
+  },
+  {
+    "path": "src/core/contracts/plugin-context.ts",
+    "bytes": 8730,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "cf693c7c4ef659c981003803efe59db9de765801518c407e2d6b33ca33a8a3d7"
+  },
+  {
+    "path": "src/core/contracts/plugin-kind.test.ts",
+    "bytes": 1154,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "838e5a721e5150bfe76c5942ecf951db6139bfa1a0c7ea13a7bff21e8c7665c4"
+  },
+  {
+    "path": "src/core/contracts/plugin-kind.ts",
+    "bytes": 1069,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "611e2c3592017168ce3d50bba41823363ebc96bd75a9cea517d0b0aa7b5c35f0"
+  },
+  {
+    "path": "src/core/contracts/plugin-manifest.ts",
+    "bytes": 2655,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "dd0c6f694f3177a26798900f7dc25e5ba5da3eb8a3469d4ddd9a6ec8f777c5fb"
+  },
+  {
+    "path": "src/core/contracts/plugin-storage.ts",
+    "bytes": 297,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "f9411481d9a2db84d5e4e0a555ec5fee03e8c9f95a94cb148bd62b1401a7665e"
+  },
+  {
+    "path": "src/core/contracts/queries/index.ts",
+    "bytes": 107,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "658b6c192b8c5855f2aae79f40777b5975373fbed3281b06d5079060cbceabf8"
+  },
+  {
+    "path": "src/core/contracts/queries/registry.test.ts",
+    "bytes": 1550,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "973b0f2d35f1305af98251a33307ae9666f482d886aa32784ab1c9e31b4049cf"
+  },
+  {
+    "path": "src/core/contracts/queries/registry.ts",
+    "bytes": 2148,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "ab38184865c0cf374c8315bf837131818f491d24431ef92d0e18f379b53f4cee"
+  },
+  {
+    "path": "src/core/contracts/scheduler.ts",
+    "bytes": 681,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "31a251a36449d4d9cbebb63da511b6003342b21dd32fda6e639838704a0a5adb"
+  },
+  {
+    "path": "src/core/contracts/schema.ts",
+    "bytes": 281,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "4a5214b877ab4c9a7ac61342b2ac318bfe8af125f8c0d179a11256a0b5246816"
+  },
+  {
+    "path": "src/core/contracts/slot.ts",
+    "bytes": 677,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "e18e9974b4eb731578e3b46c2058e869466a6d72c509bb9b0226e6a7bf7f43ea"
+  },
+  {
+    "path": "src/core/contracts/transaction.ts",
+    "bytes": 1072,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "003e684321c6ac2b227b9f17e68d1ecd6ce5a9b91a5a0386f3af500f955109de"
+  },
+  {
+    "path": "src/core/contracts/typed-event.ts",
+    "bytes": 902,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "f6b062f46a50822ead06624631837f0ed84dd0ca83c30d979950ebcbd527e77a"
+  },
+  {
+    "path": "src/core/index.ts",
+    "bytes": 3380,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "cd7bb5f112a7ec75ce2e616c004c1afacb8955d235a43aa5150cb4946878231f"
+  },
+  {
+    "path": "src/core/internal/boot-order.test.ts",
+    "bytes": 2181,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "938a5dd6a8273b2c04a4b09998f5dfc20745c1dcba5f2e03e2c34160391c7a84"
+  },
+  {
+    "path": "src/core/internal/boot-order.ts",
+    "bytes": 2587,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "a592a761dc1a193901e3ece13b2754f513e7d36beacda519f159fd7dcc0aad21"
+  },
+  {
+    "path": "src/core/internal/capability-registry.test.ts",
+    "bytes": 1992,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "420d92d5a6379ae69cd5c1e16812c54a1ad9e99f80fae31bc581d93e89e81d0f"
+  },
+  {
+    "path": "src/core/internal/capability-registry.ts",
+    "bytes": 7747,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "84b7f0616d9cac4f49896b05ff7d19386e6faa9edc07747a160922f8c001384f"
+  },
+  {
+    "path": "src/core/internal/capability-waiters.ts",
+    "bytes": 3409,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "08b07ceb674f14bf8c3718fe7fe04d699742ee115681e567a96ffc36e5f31ea3"
+  },
+  {
+    "path": "src/core/internal/capability-watchers.ts",
+    "bytes": 1003,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "97462b4138d694e18586db578068479a6dae8b67c11571b69e1bc0fed3298317"
+  },
+  {
+    "path": "src/core/internal/clock.ts",
+    "bytes": 3533,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "c3471b6c3e2b86319b86fa36e5c46857f44f2068ff7f33f9e2b2f6108fe9ecf9"
+  },
+  {
+    "path": "src/core/internal/dispatcher.ts",
+    "bytes": 4253,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "b50544ded03d7686876a74d1224bbdf87ba7caf0076912dc2c7bd29d4fd86c8f"
+  },
+  {
+    "path": "src/core/internal/emit-queue.ts",
+    "bytes": 2127,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "6f8b1c589f52d34e52a40ca0d1add2fde4c03d8a6c32cfc9fcbb2be04a66dde0"
+  },
+  {
+    "path": "src/core/internal/envelope-dispatcher.ts",
+    "bytes": 2251,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "4c4ec8b6e8faa1327d99bb17e87b39510d1d2f819020037ecd6cbba04500bc33"
+  },
+  {
+    "path": "src/core/internal/error-boundary.ts",
+    "bytes": 1082,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "4ee72442e7216cf164e361855a364b03da3ce5f8a6d72738d46a542911a3c020"
+  },
+  {
+    "path": "src/core/internal/errors.ts",
+    "bytes": 2707,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "77b0a798b9feb7fe2c5ed9556c0048944b1c925afd41b2228265dd81e5e5b842"
+  },
+  {
+    "path": "src/core/internal/event-bus.test.ts",
+    "bytes": 1373,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "e649c6b503a91e994b98a4ca5ece3fff1949f2675579c6bffb639db86f2ba527"
+  },
+  {
+    "path": "src/core/internal/event-bus.ts",
+    "bytes": 3874,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "53f0ddc4aaebd4524fe8fc336d5b1e82a20f96e31ba5b0c27812a10c17d6fadb"
+  },
+  {
+    "path": "src/core/internal/freeze.ts",
+    "bytes": 1907,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "fc892c94f6746e5ffd04814fab2718333e4d2d90c81ea3e93ee542f15226d754"
+  },
+  {
+    "path": "src/core/internal/ids.ts",
+    "bytes": 715,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "1a1cbe493da542e36ef6e45d4e31e754f4a0c38a5b294d6804b7d85e3143ce27"
+  },
+  {
+    "path": "src/core/internal/index.ts",
+    "bytes": 2443,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "e416faffdf970edce797f7d0569eeb6d92a00be67aa6020f8ae03b370dc2c533"
+  },
+  {
+    "path": "src/core/internal/logger.ts",
+    "bytes": 2449,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "aa4ded6d558b1c4dd7e4ba73c831de564817730ce6a8bb25dad8d5f20ae8e217"
+  },
+  {
+    "path": "src/core/internal/middleware.ts",
+    "bytes": 3170,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "2b472bb9854a4102adaf148523715ef01001376b3a64f96dfaa29fd461233212"
+  },
+  {
+    "path": "src/core/internal/permissions.test.ts",
+    "bytes": 6206,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "6481cce35655f7fdc1ff48c1ac604206f8ed90c1f3bab76df02d1b9e11a47184"
+  },
+  {
+    "path": "src/core/internal/plugin-registry.ts",
+    "bytes": 3540,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "de426f5d202b0c0ec689ff26692e043cecec72b593b3d5413b6f5b4a216f2822"
+  },
+  {
+    "path": "src/core/internal/plugin-storage.ts",
+    "bytes": 2368,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "9728bb16749c33ed119daaafac702679190024fc1cf6404b626125c90536fc46"
+  },
+  {
+    "path": "src/core/internal/readiness.ts",
+    "bytes": 2913,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "14b8fb0a8ae128c7325cd7be9b280d742494a8d0d02ffbfe6e704f9317208d93"
+  },
+  {
+    "path": "src/core/internal/resolver.ts",
+    "bytes": 3479,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "0628b9a4c5b11f665be8e890860057e729c9791a63f739cc4f44798e8539901e"
+  },
+  {
+    "path": "src/core/internal/scheduler.ts",
+    "bytes": 4410,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "74080a72107416b4ece3f323563ea6f465efadd859065b359aef36417f02beff"
+  },
+  {
+    "path": "src/core/internal/scope.ts",
+    "bytes": 1534,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "f2d82e140b325bd0fa83855be9de80a14824dd1ef72aa26092f12f0bf14f515c"
+  },
+  {
+    "path": "src/core/internal/semver.ts",
+    "bytes": 3405,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "9eedd2b16604d7177b4029e9c6e5a3c171bc1725dfa42625acb313a13332f3ee"
+  },
+  {
+    "path": "src/core/internal/service-token-registry.ts",
+    "bytes": 4001,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "f8a4f1173324a5f5575de195c1cfee1a3f39d299aa3db0748144a7b2d90d547b"
+  },
+  {
+    "path": "src/core/internal/slot-registry.ts",
+    "bytes": 5172,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "dbb5e1df2da8e5edc41fea31daa5a6b0ee4bd2603d8fa40eb045554d7f4c18ce"
+  },
+  {
+    "path": "src/core/internal/transaction.ts",
+    "bytes": 4308,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "750b4ec199620a311cb7d30e84a408bd0139fcc3872842d5b2b802fba7c65af1"
+  },
+  {
+    "path": "src/core/internal/ttl.ts",
+    "bytes": 843,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "b3f973bc98a3bd375047086dc8b9fcd9fd352b7bce54b7d94c9bceec3db4289e"
+  },
+  {
+    "path": "src/core/kernel-types.ts",
+    "bytes": 614,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "7af33de325e3e9cbddba4c863e9ed00b46f5de6c7c392d717cd59b5366f3a5c7"
+  },
+  {
+    "path": "src/core/kernel.ts",
+    "bytes": 3643,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "01f975e0e755b03222edce141af0e216572a33e0d2121bed80e698cd9394f547"
+  },
+  {
+    "path": "src/core/runtime/boot.ts",
+    "bytes": 5875,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "27773869d59bc1aaffa5dd0ee2ec2351504138b6e694f628e9218da989d7f29e"
+  },
+  {
+    "path": "src/core/runtime/caps.ts",
+    "bytes": 6698,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "8ffc94407022e47110d5beb6f6afa4ce2262607b202645adc43126f98df0a724"
+  },
+  {
+    "path": "src/core/runtime/context.ts",
+    "bytes": 6317,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "1d610850237d5550cca29d51a9e6b9210b926a42f8df5cc757f8f5657dc70135"
+  },
+  {
+    "path": "src/core/runtime/dispose.ts",
+    "bytes": 5361,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "2141719bfae20e1cba2a92635536e4e3fdb137e81a801ad2fd957a444c2ac841"
+  },
+  {
+    "path": "src/core/runtime/hardening-failures.test.ts",
+    "bytes": 3232,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "a98d9a3ac38de383e35af2063755b5816b070ee9c0014b3c7f96c892d0827ebc"
+  },
+  {
+    "path": "src/core/runtime/index.ts",
+    "bytes": 1233,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "b8cce550c8c87f7a77d2ec0211c0c41d99b643578989c132b6eabc8139829e9f"
+  },
+  {
+    "path": "src/core/runtime/install.ts",
+    "bytes": 4204,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "f1f1706360b80cc21558b55511ddab8678a2ee734b633e07d1eac5e48e431734"
+  },
+  {
+    "path": "src/core/runtime/lifecycle-events.ts",
+    "bytes": 903,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "5b43aab69b3119a9d0f3227cb5efd337935bcd3097f7e77e776067ec69492f47"
+  },
+  {
+    "path": "src/core/runtime/permissions.ts",
+    "bytes": 1843,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "4eef5fc0f691e6a3ccfcce2ad3b879aaebaaa33a097dc3de8d3f68aa8413fb28"
+  },
+  {
+    "path": "src/core/runtime/pipeline.ts",
+    "bytes": 4741,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "b6e6fa87a298cc7c31759922327e8b74381219fcf01f2a0f0a0b1355513df5c0"
+  },
+  {
+    "path": "src/core/runtime/register.ts",
+    "bytes": 2126,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "fa06bece21a289adb106865aa3fe9a0be260e880780d12565bb29e6e0e18bd5b"
+  },
+  {
+    "path": "src/core/runtime/replace.ts",
+    "bytes": 14034,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "8bc86919fb2942a7e3f394abf1377188d09057e14f27119191dccf5420b77a57"
+  },
+  {
+    "path": "src/core/runtime/services.ts",
+    "bytes": 7478,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "bbc93540016f4d16d122f4ef022937e6a7b52c74e05bce7f946a9f8f7da419c9"
+  },
+  {
+    "path": "src/core/runtime/snapshot.ts",
+    "bytes": 599,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "5efa0b68f2047ab597b264b76fea1728423d35971529a6ce856640c3523b6195"
+  },
+  {
+    "path": "src/core/runtime/state.ts",
+    "bytes": 6630,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "f81e89806729e1f748bfe09614a2136f2b36da63ff4c840479264c2bc1ac7bfd"
+  },
+  {
+    "path": "src/core/runtime/stop.ts",
+    "bytes": 2179,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "d8b33d9f0f680951d6af581051d0a371ca68406fd89e88d6e33da0e5a4aa269b"
+  },
+  {
+    "path": "src/core/runtime/test-hooks.ts",
+    "bytes": 1383,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "6560c4f895a80bb6b797830c515884adad8baf2140be69e2b5480634ce02aae6"
+  },
+  {
+    "path": "src/core/scripts/generate-plugin-barrel.mjs",
+    "bytes": 3875,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "core",
+    "module": null,
+    "sha256": "6a920db3ae5ec6272045f64ff30f589e55d657ab14433c32043b7f532f1bb420"
+  },
+  {
+    "path": "src/debug/diagnostics/SteamDiagnostics.ts",
+    "bytes": 1098,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "debug",
+    "module": null,
+    "sha256": "6b8984ba59aea061d07d2b0c540cfc132516e7225ccf79393712cad00ae65895"
+  },
+  {
+    "path": "src/debug/hud/DebugHud.ts",
+    "bytes": 11038,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "debug",
+    "module": null,
+    "sha256": "6a898d7eee3384fdf5f31343a8f458edc0eb1679390d98470a46f50fa3825e9e"
+  },
+  {
+    "path": "src/debug/hud/FpsMonitor.ts",
+    "bytes": 1344,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "debug",
+    "module": null,
+    "sha256": "e928c8d828dad25aa27a8494a377576ffcba3be39c692941775ceb71bfffed1b"
+  },
+  {
+    "path": "src/debug/hud/HudRenderer.ts",
+    "bytes": 9509,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "debug",
+    "module": null,
+    "sha256": "0aa814cb09497134427c2f5fe5a70cc73ae208156e1b920f5e53863dde49890d"
+  },
+  {
+    "path": "src/debug/hud/InputDiagnostics.ts",
+    "bytes": 5611,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "debug",
+    "module": null,
+    "sha256": "ee561db8381cd9397babbc4db85510f465114db319abce7368638ceb1f674b51"
+  },
+  {
+    "path": "src/engine/ai/AIAgentManager.ts",
+    "bytes": 18059,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "ai",
+    "sha256": "14b84e1224a75924ac98f434c58c0e497a06e091cc393f6d591ede8ea7df3fbe"
+  },
+  {
+    "path": "src/engine/ai/BehaviorTree.ts",
+    "bytes": 2695,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "ai",
+    "sha256": "e7b395b18e4b1a1b9354b69684c4a84bb1037ae357aa481e915b7fc30b7304e5"
+  },
+  {
+    "path": "src/engine/ai/NavMeshQuery.ts",
+    "bytes": 14919,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "ai",
+    "sha256": "775a0bfb18fbe4399e09c6699a0ff953b293fc3e682a87d7910e84e5614369cc"
+  },
+  {
+    "path": "src/engine/ai/PerceptionSystem.ts",
+    "bytes": 6506,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "ai",
+    "sha256": "23954277f60a489239f3f5967fe568b5ef877394b54df24c23c9148e98c289f7"
+  },
+  {
+    "path": "src/engine/ai/SteeringBehaviors.ts",
+    "bytes": 3686,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "ai",
+    "sha256": "abecf23b08f068f1649bc986207ad3a365ee8b8422aef2c6ee2f1b08c4c8e0a9"
+  },
+  {
+    "path": "src/engine/anim/AnimationEventManager.ts",
+    "bytes": 1312,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "anim",
+    "sha256": "7b4174dfcf51ffa331d68f64a55348812e2024798dd703e488bed9d0dc09a5ed"
+  },
+  {
+    "path": "src/engine/anim/AnimationState.ts",
+    "bytes": 795,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "anim",
+    "sha256": "bc2bcd3d87f239e6547b65004b071898333b691428e076e11dfe1de3db66f142"
+  },
+  {
+    "path": "src/engine/anim/AnimationStateMachine.ts",
+    "bytes": 11297,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "anim",
+    "sha256": "8cb445f10ad06bb38b1281aca7c053c61a12fe99e92c75ab07de26481e9d9457"
+  },
+  {
+    "path": "src/engine/anim/SkeletalAnimationDriver.ts",
+    "bytes": 5423,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "anim",
+    "sha256": "a86438493b829781d6eac17fe4f60869bcd730d5495be4112e219f719da6a5c8"
+  },
+  {
+    "path": "src/engine/anim/Sprite2DAnimationDriver.ts",
+    "bytes": 5513,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "anim",
+    "sha256": "8d086ec37d69c2cb1c5c99e4039632aa96d6b8c80e6744536778848e24e99dc1"
+  },
+  {
+    "path": "src/engine/assets/AssetCache.ts",
+    "bytes": 2287,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "assets",
+    "sha256": "8c44d29c67a4ba15e8d19ec7aa8c555b989d9cfb3cdd4bc601108171ac669d08"
+  },
+  {
+    "path": "src/engine/assets/AudioLoaderService.ts",
+    "bytes": 1327,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "assets",
+    "sha256": "b44f037522b940afdc6ea8b988b34ef20d8e92daacf48b1b6bc75ce2c1659373"
+  },
+  {
+    "path": "src/engine/assets/GLTFLoaderService.ts",
+    "bytes": 1091,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "assets",
+    "sha256": "8709291fb74e1f70443d644def0768f0b95783a77346be461debe804b1335a42"
+  },
+  {
+    "path": "src/engine/assets/TextureLoaderService.ts",
+    "bytes": 927,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "assets",
+    "sha256": "c7d6c79010d0d6d80aaf90e0d04df114267a20bad4fec7118a619f82aba52453"
+  },
+  {
+    "path": "src/engine/audio/AudioListenerBridge.ts",
+    "bytes": 1240,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "audio",
+    "sha256": "652309bcc23b42a9df93b297cf405444eef30eb020a5c11c3b6d3f27119b8cfd"
+  },
+  {
+    "path": "src/engine/audio/AudioMixer.ts",
+    "bytes": 2786,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "audio",
+    "sha256": "4ebeb9e1e544f7113de4e6802f82e70238ce1f173ab7f1d78a10077d786466d1"
+  },
+  {
+    "path": "src/engine/audio/MusicCrossfader.ts",
+    "bytes": 2249,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "audio",
+    "sha256": "e8de849823d39e02eb874a2e22f1cd0fad502139074f0329e3482132f750741a"
+  },
+  {
+    "path": "src/engine/audio/PositionalAudio3D.ts",
+    "bytes": 1930,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "audio",
+    "sha256": "bf293533573592bf5e3bb9592fe1b362fec1468d3ff7fd6508c191bbb76d38ab"
+  },
+  {
+    "path": "src/engine/camera/CameraOcclusionDetector.ts",
+    "bytes": 1443,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "camera",
+    "sha256": "fa74a2b26f5150fc041fe27ae8205ade6efd61df5e67ae74eb3fd9c1cca26f61"
+  },
+  {
+    "path": "src/engine/camera/SpringArm3D.ts",
+    "bytes": 3267,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "camera",
+    "sha256": "844c7187359f135f7972013b6dbf60e76cd91ea6c00c88465453d8f5faac7dae"
+  },
+  {
+    "path": "src/engine/camera/TraumaCameraShake.ts",
+    "bytes": 4185,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "camera",
+    "sha256": "5089d566786913f81a513ea21b8997f7ed437edca958585d56745ccbd0376920"
+  },
+  {
+    "path": "src/engine/camera/VirtualCameraStack.ts",
+    "bytes": 11864,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "camera",
+    "sha256": "a231d70c65a71ee0969deb88ddaf7dc10b1031069b2624ef6705099a63f45521"
+  },
+  {
+    "path": "src/engine/input/GamepadDriver.ts",
+    "bytes": 2495,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "input",
+    "sha256": "b48fad2687261636c7dbc84795986ae0e263a90727ef833d8a716666f09bc4a9"
+  },
+  {
+    "path": "src/engine/input/InputManager.ts",
+    "bytes": 10177,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "input",
+    "sha256": "72f3441a68f5e06036fb58258174caa0824623a1c2875e8d2a3243f5211ac959"
+  },
+  {
+    "path": "src/engine/input/KeyboardMouseDriver.ts",
+    "bytes": 12369,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "input",
+    "sha256": "3271d2f0d2cad7fb022f4c4dcab05ae0a7061856f7f069e7a099bbba29b37eae"
+  },
+  {
+    "path": "src/engine/modding/AssetOverrideRegistry.ts",
+    "bytes": 2782,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "modding",
+    "sha256": "69c7a468da67141544067e30788a5186091bbf22987773c00dd83f71be3aad9f"
+  },
+  {
+    "path": "src/engine/modding/DynamicPluginLoader.ts",
+    "bytes": 9611,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "modding",
+    "sha256": "e7f1ffbdcaa78aaa3ae3f812b124ffdecd870cc43dfef523cc394b419e6e328a"
+  },
+  {
+    "path": "src/engine/modding/ScriptSandbox.ts",
+    "bytes": 4808,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "modding",
+    "sha256": "efcdf12cf98cd8afe8efdc32e3a38fbb8c0b7dd0e8f7ace4b940db7a932a2f77"
+  },
+  {
+    "path": "src/engine/modding/SteamWorkshopDriver.ts",
+    "bytes": 1635,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "modding",
+    "sha256": "86d8fb7044e8e09832e8cc7fbf128879d86138e70340c47126fc1db78f1851ff"
+  },
+  {
+    "path": "src/engine/modding/TauriModdingDriver.ts",
+    "bytes": 2182,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "modding",
+    "sha256": "df3888e1e0914b67d87e8c7d86f7a0ab3434902c60458f3563dae5db9b8f7dfc"
+  },
+  {
+    "path": "src/engine/monetization/InventoryReceiptValidator.ts",
+    "bytes": 1111,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "monetization",
+    "sha256": "2885f56a457d510dd1a2f6e8e7c97d0a60d7cb1c88ef795fde406392e670a2b3"
+  },
+  {
+    "path": "src/engine/monetization/SteamMicroTxnBridge.ts",
+    "bytes": 1896,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "monetization",
+    "sha256": "d13d60302a06567794966e4bfb02cbc2e623c4c3d9a023b687b55c600b1f831b"
+  },
+  {
+    "path": "src/engine/monetization/StoreCatalogRegistry.ts",
+    "bytes": 1122,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "monetization",
+    "sha256": "f0efd4f1d72e1a4b97db90be73e71dd5a08c3de8539679d981287e049c79a26e"
+  },
+  {
+    "path": "src/engine/monetization/TauriMonetizationDriver.ts",
+    "bytes": 1285,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "monetization",
+    "sha256": "e09a2fa24a5caf1ff0a2441d17cfe9608c381fb127904b38f256764870e4a69b"
+  },
+  {
+    "path": "src/engine/monetization/VirtualCurrencyWallet.ts",
+    "bytes": 2187,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "monetization",
+    "sha256": "956d9268dac191b618e7f2c42edac883da34450f780baed802ba29f0dac50d20"
+  },
+  {
+    "path": "src/engine/net/NetworkTransport.ts",
+    "bytes": 2391,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "net",
+    "sha256": "e8ab6541c848ad0a8d4177e2c04ff29a7d75c3f96e358abb56d5782916b42906"
+  },
+  {
+    "path": "src/engine/net/StateReplicator.ts",
+    "bytes": 6276,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "net",
+    "sha256": "46977c4a401f127e5fce20c7315ac9e8340f91d321a9fe99fd2094a8567687cc"
+  },
+  {
+    "path": "src/engine/net/SteamP2PTransport.ts",
+    "bytes": 5059,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "net",
+    "sha256": "1b05cbf5f6a03908c477e1a4c8b772062cb308527173229a7b38f7b38d6f6344"
+  },
+  {
+    "path": "src/engine/net/WebSocketTransport.ts",
+    "bytes": 3154,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "net",
+    "sha256": "d92798b50934f22eb7bf8d5fead66aabc76d075ec3d205c03281d2cda270c2af"
+  },
+  {
+    "path": "src/engine/overlay/OverlayWindowManager.ts",
+    "bytes": 1949,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "overlay",
+    "sha256": "9b65e0b59a9848923eb65cff2a88c4ed441fe02330f3bad1fbb11689824917a4"
+  },
+  {
+    "path": "src/engine/overlay/RaycastHitTestPassthrough.ts",
+    "bytes": 1825,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "overlay",
+    "sha256": "2c4a6a11b9010f48aa5a70dab1d9e929132ab330f3cb50c55f35cd923b43fa13"
+  },
+  {
+    "path": "src/engine/overlay/TauriOverlayDriver.ts",
+    "bytes": 2065,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "overlay",
+    "sha256": "e81ad3bcf8c9b6e0b860bd78bfa498c6b4d824dc7ef630d19400cfda5f1d5018"
+  },
+  {
+    "path": "src/engine/physics/CollisionEventManager.ts",
+    "bytes": 1012,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "physics",
+    "sha256": "2202fc4cf6db76bdee17a4b0aeb2a806ed9ad82248cf2126ea44c8bc5578324a"
+  },
+  {
+    "path": "src/engine/physics/PhysicsWorld.ts",
+    "bytes": 9125,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "physics",
+    "sha256": "52c507ccbde0bc6777cf568d605ad84f2b6e634a470f8b0dd44cca5a3331a2b1"
+  },
+  {
+    "path": "src/engine/physics/RaycasterQueries.ts",
+    "bytes": 1639,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "physics",
+    "sha256": "299de6d39a9f78bf8301c179fef9612639ee08b9d571855acbbb75c106f277c0"
+  },
+  {
+    "path": "src/engine/physics/RigidBodyFactory.ts",
+    "bytes": 3045,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "physics",
+    "sha256": "06cd598de2b707637dd6e9e684a350c2192395d142811889e63d358ef30080b1"
+  },
+  {
+    "path": "src/engine/render/CameraManager.ts",
+    "bytes": 4606,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "render",
+    "sha256": "df5438799cf34f7eba3a8ad779b83c98be915771049920c995d5bc1fb8edd240"
+  },
+  {
+    "path": "src/engine/render/SceneGraphManager.ts",
+    "bytes": 3208,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "render",
+    "sha256": "313042e75abacbda76918c848947cd7835ec789364c557124e4019084e8668a9"
+  },
+  {
+    "path": "src/engine/render/ThreeRenderEngine.ts",
+    "bytes": 5076,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "render",
+    "sha256": "5567b04b01c13687dd61bf0f69d716d6fec0bf2cc973abfd9a862b544f7af7a0"
+  },
+  {
+    "path": "src/engine/render/ViewportManager.ts",
+    "bytes": 2486,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "render",
+    "sha256": "306547a9061fddd48ac0c479ac493b7569a4cefc19eac6059d0003f679ba1c9a"
+  },
+  {
+    "path": "src/engine/scripting/CutsceneTimeline.ts",
+    "bytes": 4416,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "scripting",
+    "sha256": "c6a13435f620c33232edbd39c2754808fa2dd61107f797a1caf3c0e96162a163"
+  },
+  {
+    "path": "src/engine/scripting/DialogueTreeParser.ts",
+    "bytes": 3024,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "scripting",
+    "sha256": "497085d179ccd55a7c9c9b5c4c895edadfeb8f635ef2347d71d9a7cd1137a2e5"
+  },
+  {
+    "path": "src/engine/scripting/QuestManager.ts",
+    "bytes": 4263,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "scripting",
+    "sha256": "4ffd349eb8c147a745b4856357247e5b4cabbfd250546253e63508c3b3a75e47"
+  },
+  {
+    "path": "src/engine/scripting/TriggerZoneManager.ts",
+    "bytes": 3805,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "scripting",
+    "sha256": "2e17c76b6f5b1aa14f7495a6f0ebf898395cf5df1fdbefa37f34a3dfe36582e3"
+  },
+  {
+    "path": "src/engine/security/CrashReportDumper.ts",
+    "bytes": 2938,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "security",
+    "sha256": "240d3ef6557b7bdfc4e251aecdb3b63287eaa99ca68d5e1ced00817007b21016"
+  },
+  {
+    "path": "src/engine/security/FrameProfiler.ts",
+    "bytes": 5089,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "security",
+    "sha256": "8fd47165dc7804705ede25df36e0eaad6c3c7bf10ebf137e4110b6026b921859"
+  },
+  {
+    "path": "src/engine/security/MemoryIntegrityGuard.ts",
+    "bytes": 5041,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "security",
+    "sha256": "d4ae98ade19ba3e9aef905dad855fc4f931834f6e7bfc7bf5f02c61aa2828b61"
+  },
+  {
+    "path": "src/engine/security/TauriSecurityDriver.ts",
+    "bytes": 2158,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "security",
+    "sha256": "1437bafd515d8995cd70d1d724a50ee66b2cf46a2401c1b2f3b097f4e1384563"
+  },
+  {
+    "path": "src/engine/sprites/InstancedTilemapRenderer.ts",
+    "bytes": 4067,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "sprites",
+    "sha256": "a53028a1e5683d7c7723852ce4dbe0e4438a2193ee378a5d6fa41abbf98c2aec"
+  },
+  {
+    "path": "src/engine/sprites/ParallaxController.ts",
+    "bytes": 2274,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "sprites",
+    "sha256": "ba3c6f9a15d9f82cde40c047f9c7f41ef21ef0065053a65b0ed4ebf6249f6a95"
+  },
+  {
+    "path": "src/engine/sprites/PixelArtScaler.ts",
+    "bytes": 1043,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "sprites",
+    "sha256": "62f821e984f58eca17a30c4e855f53df3cee3d9eb48e1a26359ea310ddb80bd3"
+  },
+  {
+    "path": "src/engine/sprites/Sprite2DRenderer.ts",
+    "bytes": 2020,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "sprites",
+    "sha256": "34de19674c2fa188017b097953e5dc0a86cd772d9d68a1ebc50f71d6033afdb6"
+  },
+  {
+    "path": "src/engine/sprites/TextureAtlasParser.ts",
+    "bytes": 1806,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "sprites",
+    "sha256": "74a9ac627cf7faeafdb82237a11f31c2bb9c90d54efc0e883ac0a456df0bd440"
+  },
+  {
+    "path": "src/engine/storage/CloudDatabaseDriver.ts",
+    "bytes": 1165,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "storage",
+    "sha256": "05624833ac141e8f99a9969f2ca5d79fd5995b763aaaf708fc262062264e3d79"
+  },
+  {
+    "path": "src/engine/storage/LocalDatabaseDriver.ts",
+    "bytes": 2560,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "storage",
+    "sha256": "e6ed8f192348e8790618bc6a940bfb99cd744990b7e120e055e1869335400e42"
+  },
+  {
+    "path": "src/engine/storage/SteamCloudDriver.ts",
+    "bytes": 2806,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "storage",
+    "sha256": "0f2e6518ff98de3a11545c5cf5d240cec32c0cc22709d44c843f7251661c2b8a"
+  },
+  {
+    "path": "src/engine/streaming/DistanceLODManager.ts",
+    "bytes": 2431,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "streaming",
+    "sha256": "88e24774b6938e88f1b4d4917f8544ee0cf55b6ad7df1f0be0f55a9d24b12abf"
+  },
+  {
+    "path": "src/engine/streaming/HLODBuilder.ts",
+    "bytes": 1355,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "streaming",
+    "sha256": "aae19abfc41619279a58546ef08b449db893203a9c4c7c0ff3ffdf76f7270e62"
+  },
+  {
+    "path": "src/engine/streaming/streaming.worker.ts",
+    "bytes": 835,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "streaming",
+    "sha256": "4c7864d725e21b073868f321397b46cb5b18d2e3bba5078bb5b14a850801c3d8"
+  },
+  {
+    "path": "src/engine/streaming/StreamingWorkerPool.ts",
+    "bytes": 6718,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "streaming",
+    "sha256": "f15bf05cfc79d6924c3b4e542bf3cbf9b28556213a5e1999556888459e78d3b0"
+  },
+  {
+    "path": "src/engine/streaming/WorldStreamingSectorManager.ts",
+    "bytes": 4238,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "streaming",
+    "sha256": "5cbecb9e56cf7dfc547f3cfc1003106151ee45fc934baaf29889c61f7235cfcd"
+  },
+  {
+    "path": "src/engine/terrain/BiomeEvaluator.ts",
+    "bytes": 4086,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "terrain",
+    "sha256": "c176f50391013ede922c5f524a61f989e7ed761b9e47b72c808b48ecec2ee0c2"
+  },
+  {
+    "path": "src/engine/terrain/GreedyMesher.ts",
+    "bytes": 12420,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "terrain",
+    "sha256": "87fcc0354871ae89e948192109c9f997d503164e7247c44287d86faeb15e5ffb"
+  },
+  {
+    "path": "src/engine/terrain/PerlinNoiseService.ts",
+    "bytes": 10492,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "terrain",
+    "sha256": "e2524d8464dc4910e32857235eb79b717775ba6e963888aa970a1921da2295b3"
+  },
+  {
+    "path": "src/engine/terrain/ProceduralWorkerPool.ts",
+    "bytes": 10392,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "terrain",
+    "sha256": "5450dd3bf91c4c1db8edc21ca017d2185722e69555f7473c08264e49e2183a7b"
+  },
+  {
+    "path": "src/engine/terrain/terrain.worker.ts",
+    "bytes": 4678,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "terrain",
+    "sha256": "e73208b04be7d80f1d7f8ace16d4d8d1ad261fd2b824fa6f72564e40e07950a8"
+  },
+  {
+    "path": "src/engine/terrain/VoxelChunkManager.ts",
+    "bytes": 10841,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "terrain",
+    "sha256": "50a5777d231bb9a1ad0b3cbe10d4152637e297b090294a2ccf47566f9e111fa2"
+  },
+  {
+    "path": "src/engine/ui/DOMEventListenerBridge.ts",
+    "bytes": 3087,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "ui",
+    "sha256": "95d9b2a125f56575c13fc260e20119a164c1e29ca79bdcc1097ff9220a20029b"
+  },
+  {
+    "path": "src/engine/ui/HUDDataBinder.ts",
+    "bytes": 5435,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "ui",
+    "sha256": "26c8c44bb7dacb77f9ad617142e0d87a759c584b43f7c728b9082777558112c6"
+  },
+  {
+    "path": "src/engine/ui/LocalizationEngine.ts",
+    "bytes": 5072,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "ui",
+    "sha256": "e926c639dc3a51aca6da1a06112a48fae2f1dec8cdfa6bab55b0aaf9485c6e88"
+  },
+  {
+    "path": "src/engine/ui/UIManager.ts",
+    "bytes": 7336,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "ui",
+    "sha256": "bec70b2fbb2101f02e3cd4e3b09addc9a043d75a95c8fe57068f3df79eb10446"
+  },
+  {
+    "path": "src/engine/ui/UITemplateRegistry.ts",
+    "bytes": 2777,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "ui",
+    "sha256": "97826ed888b3c6b27364c1e0a470b15f091099e6451fa80d67c3dacf97912ec5"
+  },
+  {
+    "path": "src/engine/vfx/CustomShaderLibrary.ts",
+    "bytes": 2681,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "vfx",
+    "sha256": "82b0b5a1945187a1a46a6c7628c55584b5b46547c1e38f3f362917484314d07e"
+  },
+  {
+    "path": "src/engine/vfx/DecalManager.ts",
+    "bytes": 2929,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "vfx",
+    "sha256": "20aae7bb1d8353079d8ed5abb10dc3b32767716c77c29ca64cc6dab8b39e2d81"
+  },
+  {
+    "path": "src/engine/vfx/GPUParticleSystem.ts",
+    "bytes": 12873,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "vfx",
+    "sha256": "297312d038d7c4b58608b050386d0711c4344fe88a480b8a9353ee1d3ddad796"
+  },
+  {
+    "path": "src/engine/vfx/PostProcessingPipeline.ts",
+    "bytes": 5727,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "vfx",
+    "sha256": "5afa7cecd5b40b02db91106e5971407589a584e1575d94a542b223e05789e02f"
+  },
+  {
+    "path": "src/engine/vfx/VFXEffectManager.ts",
+    "bytes": 905,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "vfx",
+    "sha256": "78385190700a738ed1e4c2cedf7c0a9c7d5e1fccc89875967fd687f1fbd2f210"
+  },
+  {
+    "path": "src/engine/world/EntityManager.ts",
+    "bytes": 1815,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "world",
+    "sha256": "197247f45dfc54a3447a0ce60d018e3cfebe9560dfacef0ca13d9264f768c2de"
+  },
+  {
+    "path": "src/engine/world/OctreeManager.ts",
+    "bytes": 4955,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "world",
+    "sha256": "a7848145dfa2b33f81e373742d204bbd4b81835313d289b692a118522b787b2b"
+  },
+  {
+    "path": "src/engine/world/SaveSystem.ts",
+    "bytes": 1553,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "world",
+    "sha256": "7cea965c92bafbdfbbb9bf0af5be33d385424325f73b1bab57a1d06520bf88bb"
+  },
+  {
+    "path": "src/engine/world/SceneManager.ts",
+    "bytes": 3107,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "world",
+    "sha256": "6f61c75a109bdfa4cfce466f96900cdf835e049bb16783a9fb726208c714d51f"
+  },
+  {
+    "path": "src/engine/world/SpatialGrid.ts",
+    "bytes": 6504,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "world",
+    "sha256": "72c93160962e4225989293d1e073cd7500032dc3bb5134ce96c97c8afe5c6d24"
+  },
+  {
+    "path": "src/engine/world/WorldStateSerializer.ts",
+    "bytes": 1362,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "engine",
+    "module": "world",
+    "sha256": "824facff6206b3cb7b9dc7ba339f01200899613370a05690c7d80f28089b7aec"
+  },
+  {
+    "path": "src/main.ts",
+    "bytes": 268,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "src-other",
+    "module": null,
+    "sha256": "9dd15d4cbac7f5006dc0446a00adfd417c17aafef5a3ba34b6eccb02803706e8"
+  },
+  {
+    "path": "src/plugins/ai/plugin.ts",
+    "bytes": 10944,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "ai",
+    "sha256": "8a9a7452035db72b2ec1c43814f2988da183182f30c94d07cf458a00728ed708"
+  },
+  {
+    "path": "src/plugins/anim/plugin.ts",
+    "bytes": 14569,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "anim",
+    "sha256": "2acd0bb13969fd2eda1c30a57d198fea48fc62c56776b05b3d582f644d240da7"
+  },
+  {
+    "path": "src/plugins/assets/plugin.ts",
+    "bytes": 2218,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "assets",
+    "sha256": "f7e06abf5a8393d5278030dd72ea21dcce400da45863169c6b3b483a6f770d2b"
+  },
+  {
+    "path": "src/plugins/audio/plugin.ts",
+    "bytes": 6754,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "audio",
+    "sha256": "6e20458f5f272cc3450c677fbd3a3f142d8fdc984996ac00b7e7c04832e907b1"
+  },
+  {
+    "path": "src/plugins/camera/plugin.ts",
+    "bytes": 12150,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "camera",
+    "sha256": "58e501790062d60657f8f57d279676fb11aafbdb9b452edd248fa1858003ff43"
+  },
+  {
+    "path": "src/plugins/debug/plugin.ts",
+    "bytes": 5536,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "debug",
+    "sha256": "82a3829810d4d51688232eeb4fac1f06ed2d69f044e474c39ce13d33b5e6ae9c"
+  },
+  {
+    "path": "src/plugins/game-loop/plugin.ts",
+    "bytes": 4970,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "game-loop",
+    "sha256": "4023af84be4a1f8d5de7d4685f0720b4ba2a25fe37ae14fa24447ea47b5e4dca"
+  },
+  {
+    "path": "src/plugins/input/plugin.ts",
+    "bytes": 1140,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "input",
+    "sha256": "ca1f0cb92e7a09e97aa969040af27e1d529f37994c8c8e9e3d2fd4ecc9d46440"
+  },
+  {
+    "path": "src/plugins/modding/plugin.ts",
+    "bytes": 9788,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "modding",
+    "sha256": "d5ee88241567ac8611e07476721246d840c0dcc1252acbe55098cca97a0d8cac"
+  },
+  {
+    "path": "src/plugins/monetization/plugin.ts",
+    "bytes": 8536,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "monetization",
+    "sha256": "17a75d6585509de29aced863d214fc22f3342bc0bfd93b811e43d61d71a0f674"
+  },
+  {
+    "path": "src/plugins/net/plugin.ts",
+    "bytes": 10023,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "net",
+    "sha256": "2b354eb5a3836a9368f6635ef34e1e8305219ae4411f9bd7065a098d1d2811bd"
+  },
+  {
+    "path": "src/plugins/overlay/plugin.ts",
+    "bytes": 5541,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "overlay",
+    "sha256": "a028a2672b98150e739b7ac2d092181a95cba41c2b8bfc7dba816f2bedc2a8a7"
+  },
+  {
+    "path": "src/plugins/physics/plugin.ts",
+    "bytes": 7457,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "physics",
+    "sha256": "d99dcf9922ff1fb74e8cfb50cf42e4f6f4c62599393a1205a15861a7cae1de47"
+  },
+  {
+    "path": "src/plugins/player/plugin.ts",
+    "bytes": 1596,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "player",
+    "sha256": "5d85fbbba9157581d988d9a597eb86a29efb0d0822f66c48a34a1f929faa4394"
+  },
+  {
+    "path": "src/plugins/render/plugin.ts",
+    "bytes": 1879,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "render",
+    "sha256": "03972300eb5ca8e37c319318f4b36190afba8fb3198c51c0d4fbe2af3c3e00a1"
+  },
+  {
+    "path": "src/plugins/scripting/plugin.ts",
+    "bytes": 8627,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "scripting",
+    "sha256": "806a481e28519dc31f934638a4bd8ceaae857d25401c9df25aea2d23c07661f0"
+  },
+  {
+    "path": "src/plugins/security/plugin.ts",
+    "bytes": 6538,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "security",
+    "sha256": "b85f7cc78513788fb7da045fba782f6433233a6528093f60151a32f5a151836f"
+  },
+  {
+    "path": "src/plugins/sprites/plugin.ts",
+    "bytes": 6145,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "sprites",
+    "sha256": "c0292cbe8656156bf11688e4007ce08fb26842c4eb09341ad84d9be2e298db1e"
+  },
+  {
+    "path": "src/plugins/steam/plugin.ts",
+    "bytes": 6348,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "steam",
+    "sha256": "2716b0c2df3f979abcee4d04f6be672831c63353b52958c1772ed8b02f8d7386"
+  },
+  {
+    "path": "src/plugins/storage/plugin.ts",
+    "bytes": 7633,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "storage",
+    "sha256": "a000116d607c6d582c8c2880d9542b14cf342c2383d1a4c24f5052e06157d250"
+  },
+  {
+    "path": "src/plugins/streaming/plugin.ts",
+    "bytes": 9817,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "streaming",
+    "sha256": "c7a8799bcadf66a18d9dde0d9aed0809fcb85461d1d9249c586a2cef552488ee"
+  },
+  {
+    "path": "src/plugins/terrain/plugin.ts",
+    "bytes": 10191,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "terrain",
+    "sha256": "1763156d5d8353a7b54099f041913f7adf8048f80d5938a07ac97e25ee5ea7da"
+  },
+  {
+    "path": "src/plugins/ui/plugin.ts",
+    "bytes": 13368,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "ui",
+    "sha256": "ee42102ae0db97434a041638c00e7d949dd570c69b4ea2411581473be0ecc93c"
+  },
+  {
+    "path": "src/plugins/vfx/plugin.ts",
+    "bytes": 6777,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "vfx",
+    "sha256": "2b4e60c92b4b748eee467f4adc3152766f8fb1e87e2c83931c03ba0a2fc63756"
+  },
+  {
+    "path": "src/plugins/world/plugin.ts",
+    "bytes": 10317,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "plugins",
+    "module": "world",
+    "sha256": "ac146869944a6f09bfdfe5d8a5de6f6cc35e6eca7665565e05fa0e63129d03d1"
+  },
+  {
+    "path": "src/SteamSetup.exe",
+    "bytes": 2380800,
+    "extension": ".exe",
+    "isText": false,
+    "isGenerated": false,
+    "area": "src-other",
+    "module": null,
+    "sha256": "7d3654531c32d941b8cae81c4137fc542172bfa9635f169cb392f245a0a12bcb"
+  },
+  {
+    "path": "src/styles.css",
+    "bytes": 1860,
+    "extension": ".css",
+    "isText": true,
+    "isGenerated": false,
+    "area": "src-other",
+    "module": null,
+    "sha256": "ed3f94e632a54dfa3c94c8e1d6007320ab0a42d559a461d7417688e52a130dd4"
+  },
+  {
+    "path": "src/styles/ui.css",
+    "bytes": 3034,
+    "extension": ".css",
+    "isText": true,
+    "isGenerated": false,
+    "area": "styles",
+    "module": null,
+    "sha256": "5574cbadafd9d52939b5f1955a7dafdb07020a219e0280ebcd4c2c57933194eb"
+  },
+  {
+    "path": "src/tokens/ai.ts",
+    "bytes": 1249,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "ai",
+    "sha256": "23a0133120e3365bc99c8b478df1e7b162748b1c744619421304cd66228cdefb"
+  },
+  {
+    "path": "src/tokens/anim.ts",
+    "bytes": 1478,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "anim",
+    "sha256": "b6ea17df79899c40bf0a2d716726306e9871a02468586fb651afce05dbfff692"
+  },
+  {
+    "path": "src/tokens/assets.ts",
+    "bytes": 1210,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "assets",
+    "sha256": "9a7d5f87f9bdab78295ac678dc703c7254144fce1634a3dbe3bdd65f663e2e5c"
+  },
+  {
+    "path": "src/tokens/audio.ts",
+    "bytes": 896,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "audio",
+    "sha256": "beba151094e51312616dbc79ca5744890d03ac10b5481ed348355d89ff695b13"
+  },
+  {
+    "path": "src/tokens/camera.ts",
+    "bytes": 817,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "camera",
+    "sha256": "63210e2c1aea7904ba946b0d609a96dc17f136fc9f935008b7047202ba498a13"
+  },
+  {
+    "path": "src/tokens/game-loop.ts",
+    "bytes": 517,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "game-loop",
+    "sha256": "da24c9216d311a3129db570c804843d08f0cbe69cb5865e3e2acd364dc526762"
+  },
+  {
+    "path": "src/tokens/input.ts",
+    "bytes": 1525,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "input",
+    "sha256": "ad2c9ac8120ec7f9ffec06dc6f3b8654074803155ba993231bcea2bd527df174"
+  },
+  {
+    "path": "src/tokens/modding.ts",
+    "bytes": 752,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "modding",
+    "sha256": "81fa9bd2e7cfdc836f13a158440c1c9ef01d02812269c1405d4261a719e1a318"
+  },
+  {
+    "path": "src/tokens/monetization.ts",
+    "bytes": 1128,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "monetization",
+    "sha256": "1a61e4c3244bd163d74aa954b88fd8df83c285b92e937b210c3c94bc5c81aa6d"
+  },
+  {
+    "path": "src/tokens/net.ts",
+    "bytes": 1416,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "net",
+    "sha256": "758c27c39848557147205e144f8601629fce89300a31561fd6919ca8776a4448"
+  },
+  {
+    "path": "src/tokens/overlay.ts",
+    "bytes": 850,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "overlay",
+    "sha256": "6e87120e740f38c73177aba27e15921cf07d208bd7af443d3ce82c0c50b784c8"
+  },
+  {
+    "path": "src/tokens/physics.ts",
+    "bytes": 1776,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "physics",
+    "sha256": "091bc2ded702b92d25987e699c99175292203ca1b45c9270df47b2634093b8f6"
+  },
+  {
+    "path": "src/tokens/render.ts",
+    "bytes": 2126,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "render",
+    "sha256": "02d7833d4e663d08ea0af50dff157a77f002fd566f9b5299838d2e0c7d4abf90"
+  },
+  {
+    "path": "src/tokens/scripting.ts",
+    "bytes": 1284,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "scripting",
+    "sha256": "2e9e94833cd050000166a0a1ea6c91e2ac45562767758d4c5abf4dc3ccbb9248"
+  },
+  {
+    "path": "src/tokens/security.ts",
+    "bytes": 878,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "security",
+    "sha256": "363a1541b53b4b78f7246dabdf57d365aa41604f8b740f46ecba829aacdc2b20"
+  },
+  {
+    "path": "src/tokens/sprites.ts",
+    "bytes": 1030,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "sprites",
+    "sha256": "633b727056662bc65820b3079e47ae78150c59e543a6517deac06b295f5b9aaf"
+  },
+  {
+    "path": "src/tokens/steam-net.ts",
+    "bytes": 1996,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "steam-net",
+    "sha256": "48717d5fd6818e429f15c3d879cb800507eccf7670d9c334c6b2b777329fc9e9"
+  },
+  {
+    "path": "src/tokens/steam.ts",
+    "bytes": 1010,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "steam",
+    "sha256": "cccf60e2276224e45590455d659fe473d85fa15af81cd35167b9e361af39dca4"
+  },
+  {
+    "path": "src/tokens/storage.ts",
+    "bytes": 1525,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "storage",
+    "sha256": "0bd7587d0eb5a19720df2fef3edbfeb060572e5cc504aa554416f3f82f9cf793"
+  },
+  {
+    "path": "src/tokens/streaming.ts",
+    "bytes": 1054,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "streaming",
+    "sha256": "6b2f51b6ad69d3991c991b48a8d7a2923a650ad2d549f3030bd2dda208c37bfd"
+  },
+  {
+    "path": "src/tokens/terrain.ts",
+    "bytes": 764,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "terrain",
+    "sha256": "771cd89cf06c1e55f43e05f9e7d21dec1577c153a1a0fceb015ee373452bf356"
+  },
+  {
+    "path": "src/tokens/ui.ts",
+    "bytes": 767,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "ui",
+    "sha256": "54d1bad11b078c5b093984aeb777e036998ef2d2579f5af05d9929ccb55dc24a"
+  },
+  {
+    "path": "src/tokens/vfx.ts",
+    "bytes": 1606,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "vfx",
+    "sha256": "43bee09744115a7f0e6683a5064999a623cf00a4a0c6c9412169763bc862efeb"
+  },
+  {
+    "path": "src/tokens/world.ts",
+    "bytes": 1137,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tokens",
+    "module": "world",
+    "sha256": "06f6b7d213809c18aa41b3dfd5fc4a0d23947ca76f872bf9e70ae8e54de29a29"
+  },
+  {
+    "path": "STAGE0_README.txt",
+    "bytes": 503,
+    "extension": ".txt",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "d586e464a28927b6be1fdfb923c769822b46b8b5d4a32dc0d6c9b5d2398d01b4"
+  },
+  {
+    "path": "steam_appid.txt",
+    "bytes": 3,
+    "extension": ".txt",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "ddfe0e8d462af661f81db36589c39882dc0f2330785b5d80cd34f2f520ad618f"
+  },
+  {
+    "path": "STREAMING_OVERLAY_FIX_README.txt",
+    "bytes": 2207,
+    "extension": ".txt",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "88232be9431e5dcdff201a7ff22feee41bdd3c45943b219b714d5b5eac538fd0"
+  },
+  {
+    "path": "test-steam-environment.bat",
+    "bytes": 1094,
+    "extension": ".bat",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "04305e04cb41f2842ed2d4359bc5192b781333f677f36082d7f668e870e97292"
+  },
+  {
+    "path": "tests/ai-smoke-test.mjs",
+    "bytes": 6677,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "b9c2aa5a0e049411e28c1f3a1958580d0451a2158622d9352e784f772e3d5c94"
+  },
+  {
+    "path": "tests/ai-system.test.ts",
+    "bytes": 10871,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "9e6cdf3ab852c6e23adefc0a3101353ffa6c694dd29c677eda96a9237bceefaa"
+  },
+  {
+    "path": "tests/anim-smoke-test.mjs",
+    "bytes": 1443,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "868ae934274505a3703bb345416a0158435642faf0a56fff08a1819f67bf1a88"
+  },
+  {
+    "path": "tests/anim-system.test.ts",
+    "bytes": 9829,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "c7c448e7674900af2eec0195d25ea2f5f9ec63ad375427cc7321f3ffa5f4beaa"
+  },
+  {
+    "path": "tests/assets-pipeline.test.ts",
+    "bytes": 6315,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "89d1ee4d3f6e76f6a019d6f7382b6fc55c7fb6ef80732767bd740a3e2dfbd019"
+  },
+  {
+    "path": "tests/assets-smoke-test.mjs",
+    "bytes": 3255,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "034bc7be5c9102e459b64ad0685f81f9e4846af63963182ce5a2bee035c1cb1b"
+  },
+  {
+    "path": "tests/audio-smoke-test.mjs",
+    "bytes": 1388,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "832e09189da98e3127d74f1748c3d625fcdafa728d742cab0e620e542538788e"
+  },
+  {
+    "path": "tests/audio-system.test.ts",
+    "bytes": 4059,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "dc972ea77939bf6376abe16a2e2d3caeec44082270dfc25ef35df9850d12a105"
+  },
+  {
+    "path": "tests/camera-smoke-test.mjs",
+    "bytes": 1407,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "6e329cd10280402efce719abde0b1d91450e3b1a6eda3075766f9353c57dd323"
+  },
+  {
+    "path": "tests/camera-system.test.ts",
+    "bytes": 2652,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "d26221f34c4ca0ada542f9f4b9ad53b321dda4ed4f078d9dcfdc99342f51aad2"
+  },
+  {
+    "path": "tests/debug-diagnostics.mjs",
+    "bytes": 2380,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "62edbadf4d5933f6f9ea1a38054c7e266535a35c1fee315e4533f963fa0fa844"
+  },
+  {
+    "path": "tests/debug-execution.log",
+    "bytes": 2921,
+    "extension": ".log",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "b6dc80b02eeea3af3aaae0dc4e9f7a8716aec92920781db4adb65fd29571b0e8"
+  },
+  {
+    "path": "tests/debug-report.txt",
+    "bytes": 576,
+    "extension": ".txt",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "6eb1f04afa9c6f9064c2d3b39dcc9cddbefe43a481e1878bffa54ac1787a5581"
+  },
+  {
+    "path": "tests/freeze-invariants.mjs",
+    "bytes": 1862,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "78633e5bd10d9a0e2d0d0a3c7678f6c73448423df2ebda5c53adcf027001b217"
+  },
+  {
+    "path": "tests/freeze-lock.mjs",
+    "bytes": 11919,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "797cb33df106aa4a9442bf40fb876631328caf48a628275970bfe6daec480f54"
+  },
+  {
+    "path": "tests/hud-renderer-smoke-test.mjs",
+    "bytes": 2636,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "79cee0fb64dc1936c541ba34d2335d7c769cd0dcee1699ffc89c396cc55d6ae6"
+  },
+  {
+    "path": "tests/input-smoke-test.mjs",
+    "bytes": 3016,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "ca0b129146fa947ef24b2447a5ea2c153560d79cc2acfff0d3a5e87899dd01fd"
+  },
+  {
+    "path": "tests/input-system.test.ts",
+    "bytes": 8863,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "756cb2e528026b48f74a993bdc8fbf6d4bc9f7334195bc2e5c225197d05df85f"
+  },
+  {
+    "path": "tests/modding-smoke-test.mjs",
+    "bytes": 4685,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "3650c917473080f439945e6a91b73cd27e6250b44ce92e62afb971996dc107b5"
+  },
+  {
+    "path": "tests/modding-system.test.ts",
+    "bytes": 7863,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "77fbaf7ab5346e47aed97017ee678cc941b1161cb24668d4bf19876490790b24"
+  },
+  {
+    "path": "tests/monetization-smoke-test.mjs",
+    "bytes": 1582,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "88ef6ded5fe58d618e146355a64a921e6c6abe1b16d419def5d1f51a645ce5fe"
+  },
+  {
+    "path": "tests/monetization-system.test.ts",
+    "bytes": 3784,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "6dc0e4becce3e2ab1fa44d795e34614aba0d87736e1f52b663906a0d5f687cfa"
+  },
+  {
+    "path": "tests/overlay-smoke-test.mjs",
+    "bytes": 2751,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "639b7c31f0536fb17f1787e8e2ff62e5bd9d8062e2e6b12237330566f50fa532"
+  },
+  {
+    "path": "tests/overlay-system.test.ts",
+    "bytes": 3071,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "25ebfbd81a91ebd7fee5fc6751495418d3e31d78b4a55dad6c434ab1f0053a9a"
+  },
+  {
+    "path": "tests/physics-smoke-test.mjs",
+    "bytes": 1414,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "e88197bc4d41cb5fcec06703d9ed812af5a977692a653ab10f712e933d450062"
+  },
+  {
+    "path": "tests/physics-system.test.ts",
+    "bytes": 2373,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "27d2e4dc2717a9af559480921854923131a0b95a767c319f5a3c2c5ef2f763cd"
+  },
+  {
+    "path": "tests/run-tauri-logged.mjs",
+    "bytes": 2645,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "4175ef329e7a4cbebafbf7e962caea1e205395e4eea5a56f8d159011a1bf7317"
+  },
+  {
+    "path": "tests/scripting-smoke-test.mjs",
+    "bytes": 5087,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "08a6a897741be45084568d9738501d7a15550932b9cb02272064d5e0076e303f"
+  },
+  {
+    "path": "tests/scripting-system.test.ts",
+    "bytes": 14516,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "9326622c8a4735e318550bb12c60182ca6e0a9912d9cf86f4b406f0ec0daeef8"
+  },
+  {
+    "path": "tests/security-smoke-test.mjs",
+    "bytes": 6303,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "794196afeefa6146b35e7386c91ee812e2a9c88a2137a67a669e49df03f1a9c0"
+  },
+  {
+    "path": "tests/security-system.test.ts",
+    "bytes": 7015,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "c4a74e508337cf2a6e8b3876120fa11c3dc4ddd558a40048b6662216aef43f6e"
+  },
+  {
+    "path": "tests/sprites-smoke-test.mjs",
+    "bytes": 1467,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "4e58d9b4826461dc27f52cbf59e8cf2e7249e4af27888588e5e5dc204282c5fb"
+  },
+  {
+    "path": "tests/sprites-system.test.ts",
+    "bytes": 2291,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "d83a0b45dbfc5100bddef41d2f865347eb8ddb15cb33e00ab4cbf23cc5045734"
+  },
+  {
+    "path": "tests/steam-integration.test.ts",
+    "bytes": 6791,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "d6e0f9fe60d0ba943bf63675a03622acf807675b454d535da023563514f2619c"
+  },
+  {
+    "path": "tests/steam-p2p-smoke.mjs",
+    "bytes": 3142,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "17af6a9d4c8b8dde3e5924fd975049964461413abb2d42101e8d136d2304df53"
+  },
+  {
+    "path": "tests/steam-smoke-test.mjs",
+    "bytes": 2392,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "592eb1c1577884e8bda7159a71819ae65c006e65ea2c9d27e16e4561ba4c403b"
+  },
+  {
+    "path": "tests/storage-cloud-db.test.ts",
+    "bytes": 4311,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "403d1660c97c16adbbed048f613643e59a30885f0f8eebfa08b81633aa34c957"
+  },
+  {
+    "path": "tests/storage-persistence.test.ts",
+    "bytes": 4697,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "332fc3e867d86ae891ae819390c41082f6c15ab20354757e9cc36857f9f498dc"
+  },
+  {
+    "path": "tests/storage-smoke-test.mjs",
+    "bytes": 1374,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "a9501bfe287e1cff767f1c205e30a647abdd57f9c686e98b1319b9b29ef5e424"
+  },
+  {
+    "path": "tests/storage-system.test.ts",
+    "bytes": 4426,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "1d2094dbe92eedd2423983699e0858df9a53a6b05b44f25a9e31b8d5805f0ed0"
+  },
+  {
+    "path": "tests/streaming-smoke-test.mjs",
+    "bytes": 2690,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "7de8706904467c0337aa86bc3a0ad4bfd128bc12539ede40e7cca2c3e0502a2f"
+  },
+  {
+    "path": "tests/streaming-system.test.ts",
+    "bytes": 5093,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "76697ecb5b7f3a2dbcdb0583263ee85e3ea2ed92e2d22a2819344e9e723a75b0"
+  },
+  {
+    "path": "tests/terrain-smoke-test.mjs",
+    "bytes": 5738,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "215cf5b8d5391384a7a94c1087c33fd837113e54c438bc47e58244636aad9d84"
+  },
+  {
+    "path": "tests/terrain-system.test.ts",
+    "bytes": 11136,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "c0ef29db89dde82d45a3d012bf11ea2b047e6b751b043063a6ae7b28e457197a"
+  },
+  {
+    "path": "tests/test-steam-environment.bat",
+    "bytes": 3481,
+    "extension": ".bat",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "7dfc2e21d3e2cdde8dfb26f64c2e631a1d5a523ff09ee8d0b46819dd539c0a30"
+  },
+  {
+    "path": "tests/ui-smoke-test.mjs",
+    "bytes": 1421,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "e24c0d90ddd19f8628d1093ead2716a58a7bb53e7e8b830560e62f7663d9421c"
+  },
+  {
+    "path": "tests/ui-system.test.ts",
+    "bytes": 12252,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "33449127bc43aa60a5733fa307338365c06ce3e84da04697c108f4ec0deb77c4"
+  },
+  {
+    "path": "tests/vfx-smoke-test.mjs",
+    "bytes": 1415,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "03bf1b429e0b73d4b38d2641917b81812b5f8f9a97e46a0bd589a7d911eb3dd3"
+  },
+  {
+    "path": "tests/vfx-system.test.ts",
+    "bytes": 2606,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "89211ac249c62bd094b86c7141051735325a90e30759c6765dade2951d4fe7c7"
+  },
+  {
+    "path": "tests/world-smoke-test.mjs",
+    "bytes": 1459,
+    "extension": ".mjs",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "eeeacd0c7b433cb7816b24c45e5e4c8667834d3ae034dc1c9c58f5eaba66eb2f"
+  },
+  {
+    "path": "tests/world-system.test.ts",
+    "bytes": 11001,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "tests",
+    "module": null,
+    "sha256": "c5b5b7db69a7bf893bd908d24a588482a49e79e784d7d8aaec83834fbf9f3fc2"
+  },
+  {
+    "path": "tsconfig.json",
+    "bytes": 534,
+    "extension": ".json",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "78d72cab9433cd617570d6cbfa6d6422fab30e42c188d075577015a61f5dfda8"
+  },
+  {
+    "path": "vite.config.ts",
+    "bytes": 825,
+    "extension": ".ts",
+    "isText": true,
+    "isGenerated": false,
+    "area": "root",
+    "module": null,
+    "sha256": "118817aadf172c8c9326f37cf9aa8f55e9d9b21bfac1a100d95b22506f928b79"
+  }
+]

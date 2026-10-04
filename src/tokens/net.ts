@@ -1,17 +1,15 @@
 import {
   defineCapability,
-} from "../core/contracts/capability-token";
+} from "@core";
 
 import type {
   EntitySnapshot,
   NetMode,
   NetworkStats,
   TransportType,
+  StateReplicationApi,
 } from "../contracts/net/types";
 
-import type {
-  StateReplicator,
-} from "../engine/net/StateReplicator";
 
 export interface NetworkApi {
   readonly mode:
@@ -52,7 +50,7 @@ export interface NetworkApi {
     NetworkStats;
 
   getStateReplicator():
-    StateReplicator;
+    StateReplicationApi;
 
   registerEntity(
     entityId: string,

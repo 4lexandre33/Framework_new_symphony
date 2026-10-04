@@ -1,8 +1,8 @@
 import type {
   Plugin,
   PluginContext,
-} from "../../core/contracts/plugin-context";
-import type { CapabilityToken } from "../../core/contracts/capability-token";
+} from "@core";
+import type { CapabilityToken } from "@core";
 import type { EngineServices } from "../../app/EngineServices";
 import { clearEngineServices } from "../../app/EngineServices";
 import { getErrorMessage } from "../../app/errors";
@@ -72,7 +72,9 @@ export function createDebugOverlayPlugin(
         consumes: CONSUMED_CAPABILITIES.map((token) => ({
           id: token.id,
           range: "^1.0.0",
+          optional: false,
         })),
+        conflicts: [],
       },
       lifecycleHooks: {
         onBoot(ctx: PluginContext): void {

@@ -1,0 +1,50 @@
+{
+  "stage": "46",
+  "name": "World Objects / referências de objetos",
+  "requires": [
+    "44",
+    "45"
+  ],
+  "roadmapSource": "Camada 2 roadmap stages 45-70",
+  "scope": {
+    "implemented": [
+      "WorldObjectId",
+      "WorldObjectRef",
+      "ObjectStateRef",
+      "ObjectProp"
+    ],
+    "explicitlyDeferred": [
+      "StateKey",
+      "StateValue",
+      "StateStore",
+      "StateSnapshot",
+      "DomainTag",
+      "TagSet",
+      "Interaction/Affordances"
+    ]
+  },
+  "objectProp": {
+    "identity": "WorldObjectId",
+    "location": "optional LocationRef",
+    "state": "optional opaque ObjectStateRef",
+    "mutableRuntimeField": "location only",
+    "snapshot": "dimension-agnostic IDs only"
+  },
+  "rules": [
+    "No x/y/z, transform, Sprite, Mesh, collider, rigid body or render assets.",
+    "ObjectProp may relocate between semantic LocationRefs in-place.",
+    "ObjectStateRef is opaque; Stage 47 StateStore is not anticipated.",
+    "Tags/classification remain deferred to Stage 61.",
+    "Compatible with 2D, 2.5D, 3D and headless execution."
+  ],
+  "files": [
+    "scripts/architecture/stage46-validate-world-objects.mjs",
+    "src/domain/entities/ObjectProp.ts",
+    "src/domain/entities/ObjectStateRef.ts",
+    "src/domain/entities/README.txt",
+    "src/domain/entities/WorldObjectId.ts",
+    "src/domain/entities/WorldObjectRef.ts",
+    "src/domain/entities/index.ts",
+    "tests/domain-world-object.test.ts"
+  ]
+}

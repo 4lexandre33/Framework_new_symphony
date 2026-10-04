@@ -7,11 +7,11 @@ const ROOT_DIR =
 const REQUIRED_AI_FILES = [
   "src/contracts/ai/types.ts",
   "src/tokens/ai.ts",
-  "src/engine/ai/NavMeshQuery.ts",
-  "src/engine/ai/BehaviorTree.ts",
-  "src/engine/ai/PerceptionSystem.ts",
-  "src/engine/ai/SteeringBehaviors.ts",
-  "src/engine/ai/AIAgentManager.ts",
+  "src/engine/ai/internal/NavMeshQuery.ts",
+  "src/engine/ai/internal/BehaviorTree.ts",
+  "src/engine/ai/internal/PerceptionSystem.ts",
+  "src/engine/ai/internal/SteeringBehaviors.ts",
+  "src/engine/ai/internal/AIAgentManager.ts",
   "src/plugins/ai/plugin.ts",
   "tests/ai-system.test.ts",
 ];

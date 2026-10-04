@@ -1,0 +1,63 @@
+{
+  "stage": "45",
+  "name": "Location / espaço semântico",
+  "requires": [
+    "44"
+  ],
+  "roadmapSource": "Camada 2 roadmap stages 45-70",
+  "scope": {
+    "implemented": [
+      "LocationId",
+      "LocationRef",
+      "LocationZone",
+      "LocationRelation",
+      "LocationGraph"
+    ],
+    "explicitlyDeferred": [
+      "WorldObjectId",
+      "WorldObjectRef",
+      "ObjectProp",
+      "ObjectStateRef",
+      "StateStore",
+      "DomainTime",
+      "DomainEvents"
+    ]
+  },
+  "relations": [
+    "contains",
+    "connected-to",
+    "parent",
+    "child",
+    "neighbor"
+  ],
+  "semantics": {
+    "contains": "directed and acyclic",
+    "connected-to": "symmetric; cycles allowed",
+    "neighbor": "symmetric; cycles allowed",
+    "parent": "directed",
+    "child": "directed",
+    "defaultPathKinds": [
+      "connected-to",
+      "neighbor"
+    ]
+  },
+  "rules": [
+    "Zero coordinates or engine transforms in domain location.",
+    "Compatible with 2D, 2.5D, 3D and headless execution.",
+    "Graph validates duplicate locations, missing references and duplicate relations.",
+    "Reverse duplicate symmetric relations are rejected.",
+    "Containment cycles are rejected; connectivity cycles are allowed.",
+    "BFS path allocation occurs only on explicit query."
+  ],
+  "files": [
+    "scripts/architecture/stage45-validate-location.mjs",
+    "src/domain/location/LocationGraph.ts",
+    "src/domain/location/LocationId.ts",
+    "src/domain/location/LocationRef.ts",
+    "src/domain/location/LocationRelation.ts",
+    "src/domain/location/LocationZone.ts",
+    "src/domain/location/README.txt",
+    "src/domain/location/index.ts",
+    "tests/domain-location.test.ts"
+  ]
+}

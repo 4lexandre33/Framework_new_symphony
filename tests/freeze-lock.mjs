@@ -2,280 +2,174 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import {
+  CANONICAL_MODULES,
+  MODULE_MAP_SCHEMA_VERSION,
+} from "../scripts/architecture/module-map.mjs";
 
 const ROOT_DIR = process.cwd();
 const TESTS_DIR = path.join(ROOT_DIR, "tests");
-const LOCK_FILE = path.join(TESTS_DIR, ".freeze-lock.json");
+const LOCK_FILE = path.join(ROOT_DIR, ".freeze-lock.json");
+const LEGACY_LOCK_FILE = path.join(TESTS_DIR, ".freeze-lock.json");
 
-if (!fs.existsSync(TESTS_DIR)) {
-  fs.mkdirSync(TESTS_DIR, { recursive: true });
-}
-
-// Arquivos protegidos por hash SHA-256 (Camadas 1 a 20)
-const PROTECTED_FILES = [
-  // Camada 1: Steamworks & P2P
-  "src-tauri/src/steam.rs",
+const SHARED_HOST_FILES = Object.freeze([
   "src-tauri/src/lib.rs",
   "src-tauri/Cargo.toml",
-  "src/contracts/steam/net-types.ts",
-  "src/tokens/steam.ts",
-  "src/tokens/steam-net.ts",
-  "src/plugins/steam/plugin.ts",
-  "steam_appid.txt",
-  "src-tauri/steam_appid.txt",
-  "tests/steam-integration.test.ts",
-  "tests/steam-p2p-smoke.mjs",
+]);
 
-  // Camada 2: Input Manager
-  "src/contracts/input/types.ts",
-  "src/tokens/input.ts",
-  "src/engine/input/KeyboardMouseDriver.ts",
-  "src/engine/input/GamepadDriver.ts",
-  "src/engine/input/InputManager.ts",
-  "src/plugins/input/plugin.ts",
-  "tests/input-system.test.ts",
-  "tests/input-smoke-test.mjs",
+function migrateLegacyLockIfNeeded() {
+  const canonicalExists = fs.existsSync(LOCK_FILE);
+  const legacyExists = fs.existsSync(LEGACY_LOCK_FILE);
 
-  // Camada 3: Asset Pipeline & VRAM Cache
-  "src/contracts/assets/types.ts",
-  "src/tokens/assets.ts",
-  "src/engine/assets/AssetCache.ts",
-  "src/engine/assets/GLTFLoaderService.ts",
-  "src/engine/assets/TextureLoaderService.ts",
-  "src/engine/assets/AudioLoaderService.ts",
-  "src/plugins/assets/plugin.ts",
-  "tests/assets-pipeline.test.ts",
-  "tests/assets-smoke-test.mjs",
+  if (canonicalExists && legacyExists) {
+    console.error(
+      "[ERRO] Existem simultaneamente /.freeze-lock.json e tests/.freeze-lock.json. " +
+      "Remova a ambiguidade antes de continuar.",
+    );
+    process.exit(1);
+  }
 
-  // Camada 4: Motor de Física (Rapier WASM)
-  "src/contracts/physics/types.ts",
-  "src/tokens/physics.ts",
-  "src/engine/physics/PhysicsWorld.ts",
-  "src/engine/physics/RigidBodyFactory.ts",
-  "src/engine/physics/RaycasterQueries.ts",
-  "src/engine/physics/CollisionEventManager.ts",
-  "src/plugins/physics/plugin.ts",
-  "tests/physics-system.test.ts",
-  "tests/physics-smoke-test.mjs",
+  if (!canonicalExists && legacyExists) {
+    try {
+      JSON.parse(fs.readFileSync(LEGACY_LOCK_FILE, "utf8"));
+    } catch (error) {
+      console.error(
+        `[ERRO] Lock legado inválido em tests/.freeze-lock.json: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      process.exit(1);
+    }
 
-  // Camada 5: Persistência & Banco de Dados (game.storage)
-  "src/contracts/storage/types.ts",
-  "src/tokens/storage.ts",
-  "src/engine/storage/SteamCloudDriver.ts",
-  "src/engine/storage/LocalDatabaseDriver.ts",
-  "src/engine/storage/CloudDatabaseDriver.ts",
-  "src/plugins/storage/plugin.ts",
-  "tests/storage-system.test.ts",
-  "tests/storage-smoke-test.mjs",
+    fs.renameSync(LEGACY_LOCK_FILE, LOCK_FILE);
+    console.log(
+      "\x1b[36m[MIGRADO]\x1b[0m tests/.freeze-lock.json -> /.freeze-lock.json",
+    );
+    return true;
+  }
 
-  // Camada 6: Gerenciador de Mundo, Cenas & ECS (game.world)
-  "src/contracts/world/types.ts",
-  "src/tokens/world.ts",
-  "src/engine/world/SceneManager.ts",
-  "src/engine/world/EntityManager.ts",
-  "src/engine/world/SpatialGrid.ts",
-  "src/engine/world/OctreeManager.ts",
-  "src/engine/world/WorldStateSerializer.ts",
-  "src/engine/world/SaveSystem.ts",
-  "src/plugins/world/plugin.ts",
-  "tests/world-system.test.ts",
-  "tests/world-smoke-test.mjs",
+  return false;
+}
 
-  // Camada 7: Interface de Usuário & HUD (game.ui)
-  "src/contracts/ui/types.ts",
-  "src/tokens/ui.ts",
-  "src/styles/ui.css",
-  "src/engine/ui/UIManager.ts",
-  "src/engine/ui/HUDDataBinder.ts",
-  "src/engine/ui/LocalizationEngine.ts",
-  "src/engine/ui/UITemplateRegistry.ts",
-  "src/engine/ui/DOMEventListenerBridge.ts",
-  "src/plugins/ui/plugin.ts",
-  "tests/ui-system.test.ts",
-  "tests/ui-smoke-test.mjs",
+function toPosix(relativePath) {
+  return relativePath.split(path.sep).join("/");
+}
 
-  // Camada 8: Pipeline de Animações & State Machines (game.anim)
-  "src/contracts/anim/types.ts",
-  "src/tokens/anim.ts",
-  "src/engine/anim/AnimationState.ts",
-  "src/engine/anim/AnimationStateMachine.ts",
-  "src/engine/anim/SkeletalAnimationDriver.ts",
-  "src/engine/anim/Sprite2DAnimationDriver.ts",
-  "src/engine/anim/AnimationEventManager.ts",
-  "src/plugins/anim/plugin.ts",
-  "tests/anim-system.test.ts",
-  "tests/anim-smoke-test.mjs",
+function comparePath(a, b) {
+  return a.localeCompare(b, "en");
+}
 
-  // Camada 9: Motor 2D, Tilemaps & Pixel Art (game.sprites)
-  "src/contracts/sprites/types.ts",
-  "src/tokens/sprites.ts",
-  "src/engine/sprites/TextureAtlasParser.ts",
-  "src/engine/sprites/InstancedTilemapRenderer.ts",
-  "src/engine/sprites/ParallaxController.ts",
-  "src/engine/sprites/PixelArtScaler.ts",
-  "src/engine/sprites/Sprite2DRenderer.ts",
-  "src/plugins/sprites/plugin.ts",
-  "tests/sprites-system.test.ts",
-  "tests/sprites-smoke-test.mjs",
+function collectFilesRecursively(relativeRoot) {
+  const absoluteRoot = path.join(ROOT_DIR, relativeRoot);
+  if (!fs.existsSync(absoluteRoot)) {
+    return [];
+  }
 
-  // Camada 10: Mixer de Áudio Espacial 3D (game.audio)
-  "src/contracts/audio/types.ts",
-  "src/tokens/audio.ts",
-  "src/engine/audio/AudioMixer.ts",
-  "src/engine/audio/PositionalAudio3D.ts",
-  "src/engine/audio/MusicCrossfader.ts",
-  "src/engine/audio/AudioListenerBridge.ts",
-  "src/plugins/audio/plugin.ts",
-  "tests/audio-system.test.ts",
-  "tests/audio-smoke-test.mjs",
+  const stat = fs.statSync(absoluteRoot);
+  if (!stat.isDirectory()) {
+    return [relativeRoot];
+  }
 
-  // Camada 11: Câmera Dinâmica & SpringArm (game.camera)
-  "src/contracts/camera/types.ts",
-  "src/tokens/camera.ts",
-  "src/engine/camera/SpringArm3D.ts",
-  "src/engine/camera/TraumaCameraShake.ts",
-  "src/engine/camera/VirtualCameraStack.ts",
-  "src/engine/camera/CameraOcclusionDetector.ts",
-  "src/plugins/camera/plugin.ts",
-  "tests/camera-system.test.ts",
-  "tests/camera-smoke-test.mjs",
+  const files = [];
+  const stack = [absoluteRoot];
 
-  // Camada 12: Inteligência Artificial & NavMesh (game.ai)
-  "src/contracts/ai/types.ts",
-  "src/tokens/ai.ts",
-  "src/engine/ai/NavMeshQuery.ts",
-  "src/engine/ai/BehaviorTree.ts",
-  "src/engine/ai/PerceptionSystem.ts",
-  "src/engine/ai/SteeringBehaviors.ts",
-  "src/engine/ai/AIAgentManager.ts",
-  "src/plugins/ai/plugin.ts",
-  "tests/ai-system.test.ts",
-  "tests/ai-smoke-test.mjs",
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current) continue;
 
-  // Camada 13: Partículas GPU, Decals & Pós-Processamento (game.vfx)
-  "src/contracts/vfx/types.ts",
-  "src/tokens/vfx.ts",
-  "src/engine/vfx/GPUParticleSystem.ts",
-  "src/engine/vfx/DecalManager.ts",
-  "src/engine/vfx/PostProcessingPipeline.ts",
-  "src/engine/vfx/CustomShaderLibrary.ts",
-  "src/engine/vfx/VFXEffectManager.ts",
-  "src/plugins/vfx/plugin.ts",
-  "tests/vfx-system.test.ts",
-  "tests/vfx-smoke-test.mjs",
+    const entries = fs.readdirSync(current, { withFileTypes: true });
+    entries.sort((a, b) => comparePath(a.name, b.name));
 
-  // Camada 14: Terreno Procedural, Biomas & Voxels (game.terrain)
-  "src/contracts/terrain/types.ts",
-  "src/tokens/terrain.ts",
-  "src/engine/terrain/PerlinNoiseService.ts",
-  "src/engine/terrain/BiomeEvaluator.ts",
-  "src/engine/terrain/GreedyMesher.ts",
-  "src/engine/terrain/VoxelChunkManager.ts",
-  "src/engine/terrain/ProceduralWorkerPool.ts",
-  "src/engine/terrain/terrain.worker.ts",
-  "src/plugins/terrain/plugin.ts",
-  "tests/terrain-system.test.ts",
-  "tests/terrain-smoke-test.mjs",
+    for (let index = entries.length - 1; index >= 0; index -= 1) {
+      const entry = entries[index];
+      const absolutePath = path.join(current, entry.name);
 
-  // Camada 15: Cutscenes, Diálogos & Quests (game.scripting)
-  "src/contracts/scripting/types.ts",
-  "src/tokens/scripting.ts",
-  "src/engine/scripting/CutsceneTimeline.ts",
-  "src/engine/scripting/DialogueTreeParser.ts",
-  "src/engine/scripting/QuestManager.ts",
-  "src/engine/scripting/TriggerZoneManager.ts",
-  "src/plugins/scripting/plugin.ts",
-  "tests/scripting-system.test.ts",
-  "tests/scripting-smoke-test.mjs",
+      if (entry.isDirectory()) {
+        stack.push(absolutePath);
+        continue;
+      }
 
-  // Camada 16: Streaming Espacial, LOD & HLOD (game.streaming)
-  "src/contracts/streaming/types.ts",
-  "src/tokens/streaming.ts",
-  "src/engine/streaming/DistanceLODManager.ts",
-  "src/engine/streaming/WorldStreamingSectorManager.ts",
-  "src/engine/streaming/HLODBuilder.ts",
-  "src/engine/streaming/StreamingWorkerPool.ts",
-  "src/engine/streaming/streaming.worker.ts",
-  "src/plugins/streaming/plugin.ts",
-  "tests/streaming-system.test.ts",
-  "tests/streaming-smoke-test.mjs",
+      if (entry.isFile()) {
+        files.push(toPosix(path.relative(ROOT_DIR, absolutePath)));
+      }
+    }
+  }
 
-  // Camada 17: Desktop Overlay, Ancoragem na Barra de Tarefas & Raycast Click Passthrough (game.overlay)
-  "src/contracts/overlay/types.ts",
-  "src/tokens/overlay.ts",
-  "src/engine/overlay/RaycastHitTestPassthrough.ts",
-  "src/engine/overlay/OverlayWindowManager.ts",
-  "src/engine/overlay/TauriOverlayDriver.ts",
-  "src-tauri/src/overlay.rs",
-  "src/plugins/overlay/plugin.ts",
-  "tests/overlay-system.test.ts",
-  "tests/overlay-smoke-test.mjs",
+  return files.sort(comparePath);
+}
 
-  // Camada 18: Profiler de Performance, Anti-cheat & Crash Dumper (game.security)
-  "src/contracts/security/types.ts",
-  "src/tokens/security.ts",
-  "src/engine/security/FrameProfiler.ts",
-  "src/engine/security/MemoryIntegrityGuard.ts",
-  "src/engine/security/CrashReportDumper.ts",
-  "src/engine/security/TauriSecurityDriver.ts",
-  "src-tauri/src/security.rs",
-  "src/plugins/security/plugin.ts",
-  "tests/security-system.test.ts",
-  "tests/security-smoke-test.mjs",
+function collectDeclaredModuleFiles(moduleRecord) {
+  return [
+    ...moduleRecord.contracts,
+    ...moduleRecord.tokens.map((tokenRecord) => tokenRecord.path),
+    moduleRecord.plugin,
+    ...moduleRecord.nativeFiles,
+    ...moduleRecord.tests,
+    ...moduleRecord.extraFiles,
+  ];
+}
 
-  // Camada 19: Steam Workshop, Dynamic Loading & Asset Override (game.modding)
-  "src/contracts/modding/types.ts",
-  "src/tokens/modding.ts",
-  "src/engine/modding/AssetOverrideRegistry.ts",
-  "src/engine/modding/DynamicPluginLoader.ts",
-  "src/engine/modding/ScriptSandbox.ts",
-  "src/engine/modding/SteamWorkshopDriver.ts",
-  "src/engine/modding/TauriModdingDriver.ts",
-  "src-tauri/src/modding.rs",
-  "src/plugins/modding/plugin.ts",
-  "tests/modding-system.test.ts",
-  "tests/modding-smoke-test.mjs",
+function collectProtectedFiles() {
+  const protectedFiles = new Set(SHARED_HOST_FILES);
 
-  // Camada 20: Microtransações Steam & Steam Inventory Service (game.monetization)
-  "src/contracts/monetization/types.ts",
-  "src/tokens/monetization.ts",
-  "src/engine/monetization/StoreCatalogRegistry.ts",
-  "src/engine/monetization/InventoryReceiptValidator.ts",
-  "src/engine/monetization/VirtualCurrencyWallet.ts",
-  "src/engine/monetization/SteamMicroTxnBridge.ts",
-  "src/engine/monetization/TauriMonetizationDriver.ts",
-  "src-tauri/src/monetization.rs",
-  "src/plugins/monetization/plugin.ts",
-  "tests/monetization-system.test.ts",
-  "tests/monetization-smoke-test.mjs",
-];
+  for (const moduleRecord of CANONICAL_MODULES) {
+    for (const relPath of collectDeclaredModuleFiles(moduleRecord)) {
+      protectedFiles.add(relPath);
+    }
 
-function calculateHash(filePath) {
-  const fullPath = path.join(ROOT_DIR, filePath);
+    for (const relPath of collectFilesRecursively(moduleRecord.engine.root)) {
+      protectedFiles.add(relPath);
+    }
+  }
+
+  return [...protectedFiles].sort(comparePath);
+}
+
+function calculateHash(relativePath) {
+  const fullPath = path.join(ROOT_DIR, relativePath);
   if (!fs.existsSync(fullPath)) return null;
   const content = fs.readFileSync(fullPath);
   return crypto.createHash("sha256").update(content).digest("hex");
 }
 
+function ensureTestsDirectory() {
+  if (!fs.existsSync(TESTS_DIR)) {
+    fs.mkdirSync(TESTS_DIR, { recursive: true });
+  }
+}
+
 function lock() {
+  ensureTestsDirectory();
+
   console.log("============================================================");
   console.log("  Congelando Módulos Estáveis do Projeto (Freeze Lock)     ");
-  console.log("============================================================\n");
+  console.log("============================================================");
+  console.log("Fonte: scripts/architecture/module-map.mjs\n");
 
+  const protectedFiles = collectProtectedFiles();
   const manifest = {
     version: "20.0.0",
+    moduleMapSchemaVersion: MODULE_MAP_SCHEMA_VERSION,
     lockedAt: new Date().toISOString(),
     files: {},
   };
 
-  for (const relPath of PROTECTED_FILES) {
+  let missing = 0;
+
+  for (const relPath of protectedFiles) {
     const hash = calculateHash(relPath);
     if (hash) {
       manifest.files[relPath] = hash;
       console.log(`\x1b[32m[CONGELADO]\x1b[0m ${relPath} (SHA-256: ${hash.substring(0, 12)}...)`);
     } else {
-      console.log(`\x1b[31m[ALERTA]\x1b[0m Arquivo não encontrado para congelamento: ${relPath}`);
+      missing += 1;
+      console.log(`\x1b[31m[ALERTA]\x1b[0m Arquivo declarado no module-map não encontrado: ${relPath}`);
     }
+  }
+
+  if (missing > 0) {
+    console.error(`\n[ERRO] ${missing} arquivo(s) canônico(s) ausente(s). Lock não foi gravado.`);
+    process.exit(1);
   }
 
   fs.writeFileSync(LOCK_FILE, JSON.stringify(manifest, null, 2), "utf8");
@@ -284,18 +178,49 @@ function lock() {
 
 function verify() {
   if (!fs.existsSync(LOCK_FILE)) {
-    console.log("\x1b[33m[AVISO]\x1b[0m Nenhum arquivo de trava '.freeze-lock.json' encontrado. Execute '--lock' primeiro.");
+    console.log("\x1b[33m[AVISO]\x1b[0m Nenhum arquivo de trava '/.freeze-lock.json' encontrado. Execute '--lock' primeiro.");
     return true;
   }
 
   const manifest = JSON.parse(fs.readFileSync(LOCK_FILE, "utf8"));
+  const currentProtectedFiles = collectProtectedFiles();
+  const lockedFiles = Object.keys(manifest.files ?? {}).sort(comparePath);
   let hasViolation = false;
 
   console.log("============================================================");
   console.log("  Verificando Integridade de Módulos Congelados            ");
-  console.log("============================================================\n");
+  console.log("============================================================");
+  console.log("Fonte: scripts/architecture/module-map.mjs\n");
 
-  for (const [relPath, expectedHash] of Object.entries(manifest.files)) {
+  if (manifest.moduleMapSchemaVersion !== MODULE_MAP_SCHEMA_VERSION) {
+    console.log(
+      `\x1b[31m[VIOLAÇÃO DETECTADA]\x1b[0m O lock usa moduleMapSchemaVersion=${String(manifest.moduleMapSchemaVersion)}, ` +
+      `mas o catálogo atual usa ${String(MODULE_MAP_SCHEMA_VERSION)}.`,
+    );
+    hasViolation = true;
+  }
+
+  const currentSet = new Set(currentProtectedFiles);
+  const lockedSet = new Set(lockedFiles);
+
+  const missingFromLock = currentProtectedFiles.filter((relPath) => !lockedSet.has(relPath));
+  const staleInLock = lockedFiles.filter((relPath) => !currentSet.has(relPath));
+
+  if (missingFromLock.length > 0) {
+    hasViolation = true;
+    for (const relPath of missingFromLock) {
+      console.log(`\x1b[31m[ERRO DE CONGELAMENTO]\x1b[0m Arquivo canônico não está no lock: ${relPath}`);
+    }
+  }
+
+  if (staleInLock.length > 0) {
+    hasViolation = true;
+    for (const relPath of staleInLock) {
+      console.log(`\x1b[31m[ERRO DE CONGELAMENTO]\x1b[0m Path obsoleto permanece no lock: ${relPath}`);
+    }
+  }
+
+  for (const [relPath, expectedHash] of Object.entries(manifest.files ?? {})) {
     const currentHash = calculateHash(relPath);
     if (!currentHash) {
       console.log(`\x1b[31m[ERRO DE CONGELAMENTO]\x1b[0m Arquivo removido: ${relPath}`);
@@ -304,26 +229,45 @@ function verify() {
       console.log(`\x1b[31m[VIOLAÇÃO DETECTADA]\x1b[0m O arquivo congelado '${relPath}' foi alterado!`);
       hasViolation = true;
     } else {
-      console.log(`\x1b[32m[ÍINTEGRO]\x1b[0m ${relPath}`);
+      console.log(`\x1b[32m[ÍNTEGRO]\x1b[0m ${relPath}`);
     }
   }
 
   if (hasViolation) {
-    console.log("\n\x1b[31m[BLOQUEIO DE BUILD] Modificações não autorizadas foram detectadas em módulos congelados!\x1b[0m");
-    console.log("Para atualizar legitimamente o código, execute: node tests/freeze-lock.mjs --lock\n");
+    console.log("\n\x1b[31m[BLOQUEIO DE BUILD] Modificações não autorizadas ou drift do catálogo foram detectados!\x1b[0m");
+    console.log("Para atualizar legitimamente o código, desbloqueie antes da alteração e regenere o lock na etapa apropriada.\n");
     process.exit(1);
-  } else {
-    console.log("\n\x1b[32mTodos os módulos congelados estão 100% protegidos e íntegros.\x1b[0m\n");
   }
+
+  console.log("\n\x1b[32mTodos os módulos congelados estão protegidos e íntegros.\x1b[0m\n");
+  return true;
 }
 
 const args = process.argv.slice(2);
-if (args.includes("--lock")) {
+const isLock = args.includes("--lock");
+const isUnlock = args.includes("--unlock");
+
+if (isLock && isUnlock) {
+  console.error("[ERRO] --lock e --unlock são mutuamente exclusivos.");
+  process.exit(1);
+}
+
+const unknownArgs = args.filter((arg) => arg !== "--lock" && arg !== "--unlock");
+if (unknownArgs.length > 0) {
+  console.error(`[ERRO] Argumento(s) desconhecido(s): ${unknownArgs.join(", ")}`);
+  process.exit(1);
+}
+
+migrateLegacyLockIfNeeded();
+
+if (isLock) {
   lock();
-} else if (args.includes("--unlock")) {
+} else if (isUnlock) {
   if (fs.existsSync(LOCK_FILE)) {
     fs.unlinkSync(LOCK_FILE);
     console.log("\x1b[33m[DESBLOQUEADO]\x1b[0m Trava de imutabilidade removida temporariamente.");
+  } else {
+    console.log("\x1b[33m[DESBLOQUEADO]\x1b[0m Nenhuma trava ativa em /.freeze-lock.json.");
   }
 } else {
   verify();

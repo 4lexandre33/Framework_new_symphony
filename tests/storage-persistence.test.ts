@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { LocalDatabaseDriver } from "../src/engine/storage/LocalDatabaseDriver";
-import { SteamCloudDriver } from "../src/engine/storage/SteamCloudDriver";
-import { StorageService } from "../src/plugins/storage/plugin";
-import type { PluginContext } from "../src/core/contracts/plugin-context";
+import { LocalDatabaseDriver } from "../src/engine/storage/internal/LocalDatabaseDriver";
+import { SteamCloudDriver } from "../src/engine/storage/internal/SteamCloudDriver";
+import { StorageService } from "../src/engine/storage/internal/StorageService";
+import type { PluginContext } from "@core";
 import type { SaveGameMetadata } from "../src/contracts/storage/types";
 
 // ── POLYFILL DE LOCALSTORAGE PARA AMBIENTE NODE.JS / VITEST ────────────────

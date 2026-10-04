@@ -1,0 +1,69 @@
+{
+  "stage": "52",
+  "name": "Modifiers",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51"
+  ],
+  "roadmapSource": "Camada 2 roadmap stages 45-70",
+  "scope": {
+    "implemented": [
+      "ModifierId",
+      "ModifierTargetId",
+      "ModifierSourceRef",
+      "ModifierOperation",
+      "Modifier",
+      "ModifierSet"
+    ],
+    "explicitlyDeferred": [
+      "ResourceId",
+      "ResourcePool",
+      "CooldownId",
+      "Cooldown",
+      "CooldownSet",
+      "StatusEffect->Modifier automatic integration"
+    ]
+  },
+  "operations": [
+    "add",
+    "multiply",
+    "override"
+  ],
+  "ordering": {
+    "primary": "priority ascending",
+    "tieBreak": "ModifierId lexicographic ascending",
+    "semantics": "linear pipeline; each operation consumes previous result"
+  },
+  "modifierSet": {
+    "storage": "Map<ModifierId, Modifier>",
+    "index": "Map<ModifierTargetId, readonly Modifier[]>",
+    "hotPath": "evaluate uses pre-sorted bucket without sorting/allocation",
+    "snapshot": "targetId -> priority -> ModifierId"
+  },
+  "rules": [
+    "ModifierTargetId is semantic and engine-agnostic.",
+    "All numeric inputs/results must remain finite.",
+    "Modifier priority must be a safe integer.",
+    "Duplicate ModifierId is rejected.",
+    "No automatic StatusEffect integration before Stage 62.",
+    "No Resources/Cooldowns before Stage 53.",
+    "Compatible with 2D, 2.5D, 3D and headless execution."
+  ],
+  "files": [
+    "scripts/architecture/stage52-validate-modifiers.mjs",
+    "src/domain/mechanics/Modifier.ts",
+    "src/domain/mechanics/ModifierId.ts",
+    "src/domain/mechanics/ModifierOperation.ts",
+    "src/domain/mechanics/ModifierSet.ts",
+    "src/domain/mechanics/README.txt",
+    "src/domain/mechanics/index.ts",
+    "tests/domain-modifiers-purity.test.ts",
+    "tests/domain-modifiers.test.ts"
+  ]
+}

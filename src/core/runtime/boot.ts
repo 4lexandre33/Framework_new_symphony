@@ -7,7 +7,7 @@ import type { KernelState } from "./state";
 import type { PluginManifest } from "../contracts/plugin-manifest";
 import { KernelError } from "../contracts/errors";
 import {
-  computeBootOrder,
+  runArchitecturalPreflight,
   createScope,
   createSystemClock,
   SchedulerImpl,
@@ -48,7 +48,10 @@ export async function boot(state: KernelState): Promise<void> {
 
 async function runBoot(state: KernelState): Promise<void> {
   const manifests = state.registry.all().map((p) => p.manifest);
-  const order = computeBootOrder(manifests);
+  const order = runArchitecturalPreflight(manifests, {
+    allowInternalConsumeExternal:
+      state.options.allowInternalConsumeExternal ?? false,
+  });
   state.bootOrder = order.map((m) => m.id);
 
   state.phase = "setup";

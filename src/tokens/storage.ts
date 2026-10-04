@@ -1,4 +1,4 @@
-import { defineCapability } from "../core/contracts/capability-token";
+import { defineCapability } from "@core";
 import type {
   StorageDriverType,
   SaveGameMetadata,

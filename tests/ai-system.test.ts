@@ -7,7 +7,7 @@ import {
 
 import {
   NavMeshQuery,
-} from "../src/engine/ai/NavMeshQuery";
+} from "../src/engine/ai/internal/NavMeshQuery";
 
 import {
   ActionNode,
@@ -15,19 +15,19 @@ import {
   ConditionNode,
   SelectorNode,
   SequenceNode,
-} from "../src/engine/ai/BehaviorTree";
+} from "../src/engine/ai/internal/BehaviorTree";
 
 import {
   PerceptionSystem,
-} from "../src/engine/ai/PerceptionSystem";
+} from "../src/engine/ai/internal/PerceptionSystem";
 
 import {
   SteeringBehaviors,
-} from "../src/engine/ai/SteeringBehaviors";
+} from "../src/engine/ai/internal/SteeringBehaviors";
 
 import {
   AIAgentManager,
-} from "../src/engine/ai/AIAgentManager";
+} from "../src/engine/ai/internal/AIAgentManager";
 
 import {
   SetBlackboardValueCommand,

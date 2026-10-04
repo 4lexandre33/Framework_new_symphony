@@ -1,0 +1,16 @@
+{
+  "id": "tsc",
+  "label": "TypeScript",
+  "command": "npx tsc --noEmit",
+  "startedAtUtc": "2026-10-03T22:50:38.340Z",
+  "finishedAtUtc": "2026-10-03T22:50:43.163Z",
+  "durationMs": 4823,
+  "timeoutMs": 1800000,
+  "passed": true,
+  "timedOut": false,
+  "exitCode": 0,
+  "signal": null,
+  "spawnError": null,
+  "stdoutFile": "commands/01-tsc.stdout.log",
+  "stderrFile": "commands/01-tsc.stderr.log"
+}

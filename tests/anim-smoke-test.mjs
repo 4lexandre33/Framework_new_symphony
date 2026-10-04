@@ -6,11 +6,11 @@ const ROOT_DIR = process.cwd();
 const REQUIRED_ANIM_FILES = [
   "src/contracts/anim/types.ts",
   "src/tokens/anim.ts",
-  "src/engine/anim/AnimationState.ts",
-  "src/engine/anim/AnimationStateMachine.ts",
-  "src/engine/anim/SkeletalAnimationDriver.ts",
-  "src/engine/anim/Sprite2DAnimationDriver.ts",
-  "src/engine/anim/AnimationEventManager.ts",
+  "src/engine/anim/internal/AnimationState.ts",
+  "src/engine/anim/internal/AnimationStateMachine.ts",
+  "src/engine/anim/internal/SkeletalAnimationDriver.ts",
+  "src/engine/anim/internal/Sprite2DAnimationDriver.ts",
+  "src/engine/anim/internal/AnimationEventManager.ts",
   "src/plugins/anim/plugin.ts",
   "tests/anim-system.test.ts",
 ];

@@ -1,11 +1,11 @@
-import type { Plugin, PluginContext } from "../../core/contracts/plugin-context";
+import type { Plugin, PluginContext } from "@core";
 import { RenderToken } from "../../tokens/render";
 import {
   RenderFrameEvent,
   ViewportResizeEvent,
   SetCameraModeCommand,
 } from "../../contracts/render/types";
-import { ThreeRenderEngine } from "../../engine/render/ThreeRenderEngine";
+import { ThreeRenderEngine } from "../../engine/render/internal/ThreeRenderEngine";
 
 export const renderManifest: Plugin["manifest"] = {
   id: "game.render",
@@ -24,6 +24,7 @@ export const renderManifest: Plugin["manifest"] = {
         version: "1.0.0",
       },
     ],
+    conflicts: [],
   },
 };
 

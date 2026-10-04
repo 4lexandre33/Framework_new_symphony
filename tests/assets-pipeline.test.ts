@@ -8,7 +8,7 @@ import {
 
 import {
   AssetCache,
-} from "../src/engine/assets/AssetCache";
+} from "../src/engine/assets/internal/AssetCache";
 
 import {
   createAssetsPlugin,

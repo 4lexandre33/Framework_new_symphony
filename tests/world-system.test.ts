@@ -7,19 +7,19 @@ import {
 
 import {
   EntityManager,
-} from "../src/engine/world/EntityManager";
+} from "../src/engine/world/internal/EntityManager";
 
 import {
   SpatialGrid,
-} from "../src/engine/world/SpatialGrid";
+} from "../src/engine/world/internal/SpatialGrid";
 
 import {
   OctreeManager,
-} from "../src/engine/world/OctreeManager";
+} from "../src/engine/world/internal/OctreeManager";
 
 import {
   WorldStateSerializer,
-} from "../src/engine/world/WorldStateSerializer";
+} from "../src/engine/world/internal/WorldStateSerializer";
 
 import type {
   EntityComponentState,

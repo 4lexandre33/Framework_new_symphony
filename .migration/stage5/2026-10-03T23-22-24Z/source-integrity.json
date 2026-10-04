@@ -1,0 +1,945 @@
+{
+  "before": {
+    "fileCount": 93,
+    "scopeSha256": "62177a32acdf70e44872424d7a87286980958c48b92c81d18532bc56095f5bb7",
+    "files": [
+      {
+        "path": "src/engine/ai/AIAgentManager.ts",
+        "sha256": "14b84e1224a75924ac98f434c58c0e497a06e091cc393f6d591ede8ea7df3fbe",
+        "bytes": 18059
+      },
+      {
+        "path": "src/engine/ai/BehaviorTree.ts",
+        "sha256": "e7b395b18e4b1a1b9354b69684c4a84bb1037ae357aa481e915b7fc30b7304e5",
+        "bytes": 2695
+      },
+      {
+        "path": "src/engine/ai/NavMeshQuery.ts",
+        "sha256": "775a0bfb18fbe4399e09c6699a0ff953b293fc3e682a87d7910e84e5614369cc",
+        "bytes": 14919
+      },
+      {
+        "path": "src/engine/ai/PerceptionSystem.ts",
+        "sha256": "23954277f60a489239f3f5967fe568b5ef877394b54df24c23c9148e98c289f7",
+        "bytes": 6506
+      },
+      {
+        "path": "src/engine/ai/SteeringBehaviors.ts",
+        "sha256": "abecf23b08f068f1649bc986207ad3a365ee8b8422aef2c6ee2f1b08c4c8e0a9",
+        "bytes": 3686
+      },
+      {
+        "path": "src/engine/anim/AnimationEventManager.ts",
+        "sha256": "7b4174dfcf51ffa331d68f64a55348812e2024798dd703e488bed9d0dc09a5ed",
+        "bytes": 1312
+      },
+      {
+        "path": "src/engine/anim/AnimationState.ts",
+        "sha256": "bc2bcd3d87f239e6547b65004b071898333b691428e076e11dfe1de3db66f142",
+        "bytes": 795
+      },
+      {
+        "path": "src/engine/anim/AnimationStateMachine.ts",
+        "sha256": "8cb445f10ad06bb38b1281aca7c053c61a12fe99e92c75ab07de26481e9d9457",
+        "bytes": 11297
+      },
+      {
+        "path": "src/engine/anim/SkeletalAnimationDriver.ts",
+        "sha256": "a86438493b829781d6eac17fe4f60869bcd730d5495be4112e219f719da6a5c8",
+        "bytes": 5423
+      },
+      {
+        "path": "src/engine/anim/Sprite2DAnimationDriver.ts",
+        "sha256": "8d086ec37d69c2cb1c5c99e4039632aa96d6b8c80e6744536778848e24e99dc1",
+        "bytes": 5513
+      },
+      {
+        "path": "src/engine/assets/AssetCache.ts",
+        "sha256": "8c44d29c67a4ba15e8d19ec7aa8c555b989d9cfb3cdd4bc601108171ac669d08",
+        "bytes": 2287
+      },
+      {
+        "path": "src/engine/assets/AudioLoaderService.ts",
+        "sha256": "b44f037522b940afdc6ea8b988b34ef20d8e92daacf48b1b6bc75ce2c1659373",
+        "bytes": 1327
+      },
+      {
+        "path": "src/engine/assets/GLTFLoaderService.ts",
+        "sha256": "8709291fb74e1f70443d644def0768f0b95783a77346be461debe804b1335a42",
+        "bytes": 1091
+      },
+      {
+        "path": "src/engine/assets/TextureLoaderService.ts",
+        "sha256": "c7d6c79010d0d6d80aaf90e0d04df114267a20bad4fec7118a619f82aba52453",
+        "bytes": 927
+      },
+      {
+        "path": "src/engine/audio/AudioListenerBridge.ts",
+        "sha256": "652309bcc23b42a9df93b297cf405444eef30eb020a5c11c3b6d3f27119b8cfd",
+        "bytes": 1240
+      },
+      {
+        "path": "src/engine/audio/AudioMixer.ts",
+        "sha256": "4ebeb9e1e544f7113de4e6802f82e70238ce1f173ab7f1d78a10077d786466d1",
+        "bytes": 2786
+      },
+      {
+        "path": "src/engine/audio/MusicCrossfader.ts",
+        "sha256": "e8de849823d39e02eb874a2e22f1cd0fad502139074f0329e3482132f750741a",
+        "bytes": 2249
+      },
+      {
+        "path": "src/engine/audio/PositionalAudio3D.ts",
+        "sha256": "bf293533573592bf5e3bb9592fe1b362fec1468d3ff7fd6508c191bbb76d38ab",
+        "bytes": 1930
+      },
+      {
+        "path": "src/engine/camera/CameraOcclusionDetector.ts",
+        "sha256": "fa74a2b26f5150fc041fe27ae8205ade6efd61df5e67ae74eb3fd9c1cca26f61",
+        "bytes": 1443
+      },
+      {
+        "path": "src/engine/camera/SpringArm3D.ts",
+        "sha256": "844c7187359f135f7972013b6dbf60e76cd91ea6c00c88465453d8f5faac7dae",
+        "bytes": 3267
+      },
+      {
+        "path": "src/engine/camera/TraumaCameraShake.ts",
+        "sha256": "5089d566786913f81a513ea21b8997f7ed437edca958585d56745ccbd0376920",
+        "bytes": 4185
+      },
+      {
+        "path": "src/engine/camera/VirtualCameraStack.ts",
+        "sha256": "a231d70c65a71ee0969deb88ddaf7dc10b1031069b2624ef6705099a63f45521",
+        "bytes": 11864
+      },
+      {
+        "path": "src/engine/input/GamepadDriver.ts",
+        "sha256": "b48fad2687261636c7dbc84795986ae0e263a90727ef833d8a716666f09bc4a9",
+        "bytes": 2495
+      },
+      {
+        "path": "src/engine/input/InputManager.ts",
+        "sha256": "72f3441a68f5e06036fb58258174caa0824623a1c2875e8d2a3243f5211ac959",
+        "bytes": 10177
+      },
+      {
+        "path": "src/engine/input/KeyboardMouseDriver.ts",
+        "sha256": "3271d2f0d2cad7fb022f4c4dcab05ae0a7061856f7f069e7a099bbba29b37eae",
+        "bytes": 12369
+      },
+      {
+        "path": "src/engine/modding/AssetOverrideRegistry.ts",
+        "sha256": "69c7a468da67141544067e30788a5186091bbf22987773c00dd83f71be3aad9f",
+        "bytes": 2782
+      },
+      {
+        "path": "src/engine/modding/DynamicPluginLoader.ts",
+        "sha256": "e7f1ffbdcaa78aaa3ae3f812b124ffdecd870cc43dfef523cc394b419e6e328a",
+        "bytes": 9611
+      },
+      {
+        "path": "src/engine/modding/ScriptSandbox.ts",
+        "sha256": "efcdf12cf98cd8afe8efdc32e3a38fbb8c0b7dd0e8f7ace4b940db7a932a2f77",
+        "bytes": 4808
+      },
+      {
+        "path": "src/engine/modding/SteamWorkshopDriver.ts",
+        "sha256": "86d8fb7044e8e09832e8cc7fbf128879d86138e70340c47126fc1db78f1851ff",
+        "bytes": 1635
+      },
+      {
+        "path": "src/engine/modding/TauriModdingDriver.ts",
+        "sha256": "df3888e1e0914b67d87e8c7d86f7a0ab3434902c60458f3563dae5db9b8f7dfc",
+        "bytes": 2182
+      },
+      {
+        "path": "src/engine/monetization/InventoryReceiptValidator.ts",
+        "sha256": "2885f56a457d510dd1a2f6e8e7c97d0a60d7cb1c88ef795fde406392e670a2b3",
+        "bytes": 1111
+      },
+      {
+        "path": "src/engine/monetization/SteamMicroTxnBridge.ts",
+        "sha256": "d13d60302a06567794966e4bfb02cbc2e623c4c3d9a023b687b55c600b1f831b",
+        "bytes": 1896
+      },
+      {
+        "path": "src/engine/monetization/StoreCatalogRegistry.ts",
+        "sha256": "f0efd4f1d72e1a4b97db90be73e71dd5a08c3de8539679d981287e049c79a26e",
+        "bytes": 1122
+      },
+      {
+        "path": "src/engine/monetization/TauriMonetizationDriver.ts",
+        "sha256": "e09a2fa24a5caf1ff0a2441d17cfe9608c381fb127904b38f256764870e4a69b",
+        "bytes": 1285
+      },
+      {
+        "path": "src/engine/monetization/VirtualCurrencyWallet.ts",
+        "sha256": "956d9268dac191b618e7f2c42edac883da34450f780baed802ba29f0dac50d20",
+        "bytes": 2187
+      },
+      {
+        "path": "src/engine/net/NetworkTransport.ts",
+        "sha256": "e8ab6541c848ad0a8d4177e2c04ff29a7d75c3f96e358abb56d5782916b42906",
+        "bytes": 2391
+      },
+      {
+        "path": "src/engine/net/StateReplicator.ts",
+        "sha256": "46977c4a401f127e5fce20c7315ac9e8340f91d321a9fe99fd2094a8567687cc",
+        "bytes": 6276
+      },
+      {
+        "path": "src/engine/net/SteamP2PTransport.ts",
+        "sha256": "1b05cbf5f6a03908c477e1a4c8b772062cb308527173229a7b38f7b38d6f6344",
+        "bytes": 5059
+      },
+      {
+        "path": "src/engine/net/WebSocketTransport.ts",
+        "sha256": "d92798b50934f22eb7bf8d5fead66aabc76d075ec3d205c03281d2cda270c2af",
+        "bytes": 3154
+      },
+      {
+        "path": "src/engine/overlay/OverlayWindowManager.ts",
+        "sha256": "9b65e0b59a9848923eb65cff2a88c4ed441fe02330f3bad1fbb11689824917a4",
+        "bytes": 1949
+      },
+      {
+        "path": "src/engine/overlay/RaycastHitTestPassthrough.ts",
+        "sha256": "2c4a6a11b9010f48aa5a70dab1d9e929132ab330f3cb50c55f35cd923b43fa13",
+        "bytes": 1825
+      },
+      {
+        "path": "src/engine/overlay/TauriOverlayDriver.ts",
+        "sha256": "e81ad3bcf8c9b6e0b860bd78bfa498c6b4d824dc7ef630d19400cfda5f1d5018",
+        "bytes": 2065
+      },
+      {
+        "path": "src/engine/physics/CollisionEventManager.ts",
+        "sha256": "2202fc4cf6db76bdee17a4b0aeb2a806ed9ad82248cf2126ea44c8bc5578324a",
+        "bytes": 1012
+      },
+      {
+        "path": "src/engine/physics/PhysicsWorld.ts",
+        "sha256": "52c507ccbde0bc6777cf568d605ad84f2b6e634a470f8b0dd44cca5a3331a2b1",
+        "bytes": 9125
+      },
+      {
+        "path": "src/engine/physics/RaycasterQueries.ts",
+        "sha256": "299de6d39a9f78bf8301c179fef9612639ee08b9d571855acbbb75c106f277c0",
+        "bytes": 1639
+      },
+      {
+        "path": "src/engine/physics/RigidBodyFactory.ts",
+        "sha256": "06cd598de2b707637dd6e9e684a350c2192395d142811889e63d358ef30080b1",
+        "bytes": 3045
+      },
+      {
+        "path": "src/engine/render/CameraManager.ts",
+        "sha256": "df5438799cf34f7eba3a8ad779b83c98be915771049920c995d5bc1fb8edd240",
+        "bytes": 4606
+      },
+      {
+        "path": "src/engine/render/SceneGraphManager.ts",
+        "sha256": "313042e75abacbda76918c848947cd7835ec789364c557124e4019084e8668a9",
+        "bytes": 3208
+      },
+      {
+        "path": "src/engine/render/ThreeRenderEngine.ts",
+        "sha256": "5567b04b01c13687dd61bf0f69d716d6fec0bf2cc973abfd9a862b544f7af7a0",
+        "bytes": 5076
+      },
+      {
+        "path": "src/engine/render/ViewportManager.ts",
+        "sha256": "306547a9061fddd48ac0c479ac493b7569a4cefc19eac6059d0003f679ba1c9a",
+        "bytes": 2486
+      },
+      {
+        "path": "src/engine/scripting/CutsceneTimeline.ts",
+        "sha256": "c6a13435f620c33232edbd39c2754808fa2dd61107f797a1caf3c0e96162a163",
+        "bytes": 4416
+      },
+      {
+        "path": "src/engine/scripting/DialogueTreeParser.ts",
+        "sha256": "497085d179ccd55a7c9c9b5c4c895edadfeb8f635ef2347d71d9a7cd1137a2e5",
+        "bytes": 3024
+      },
+      {
+        "path": "src/engine/scripting/QuestManager.ts",
+        "sha256": "4ffd349eb8c147a745b4856357247e5b4cabbfd250546253e63508c3b3a75e47",
+        "bytes": 4263
+      },
+      {
+        "path": "src/engine/scripting/TriggerZoneManager.ts",
+        "sha256": "2e17c76b6f5b1aa14f7495a6f0ebf898395cf5df1fdbefa37f34a3dfe36582e3",
+        "bytes": 3805
+      },
+      {
+        "path": "src/engine/security/CrashReportDumper.ts",
+        "sha256": "240d3ef6557b7bdfc4e251aecdb3b63287eaa99ca68d5e1ced00817007b21016",
+        "bytes": 2938
+      },
+      {
+        "path": "src/engine/security/FrameProfiler.ts",
+        "sha256": "8fd47165dc7804705ede25df36e0eaad6c3c7bf10ebf137e4110b6026b921859",
+        "bytes": 5089
+      },
+      {
+        "path": "src/engine/security/MemoryIntegrityGuard.ts",
+        "sha256": "d4ae98ade19ba3e9aef905dad855fc4f931834f6e7bfc7bf5f02c61aa2828b61",
+        "bytes": 5041
+      },
+      {
+        "path": "src/engine/security/TauriSecurityDriver.ts",
+        "sha256": "1437bafd515d8995cd70d1d724a50ee66b2cf46a2401c1b2f3b097f4e1384563",
+        "bytes": 2158
+      },
+      {
+        "path": "src/engine/sprites/InstancedTilemapRenderer.ts",
+        "sha256": "a53028a1e5683d7c7723852ce4dbe0e4438a2193ee378a5d6fa41abbf98c2aec",
+        "bytes": 4067
+      },
+      {
+        "path": "src/engine/sprites/ParallaxController.ts",
+        "sha256": "ba3c6f9a15d9f82cde40c047f9c7f41ef21ef0065053a65b0ed4ebf6249f6a95",
+        "bytes": 2274
+      },
+      {
+        "path": "src/engine/sprites/PixelArtScaler.ts",
+        "sha256": "62f821e984f58eca17a30c4e855f53df3cee3d9eb48e1a26359ea310ddb80bd3",
+        "bytes": 1043
+      },
+      {
+        "path": "src/engine/sprites/Sprite2DRenderer.ts",
+        "sha256": "34de19674c2fa188017b097953e5dc0a86cd772d9d68a1ebc50f71d6033afdb6",
+        "bytes": 2020
+      },
+      {
+        "path": "src/engine/sprites/TextureAtlasParser.ts",
+        "sha256": "74a9ac627cf7faeafdb82237a11f31c2bb9c90d54efc0e883ac0a456df0bd440",
+        "bytes": 1806
+      },
+      {
+        "path": "src/engine/storage/CloudDatabaseDriver.ts",
+        "sha256": "05624833ac141e8f99a9969f2ca5d79fd5995b763aaaf708fc262062264e3d79",
+        "bytes": 1165
+      },
+      {
+        "path": "src/engine/storage/LocalDatabaseDriver.ts",
+        "sha256": "e6ed8f192348e8790618bc6a940bfb99cd744990b7e120e055e1869335400e42",
+        "bytes": 2560
+      },
+      {
+        "path": "src/engine/storage/SteamCloudDriver.ts",
+        "sha256": "0f2e6518ff98de3a11545c5cf5d240cec32c0cc22709d44c843f7251661c2b8a",
+        "bytes": 2806
+      },
+      {
+        "path": "src/engine/streaming/DistanceLODManager.ts",
+        "sha256": "88e24774b6938e88f1b4d4917f8544ee0cf55b6ad7df1f0be0f55a9d24b12abf",
+        "bytes": 2431
+      },
+      {
+        "path": "src/engine/streaming/HLODBuilder.ts",
+        "sha256": "aae19abfc41619279a58546ef08b449db893203a9c4c7c0ff3ffdf76f7270e62",
+        "bytes": 1355
+      },
+      {
+        "path": "src/engine/streaming/streaming.worker.ts",
+        "sha256": "4c7864d725e21b073868f321397b46cb5b18d2e3bba5078bb5b14a850801c3d8",
+        "bytes": 835
+      },
+      {
+        "path": "src/engine/streaming/StreamingWorkerPool.ts",
+        "sha256": "f15bf05cfc79d6924c3b4e542bf3cbf9b28556213a5e1999556888459e78d3b0",
+        "bytes": 6718
+      },
+      {
+        "path": "src/engine/streaming/WorldStreamingSectorManager.ts",
+        "sha256": "5cbecb9e56cf7dfc547f3cfc1003106151ee45fc934baaf29889c61f7235cfcd",
+        "bytes": 4238
+      },
+      {
+        "path": "src/engine/terrain/BiomeEvaluator.ts",
+        "sha256": "c176f50391013ede922c5f524a61f989e7ed761b9e47b72c808b48ecec2ee0c2",
+        "bytes": 4086
+      },
+      {
+        "path": "src/engine/terrain/GreedyMesher.ts",
+        "sha256": "87fcc0354871ae89e948192109c9f997d503164e7247c44287d86faeb15e5ffb",
+        "bytes": 12420
+      },
+      {
+        "path": "src/engine/terrain/PerlinNoiseService.ts",
+        "sha256": "e2524d8464dc4910e32857235eb79b717775ba6e963888aa970a1921da2295b3",
+        "bytes": 10492
+      },
+      {
+        "path": "src/engine/terrain/ProceduralWorkerPool.ts",
+        "sha256": "5450dd3bf91c4c1db8edc21ca017d2185722e69555f7473c08264e49e2183a7b",
+        "bytes": 10392
+      },
+      {
+        "path": "src/engine/terrain/terrain.worker.ts",
+        "sha256": "e73208b04be7d80f1d7f8ace16d4d8d1ad261fd2b824fa6f72564e40e07950a8",
+        "bytes": 4678
+      },
+      {
+        "path": "src/engine/terrain/VoxelChunkManager.ts",
+        "sha256": "50a5777d231bb9a1ad0b3cbe10d4152637e297b090294a2ccf47566f9e111fa2",
+        "bytes": 10841
+      },
+      {
+        "path": "src/engine/ui/DOMEventListenerBridge.ts",
+        "sha256": "95d9b2a125f56575c13fc260e20119a164c1e29ca79bdcc1097ff9220a20029b",
+        "bytes": 3087
+      },
+      {
+        "path": "src/engine/ui/HUDDataBinder.ts",
+        "sha256": "26c8c44bb7dacb77f9ad617142e0d87a759c584b43f7c728b9082777558112c6",
+        "bytes": 5435
+      },
+      {
+        "path": "src/engine/ui/LocalizationEngine.ts",
+        "sha256": "e926c639dc3a51aca6da1a06112a48fae2f1dec8cdfa6bab55b0aaf9485c6e88",
+        "bytes": 5072
+      },
+      {
+        "path": "src/engine/ui/UIManager.ts",
+        "sha256": "bec70b2fbb2101f02e3cd4e3b09addc9a043d75a95c8fe57068f3df79eb10446",
+        "bytes": 7336
+      },
+      {
+        "path": "src/engine/ui/UITemplateRegistry.ts",
+        "sha256": "97826ed888b3c6b27364c1e0a470b15f091099e6451fa80d67c3dacf97912ec5",
+        "bytes": 2777
+      },
+      {
+        "path": "src/engine/vfx/CustomShaderLibrary.ts",
+        "sha256": "82b0b5a1945187a1a46a6c7628c55584b5b46547c1e38f3f362917484314d07e",
+        "bytes": 2681
+      },
+      {
+        "path": "src/engine/vfx/DecalManager.ts",
+        "sha256": "20aae7bb1d8353079d8ed5abb10dc3b32767716c77c29ca64cc6dab8b39e2d81",
+        "bytes": 2929
+      },
+      {
+        "path": "src/engine/vfx/GPUParticleSystem.ts",
+        "sha256": "297312d038d7c4b58608b050386d0711c4344fe88a480b8a9353ee1d3ddad796",
+        "bytes": 12873
+      },
+      {
+        "path": "src/engine/vfx/PostProcessingPipeline.ts",
+        "sha256": "5afa7cecd5b40b02db91106e5971407589a584e1575d94a542b223e05789e02f",
+        "bytes": 5727
+      },
+      {
+        "path": "src/engine/vfx/VFXEffectManager.ts",
+        "sha256": "78385190700a738ed1e4c2cedf7c0a9c7d5e1fccc89875967fd687f1fbd2f210",
+        "bytes": 905
+      },
+      {
+        "path": "src/engine/world/EntityManager.ts",
+        "sha256": "197247f45dfc54a3447a0ce60d018e3cfebe9560dfacef0ca13d9264f768c2de",
+        "bytes": 1815
+      },
+      {
+        "path": "src/engine/world/OctreeManager.ts",
+        "sha256": "a7848145dfa2b33f81e373742d204bbd4b81835313d289b692a118522b787b2b",
+        "bytes": 4955
+      },
+      {
+        "path": "src/engine/world/SaveSystem.ts",
+        "sha256": "7cea965c92bafbdfbbb9bf0af5be33d385424325f73b1bab57a1d06520bf88bb",
+        "bytes": 1553
+      },
+      {
+        "path": "src/engine/world/SceneManager.ts",
+        "sha256": "6f61c75a109bdfa4cfce466f96900cdf835e049bb16783a9fb726208c714d51f",
+        "bytes": 3107
+      },
+      {
+        "path": "src/engine/world/SpatialGrid.ts",
+        "sha256": "72c93160962e4225989293d1e073cd7500032dc3bb5134ce96c97c8afe5c6d24",
+        "bytes": 6504
+      },
+      {
+        "path": "src/engine/world/WorldStateSerializer.ts",
+        "sha256": "824facff6206b3cb7b9dc7ba339f01200899613370a05690c7d80f28089b7aec",
+        "bytes": 1362
+      }
+    ]
+  },
+  "after": {
+    "fileCount": 93,
+    "scopeSha256": "62177a32acdf70e44872424d7a87286980958c48b92c81d18532bc56095f5bb7",
+    "files": [
+      {
+        "path": "src/engine/ai/AIAgentManager.ts",
+        "sha256": "14b84e1224a75924ac98f434c58c0e497a06e091cc393f6d591ede8ea7df3fbe",
+        "bytes": 18059
+      },
+      {
+        "path": "src/engine/ai/BehaviorTree.ts",
+        "sha256": "e7b395b18e4b1a1b9354b69684c4a84bb1037ae357aa481e915b7fc30b7304e5",
+        "bytes": 2695
+      },
+      {
+        "path": "src/engine/ai/NavMeshQuery.ts",
+        "sha256": "775a0bfb18fbe4399e09c6699a0ff953b293fc3e682a87d7910e84e5614369cc",
+        "bytes": 14919
+      },
+      {
+        "path": "src/engine/ai/PerceptionSystem.ts",
+        "sha256": "23954277f60a489239f3f5967fe568b5ef877394b54df24c23c9148e98c289f7",
+        "bytes": 6506
+      },
+      {
+        "path": "src/engine/ai/SteeringBehaviors.ts",
+        "sha256": "abecf23b08f068f1649bc986207ad3a365ee8b8422aef2c6ee2f1b08c4c8e0a9",
+        "bytes": 3686
+      },
+      {
+        "path": "src/engine/anim/AnimationEventManager.ts",
+        "sha256": "7b4174dfcf51ffa331d68f64a55348812e2024798dd703e488bed9d0dc09a5ed",
+        "bytes": 1312
+      },
+      {
+        "path": "src/engine/anim/AnimationState.ts",
+        "sha256": "bc2bcd3d87f239e6547b65004b071898333b691428e076e11dfe1de3db66f142",
+        "bytes": 795
+      },
+      {
+        "path": "src/engine/anim/AnimationStateMachine.ts",
+        "sha256": "8cb445f10ad06bb38b1281aca7c053c61a12fe99e92c75ab07de26481e9d9457",
+        "bytes": 11297
+      },
+      {
+        "path": "src/engine/anim/SkeletalAnimationDriver.ts",
+        "sha256": "a86438493b829781d6eac17fe4f60869bcd730d5495be4112e219f719da6a5c8",
+        "bytes": 5423
+      },
+      {
+        "path": "src/engine/anim/Sprite2DAnimationDriver.ts",
+        "sha256": "8d086ec37d69c2cb1c5c99e4039632aa96d6b8c80e6744536778848e24e99dc1",
+        "bytes": 5513
+      },
+      {
+        "path": "src/engine/assets/AssetCache.ts",
+        "sha256": "8c44d29c67a4ba15e8d19ec7aa8c555b989d9cfb3cdd4bc601108171ac669d08",
+        "bytes": 2287
+      },
+      {
+        "path": "src/engine/assets/AudioLoaderService.ts",
+        "sha256": "b44f037522b940afdc6ea8b988b34ef20d8e92daacf48b1b6bc75ce2c1659373",
+        "bytes": 1327
+      },
+      {
+        "path": "src/engine/assets/GLTFLoaderService.ts",
+        "sha256": "8709291fb74e1f70443d644def0768f0b95783a77346be461debe804b1335a42",
+        "bytes": 1091
+      },
+      {
+        "path": "src/engine/assets/TextureLoaderService.ts",
+        "sha256": "c7d6c79010d0d6d80aaf90e0d04df114267a20bad4fec7118a619f82aba52453",
+        "bytes": 927
+      },
+      {
+        "path": "src/engine/audio/AudioListenerBridge.ts",
+        "sha256": "652309bcc23b42a9df93b297cf405444eef30eb020a5c11c3b6d3f27119b8cfd",
+        "bytes": 1240
+      },
+      {
+        "path": "src/engine/audio/AudioMixer.ts",
+        "sha256": "4ebeb9e1e544f7113de4e6802f82e70238ce1f173ab7f1d78a10077d786466d1",
+        "bytes": 2786
+      },
+      {
+        "path": "src/engine/audio/MusicCrossfader.ts",
+        "sha256": "e8de849823d39e02eb874a2e22f1cd0fad502139074f0329e3482132f750741a",
+        "bytes": 2249
+      },
+      {
+        "path": "src/engine/audio/PositionalAudio3D.ts",
+        "sha256": "bf293533573592bf5e3bb9592fe1b362fec1468d3ff7fd6508c191bbb76d38ab",
+        "bytes": 1930
+      },
+      {
+        "path": "src/engine/camera/CameraOcclusionDetector.ts",
+        "sha256": "fa74a2b26f5150fc041fe27ae8205ade6efd61df5e67ae74eb3fd9c1cca26f61",
+        "bytes": 1443
+      },
+      {
+        "path": "src/engine/camera/SpringArm3D.ts",
+        "sha256": "844c7187359f135f7972013b6dbf60e76cd91ea6c00c88465453d8f5faac7dae",
+        "bytes": 3267
+      },
+      {
+        "path": "src/engine/camera/TraumaCameraShake.ts",
+        "sha256": "5089d566786913f81a513ea21b8997f7ed437edca958585d56745ccbd0376920",
+        "bytes": 4185
+      },
+      {
+        "path": "src/engine/camera/VirtualCameraStack.ts",
+        "sha256": "a231d70c65a71ee0969deb88ddaf7dc10b1031069b2624ef6705099a63f45521",
+        "bytes": 11864
+      },
+      {
+        "path": "src/engine/input/GamepadDriver.ts",
+        "sha256": "b48fad2687261636c7dbc84795986ae0e263a90727ef833d8a716666f09bc4a9",
+        "bytes": 2495
+      },
+      {
+        "path": "src/engine/input/InputManager.ts",
+        "sha256": "72f3441a68f5e06036fb58258174caa0824623a1c2875e8d2a3243f5211ac959",
+        "bytes": 10177
+      },
+      {
+        "path": "src/engine/input/KeyboardMouseDriver.ts",
+        "sha256": "3271d2f0d2cad7fb022f4c4dcab05ae0a7061856f7f069e7a099bbba29b37eae",
+        "bytes": 12369
+      },
+      {
+        "path": "src/engine/modding/AssetOverrideRegistry.ts",
+        "sha256": "69c7a468da67141544067e30788a5186091bbf22987773c00dd83f71be3aad9f",
+        "bytes": 2782
+      },
+      {
+        "path": "src/engine/modding/DynamicPluginLoader.ts",
+        "sha256": "e7f1ffbdcaa78aaa3ae3f812b124ffdecd870cc43dfef523cc394b419e6e328a",
+        "bytes": 9611
+      },
+      {
+        "path": "src/engine/modding/ScriptSandbox.ts",
+        "sha256": "efcdf12cf98cd8afe8efdc32e3a38fbb8c0b7dd0e8f7ace4b940db7a932a2f77",
+        "bytes": 4808
+      },
+      {
+        "path": "src/engine/modding/SteamWorkshopDriver.ts",
+        "sha256": "86d8fb7044e8e09832e8cc7fbf128879d86138e70340c47126fc1db78f1851ff",
+        "bytes": 1635
+      },
+      {
+        "path": "src/engine/modding/TauriModdingDriver.ts",
+        "sha256": "df3888e1e0914b67d87e8c7d86f7a0ab3434902c60458f3563dae5db9b8f7dfc",
+        "bytes": 2182
+      },
+      {
+        "path": "src/engine/monetization/InventoryReceiptValidator.ts",
+        "sha256": "2885f56a457d510dd1a2f6e8e7c97d0a60d7cb1c88ef795fde406392e670a2b3",
+        "bytes": 1111
+      },
+      {
+        "path": "src/engine/monetization/SteamMicroTxnBridge.ts",
+        "sha256": "d13d60302a06567794966e4bfb02cbc2e623c4c3d9a023b687b55c600b1f831b",
+        "bytes": 1896
+      },
+      {
+        "path": "src/engine/monetization/StoreCatalogRegistry.ts",
+        "sha256": "f0efd4f1d72e1a4b97db90be73e71dd5a08c3de8539679d981287e049c79a26e",
+        "bytes": 1122
+      },
+      {
+        "path": "src/engine/monetization/TauriMonetizationDriver.ts",
+        "sha256": "e09a2fa24a5caf1ff0a2441d17cfe9608c381fb127904b38f256764870e4a69b",
+        "bytes": 1285
+      },
+      {
+        "path": "src/engine/monetization/VirtualCurrencyWallet.ts",
+        "sha256": "956d9268dac191b618e7f2c42edac883da34450f780baed802ba29f0dac50d20",
+        "bytes": 2187
+      },
+      {
+        "path": "src/engine/net/NetworkTransport.ts",
+        "sha256": "e8ab6541c848ad0a8d4177e2c04ff29a7d75c3f96e358abb56d5782916b42906",
+        "bytes": 2391
+      },
+      {
+        "path": "src/engine/net/StateReplicator.ts",
+        "sha256": "46977c4a401f127e5fce20c7315ac9e8340f91d321a9fe99fd2094a8567687cc",
+        "bytes": 6276
+      },
+      {
+        "path": "src/engine/net/SteamP2PTransport.ts",
+        "sha256": "1b05cbf5f6a03908c477e1a4c8b772062cb308527173229a7b38f7b38d6f6344",
+        "bytes": 5059
+      },
+      {
+        "path": "src/engine/net/WebSocketTransport.ts",
+        "sha256": "d92798b50934f22eb7bf8d5fead66aabc76d075ec3d205c03281d2cda270c2af",
+        "bytes": 3154
+      },
+      {
+        "path": "src/engine/overlay/OverlayWindowManager.ts",
+        "sha256": "9b65e0b59a9848923eb65cff2a88c4ed441fe02330f3bad1fbb11689824917a4",
+        "bytes": 1949
+      },
+      {
+        "path": "src/engine/overlay/RaycastHitTestPassthrough.ts",
+        "sha256": "2c4a6a11b9010f48aa5a70dab1d9e929132ab330f3cb50c55f35cd923b43fa13",
+        "bytes": 1825
+      },
+      {
+        "path": "src/engine/overlay/TauriOverlayDriver.ts",
+        "sha256": "e81ad3bcf8c9b6e0b860bd78bfa498c6b4d824dc7ef630d19400cfda5f1d5018",
+        "bytes": 2065
+      },
+      {
+        "path": "src/engine/physics/CollisionEventManager.ts",
+        "sha256": "2202fc4cf6db76bdee17a4b0aeb2a806ed9ad82248cf2126ea44c8bc5578324a",
+        "bytes": 1012
+      },
+      {
+        "path": "src/engine/physics/PhysicsWorld.ts",
+        "sha256": "52c507ccbde0bc6777cf568d605ad84f2b6e634a470f8b0dd44cca5a3331a2b1",
+        "bytes": 9125
+      },
+      {
+        "path": "src/engine/physics/RaycasterQueries.ts",
+        "sha256": "299de6d39a9f78bf8301c179fef9612639ee08b9d571855acbbb75c106f277c0",
+        "bytes": 1639
+      },
+      {
+        "path": "src/engine/physics/RigidBodyFactory.ts",
+        "sha256": "06cd598de2b707637dd6e9e684a350c2192395d142811889e63d358ef30080b1",
+        "bytes": 3045
+      },
+      {
+        "path": "src/engine/render/CameraManager.ts",
+        "sha256": "df5438799cf34f7eba3a8ad779b83c98be915771049920c995d5bc1fb8edd240",
+        "bytes": 4606
+      },
+      {
+        "path": "src/engine/render/SceneGraphManager.ts",
+        "sha256": "313042e75abacbda76918c848947cd7835ec789364c557124e4019084e8668a9",
+        "bytes": 3208
+      },
+      {
+        "path": "src/engine/render/ThreeRenderEngine.ts",
+        "sha256": "5567b04b01c13687dd61bf0f69d716d6fec0bf2cc973abfd9a862b544f7af7a0",
+        "bytes": 5076
+      },
+      {
+        "path": "src/engine/render/ViewportManager.ts",
+        "sha256": "306547a9061fddd48ac0c479ac493b7569a4cefc19eac6059d0003f679ba1c9a",
+        "bytes": 2486
+      },
+      {
+        "path": "src/engine/scripting/CutsceneTimeline.ts",
+        "sha256": "c6a13435f620c33232edbd39c2754808fa2dd61107f797a1caf3c0e96162a163",
+        "bytes": 4416
+      },
+      {
+        "path": "src/engine/scripting/DialogueTreeParser.ts",
+        "sha256": "497085d179ccd55a7c9c9b5c4c895edadfeb8f635ef2347d71d9a7cd1137a2e5",
+        "bytes": 3024
+      },
+      {
+        "path": "src/engine/scripting/QuestManager.ts",
+        "sha256": "4ffd349eb8c147a745b4856357247e5b4cabbfd250546253e63508c3b3a75e47",
+        "bytes": 4263
+      },
+      {
+        "path": "src/engine/scripting/TriggerZoneManager.ts",
+        "sha256": "2e17c76b6f5b1aa14f7495a6f0ebf898395cf5df1fdbefa37f34a3dfe36582e3",
+        "bytes": 3805
+      },
+      {
+        "path": "src/engine/security/CrashReportDumper.ts",
+        "sha256": "240d3ef6557b7bdfc4e251aecdb3b63287eaa99ca68d5e1ced00817007b21016",
+        "bytes": 2938
+      },
+      {
+        "path": "src/engine/security/FrameProfiler.ts",
+        "sha256": "8fd47165dc7804705ede25df36e0eaad6c3c7bf10ebf137e4110b6026b921859",
+        "bytes": 5089
+      },
+      {
+        "path": "src/engine/security/MemoryIntegrityGuard.ts",
+        "sha256": "d4ae98ade19ba3e9aef905dad855fc4f931834f6e7bfc7bf5f02c61aa2828b61",
+        "bytes": 5041
+      },
+      {
+        "path": "src/engine/security/TauriSecurityDriver.ts",
+        "sha256": "1437bafd515d8995cd70d1d724a50ee66b2cf46a2401c1b2f3b097f4e1384563",
+        "bytes": 2158
+      },
+      {
+        "path": "src/engine/sprites/InstancedTilemapRenderer.ts",
+        "sha256": "a53028a1e5683d7c7723852ce4dbe0e4438a2193ee378a5d6fa41abbf98c2aec",
+        "bytes": 4067
+      },
+      {
+        "path": "src/engine/sprites/ParallaxController.ts",
+        "sha256": "ba3c6f9a15d9f82cde40c047f9c7f41ef21ef0065053a65b0ed4ebf6249f6a95",
+        "bytes": 2274
+      },
+      {
+        "path": "src/engine/sprites/PixelArtScaler.ts",
+        "sha256": "62f821e984f58eca17a30c4e855f53df3cee3d9eb48e1a26359ea310ddb80bd3",
+        "bytes": 1043
+      },
+      {
+        "path": "src/engine/sprites/Sprite2DRenderer.ts",
+        "sha256": "34de19674c2fa188017b097953e5dc0a86cd772d9d68a1ebc50f71d6033afdb6",
+        "bytes": 2020
+      },
+      {
+        "path": "src/engine/sprites/TextureAtlasParser.ts",
+        "sha256": "74a9ac627cf7faeafdb82237a11f31c2bb9c90d54efc0e883ac0a456df0bd440",
+        "bytes": 1806
+      },
+      {
+        "path": "src/engine/storage/CloudDatabaseDriver.ts",
+        "sha256": "05624833ac141e8f99a9969f2ca5d79fd5995b763aaaf708fc262062264e3d79",
+        "bytes": 1165
+      },
+      {
+        "path": "src/engine/storage/LocalDatabaseDriver.ts",
+        "sha256": "e6ed8f192348e8790618bc6a940bfb99cd744990b7e120e055e1869335400e42",
+        "bytes": 2560
+      },
+      {
+        "path": "src/engine/storage/SteamCloudDriver.ts",
+        "sha256": "0f2e6518ff98de3a11545c5cf5d240cec32c0cc22709d44c843f7251661c2b8a",
+        "bytes": 2806
+      },
+      {
+        "path": "src/engine/streaming/DistanceLODManager.ts",
+        "sha256": "88e24774b6938e88f1b4d4917f8544ee0cf55b6ad7df1f0be0f55a9d24b12abf",
+        "bytes": 2431
+      },
+      {
+        "path": "src/engine/streaming/HLODBuilder.ts",
+        "sha256": "aae19abfc41619279a58546ef08b449db893203a9c4c7c0ff3ffdf76f7270e62",
+        "bytes": 1355
+      },
+      {
+        "path": "src/engine/streaming/streaming.worker.ts",
+        "sha256": "4c7864d725e21b073868f321397b46cb5b18d2e3bba5078bb5b14a850801c3d8",
+        "bytes": 835
+      },
+      {
+        "path": "src/engine/streaming/StreamingWorkerPool.ts",
+        "sha256": "f15bf05cfc79d6924c3b4e542bf3cbf9b28556213a5e1999556888459e78d3b0",
+        "bytes": 6718
+      },
+      {
+        "path": "src/engine/streaming/WorldStreamingSectorManager.ts",
+        "sha256": "5cbecb9e56cf7dfc547f3cfc1003106151ee45fc934baaf29889c61f7235cfcd",
+        "bytes": 4238
+      },
+      {
+        "path": "src/engine/terrain/BiomeEvaluator.ts",
+        "sha256": "c176f50391013ede922c5f524a61f989e7ed761b9e47b72c808b48ecec2ee0c2",
+        "bytes": 4086
+      },
+      {
+        "path": "src/engine/terrain/GreedyMesher.ts",
+        "sha256": "87fcc0354871ae89e948192109c9f997d503164e7247c44287d86faeb15e5ffb",
+        "bytes": 12420
+      },
+      {
+        "path": "src/engine/terrain/PerlinNoiseService.ts",
+        "sha256": "e2524d8464dc4910e32857235eb79b717775ba6e963888aa970a1921da2295b3",
+        "bytes": 10492
+      },
+      {
+        "path": "src/engine/terrain/ProceduralWorkerPool.ts",
+        "sha256": "5450dd3bf91c4c1db8edc21ca017d2185722e69555f7473c08264e49e2183a7b",
+        "bytes": 10392
+      },
+      {
+        "path": "src/engine/terrain/terrain.worker.ts",
+        "sha256": "e73208b04be7d80f1d7f8ace16d4d8d1ad261fd2b824fa6f72564e40e07950a8",
+        "bytes": 4678
+      },
+      {
+        "path": "src/engine/terrain/VoxelChunkManager.ts",
+        "sha256": "50a5777d231bb9a1ad0b3cbe10d4152637e297b090294a2ccf47566f9e111fa2",
+        "bytes": 10841
+      },
+      {
+        "path": "src/engine/ui/DOMEventListenerBridge.ts",
+        "sha256": "95d9b2a125f56575c13fc260e20119a164c1e29ca79bdcc1097ff9220a20029b",
+        "bytes": 3087
+      },
+      {
+        "path": "src/engine/ui/HUDDataBinder.ts",
+        "sha256": "26c8c44bb7dacb77f9ad617142e0d87a759c584b43f7c728b9082777558112c6",
+        "bytes": 5435
+      },
+      {
+        "path": "src/engine/ui/LocalizationEngine.ts",
+        "sha256": "e926c639dc3a51aca6da1a06112a48fae2f1dec8cdfa6bab55b0aaf9485c6e88",
+        "bytes": 5072
+      },
+      {
+        "path": "src/engine/ui/UIManager.ts",
+        "sha256": "bec70b2fbb2101f02e3cd4e3b09addc9a043d75a95c8fe57068f3df79eb10446",
+        "bytes": 7336
+      },
+      {
+        "path": "src/engine/ui/UITemplateRegistry.ts",
+        "sha256": "97826ed888b3c6b27364c1e0a470b15f091099e6451fa80d67c3dacf97912ec5",
+        "bytes": 2777
+      },
+      {
+        "path": "src/engine/vfx/CustomShaderLibrary.ts",
+        "sha256": "82b0b5a1945187a1a46a6c7628c55584b5b46547c1e38f3f362917484314d07e",
+        "bytes": 2681
+      },
+      {
+        "path": "src/engine/vfx/DecalManager.ts",
+        "sha256": "20aae7bb1d8353079d8ed5abb10dc3b32767716c77c29ca64cc6dab8b39e2d81",
+        "bytes": 2929
+      },
+      {
+        "path": "src/engine/vfx/GPUParticleSystem.ts",
+        "sha256": "297312d038d7c4b58608b050386d0711c4344fe88a480b8a9353ee1d3ddad796",
+        "bytes": 12873
+      },
+      {
+        "path": "src/engine/vfx/PostProcessingPipeline.ts",
+        "sha256": "5afa7cecd5b40b02db91106e5971407589a584e1575d94a542b223e05789e02f",
+        "bytes": 5727
+      },
+      {
+        "path": "src/engine/vfx/VFXEffectManager.ts",
+        "sha256": "78385190700a738ed1e4c2cedf7c0a9c7d5e1fccc89875967fd687f1fbd2f210",
+        "bytes": 905
+      },
+      {
+        "path": "src/engine/world/EntityManager.ts",
+        "sha256": "197247f45dfc54a3447a0ce60d018e3cfebe9560dfacef0ca13d9264f768c2de",
+        "bytes": 1815
+      },
+      {
+        "path": "src/engine/world/OctreeManager.ts",
+        "sha256": "a7848145dfa2b33f81e373742d204bbd4b81835313d289b692a118522b787b2b",
+        "bytes": 4955
+      },
+      {
+        "path": "src/engine/world/SaveSystem.ts",
+        "sha256": "7cea965c92bafbdfbbb9bf0af5be33d385424325f73b1bab57a1d06520bf88bb",
+        "bytes": 1553
+      },
+      {
+        "path": "src/engine/world/SceneManager.ts",
+        "sha256": "6f61c75a109bdfa4cfce466f96900cdf835e049bb16783a9fb726208c714d51f",
+        "bytes": 3107
+      },
+      {
+        "path": "src/engine/world/SpatialGrid.ts",
+        "sha256": "72c93160962e4225989293d1e073cd7500032dc3bb5134ce96c97c8afe5c6d24",
+        "bytes": 6504
+      },
+      {
+        "path": "src/engine/world/WorldStateSerializer.ts",
+        "sha256": "824facff6206b3cb7b9dc7ba339f01200899613370a05690c7d80f28089b7aec",
+        "bytes": 1362
+      }
+    ]
+  },
+  "unchanged": true
+}

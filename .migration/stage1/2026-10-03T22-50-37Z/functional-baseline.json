@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "stage": "stage-1-functional-baseline",
+  "classification": "pre-migration-functional-baseline",
+  "runId": "2026-10-03T22-50-37Z",
+  "startedAtUtc": "2026-10-03T22:50:37.949Z",
+  "finishedAtUtc": "2026-10-03T22:51:25.514Z",
+  "projectRoot": "C:\\Users\\Alexandre\\projeto1",
+  "status": "passed",
+  "repository": {
+    "branch": "main",
+    "head": "fcb03848fd1d36081ce72ef689e3ba4bfd58f857",
+    "hasCommits": true,
+    "gitVersion": "git version 2.52.0.windows.1"
+  },
+  "runtime": {
+    "nodeVersion": "v24.21.0",
+    "platform": "win32",
+    "arch": "x64"
+  },
+  "stage0": {
+    "baselineId": "2026-10-03T22-44-28Z",
+    "treeSha256": "c75f48c3a023d7adbdd9ea98486d211737eca03b8cb95cb460136e38a387ade5",
+    "before": {
+      "baselineId": "2026-10-03T22-44-28Z",
+      "expectedFileCount": 387,
+      "changed": [],
+      "removed": [],
+      "intact": true,
+      "manifestSha256": "c75f48c3a023d7adbdd9ea98486d211737eca03b8cb95cb460136e38a387ade5"
+    },
+    "after": {
+      "baselineId": "2026-10-03T22-44-28Z",
+      "expectedFileCount": 387,
+      "changed": [],
+      "removed": [],
+      "intact": true,
+      "manifestSha256": "c75f48c3a023d7adbdd9ea98486d211737eca03b8cb95cb460136e38a387ade5"
+    }
+  },
+  "checks": [
+    {
+      "id": "tsc",
+      "label": "TypeScript",
+      "command": "npx tsc --noEmit",
+      "startedAtUtc": "2026-10-03T22:50:38.340Z",
+      "finishedAtUtc": "2026-10-03T22:50:43.163Z",
+      "durationMs": 4823,
+      "timeoutMs": 1800000,
+      "passed": true,
+      "timedOut": false,
+      "exitCode": 0,
+      "signal": null,
+      "spawnError": null,
+      "stdoutFile": "commands/01-tsc.stdout.log",
+      "stderrFile": "commands/01-tsc.stderr.log"
+    },
+    {
+      "id": "vitest",
+      "label": "Vitest",
+      "command": "npx vitest run",
+      "startedAtUtc": "2026-10-03T22:50:43.165Z",
+      "finishedAtUtc": "2026-10-03T22:50:50.730Z",
+      "durationMs": 7565,
+      "timeoutMs": 1800000,
+      "passed": true,
+      "timedOut": false,
+      "exitCode": 0,
+      "signal": null,
+      "spawnError": null,
+      "stdoutFile": "commands/02-vitest.stdout.log",
+      "stderrFile": "commands/02-vitest.stderr.log"
+    },
+    {
+      "id": "cargo-check",
+      "label": "Cargo Check",
+      "command": "cargo check --manifest-path src-tauri/Cargo.toml",
+      "startedAtUtc": "2026-10-03T22:50:50.732Z",
+      "finishedAtUtc": "2026-10-03T22:51:16.165Z",
+      "durationMs": 25433,
+      "timeoutMs": 1800000,
+      "passed": true,
+      "timedOut": false,
+      "exitCode": 0,
+      "signal": null,
+      "spawnError": null,
+      "stdoutFile": "commands/03-cargo-check.stdout.log",
+      "stderrFile": "commands/03-cargo-check.stderr.log"
+    },
+    {
+      "id": "build",
+      "label": "Build",
+      "command": "npm run build",
+      "startedAtUtc": "2026-10-03T22:51:16.166Z",
+      "finishedAtUtc": "2026-10-03T22:51:24.749Z",
+      "durationMs": 8582,
+      "timeoutMs": 1800000,
+      "passed": true,
+      "timedOut": false,
+      "exitCode": 0,
+      "signal": null,
+      "spawnError": null,
+      "stdoutFile": "commands/04-build.stdout.log",
+      "stderrFile": "commands/04-build.stderr.log"
+    },
+    {
+      "id": "agents",
+      "label": "AGENTS Guardrail",
+      "command": "node agents.mjs",
+      "startedAtUtc": "2026-10-03T22:51:24.751Z",
+      "finishedAtUtc": "2026-10-03T22:51:25.125Z",
+      "durationMs": 374,
+      "timeoutMs": 1800000,
+      "passed": true,
+      "timedOut": false,
+      "exitCode": 0,
+      "signal": null,
+      "spawnError": null,
+      "stdoutFile": "commands/05-agents.stdout.log",
+      "stderrFile": "commands/05-agents.stderr.log"
+    }
+  ],
+  "failedChecks": [],
+  "notes": [
+    "Todos os checks foram executados em sequência mesmo quando um check anterior falhou.",
+    "Falhas registradas nesta etapa representam o estado funcional pré-migração.",
+    "Arquivos adicionados após a Etapa 0 não invalidam o anchor; arquivos que pertenciam à Etapa 0 devem permanecer byte-a-byte idênticos.",
+    "A pasta .migration contém somente artefatos de auditoria e não faz parte da árvore SHA-256 da Etapa 0."
+  ]
+}

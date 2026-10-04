@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "stage": "stage-41-postmigration-snapshot",
+  "architectureMigrationVersion": "v20",
+  "status": "completed",
+  "createdAtUtc": "2026-10-04T15:19:43.645Z",
+  "referenceSnapshot": {
+    "name": "Projeto1_092",
+    "generatedAtLocal": "04/10/2026, 12:12:02",
+    "totalFiles": 1096
+  },
+  "currentTree": {
+    "fileCount": 452,
+    "sha256": "11800a3d0ea26db8fbcfd1d9b34271d98316b614401a6ddf59b519c024581fd1"
+  },
+  "counts": {
+    "totalOperations": 355,
+    "movedFiles": 93,
+    "pluginExtractions": 21,
+    "rewriteFiles": 108,
+    "publicFacades": 23,
+    "aliasConfigs": 2,
+    "coreApiOperations": 104,
+    "apiLeaksFixed": 4,
+    "conceptualDirectories": 10
+  },
+  "guardrails": {
+    "agents": true,
+    "boundaries": true,
+    "dependencies": true,
+    "architectureSmoke": true
+  },
+  "hashes": {
+    "freezeLock": "fd1027b8ded14d6b945c56665c506d26bd2ccb24d62b4fc9f16f5f924d4f99b2",
+    "globalJournal": "61073f9bd5a16e3a84f16b62fe36a1e4b0a2eeb21c559ec71542ee0d3c1f8618",
+    "moduleMap": "2a3b98dc51ea88d115540eab43bc86edc99981d300c6f2e5d6d9f557839d8a4b",
+    "boundaryChecker": "24c0adc3e28a04a912b4adc3591985bcc9dd4b64405bf08e76124bd1b25ccfe7",
+    "dependencyChecker": "ce15f65357e0bae081537b843c5742409424d95e7a019a3d977ec48c89dac07a"
+  },
+  "pending": [],
+  "deferred": [
+    "stage42-temporary-artifact-cleanup",
+    "stage43-permanent-development-integration",
+    "stage44-real-layer2-layer3-implementation"
+  ]
+}

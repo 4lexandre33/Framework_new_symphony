@@ -2,240 +2,384 @@
 
 Este documento define os limites de autoridade para agentes de IA, assistentes de código e scripts de automação que operam neste repositório.
 
-## Módulos Congelados (FROZEN MODULES - DO NOT MODIFY WHILE LOCKED)
+Ele descreve o estado operacional atual da arquitetura após a migração v20 até a Etapa 25.
 
-### Camada 1 — Steamworks & P2P
-- `src-tauri/src/steam.rs`
-- `src-tauri/src/lib.rs`
-- `src-tauri/Cargo.toml`
-- `src/contracts/steam/net-types.ts`
-- `src/tokens/steam.ts`
-- `src/tokens/steam-net.ts`
-- `src/plugins/steam/plugin.ts`
-- `steam_appid.txt`
-- `src-tauri/steam_appid.txt`
-- `tests/steam-integration.test.ts`
-- `tests/steam-p2p-smoke.mjs`
+## 1. Fonte canônica da arquitetura modular
 
-### Camada 2 — Input Manager
-- `src/contracts/input/types.ts`
-- `src/tokens/input.ts`
-- `src/engine/input/KeyboardMouseDriver.ts`
-- `src/engine/input/GamepadDriver.ts`
-- `src/engine/input/InputManager.ts`
-- `src/plugins/input/plugin.ts`
-- `tests/input-system.test.ts`
-- `tests/input-smoke-test.mjs`
+A árvore de módulos não deve ser duplicada manualmente em documentação, scripts de freeze, smoke tests de governança ou outros guardrails.
 
-### Camada 3 — Asset Pipeline & VRAM Cache
-- `src/contracts/assets/types.ts`
-- `src/tokens/assets.ts`
-- `src/engine/assets/AssetCache.ts`
-- `src/engine/assets/GLTFLoaderService.ts`
-- `src/engine/assets/TextureLoaderService.ts`
-- `src/engine/assets/AudioLoaderService.ts`
-- `src/plugins/assets/plugin.ts`
-- `tests/assets-pipeline.test.ts`
-- `tests/assets-smoke-test.mjs`
+A fonte única dos módulos first-party é:
 
-### Camada 4 — Motor de Física (Rapier WASM)
-- `src/contracts/physics/types.ts`
-- `src/tokens/physics.ts`
-- `src/engine/physics/PhysicsWorld.ts`
-- `src/engine/physics/RigidBodyFactory.ts`
-- `src/engine/physics/RaycasterQueries.ts`
-- `src/engine/physics/CollisionEventManager.ts`
-- `src/plugins/physics/plugin.ts`
-- `tests/physics-system.test.ts`
-- `tests/physics-smoke-test.mjs`
+```text
+scripts/architecture/module-map.mjs
+```
 
-### Camada 5 — Persistência & Banco de Dados (game.storage)
-- `src/contracts/storage/types.ts`
-- `src/tokens/storage.ts`
-- `src/engine/storage/SteamCloudDriver.ts`
-- `src/engine/storage/LocalDatabaseDriver.ts`
-- `src/engine/storage/CloudDatabaseDriver.ts`
-- `src/plugins/storage/plugin.ts`
-- `tests/storage-system.test.ts`
-- `tests/storage-smoke-test.mjs`
+O catálogo canônico descreve:
 
-### Camada 6 — Gerenciador de Mundo, Cenas & ECS (game.world)
-- `src/contracts/world/types.ts`
-- `src/tokens/world.ts`
-- `src/engine/world/SceneManager.ts`
-- `src/engine/world/EntityManager.ts`
-- `src/engine/world/SpatialGrid.ts`
-- `src/engine/world/OctreeManager.ts`
-- `src/engine/world/WorldStateSerializer.ts`
-- `src/engine/world/SaveSystem.ts`
-- `src/plugins/world/plugin.ts`
-- `tests/world-system.test.ts`
-- `tests/world-smoke-test.mjs`
+- módulos funcionais;
+- runtimes fundamentais;
+- contracts;
+- tokens;
+- plugins;
+- arquivos nativos;
+- testes;
+- arquivos extras;
+- roots físicos da Engine;
+- roots públicos;
+- roots internos.
 
-### Camada 7 — Interface de Usuário & HUD (game.ui)
-- `src/contracts/ui/types.ts`
-- `src/tokens/ui.ts`
-- `src/styles/ui.css`
-- `src/engine/ui/UIManager.ts`
-- `src/engine/ui/HUDDataBinder.ts`
-- `src/engine/ui/LocalizationEngine.ts`
-- `src/engine/ui/UITemplateRegistry.ts`
-- `src/engine/ui/DOMEventListenerBridge.ts`
-- `src/plugins/ui/plugin.ts`
-- `tests/ui-system.test.ts`
-- `tests/ui-smoke-test.mjs`
+A estrutura vigente de cada módulo da Engine segue:
 
-### Camada 8 — Pipeline de Animações & State Machines (game.anim)
-- `src/contracts/anim/types.ts`
-- `src/tokens/anim.ts`
-- `src/engine/anim/AnimationState.ts`
-- `src/engine/anim/AnimationStateMachine.ts`
-- `src/engine/anim/SkeletalAnimationDriver.ts`
-- `src/engine/anim/Sprite2DAnimationDriver.ts`
-- `src/engine/anim/AnimationEventManager.ts`
-- `src/plugins/anim/plugin.ts`
-- `tests/anim-system.test.ts`
-- `tests/anim-smoke-test.mjs`
+```text
+src/engine/<module>/
+├── public/
+│   └── index.ts
+└── internal/
+    └── ...
+```
 
-### Camada 9 — Motor 2D, Tilemaps & Pixel Art (game.sprites)
-- `src/contracts/sprites/types.ts`
-- `src/tokens/sprites.ts`
-- `src/engine/sprites/TextureAtlasParser.ts`
-- `src/engine/sprites/InstancedTilemapRenderer.ts`
-- `src/engine/sprites/ParallaxController.ts`
-- `src/engine/sprites/PixelArtScaler.ts`
-- `src/engine/sprites/Sprite2DRenderer.ts`
-- `src/plugins/sprites/plugin.ts`
-- `tests/sprites-system.test.ts`
-- `tests/sprites-smoke-test.mjs`
+Qualquer automação que precise conhecer ownership, roots ou catálogo de módulos deve importar `module-map.mjs` em vez de manter listas paralelas.
 
-### Camada 10 — Mixer de Áudio Espacial 3D (game.audio)
-- `src/contracts/audio/types.ts`
-- `src/tokens/audio.ts`
-- `src/engine/audio/AudioMixer.ts`
-- `src/engine/audio/PositionalAudio3D.ts`
-- `src/engine/audio/MusicCrossfader.ts`
-- `src/engine/audio/AudioListenerBridge.ts`
-- `src/plugins/audio/plugin.ts`
-- `tests/audio-system.test.ts`
-- `tests/audio-smoke-test.mjs`
+## 2. Fronteira `/public` vs `/internal`
 
-### Camada 11 — Câmera Dinâmica & SpringArm (game.camera)
-- `src/contracts/camera/types.ts`
-- `src/tokens/camera.ts`
-- `src/engine/camera/SpringArm3D.ts`
-- `src/engine/camera/TraumaCameraShake.ts`
-- `src/engine/camera/VirtualCameraStack.ts`
-- `src/engine/camera/CameraOcclusionDetector.ts`
-- `src/plugins/camera/plugin.ts`
-- `tests/camera-system.test.ts`
-- `tests/camera-smoke-test.mjs`
+`/public` é a fronteira formal do módulo.
 
-### Camada 12 — Inteligência Artificial & NavMesh (game.ai)
-- `src/contracts/ai/types.ts`
-- `src/tokens/ai.ts`
-- `src/engine/ai/NavMeshQuery.ts`
-- `src/engine/ai/BehaviorTree.ts`
-- `src/engine/ai/PerceptionSystem.ts`
-- `src/engine/ai/SteeringBehaviors.ts`
-- `src/engine/ai/AIAgentManager.ts`
-- `src/plugins/ai/plugin.ts`
-- `tests/ai-system.test.ts`
-- `tests/ai-smoke-test.mjs`
+Código consumidor deve preferir:
 
-### Camada 13 — Partículas GPU, Decals & Pós-Processamento (game.vfx)
-- `src/contracts/vfx/types.ts`
-- `src/tokens/vfx.ts`
-- `src/engine/vfx/GPUParticleSystem.ts`
-- `src/engine/vfx/DecalManager.ts`
-- `src/engine/vfx/PostProcessingPipeline.ts`
-- `src/engine/vfx/CustomShaderLibrary.ts`
-- `src/engine/vfx/VFXEffectManager.ts`
-- `src/plugins/vfx/plugin.ts`
-- `tests/vfx-system.test.ts`
-- `tests/vfx-smoke-test.mjs`
+```text
+src/engine/<module>/public/index.ts
+```
 
-### Camada 14 — Terreno Procedural, Biomas & Voxels (game.terrain)
-- `src/contracts/terrain/types.ts`
-- `src/tokens/terrain.ts`
-- `src/engine/terrain/PerlinNoiseService.ts`
-- `src/engine/terrain/BiomeEvaluator.ts`
-- `src/engine/terrain/GreedyMesher.ts`
-- `src/engine/terrain/VoxelChunkManager.ts`
-- `src/engine/terrain/ProceduralWorkerPool.ts`
-- `src/engine/terrain/terrain.worker.ts`
-- `src/plugins/terrain/plugin.ts`
-- `tests/terrain-system.test.ts`
-- `tests/terrain-smoke-test.mjs`
+`/internal` contém implementações concretas e não é API pública.
 
-### Camada 15 — Cutscenes, Diálogos & Quests (game.scripting)
-- `src/contracts/scripting/types.ts`
-- `src/tokens/scripting.ts`
-- `src/engine/scripting/CutsceneTimeline.ts`
-- `src/engine/scripting/DialogueTreeParser.ts`
-- `src/engine/scripting/QuestManager.ts`
-- `src/engine/scripting/TriggerZoneManager.ts`
-- `src/plugins/scripting/plugin.ts`
-- `tests/scripting-system.test.ts`
-- `tests/scripting-smoke-test.mjs`
+Regras obrigatórias:
 
-### Camada 16 — Streaming Espacial, LOD & HLOD (game.streaming)
-- `src/contracts/streaming/types.ts`
-- `src/tokens/streaming.ts`
-- `src/engine/streaming/DistanceLODManager.ts`
-- `src/engine/streaming/WorldStreamingSectorManager.ts`
-- `src/engine/streaming/HLODBuilder.ts`
-- `src/engine/streaming/StreamingWorkerPool.ts`
-- `src/engine/streaming/streaming.worker.ts`
-- `src/plugins/streaming/plugin.ts`
-- `tests/streaming-system.test.ts`
-- `tests/streaming-smoke-test.mjs`
+1. `engine/X/internal` não importa `engine/Y/internal`.
+2. `engine/X/public` não importa `internal`.
+3. `plugins/X` pode acessar `engine/X/internal` quando necessário para composição.
+4. `plugins/X` não deve acessar `engine/Y/internal`.
+5. testes white-box podem acessar `/internal` de forma deliberada.
+6. não reexportar classes concretas de `/internal` apenas para contornar boundary errors.
+7. não transformar uma implementação concreta em API pública sem decisão arquitetural explícita.
 
-### Camada 17 — Desktop Overlay, Ancoragem na Barra de Tarefas & Raycast Click Passthrough (game.overlay)
-- `src/contracts/overlay/types.ts`
-- `src/tokens/overlay.ts`
-- `src/engine/overlay/RaycastHitTestPassthrough.ts`
-- `src/engine/overlay/OverlayWindowManager.ts`
-- `src/engine/overlay/TauriOverlayDriver.ts`
-- `src-tauri/src/overlay.rs`
-- `src/plugins/overlay/plugin.ts`
-- `tests/overlay-system.test.ts`
-- `tests/overlay-smoke-test.mjs`
+## 3. Core público
 
-### Camada 18 — Profiler de Performance, Anti-cheat & Crash Dumper (game.security)
-- `src/contracts/security/types.ts`
-- `src/tokens/security.ts`
-- `src/engine/security/FrameProfiler.ts`
-- `src/engine/security/MemoryIntegrityGuard.ts`
-- `src/engine/security/CrashReportDumper.ts`
-- `src/engine/security/TauriSecurityDriver.ts`
-- `src-tauri/src/security.rs`
-- `src/plugins/security/plugin.ts`
-- `tests/security-system.test.ts`
-- `tests/security-smoke-test.mjs`
+A fachada pública do Core é:
 
-### Camada 19 — Steam Workshop, Dynamic Loading & Asset Override (game.modding)
-- `src/contracts/modding/types.ts`
-- `src/tokens/modding.ts`
-- `src/engine/modding/AssetOverrideRegistry.ts`
-- `src/engine/modding/DynamicPluginLoader.ts`
-- `src/engine/modding/ScriptSandbox.ts`
-- `src/engine/modding/SteamWorkshopDriver.ts`
-- `src/engine/modding/TauriModdingDriver.ts`
-- `src-tauri/src/modding.rs`
-- `src/plugins/modding/plugin.ts`
-- `tests/modding-system.test.ts`
-- `tests/modding-smoke-test.mjs`
+```text
+src/core/index.ts
+```
 
-### Camada 20 — Microtransações Steam & Steam Inventory Service (game.monetization)
-- `src/contracts/monetization/types.ts`
-- `src/tokens/monetization.ts`
-- `src/engine/monetization/StoreCatalogRegistry.ts`
-- `src/engine/monetization/InventoryReceiptValidator.ts`
-- `src/engine/monetization/VirtualCurrencyWallet.ts`
-- `src/engine/monetization/SteamMicroTxnBridge.ts`
-- `src/engine/monetization/TauriMonetizationDriver.ts`
-- `src-tauri/src/monetization.rs`
-- `src/plugins/monetization/plugin.ts`
-- `tests/monetization-system.test.ts`
-- `tests/monetization-smoke-test.mjs`
+Consumidores externos devem preferir:
+
+```ts
+import { ... } from "@core";
+```
+
+Código externo ao Core não deve importar diretamente:
+
+```text
+src/core/internal/
+src/core/runtime/
+```
+
+Exceções devem ficar restritas a código do próprio Core ou testes white-box deliberados.
+
+Nunca resolva uma violação exportando indiscriminadamente todo o conteúdo de `internal`.
+
+## 4. Plugins e capabilities
+
+Plugins vivem em:
+
+```text
+src/plugins/<module>/plugin.ts
+```
+
+Os manifestos usam a estrutura:
+
+```text
+capabilities.provides
+capabilities.consumes
+capabilities.conflicts
+dependsOn
+```
+
+Semântica vigente:
+
+- `consumes optional:false` = capability obrigatória;
+- `consumes optional:true` = capability opcional;
+- `dependsOn` é separado e participa do lifecycle;
+- `conflicts` declara incompatibilidades;
+- provider ambiguity, semver, ciclos, permissions e conflitos devem ser detectados pelos guardrails/preflight.
+
+Não crie um segundo orquestrador de lifecycle fora do Kernel.
+
+## 5. Lifecycle e preflight
+
+O Kernel é o único coordenador do lifecycle.
+
+Antes do primeiro `setup()`, o preflight arquitetural valida o conjunto de plugins.
+
+Fases relevantes:
+
+```text
+setup -> resolving -> ready -> running
+```
+
+O shutdown deve preservar inverse shutdown:
+
+```text
+BOOT: A -> B -> C
+STOP: C -> B -> A
+```
+
+Dependências devem permanecer disponíveis enquanto consumidores executam `onStop` e disposers.
+
+Não altere essa propriedade sem testes específicos.
+
+## 6. Freeze arquitetural
+
+O freeze é controlado por:
+
+```text
+agents.mjs
+tests/freeze-lock.mjs
+tests/freeze-invariants.mjs
+```
+
+O lock canônico é:
+
+```text
+/.freeze-lock.json
+```
+
+O path histórico:
+
+```text
+tests/.freeze-lock.json
+```
+
+não é mais o path canônico. Compatibilidade temporária pode existir apenas para conversão one-shot pelo script de freeze.
+
+Nunca crie novamente dependência operacional do path legado.
+
+### Verificação
+
+```bash
+node agents.mjs
+```
+
+### Desbloqueio controlado
+
+```bash
+node agents.mjs --unlock
+```
+
+### Congelamento
+
+```bash
+node agents.mjs --lock
+```
+
+Não apagar nem editar `.freeze-lock.json` manualmente.
+
+Mudanças em áreas congeladas exigem desbloqueio explícito e novo lock na etapa apropriada.
+
+## 7. Guardrails arquiteturais
+
+Boundary checker:
+
+```bash
+node scripts/architecture/check-boundaries.mjs
+```
+
+Dependency checker:
+
+```bash
+node scripts/architecture/check-dependencies.mjs
+```
+
+TypeScript:
+
+```bash
+npx tsc --noEmit
+```
+
+Uma checagem não deve ser afrouxada apenas para ficar verde.
+
+Se um guardrail encontra uma violação real, corrija a arquitetura ou o consumidor, não o teste que a detectou.
+
+## 8. Testes e smoke tests
+
+Testes funcionais ficam em:
+
+```text
+tests/*.test.ts
+```
+
+Smoke tests ficam em:
+
+```text
+tests/*.mjs
+```
+
+Regras:
+
+1. testes white-box podem acessar `/internal`;
+2. smoke tests devem usar os paths físicos atuais;
+3. não restaurar referências pré-migração como `src/engine/<module>/<arquivo>.ts` quando o arquivo real está em `/internal`;
+4. não remover asserts para esconder regressões;
+5. testes continuam responsáveis por comportamento e integração, não apenas existência de arquivos.
+
+## 9. Build e execução
+
+No estado atual, o build npm é:
+
+```bash
+npm run build
+```
+
+e corresponde ao pipeline configurado em `package.json`:
+
+```text
+tsc && vite build
+```
+
+Não assuma que `arch:check` já está acoplado automaticamente ao build. Essa integração permanente pertence a uma etapa posterior.
+
+Validação Rust:
+
+```bash
+cargo check --manifest-path src-tauri/Cargo.toml
+```
+
+Runtime Tauri:
+
+```bash
+npm run tauri dev
+```
+
+Não altere configuração Rust/Tauri para corrigir problema puramente TypeScript sem evidência concreta.
+
+## 10. Regras para movimentação de arquivos
+
+A grande migração física para `/public` e `/internal` já ocorreu.
+
+A partir do estado atual:
+
+- não mover arquivos de Engine por conveniência;
+- não reescrever imports em massa sem plano explícito;
+- não ressuscitar paths antigos;
+- não criar aliases ad hoc para esconder paths quebrados;
+- mudanças estruturais futuras devem passar novamente por inventário, plano e validação.
+
+Scripts históricos de migração permanecem auditáveis e não devem ser apagados apenas por estarem concluídos.
+
+## 11. Diretórios conceituais
+
+As áreas:
+
+```text
+src/domain/
+src/services/
+src/app/flows/
+```
+
+foram criadas como estrutura futura.
+
+Enquanto não houver implementação real:
+
+- preservar seus `README.txt`;
+- não criar `.ts` vazios;
+- não criar entidades, use cases ou FSMs fictícios apenas para preencher pastas.
+
+Implementações futuras das Camadas 2 e 3 pertencem a fase posterior.
+
+## 12. Documentação histórica
+
+READMEs de patches antigos podem permanecer como histórico.
+
+Exemplos de documentação histórica não devem ser reescritos automaticamente apenas porque mencionam paths antigos.
+
+Quando houver conflito entre documentação histórica e estado operacional, prevalecem:
+
+1. código/configuração atual;
+2. `module-map.mjs`;
+3. guardrails executáveis;
+4. este `AGENTS.md`;
+5. `README.md`.
+
+## 13. Proibições para agentes
+
+Agentes e automações não devem:
+
+- duplicar manualmente o catálogo completo de módulos;
+- mover arquivos sem escopo arquitetural explícito;
+- importar implementação privada de outro módulo;
+- expor classes internas para “resolver” um import;
+- remover validações para deixar CI/testes verdes;
+- alterar journals históricos como se fossem configuração atual;
+- tratar READMEs históricos como fonte canônica;
+- editar o freeze manualmente;
+- criar placeholders TypeScript vazios;
+- introduzir alocações desnecessárias dentro de game loops críticos;
+- criar um segundo lifecycle manager paralelo ao Kernel.
+
+## 14. Performance e runtime de jogo
+
+Código de runtime deve preservar boas práticas de engine:
+
+- evitar alocações por frame quando possível;
+- separar fixed update de render update quando aplicável;
+- manter ownership claro de timers, listeners e resources;
+- usar disposers/scope do lifecycle;
+- não registrar listeners globais sem remoção;
+- não ocultar trabalho caro dentro de getters usados por frame;
+- considerar draw calls, memória e pressão de GC ao alterar sistemas 3D.
+
+## 15. Tauri e desktop
+
+A aplicação alvo é desktop via Tauri.
+
+Ao alterar integração nativa:
+
+- manter fronteira TypeScript ↔ Rust explícita;
+- validar comandos Tauri e payloads;
+- evitar expor operações nativas inseguras diretamente a UI;
+- preservar compatibilidade com Steam quando aplicável;
+- validar `cargo check`;
+- validar `npm run tauri dev` quando a mudança tocar runtime nativo.
+
+## 16. Sequência mínima de validação arquitetural
+
+Antes de considerar uma alteração arquitetural válida:
+
+```bash
+node scripts/architecture/check-boundaries.mjs
+node scripts/architecture/check-dependencies.mjs
+npx tsc --noEmit
+```
+
+Depois, conforme o escopo:
+
+```bash
+npx vitest run
+cargo check --manifest-path src-tauri/Cargo.toml
+npm run build
+npm run tauri dev
+```
+
+Falhas estruturais devem ser corrigidas antes de avançar para validações funcionais que dependem delas.
+
+## 17. Princípio de autoridade
+
+O objetivo dos guardrails é preservar a arquitetura, não congelar erros.
+
+Quando uma regra, teste ou freeze divergir do estado arquitetural aprovado:
+
+- identificar a fonte canônica;
+- corrigir o consumidor ou guardrail correto;
+- preservar a intenção arquitetural;
+- registrar mudanças relevantes;
+- não usar bypass silencioso.
+

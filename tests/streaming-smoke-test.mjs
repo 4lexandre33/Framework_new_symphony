@@ -8,11 +8,11 @@ const successes = [];
 const REQUIRED_STREAMING_FILES = [
   "src/contracts/streaming/types.ts",
   "src/tokens/streaming.ts",
-  "src/engine/streaming/DistanceLODManager.ts",
-  "src/engine/streaming/WorldStreamingSectorManager.ts",
-  "src/engine/streaming/HLODBuilder.ts",
-  "src/engine/streaming/StreamingWorkerPool.ts",
-  "src/engine/streaming/streaming.worker.ts",
+  "src/engine/streaming/internal/DistanceLODManager.ts",
+  "src/engine/streaming/internal/WorldStreamingSectorManager.ts",
+  "src/engine/streaming/internal/HLODBuilder.ts",
+  "src/engine/streaming/internal/StreamingWorkerPool.ts",
+  "src/engine/streaming/internal/streaming.worker.ts",
   "src/plugins/streaming/plugin.ts",
   "tests/streaming-system.test.ts",
 ];
@@ -48,7 +48,7 @@ console.log("============================================================\n");
 for (const file of REQUIRED_STREAMING_FILES) checkFile(file);
 
 checkContains(
-  "src/engine/streaming/StreamingWorkerPool.ts",
+  "src/engine/streaming/internal/StreamingWorkerPool.ts",
   "this.workerLimit = this.normalizeWorkerLimit(maxWorkers)",
   "maxWorkers controla efetivamente o pool",
 );

@@ -1,0 +1,16 @@
+{
+  "id": "agents",
+  "label": "AGENTS Guardrail",
+  "command": "node agents.mjs",
+  "startedAtUtc": "2026-10-03T22:51:24.751Z",
+  "finishedAtUtc": "2026-10-03T22:51:25.125Z",
+  "durationMs": 374,
+  "timeoutMs": 1800000,
+  "passed": true,
+  "timedOut": false,
+  "exitCode": 0,
+  "signal": null,
+  "spawnError": null,
+  "stdoutFile": "commands/05-agents.stdout.log",
+  "stderrFile": "commands/05-agents.stderr.log"
+}

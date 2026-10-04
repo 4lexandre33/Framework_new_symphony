@@ -5,12 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run arch:check && tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
     "test": "vitest run",
     "test:ui": "vitest run tests/ui-system.test.ts",
-    "test:ui:smoke": "node tests/ui-smoke-test.mjs"
+    "test:ui:smoke": "node tests/ui-smoke-test.mjs",
+    "arch:audit": "node agents.mjs",
+    "arch:check": "node scripts/architecture/check-boundaries.mjs && node scripts/architecture/check-dependencies.mjs",
+    "arch:dependencies": "node scripts/architecture/check-dependencies.mjs",
+    "arch:migrate": "node scripts/architecture/stage43-migration-status.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.12.0",

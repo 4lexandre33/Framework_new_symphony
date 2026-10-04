@@ -1,4 +1,4 @@
-import { defineEvent, defineCommand } from "../../core/contracts";
+import { defineEvent, defineCommand } from "@core";
 
 export interface Vector3VFX {
   readonly x: number;

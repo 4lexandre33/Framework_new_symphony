@@ -66,6 +66,7 @@ pub fn run() {
             overlay::overlay_set_ignore_cursor_events,
             overlay::overlay_set_always_on_top,
             overlay::overlay_get_taskbar_bounds,
+            overlay::overlay_dock_to_taskbar,
             security::security_validate_system_clock,
             security::security_write_crash_dump,
             modding::modding_scan_local_mods,

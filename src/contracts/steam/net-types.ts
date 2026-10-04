@@ -1,4 +1,4 @@
-import { defineEvent, defineCommand } from "../../core/contracts";
+import { defineEvent, defineCommand } from "@core";
 
 /**
  * Modos de envio de pacotes P2P da Steamworks API (equivalente a P2PSend da Valve).

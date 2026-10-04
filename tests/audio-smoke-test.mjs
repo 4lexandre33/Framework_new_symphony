@@ -6,10 +6,10 @@ const ROOT_DIR = process.cwd();
 const REQUIRED_AUDIO_FILES = [
   "src/contracts/audio/types.ts",
   "src/tokens/audio.ts",
-  "src/engine/audio/AudioMixer.ts",
-  "src/engine/audio/PositionalAudio3D.ts",
-  "src/engine/audio/MusicCrossfader.ts",
-  "src/engine/audio/AudioListenerBridge.ts",
+  "src/engine/audio/internal/AudioMixer.ts",
+  "src/engine/audio/internal/PositionalAudio3D.ts",
+  "src/engine/audio/internal/MusicCrossfader.ts",
+  "src/engine/audio/internal/AudioListenerBridge.ts",
   "src/plugins/audio/plugin.ts",
   "tests/audio-system.test.ts",
 ];

@@ -1,7 +1,7 @@
-import type { Plugin, PluginContext } from "../../core/contracts/plugin-context";
+import type { Plugin, PluginContext } from "@core";
 import { InputToken } from "../../tokens/input";
 import { InputActionEvent, InputDeviceChangedEvent } from "../../contracts/input/types";
-import { InputManager } from "../../engine/input/InputManager";
+import { InputManager } from "../../engine/input/internal/InputManager";
 
 export const inputManifest: Plugin["manifest"] = {
   id: "game.input",
@@ -20,6 +20,7 @@ export const inputManifest: Plugin["manifest"] = {
         version: "1.0.0",
       },
     ],
+    conflicts: [],
   },
 };
 

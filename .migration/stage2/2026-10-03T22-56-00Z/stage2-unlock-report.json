@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "stage": "stage-2-controlled-freeze-unlock",
+  "runId": "2026-10-03T22-56-00Z",
+  "startedAtUtc": "2026-10-03T22:56:00.367Z",
+  "finishedAtUtc": "2026-10-03T22:56:00.993Z",
+  "projectRoot": "C:\\Users\\Alexandre\\projeto1",
+  "repository": {
+    "branch": "main",
+    "head": "fcb03848fd1d36081ce72ef689e3ba4bfd58f857",
+    "hasCommits": true,
+    "gitVersion": "git version 2.52.0.windows.1"
+  },
+  "stage1": {
+    "found": true,
+    "runId": "2026-10-03T22-50-37Z",
+    "status": "passed",
+    "reportPath": ".migration/stage1/2026-10-03T22-50-37Z/functional-baseline.json"
+  },
+  "freezeBefore": {
+    "relativePath": "tests/.freeze-lock.json",
+    "version": "20.0.0",
+    "lockedAt": "2026-10-03T21:39:01.713Z",
+    "protectedFileCount": 196,
+    "sha256": "22159f7bd802c3a329ab06870a250f42a726b3c3a6aa1d61be2f132fbacceb83",
+    "integrity": {
+      "intact": true,
+      "protectedFileCount": 196,
+      "missing": [],
+      "changed": []
+    },
+    "backup": ".migration/stage2/2026-10-03T22-56-00Z/freeze-lock.before.json"
+  },
+  "preUnlockGuardrailAudit": {
+    "exitCode": 0,
+    "stdoutSha256": "3a086788113b084fbe6ba6a2ddd93267aea659da040b8955e27db162b8632d61",
+    "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "unlockCommand": {
+    "command": "node agents.mjs --unlock",
+    "exitCode": 0,
+    "stdoutSha256": "fff8dd17b17c80a1bd83fe514a161ee934761abe4130970f214020cf847000e7",
+    "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "freezeAfter": {
+    "relativePath": "tests/.freeze-lock.json",
+    "exists": false,
+    "unlocked": true
+  },
+  "status": "unlocked",
+  "notes": [
+    "A trava original foi copiada para .migration/stage2 antes do desbloqueio para auditoria.",
+    "A remoção da trava foi solicitada exclusivamente através de node agents.mjs --unlock.",
+    "O script não modifica arquivos protegidos nem regenera hashes.",
+    "A partir deste ponto, alterações arquiteturais autorizadas podem modificar os caminhos que antes estavam congelados."
+  ]
+}

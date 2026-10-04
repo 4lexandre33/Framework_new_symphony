@@ -1,0 +1,744 @@
+{
+  "schemaVersion": 1,
+  "stage": "stage-14-generate-public-facades",
+  "architectureMigrationVersion": "v20",
+  "status": "completed",
+  "createdAtUtc": "2026-10-04T02:02:28.632Z",
+  "updatedAtUtc": "2026-10-04T02:02:28.632Z",
+  "completedAtUtc": "2026-10-04T02:02:28.632Z",
+  "counts": {
+    "totalFacades": 23,
+    "applied": 23,
+    "rolledBack": 0,
+    "conflicts": 0,
+    "exportStatements": 48,
+    "internalReexports": 0,
+    "forbiddenConcreteExports": 0
+  },
+  "operationsIdentitySha256": "96dd7c4a7b6c3bf3bda80a4d96bc843817cc1df89d020f401a2fb47609038c4a",
+  "operations": [
+    {
+      "sequence": 223,
+      "sourceStage": 14,
+      "moduleKey": "steam",
+      "capabilityId": "game.steam",
+      "isWorker": false,
+      "oldPath": "src/engine/steam/public/index.ts",
+      "newPath": "src/engine/steam/public/index.ts",
+      "bytes": 411,
+      "shaBefore": null,
+      "shaAfter": "2d318cb438c28bb3d4092943a2059bb4142868690abe4693c5d3b48383b07125",
+      "timestampUtc": "2026-10-04T02:02:28.337Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/steam/public/index.ts",
+      "fileBytesAfter": 411,
+      "fileShaAfter": "2d318cb438c28bb3d4092943a2059bb4142868690abe4693c5d3b48383b07125",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/steam/public/index.ts",
+      "backupAfterSha256": "2d318cb438c28bb3d4092943a2059bb4142868690abe4693c5d3b48383b07125",
+      "contractTargets": [
+        "src/contracts/steam/types.ts",
+        "src/contracts/steam/net-types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/steam.ts",
+        "src/tokens/steam-net.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/steam/types",
+        "../../../contracts/steam/net-types",
+        "../../../tokens/steam",
+        "../../../tokens/steam-net"
+      ]
+    },
+    {
+      "sequence": 224,
+      "sourceStage": 14,
+      "moduleKey": "input",
+      "capabilityId": "game.input",
+      "isWorker": false,
+      "oldPath": "src/engine/input/public/index.ts",
+      "newPath": "src/engine/input/public/index.ts",
+      "bytes": 316,
+      "shaBefore": null,
+      "shaAfter": "c5c3df3791b03633e3cdfab1361eedda0d7eefcbee6593594ccb7400a5bf4efa",
+      "timestampUtc": "2026-10-04T02:02:28.353Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/input/public/index.ts",
+      "fileBytesAfter": 316,
+      "fileShaAfter": "c5c3df3791b03633e3cdfab1361eedda0d7eefcbee6593594ccb7400a5bf4efa",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/input/public/index.ts",
+      "backupAfterSha256": "c5c3df3791b03633e3cdfab1361eedda0d7eefcbee6593594ccb7400a5bf4efa",
+      "contractTargets": [
+        "src/contracts/input/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/input.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/input/types",
+        "../../../tokens/input"
+      ]
+    },
+    {
+      "sequence": 225,
+      "sourceStage": 14,
+      "moduleKey": "assets",
+      "capabilityId": "game.assets",
+      "isWorker": false,
+      "oldPath": "src/engine/assets/public/index.ts",
+      "newPath": "src/engine/assets/public/index.ts",
+      "bytes": 319,
+      "shaBefore": null,
+      "shaAfter": "a3da24f08d1be104e3d9496b545ef7fc45fa8aec811696bf5a3fb018aaa63a61",
+      "timestampUtc": "2026-10-04T02:02:28.367Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/assets/public/index.ts",
+      "fileBytesAfter": 319,
+      "fileShaAfter": "a3da24f08d1be104e3d9496b545ef7fc45fa8aec811696bf5a3fb018aaa63a61",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/assets/public/index.ts",
+      "backupAfterSha256": "a3da24f08d1be104e3d9496b545ef7fc45fa8aec811696bf5a3fb018aaa63a61",
+      "contractTargets": [
+        "src/contracts/assets/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/assets.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/assets/types",
+        "../../../tokens/assets"
+      ]
+    },
+    {
+      "sequence": 226,
+      "sourceStage": 14,
+      "moduleKey": "physics",
+      "capabilityId": "game.physics",
+      "isWorker": false,
+      "oldPath": "src/engine/physics/public/index.ts",
+      "newPath": "src/engine/physics/public/index.ts",
+      "bytes": 322,
+      "shaBefore": null,
+      "shaAfter": "297ca2ae66da12ab602e217861ba155fcbb459c1b8db1aa0068507ffc38ed3d5",
+      "timestampUtc": "2026-10-04T02:02:28.383Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/physics/public/index.ts",
+      "fileBytesAfter": 322,
+      "fileShaAfter": "297ca2ae66da12ab602e217861ba155fcbb459c1b8db1aa0068507ffc38ed3d5",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/physics/public/index.ts",
+      "backupAfterSha256": "297ca2ae66da12ab602e217861ba155fcbb459c1b8db1aa0068507ffc38ed3d5",
+      "contractTargets": [
+        "src/contracts/physics/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/physics.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/physics/types",
+        "../../../tokens/physics"
+      ]
+    },
+    {
+      "sequence": 227,
+      "sourceStage": 14,
+      "moduleKey": "storage",
+      "capabilityId": "game.storage",
+      "isWorker": false,
+      "oldPath": "src/engine/storage/public/index.ts",
+      "newPath": "src/engine/storage/public/index.ts",
+      "bytes": 322,
+      "shaBefore": null,
+      "shaAfter": "4c5f1165e1a9021d122cdf76998f0c098f1719763d0fd97c962401c9286a6d52",
+      "timestampUtc": "2026-10-04T02:02:28.397Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/storage/public/index.ts",
+      "fileBytesAfter": 322,
+      "fileShaAfter": "4c5f1165e1a9021d122cdf76998f0c098f1719763d0fd97c962401c9286a6d52",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/storage/public/index.ts",
+      "backupAfterSha256": "4c5f1165e1a9021d122cdf76998f0c098f1719763d0fd97c962401c9286a6d52",
+      "contractTargets": [
+        "src/contracts/storage/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/storage.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/storage/types",
+        "../../../tokens/storage"
+      ]
+    },
+    {
+      "sequence": 228,
+      "sourceStage": 14,
+      "moduleKey": "world",
+      "capabilityId": "game.world",
+      "isWorker": false,
+      "oldPath": "src/engine/world/public/index.ts",
+      "newPath": "src/engine/world/public/index.ts",
+      "bytes": 316,
+      "shaBefore": null,
+      "shaAfter": "207885c856e3f94fbaa775128c75adee15494b7cdef7d361c362545ddf149ec5",
+      "timestampUtc": "2026-10-04T02:02:28.409Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/world/public/index.ts",
+      "fileBytesAfter": 316,
+      "fileShaAfter": "207885c856e3f94fbaa775128c75adee15494b7cdef7d361c362545ddf149ec5",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/world/public/index.ts",
+      "backupAfterSha256": "207885c856e3f94fbaa775128c75adee15494b7cdef7d361c362545ddf149ec5",
+      "contractTargets": [
+        "src/contracts/world/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/world.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/world/types",
+        "../../../tokens/world"
+      ]
+    },
+    {
+      "sequence": 229,
+      "sourceStage": 14,
+      "moduleKey": "ui",
+      "capabilityId": "game.ui",
+      "isWorker": false,
+      "oldPath": "src/engine/ui/public/index.ts",
+      "newPath": "src/engine/ui/public/index.ts",
+      "bytes": 307,
+      "shaBefore": null,
+      "shaAfter": "ca3af7f68e4195c0a7c16072f0a92ad47bc455d25ac2bf2aebcd16b6bc25e659",
+      "timestampUtc": "2026-10-04T02:02:28.421Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/ui/public/index.ts",
+      "fileBytesAfter": 307,
+      "fileShaAfter": "ca3af7f68e4195c0a7c16072f0a92ad47bc455d25ac2bf2aebcd16b6bc25e659",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/ui/public/index.ts",
+      "backupAfterSha256": "ca3af7f68e4195c0a7c16072f0a92ad47bc455d25ac2bf2aebcd16b6bc25e659",
+      "contractTargets": [
+        "src/contracts/ui/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/ui.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/ui/types",
+        "../../../tokens/ui"
+      ]
+    },
+    {
+      "sequence": 230,
+      "sourceStage": 14,
+      "moduleKey": "anim",
+      "capabilityId": "game.anim",
+      "isWorker": false,
+      "oldPath": "src/engine/anim/public/index.ts",
+      "newPath": "src/engine/anim/public/index.ts",
+      "bytes": 313,
+      "shaBefore": null,
+      "shaAfter": "d99bef1fe752fd3abcbe83c741f39b5e257c2f76cbe8b236a10015fa0ecb7712",
+      "timestampUtc": "2026-10-04T02:02:28.431Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/anim/public/index.ts",
+      "fileBytesAfter": 313,
+      "fileShaAfter": "d99bef1fe752fd3abcbe83c741f39b5e257c2f76cbe8b236a10015fa0ecb7712",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/anim/public/index.ts",
+      "backupAfterSha256": "d99bef1fe752fd3abcbe83c741f39b5e257c2f76cbe8b236a10015fa0ecb7712",
+      "contractTargets": [
+        "src/contracts/anim/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/anim.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/anim/types",
+        "../../../tokens/anim"
+      ]
+    },
+    {
+      "sequence": 231,
+      "sourceStage": 14,
+      "moduleKey": "sprites",
+      "capabilityId": "game.sprites",
+      "isWorker": false,
+      "oldPath": "src/engine/sprites/public/index.ts",
+      "newPath": "src/engine/sprites/public/index.ts",
+      "bytes": 322,
+      "shaBefore": null,
+      "shaAfter": "f79ed5ff5cbaee46a6f75b6b75069ed5705b9c0d2ace571122f2ae2b077e8b55",
+      "timestampUtc": "2026-10-04T02:02:28.444Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/sprites/public/index.ts",
+      "fileBytesAfter": 322,
+      "fileShaAfter": "f79ed5ff5cbaee46a6f75b6b75069ed5705b9c0d2ace571122f2ae2b077e8b55",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/sprites/public/index.ts",
+      "backupAfterSha256": "f79ed5ff5cbaee46a6f75b6b75069ed5705b9c0d2ace571122f2ae2b077e8b55",
+      "contractTargets": [
+        "src/contracts/sprites/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/sprites.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/sprites/types",
+        "../../../tokens/sprites"
+      ]
+    },
+    {
+      "sequence": 232,
+      "sourceStage": 14,
+      "moduleKey": "audio",
+      "capabilityId": "game.audio",
+      "isWorker": false,
+      "oldPath": "src/engine/audio/public/index.ts",
+      "newPath": "src/engine/audio/public/index.ts",
+      "bytes": 316,
+      "shaBefore": null,
+      "shaAfter": "c6100a2b95d068bdffc9b54e02dd420b594ba914dcfabe2f046674d15ec34c3b",
+      "timestampUtc": "2026-10-04T02:02:28.458Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/audio/public/index.ts",
+      "fileBytesAfter": 316,
+      "fileShaAfter": "c6100a2b95d068bdffc9b54e02dd420b594ba914dcfabe2f046674d15ec34c3b",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/audio/public/index.ts",
+      "backupAfterSha256": "c6100a2b95d068bdffc9b54e02dd420b594ba914dcfabe2f046674d15ec34c3b",
+      "contractTargets": [
+        "src/contracts/audio/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/audio.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/audio/types",
+        "../../../tokens/audio"
+      ]
+    },
+    {
+      "sequence": 233,
+      "sourceStage": 14,
+      "moduleKey": "camera",
+      "capabilityId": "game.camera",
+      "isWorker": false,
+      "oldPath": "src/engine/camera/public/index.ts",
+      "newPath": "src/engine/camera/public/index.ts",
+      "bytes": 319,
+      "shaBefore": null,
+      "shaAfter": "1136263e4d780c5b1eb8d83f62f1f2797e0c5e0204ae68ea74cd6d5f953689e7",
+      "timestampUtc": "2026-10-04T02:02:28.471Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/camera/public/index.ts",
+      "fileBytesAfter": 319,
+      "fileShaAfter": "1136263e4d780c5b1eb8d83f62f1f2797e0c5e0204ae68ea74cd6d5f953689e7",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/camera/public/index.ts",
+      "backupAfterSha256": "1136263e4d780c5b1eb8d83f62f1f2797e0c5e0204ae68ea74cd6d5f953689e7",
+      "contractTargets": [
+        "src/contracts/camera/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/camera.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/camera/types",
+        "../../../tokens/camera"
+      ]
+    },
+    {
+      "sequence": 234,
+      "sourceStage": 14,
+      "moduleKey": "ai",
+      "capabilityId": "game.ai",
+      "isWorker": false,
+      "oldPath": "src/engine/ai/public/index.ts",
+      "newPath": "src/engine/ai/public/index.ts",
+      "bytes": 307,
+      "shaBefore": null,
+      "shaAfter": "a93ecf906bdf44415c9d1a7e79cf4a6dadf2d4cf959d6b419f0ebe60d41b09fb",
+      "timestampUtc": "2026-10-04T02:02:28.486Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/ai/public/index.ts",
+      "fileBytesAfter": 307,
+      "fileShaAfter": "a93ecf906bdf44415c9d1a7e79cf4a6dadf2d4cf959d6b419f0ebe60d41b09fb",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/ai/public/index.ts",
+      "backupAfterSha256": "a93ecf906bdf44415c9d1a7e79cf4a6dadf2d4cf959d6b419f0ebe60d41b09fb",
+      "contractTargets": [
+        "src/contracts/ai/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/ai.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/ai/types",
+        "../../../tokens/ai"
+      ]
+    },
+    {
+      "sequence": 235,
+      "sourceStage": 14,
+      "moduleKey": "vfx",
+      "capabilityId": "game.vfx",
+      "isWorker": false,
+      "oldPath": "src/engine/vfx/public/index.ts",
+      "newPath": "src/engine/vfx/public/index.ts",
+      "bytes": 310,
+      "shaBefore": null,
+      "shaAfter": "6440a5a75a3d1a9e7717ac0ac4b204174e23765f7fe698a82f1565a948cda129",
+      "timestampUtc": "2026-10-04T02:02:28.501Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/vfx/public/index.ts",
+      "fileBytesAfter": 310,
+      "fileShaAfter": "6440a5a75a3d1a9e7717ac0ac4b204174e23765f7fe698a82f1565a948cda129",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/vfx/public/index.ts",
+      "backupAfterSha256": "6440a5a75a3d1a9e7717ac0ac4b204174e23765f7fe698a82f1565a948cda129",
+      "contractTargets": [
+        "src/contracts/vfx/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/vfx.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/vfx/types",
+        "../../../tokens/vfx"
+      ]
+    },
+    {
+      "sequence": 236,
+      "sourceStage": 14,
+      "moduleKey": "terrain",
+      "capabilityId": "game.terrain",
+      "isWorker": false,
+      "oldPath": "src/engine/terrain/public/index.ts",
+      "newPath": "src/engine/terrain/public/index.ts",
+      "bytes": 322,
+      "shaBefore": null,
+      "shaAfter": "5fe0b57079f47fdce5f4091525631f1c1f7b778df9f61f7db3cc3b5d3e06e8d9",
+      "timestampUtc": "2026-10-04T02:02:28.514Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/terrain/public/index.ts",
+      "fileBytesAfter": 322,
+      "fileShaAfter": "5fe0b57079f47fdce5f4091525631f1c1f7b778df9f61f7db3cc3b5d3e06e8d9",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/terrain/public/index.ts",
+      "backupAfterSha256": "5fe0b57079f47fdce5f4091525631f1c1f7b778df9f61f7db3cc3b5d3e06e8d9",
+      "contractTargets": [
+        "src/contracts/terrain/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/terrain.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/terrain/types",
+        "../../../tokens/terrain"
+      ]
+    },
+    {
+      "sequence": 237,
+      "sourceStage": 14,
+      "moduleKey": "scripting",
+      "capabilityId": "game.scripting",
+      "isWorker": false,
+      "oldPath": "src/engine/scripting/public/index.ts",
+      "newPath": "src/engine/scripting/public/index.ts",
+      "bytes": 328,
+      "shaBefore": null,
+      "shaAfter": "fae60246dab1d6db2551c2aaa0a8a6f9b0b2e8afc98ddf48e19fd364c8a444f2",
+      "timestampUtc": "2026-10-04T02:02:28.526Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/scripting/public/index.ts",
+      "fileBytesAfter": 328,
+      "fileShaAfter": "fae60246dab1d6db2551c2aaa0a8a6f9b0b2e8afc98ddf48e19fd364c8a444f2",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/scripting/public/index.ts",
+      "backupAfterSha256": "fae60246dab1d6db2551c2aaa0a8a6f9b0b2e8afc98ddf48e19fd364c8a444f2",
+      "contractTargets": [
+        "src/contracts/scripting/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/scripting.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/scripting/types",
+        "../../../tokens/scripting"
+      ]
+    },
+    {
+      "sequence": 238,
+      "sourceStage": 14,
+      "moduleKey": "streaming",
+      "capabilityId": "game.streaming",
+      "isWorker": false,
+      "oldPath": "src/engine/streaming/public/index.ts",
+      "newPath": "src/engine/streaming/public/index.ts",
+      "bytes": 328,
+      "shaBefore": null,
+      "shaAfter": "b6b600df44ef83525cd04079dff4d87f3ebad6ec268381d3945525681f21edbb",
+      "timestampUtc": "2026-10-04T02:02:28.538Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/streaming/public/index.ts",
+      "fileBytesAfter": 328,
+      "fileShaAfter": "b6b600df44ef83525cd04079dff4d87f3ebad6ec268381d3945525681f21edbb",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/streaming/public/index.ts",
+      "backupAfterSha256": "b6b600df44ef83525cd04079dff4d87f3ebad6ec268381d3945525681f21edbb",
+      "contractTargets": [
+        "src/contracts/streaming/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/streaming.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/streaming/types",
+        "../../../tokens/streaming"
+      ]
+    },
+    {
+      "sequence": 239,
+      "sourceStage": 14,
+      "moduleKey": "overlay",
+      "capabilityId": "game.overlay",
+      "isWorker": false,
+      "oldPath": "src/engine/overlay/public/index.ts",
+      "newPath": "src/engine/overlay/public/index.ts",
+      "bytes": 322,
+      "shaBefore": null,
+      "shaAfter": "323e22497c5cbf5351961812c33cd0d449982bef24eb96decd8e0079a2eae513",
+      "timestampUtc": "2026-10-04T02:02:28.549Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/overlay/public/index.ts",
+      "fileBytesAfter": 322,
+      "fileShaAfter": "323e22497c5cbf5351961812c33cd0d449982bef24eb96decd8e0079a2eae513",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/overlay/public/index.ts",
+      "backupAfterSha256": "323e22497c5cbf5351961812c33cd0d449982bef24eb96decd8e0079a2eae513",
+      "contractTargets": [
+        "src/contracts/overlay/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/overlay.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/overlay/types",
+        "../../../tokens/overlay"
+      ]
+    },
+    {
+      "sequence": 240,
+      "sourceStage": 14,
+      "moduleKey": "security",
+      "capabilityId": "game.security",
+      "isWorker": false,
+      "oldPath": "src/engine/security/public/index.ts",
+      "newPath": "src/engine/security/public/index.ts",
+      "bytes": 325,
+      "shaBefore": null,
+      "shaAfter": "fe6c85250c7eae6eedea268e4cade9386d8cd006a3bbadff9102a5770f9cb305",
+      "timestampUtc": "2026-10-04T02:02:28.563Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/security/public/index.ts",
+      "fileBytesAfter": 325,
+      "fileShaAfter": "fe6c85250c7eae6eedea268e4cade9386d8cd006a3bbadff9102a5770f9cb305",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/security/public/index.ts",
+      "backupAfterSha256": "fe6c85250c7eae6eedea268e4cade9386d8cd006a3bbadff9102a5770f9cb305",
+      "contractTargets": [
+        "src/contracts/security/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/security.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/security/types",
+        "../../../tokens/security"
+      ]
+    },
+    {
+      "sequence": 241,
+      "sourceStage": 14,
+      "moduleKey": "modding",
+      "capabilityId": "game.modding",
+      "isWorker": false,
+      "oldPath": "src/engine/modding/public/index.ts",
+      "newPath": "src/engine/modding/public/index.ts",
+      "bytes": 322,
+      "shaBefore": null,
+      "shaAfter": "c51a9a221359a2bdb5b1f8918ca9c3e1df4f143ef47c926b1d38a9171cae9233",
+      "timestampUtc": "2026-10-04T02:02:28.577Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/modding/public/index.ts",
+      "fileBytesAfter": 322,
+      "fileShaAfter": "c51a9a221359a2bdb5b1f8918ca9c3e1df4f143ef47c926b1d38a9171cae9233",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/modding/public/index.ts",
+      "backupAfterSha256": "c51a9a221359a2bdb5b1f8918ca9c3e1df4f143ef47c926b1d38a9171cae9233",
+      "contractTargets": [
+        "src/contracts/modding/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/modding.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/modding/types",
+        "../../../tokens/modding"
+      ]
+    },
+    {
+      "sequence": 242,
+      "sourceStage": 14,
+      "moduleKey": "monetization",
+      "capabilityId": "game.monetization",
+      "isWorker": false,
+      "oldPath": "src/engine/monetization/public/index.ts",
+      "newPath": "src/engine/monetization/public/index.ts",
+      "bytes": 337,
+      "shaBefore": null,
+      "shaAfter": "b084c3d651bb041ffd348cbbe5a73dbc6e525d54d92a415b32770fc31ac080b5",
+      "timestampUtc": "2026-10-04T02:02:28.592Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/monetization/public/index.ts",
+      "fileBytesAfter": 337,
+      "fileShaAfter": "b084c3d651bb041ffd348cbbe5a73dbc6e525d54d92a415b32770fc31ac080b5",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/monetization/public/index.ts",
+      "backupAfterSha256": "b084c3d651bb041ffd348cbbe5a73dbc6e525d54d92a415b32770fc31ac080b5",
+      "contractTargets": [
+        "src/contracts/monetization/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/monetization.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/monetization/types",
+        "../../../tokens/monetization"
+      ]
+    },
+    {
+      "sequence": 243,
+      "sourceStage": 14,
+      "moduleKey": "game-loop",
+      "capabilityId": "game.loop",
+      "isWorker": false,
+      "oldPath": "src/engine/game-loop/public/index.ts",
+      "newPath": "src/engine/game-loop/public/index.ts",
+      "bytes": 323,
+      "shaBefore": null,
+      "shaAfter": "19b6cf57c33b48b557597c4d4606bc82d81258596cca67090a1b8b0b10387458",
+      "timestampUtc": "2026-10-04T02:02:28.605Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/game-loop/public/index.ts",
+      "fileBytesAfter": 323,
+      "fileShaAfter": "19b6cf57c33b48b557597c4d4606bc82d81258596cca67090a1b8b0b10387458",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/game-loop/public/index.ts",
+      "backupAfterSha256": "19b6cf57c33b48b557597c4d4606bc82d81258596cca67090a1b8b0b10387458",
+      "contractTargets": [
+        "src/contracts/game-loop/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/game-loop.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/game-loop/types",
+        "../../../tokens/game-loop"
+      ]
+    },
+    {
+      "sequence": 244,
+      "sourceStage": 14,
+      "moduleKey": "render",
+      "capabilityId": "game.render",
+      "isWorker": false,
+      "oldPath": "src/engine/render/public/index.ts",
+      "newPath": "src/engine/render/public/index.ts",
+      "bytes": 319,
+      "shaBefore": null,
+      "shaAfter": "646a83521112bc5631d8c4f3e40c6cdcaf59451b565a2df7bf472507a7f91e58",
+      "timestampUtc": "2026-10-04T02:02:28.616Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/render/public/index.ts",
+      "fileBytesAfter": 319,
+      "fileShaAfter": "646a83521112bc5631d8c4f3e40c6cdcaf59451b565a2df7bf472507a7f91e58",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/render/public/index.ts",
+      "backupAfterSha256": "646a83521112bc5631d8c4f3e40c6cdcaf59451b565a2df7bf472507a7f91e58",
+      "contractTargets": [
+        "src/contracts/render/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/render.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/render/types",
+        "../../../tokens/render"
+      ]
+    },
+    {
+      "sequence": 245,
+      "sourceStage": 14,
+      "moduleKey": "net",
+      "capabilityId": "game.net",
+      "isWorker": false,
+      "oldPath": "src/engine/net/public/index.ts",
+      "newPath": "src/engine/net/public/index.ts",
+      "bytes": 310,
+      "shaBefore": null,
+      "shaAfter": "6cf1eda0a2ee1f1119c3f7e91ca679ab6911b26df4d0cdd7e0d5ef7c724635a8",
+      "timestampUtc": "2026-10-04T02:02:28.632Z",
+      "transformation": "create-public-facade",
+      "state": "applied",
+      "rollbackTimestampUtc": null,
+      "filePath": "src/engine/net/public/index.ts",
+      "fileBytesAfter": 310,
+      "fileShaAfter": "6cf1eda0a2ee1f1119c3f7e91ca679ab6911b26df4d0cdd7e0d5ef7c724635a8",
+      "backupAfterPath": ".migration/stage14/backups/after/src/engine/net/public/index.ts",
+      "backupAfterSha256": "6cf1eda0a2ee1f1119c3f7e91ca679ab6911b26df4d0cdd7e0d5ef7c724635a8",
+      "contractTargets": [
+        "src/contracts/net/types.ts"
+      ],
+      "tokenTargets": [
+        "src/tokens/net.ts"
+      ],
+      "exportSpecifiers": [
+        "../../../contracts/net/types",
+        "../../../tokens/net"
+      ]
+    }
+  ],
+  "notes": [
+    "As fachadas public/index.ts reexportam somente contracts e tokens declarados no module-map.",
+    "Nenhuma implementação de src/engine/**/internal, driver concreto ou worker é reexportada.",
+    "Consumidores não são migrados para as fachadas nesta etapa.",
+    "O alias @core pertence à Etapa 15."
+  ]
+}

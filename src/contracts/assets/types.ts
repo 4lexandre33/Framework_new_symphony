@@ -1,4 +1,4 @@
-import { defineEvent } from "../../core/contracts";
+import { defineEvent } from "@core";
 
 export type AssetType = "gltf" | "texture" | "audio" | "json" | "binary";
 

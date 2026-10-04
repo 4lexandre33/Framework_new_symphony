@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { StoreCatalogRegistry } from "../src/engine/monetization/StoreCatalogRegistry";
-import { VirtualCurrencyWallet } from "../src/engine/monetization/VirtualCurrencyWallet";
-import { InventoryReceiptValidator } from "../src/engine/monetization/InventoryReceiptValidator";
+import { StoreCatalogRegistry } from "../src/engine/monetization/internal/StoreCatalogRegistry";
+import { VirtualCurrencyWallet } from "../src/engine/monetization/internal/VirtualCurrencyWallet";
+import { InventoryReceiptValidator } from "../src/engine/monetization/internal/InventoryReceiptValidator";
 
 describe("Camada de Monetização & Microtransações (game.monetization)", () => {
   let catalog: StoreCatalogRegistry;

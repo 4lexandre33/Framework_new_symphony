@@ -1,0 +1,64 @@
+{
+  "stage": "44.3",
+  "name": "AbilityAction + SkillTreeGraph dimension-agnostic",
+  "requires": [
+    "44.0",
+    "44.1",
+    "44.2"
+  ],
+  "scope": {
+    "implemented": [
+      "AbilityAction",
+      "SkillTreeGraph"
+    ],
+    "explicitlyDeferred": [
+      "DialogueGraph",
+      "QuestGoal",
+      "SaveLoadUseCase",
+      "ModdingAppService",
+      "GameFlowFSM"
+    ]
+  },
+  "abilityAction": {
+    "lifecycle": [
+      "pending -> committed -> resolved",
+      "pending -> cancelled",
+      "committed -> cancelled"
+    ],
+    "targets": [
+      "self",
+      "agent",
+      "reference"
+    ],
+    "spatialPolicy": "opaque target references; no coordinates/vectors/raycasts in domain"
+  },
+  "skillTreeGraph": {
+    "structure": "immutable DAG",
+    "storage": "Map<SkillId, SkillNode>",
+    "validations": [
+      "duplicate skill",
+      "invalid name",
+      "duplicate prerequisite",
+      "self dependency",
+      "missing prerequisite",
+      "cycle"
+    ],
+    "topologicalOrder": "precomputed and deterministic by SkillId"
+  },
+  "rules": [
+    "Compatível com 2D, 2.5D e 3D.",
+    "Nenhum Vector2/Vector3/raycast/renderer/física concreta no domínio.",
+    "AbilityAction usa alvo lógico e lifecycle in-place.",
+    "SkillTreeGraph não mantém estado do jogador e não exige update per-frame.",
+    "Etapas 44.4+ não são antecipadas."
+  ],
+  "files": [
+    "scripts/architecture/stage44-3-validate-mechanics.mjs",
+    "src/domain/mechanics/AbilityAction.ts",
+    "src/domain/mechanics/README.txt",
+    "src/domain/mechanics/SkillTreeGraph.ts",
+    "src/domain/mechanics/index.ts",
+    "tests/domain-ability-action.test.ts",
+    "tests/domain-skill-tree.test.ts"
+  ]
+}

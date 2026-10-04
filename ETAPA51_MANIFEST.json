@@ -1,0 +1,87 @@
+{
+  "stage": "51",
+  "name": "Status Conditions / Effects",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50"
+  ],
+  "roadmapSource": "Camada 2 roadmap stages 45-70",
+  "scope": {
+    "implemented": [
+      "StatusEffectId",
+      "StatusEffect",
+      "StatusEffectInstance",
+      "StatusEffectSourceRef",
+      "StatusEffectSet"
+    ],
+    "explicitlyDeferred": [
+      "Modifier",
+      "ModifierId",
+      "ModifierOperation",
+      "ModifierSet",
+      "visual effects",
+      "audio cues",
+      "physics effects"
+    ]
+  },
+  "definition": {
+    "duration": "DomainDuration | null",
+    "maxStacks": "safe integer >= 1",
+    "stackingPolicies": [
+      "reject",
+      "stack",
+      "refresh",
+      "stack-and-refresh"
+    ]
+  },
+  "runtime": {
+    "statuses": [
+      "active",
+      "expired",
+      "removed"
+    ],
+    "timer": "SimulationTimer for finite effects only",
+    "source": "opaque semantic source ref",
+    "stacks": "incremental number inside instance"
+  },
+  "set": {
+    "storage": "Map<StatusEffectId, StatusEffectInstance>",
+    "operations": [
+      "apply",
+      "advance",
+      "remove",
+      "pruneTerminal",
+      "get",
+      "has",
+      "hasActive",
+      "forEach",
+      "toSnapshot",
+      "fromSnapshot"
+    ],
+    "snapshot": "deterministic, sorted by StatusEffectId"
+  },
+  "rules": [
+    "Definition and runtime instance are separate.",
+    "Finite duration is deterministic and externally advanced.",
+    "Permanent effects never consume elapsed time.",
+    "No renderer/physics/audio/platform dependencies.",
+    "No Modifiers before Stage 52.",
+    "Compatible with 2D, 2.5D, 3D and headless execution."
+  ],
+  "files": [
+    "scripts/architecture/stage51-validate-status-effects.mjs",
+    "src/domain/mechanics/README.txt",
+    "src/domain/mechanics/StatusEffect.ts",
+    "src/domain/mechanics/StatusEffectId.ts",
+    "src/domain/mechanics/StatusEffectInstance.ts",
+    "src/domain/mechanics/StatusEffectSet.ts",
+    "src/domain/mechanics/index.ts",
+    "tests/domain-status-effects-purity.test.ts",
+    "tests/domain-status-effects.test.ts"
+  ]
+}

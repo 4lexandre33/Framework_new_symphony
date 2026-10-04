@@ -6,11 +6,11 @@ const ROOT_DIR = process.cwd();
 const REQUIRED_VFX_FILES = [
   "src/contracts/vfx/types.ts",
   "src/tokens/vfx.ts",
-  "src/engine/vfx/GPUParticleSystem.ts",
-  "src/engine/vfx/DecalManager.ts",
-  "src/engine/vfx/PostProcessingPipeline.ts",
-  "src/engine/vfx/CustomShaderLibrary.ts",
-  "src/engine/vfx/VFXEffectManager.ts",
+  "src/engine/vfx/internal/GPUParticleSystem.ts",
+  "src/engine/vfx/internal/DecalManager.ts",
+  "src/engine/vfx/internal/PostProcessingPipeline.ts",
+  "src/engine/vfx/internal/CustomShaderLibrary.ts",
+  "src/engine/vfx/internal/VFXEffectManager.ts",
   "src/plugins/vfx/plugin.ts",
   "tests/vfx-system.test.ts",
 ];

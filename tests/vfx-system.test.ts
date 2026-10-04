@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import * as THREE from "three";
-import { GPUParticleSystem } from "../src/engine/vfx/GPUParticleSystem";
-import { DecalManager } from "../src/engine/vfx/DecalManager";
-import { PostProcessingPipeline } from "../src/engine/vfx/PostProcessingPipeline";
+import { GPUParticleSystem } from "../src/engine/vfx/internal/GPUParticleSystem";
+import { DecalManager } from "../src/engine/vfx/internal/DecalManager";
+import { PostProcessingPipeline } from "../src/engine/vfx/internal/PostProcessingPipeline";
 
 describe("Camada de Efeitos Visuais & Pós-Processamento (game.vfx)", () => {
   let particleSystem: GPUParticleSystem;

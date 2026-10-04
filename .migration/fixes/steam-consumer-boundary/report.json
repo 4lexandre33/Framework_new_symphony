@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "kind": "typed-boundary-fix",
+  "target": "src/engine/net/internal/SteamP2PTransport.ts",
+  "publicFacade": "src/engine/steam/public/index.ts",
+  "beforeSha256": "7d8db18ed4a3708e17ab2f334ca32c31c83950db2f366f4d0e66bddd1dd5cd7d",
+  "afterSha256": "3b69e161e9130677713c1fe5b7b4f43651efc0bd3eb8b6ee819e3599affdb7c8",
+  "changes": [
+    {
+      "from": "../../../tokens/steam",
+      "to": "../../steam/public",
+      "symbols": [
+        "SteamApi"
+      ]
+    },
+    {
+      "from": "../../../contracts/steam/net-types",
+      "to": "../../steam/public",
+      "symbols": [
+        "P2PSendType"
+      ]
+    }
+  ]
+}

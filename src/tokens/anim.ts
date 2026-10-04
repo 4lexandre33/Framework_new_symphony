@@ -5,7 +5,7 @@ import type {
 
 import {
   defineCapability,
-} from "../core/contracts/capability-token";
+} from "@core";
 
 import type {
   AnimationClipConfig,

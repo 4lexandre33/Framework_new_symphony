@@ -6,11 +6,11 @@ const ROOT_DIR = process.cwd();
 const REQUIRED_SPRITES_FILES = [
   "src/contracts/sprites/types.ts",
   "src/tokens/sprites.ts",
-  "src/engine/sprites/TextureAtlasParser.ts",
-  "src/engine/sprites/InstancedTilemapRenderer.ts",
-  "src/engine/sprites/ParallaxController.ts",
-  "src/engine/sprites/PixelArtScaler.ts",
-  "src/engine/sprites/Sprite2DRenderer.ts",
+  "src/engine/sprites/internal/TextureAtlasParser.ts",
+  "src/engine/sprites/internal/InstancedTilemapRenderer.ts",
+  "src/engine/sprites/internal/ParallaxController.ts",
+  "src/engine/sprites/internal/PixelArtScaler.ts",
+  "src/engine/sprites/internal/Sprite2DRenderer.ts",
   "src/plugins/sprites/plugin.ts",
   "tests/sprites-system.test.ts",
 ];

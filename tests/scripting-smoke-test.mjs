@@ -6,10 +6,10 @@ const ROOT_DIR = process.cwd();
 const REQUIRED_SCRIPTING_FILES = [
   "src/contracts/scripting/types.ts",
   "src/tokens/scripting.ts",
-  "src/engine/scripting/CutsceneTimeline.ts",
-  "src/engine/scripting/DialogueTreeParser.ts",
-  "src/engine/scripting/QuestManager.ts",
-  "src/engine/scripting/TriggerZoneManager.ts",
+  "src/engine/scripting/internal/CutsceneTimeline.ts",
+  "src/engine/scripting/internal/DialogueTreeParser.ts",
+  "src/engine/scripting/internal/QuestManager.ts",
+  "src/engine/scripting/internal/TriggerZoneManager.ts",
   "src/plugins/scripting/plugin.ts",
   "tests/scripting-system.test.ts",
 ];
@@ -96,31 +96,31 @@ function runSmokeTest() {
   );
 
   checkContains(
-    "src/engine/scripting/CutsceneTimeline.ts",
+    "src/engine/scripting/internal/CutsceneTimeline.ts",
     "scheduledKeyframes",
     "timeline usa fila ordenada de keyframes",
   );
 
   checkContains(
-    "src/engine/scripting/DialogueTreeParser.ts",
+    "src/engine/scripting/internal/DialogueTreeParser.ts",
     ".choiceIndex === choiceIndex",
     "diálogo resolve escolhas pelo choiceIndex declarado",
   );
 
   checkContains(
-    "src/engine/scripting/QuestManager.ts",
+    "src/engine/scripting/internal/QuestManager.ts",
     "let status: QuestStatus",
     "QuestManager tipa explicitamente o estado mutável da quest",
   );
 
   checkContains(
-    "src/engine/scripting/TriggerZoneManager.ts",
+    "src/engine/scripting/internal/TriggerZoneManager.ts",
     'case "sphere"',
     "TriggerZoneManager implementa volume sphere",
   );
 
   checkContains(
-    "src/engine/scripting/TriggerZoneManager.ts",
+    "src/engine/scripting/internal/TriggerZoneManager.ts",
     'case "cylinder"',
     "TriggerZoneManager implementa volume cylinder",
   );

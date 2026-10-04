@@ -1,0 +1,65 @@
+{
+  "stage": "44.7",
+  "name": "GameFlowFSM + final Stage 44 gate",
+  "requires": [
+    "44.0",
+    "44.1",
+    "44.2",
+    "44.3",
+    "44.4",
+    "44.5",
+    "44.6"
+  ],
+  "scope": {
+    "implemented": [
+      "GameFlowFSM",
+      "app/flows public facade",
+      "Stage 44 final validation gate"
+    ]
+  },
+  "states": [
+    "boot",
+    "main-menu",
+    "loading-game",
+    "playing",
+    "paused",
+    "saving",
+    "returning-to-menu",
+    "shutdown"
+  ],
+  "events": [
+    "boot-ready",
+    "start-game",
+    "load-succeeded",
+    "load-failed",
+    "pause",
+    "resume",
+    "save-requested",
+    "save-succeeded",
+    "save-failed",
+    "return-to-menu",
+    "menu-returned",
+    "shutdown"
+  ],
+  "finalGate": [
+    "npm run arch:audit",
+    "npx tsc --noEmit",
+    "npx vitest run",
+    "npm run build"
+  ],
+  "rules": [
+    "FSM discreta/event-driven; sem update por frame.",
+    "Sem plugins, engine internals ou stack técnica concreta em app/flows.",
+    "Save retorna ao estado anterior playing/paused.",
+    "Shutdown é terminal.",
+    "Compatível com 2D, 2.5D e 3D.",
+    "Etapa 44 somente é concluída após o gate final verde."
+  ],
+  "files": [
+    "scripts/architecture/stage44-7-validate-game-flow.mjs",
+    "src/app/flows/GameFlowFSM.ts",
+    "src/app/flows/README.txt",
+    "src/app/flows/index.ts",
+    "tests/game-flow-fsm.test.ts"
+  ]
+}

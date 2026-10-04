@@ -7,15 +7,15 @@ import {
 
 import {
   AnimationStateMachine,
-} from "../src/engine/anim/AnimationStateMachine";
+} from "../src/engine/anim/internal/AnimationStateMachine";
 
 import {
   AnimationState,
-} from "../src/engine/anim/AnimationState";
+} from "../src/engine/anim/internal/AnimationState";
 
 import {
   Sprite2DAnimationDriver,
-} from "../src/engine/anim/Sprite2DAnimationDriver";
+} from "../src/engine/anim/internal/Sprite2DAnimationDriver";
 
 import type {
   SpriteAnimationFrame,

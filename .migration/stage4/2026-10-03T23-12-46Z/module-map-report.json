@@ -1,0 +1,581 @@
+{
+  "schemaVersion": 1,
+  "stage": "stage-4-canonical-module-map",
+  "status": "passed",
+  "architectureMigrationVersion": "v20",
+  "runId": "2026-10-03T23-12-46Z",
+  "generatedAtUtc": "2026-10-03T23:12:46.220Z",
+  "projectRoot": "C:\\Users\\Alexandre\\projeto1",
+  "sourceOfTruth": "scripts/architecture/module-map.mjs",
+  "repository": {
+    "branch": "main",
+    "head": "fcb03848fd1d36081ce72ef689e3ba4bfd58f857",
+    "hasCommits": true,
+    "gitVersion": "git version 2.52.0.windows.1"
+  },
+  "stage3": {
+    "runId": "2026-10-03T23-03-19Z",
+    "reportPath": ".migration/stage3/2026-10-03T23-03-19Z/architecture-inventory.json",
+    "treeSha256": "494a49015ffb5b28b104fca79a634f8f81bbeda6ec15a71c039f906bef60781f"
+  },
+  "counts": {
+    "functionalModules": 20,
+    "runtimeModules": 3,
+    "canonicalModules": 23,
+    "toolingPlugins": 1,
+    "experimentalPlugins": 1,
+    "ownedCapabilities": 24
+  },
+  "shapeValidation": {
+    "functionalModuleCount": 20,
+    "runtimeModuleCount": 3,
+    "canonicalModuleCount": 23,
+    "toolingPluginCount": 1,
+    "experimentalPluginCount": 1,
+    "ownedCapabilityCount": 24
+  },
+  "stage3Validation": {
+    "stage3RunId": "2026-10-03T23-03-19Z",
+    "stage3ReportPath": ".migration/stage3/2026-10-03T23-03-19Z/architecture-inventory.json",
+    "stage3TreeSha256": "494a49015ffb5b28b104fca79a634f8f81bbeda6ec15a71c039f906bef60781f",
+    "engineCheck": {
+      "label": "engineModules",
+      "count": 21,
+      "missing": [],
+      "unexpected": [],
+      "matches": true
+    },
+    "pluginCheck": {
+      "label": "plugins",
+      "count": 25,
+      "missing": [],
+      "unexpected": [],
+      "matches": true
+    },
+    "tokenCheck": {
+      "label": "tokens",
+      "count": 24,
+      "missing": [],
+      "unexpected": [],
+      "matches": true
+    },
+    "contractCheck": {
+      "label": "contractAreas",
+      "count": 23,
+      "missing": [],
+      "unexpected": [],
+      "matches": true
+    },
+    "engineMetadataChecks": [
+      {
+        "key": "input",
+        "stage3FileCount": 3,
+        "stage3SourceFileCount": 3,
+        "workers": []
+      },
+      {
+        "key": "assets",
+        "stage3FileCount": 4,
+        "stage3SourceFileCount": 4,
+        "workers": []
+      },
+      {
+        "key": "physics",
+        "stage3FileCount": 4,
+        "stage3SourceFileCount": 4,
+        "workers": []
+      },
+      {
+        "key": "storage",
+        "stage3FileCount": 3,
+        "stage3SourceFileCount": 3,
+        "workers": []
+      },
+      {
+        "key": "world",
+        "stage3FileCount": 6,
+        "stage3SourceFileCount": 6,
+        "workers": []
+      },
+      {
+        "key": "ui",
+        "stage3FileCount": 5,
+        "stage3SourceFileCount": 5,
+        "workers": []
+      },
+      {
+        "key": "anim",
+        "stage3FileCount": 5,
+        "stage3SourceFileCount": 5,
+        "workers": []
+      },
+      {
+        "key": "sprites",
+        "stage3FileCount": 5,
+        "stage3SourceFileCount": 5,
+        "workers": []
+      },
+      {
+        "key": "audio",
+        "stage3FileCount": 4,
+        "stage3SourceFileCount": 4,
+        "workers": []
+      },
+      {
+        "key": "camera",
+        "stage3FileCount": 4,
+        "stage3SourceFileCount": 4,
+        "workers": []
+      },
+      {
+        "key": "ai",
+        "stage3FileCount": 5,
+        "stage3SourceFileCount": 5,
+        "workers": []
+      },
+      {
+        "key": "vfx",
+        "stage3FileCount": 5,
+        "stage3SourceFileCount": 5,
+        "workers": []
+      },
+      {
+        "key": "terrain",
+        "stage3FileCount": 6,
+        "stage3SourceFileCount": 6,
+        "workers": [
+          "src/engine/terrain/terrain.worker.ts"
+        ]
+      },
+      {
+        "key": "scripting",
+        "stage3FileCount": 4,
+        "stage3SourceFileCount": 4,
+        "workers": []
+      },
+      {
+        "key": "streaming",
+        "stage3FileCount": 5,
+        "stage3SourceFileCount": 5,
+        "workers": [
+          "src/engine/streaming/streaming.worker.ts"
+        ]
+      },
+      {
+        "key": "overlay",
+        "stage3FileCount": 3,
+        "stage3SourceFileCount": 3,
+        "workers": []
+      },
+      {
+        "key": "security",
+        "stage3FileCount": 4,
+        "stage3SourceFileCount": 4,
+        "workers": []
+      },
+      {
+        "key": "modding",
+        "stage3FileCount": 5,
+        "stage3SourceFileCount": 5,
+        "workers": []
+      },
+      {
+        "key": "monetization",
+        "stage3FileCount": 5,
+        "stage3SourceFileCount": 5,
+        "workers": []
+      },
+      {
+        "key": "render",
+        "stage3FileCount": 4,
+        "stage3SourceFileCount": 4,
+        "workers": []
+      },
+      {
+        "key": "net",
+        "stage3FileCount": 4,
+        "stage3SourceFileCount": 4,
+        "workers": []
+      }
+    ]
+  },
+  "fileValidation": {
+    "checkedFileCount": 124,
+    "capabilityChecks": [
+      {
+        "moduleKey": "steam",
+        "path": "src/tokens/steam.ts",
+        "capabilityId": "game.steam",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "steam",
+        "path": "src/tokens/steam-net.ts",
+        "capabilityId": "game.steam.net",
+        "version": "1.0.0",
+        "primary": false,
+        "matches": true
+      },
+      {
+        "moduleKey": "input",
+        "path": "src/tokens/input.ts",
+        "capabilityId": "game.input",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "assets",
+        "path": "src/tokens/assets.ts",
+        "capabilityId": "game.assets",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "physics",
+        "path": "src/tokens/physics.ts",
+        "capabilityId": "game.physics",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "storage",
+        "path": "src/tokens/storage.ts",
+        "capabilityId": "game.storage",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "world",
+        "path": "src/tokens/world.ts",
+        "capabilityId": "game.world",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "ui",
+        "path": "src/tokens/ui.ts",
+        "capabilityId": "game.ui",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "anim",
+        "path": "src/tokens/anim.ts",
+        "capabilityId": "game.anim",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "sprites",
+        "path": "src/tokens/sprites.ts",
+        "capabilityId": "game.sprites",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "audio",
+        "path": "src/tokens/audio.ts",
+        "capabilityId": "game.audio",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "camera",
+        "path": "src/tokens/camera.ts",
+        "capabilityId": "game.camera",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "ai",
+        "path": "src/tokens/ai.ts",
+        "capabilityId": "game.ai",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "vfx",
+        "path": "src/tokens/vfx.ts",
+        "capabilityId": "game.vfx",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "terrain",
+        "path": "src/tokens/terrain.ts",
+        "capabilityId": "game.terrain",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "scripting",
+        "path": "src/tokens/scripting.ts",
+        "capabilityId": "game.scripting",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "streaming",
+        "path": "src/tokens/streaming.ts",
+        "capabilityId": "game.streaming",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "overlay",
+        "path": "src/tokens/overlay.ts",
+        "capabilityId": "game.overlay",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "security",
+        "path": "src/tokens/security.ts",
+        "capabilityId": "game.security",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "modding",
+        "path": "src/tokens/modding.ts",
+        "capabilityId": "game.modding",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "monetization",
+        "path": "src/tokens/monetization.ts",
+        "capabilityId": "game.monetization",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "game-loop",
+        "path": "src/tokens/game-loop.ts",
+        "capabilityId": "game.loop",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "render",
+        "path": "src/tokens/render.ts",
+        "capabilityId": "game.render",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      },
+      {
+        "moduleKey": "net",
+        "path": "src/tokens/net.ts",
+        "capabilityId": "game.net",
+        "version": "1.0.0",
+        "primary": true,
+        "matches": true
+      }
+    ],
+    "pluginChecks": [
+      {
+        "moduleKey": "steam",
+        "path": "src/plugins/steam/plugin.ts",
+        "pluginId": "game.steam",
+        "matches": true
+      },
+      {
+        "moduleKey": "input",
+        "path": "src/plugins/input/plugin.ts",
+        "pluginId": "game.input",
+        "matches": true
+      },
+      {
+        "moduleKey": "assets",
+        "path": "src/plugins/assets/plugin.ts",
+        "pluginId": "game.assets",
+        "matches": true
+      },
+      {
+        "moduleKey": "physics",
+        "path": "src/plugins/physics/plugin.ts",
+        "pluginId": "game.physics",
+        "matches": true
+      },
+      {
+        "moduleKey": "storage",
+        "path": "src/plugins/storage/plugin.ts",
+        "pluginId": "game.storage",
+        "matches": true
+      },
+      {
+        "moduleKey": "world",
+        "path": "src/plugins/world/plugin.ts",
+        "pluginId": "game.world",
+        "matches": true
+      },
+      {
+        "moduleKey": "ui",
+        "path": "src/plugins/ui/plugin.ts",
+        "pluginId": "game.ui",
+        "matches": true
+      },
+      {
+        "moduleKey": "anim",
+        "path": "src/plugins/anim/plugin.ts",
+        "pluginId": "game.anim",
+        "matches": true
+      },
+      {
+        "moduleKey": "sprites",
+        "path": "src/plugins/sprites/plugin.ts",
+        "pluginId": "game.sprites",
+        "matches": true
+      },
+      {
+        "moduleKey": "audio",
+        "path": "src/plugins/audio/plugin.ts",
+        "pluginId": "game.audio",
+        "matches": true
+      },
+      {
+        "moduleKey": "camera",
+        "path": "src/plugins/camera/plugin.ts",
+        "pluginId": "game.camera",
+        "matches": true
+      },
+      {
+        "moduleKey": "ai",
+        "path": "src/plugins/ai/plugin.ts",
+        "pluginId": "game.ai",
+        "matches": true
+      },
+      {
+        "moduleKey": "vfx",
+        "path": "src/plugins/vfx/plugin.ts",
+        "pluginId": "game.vfx",
+        "matches": true
+      },
+      {
+        "moduleKey": "terrain",
+        "path": "src/plugins/terrain/plugin.ts",
+        "pluginId": "game.terrain",
+        "matches": true
+      },
+      {
+        "moduleKey": "scripting",
+        "path": "src/plugins/scripting/plugin.ts",
+        "pluginId": "game.scripting",
+        "matches": true
+      },
+      {
+        "moduleKey": "streaming",
+        "path": "src/plugins/streaming/plugin.ts",
+        "pluginId": "game.streaming",
+        "matches": true
+      },
+      {
+        "moduleKey": "overlay",
+        "path": "src/plugins/overlay/plugin.ts",
+        "pluginId": "game.overlay",
+        "matches": true
+      },
+      {
+        "moduleKey": "security",
+        "path": "src/plugins/security/plugin.ts",
+        "pluginId": "game.security",
+        "matches": true
+      },
+      {
+        "moduleKey": "modding",
+        "path": "src/plugins/modding/plugin.ts",
+        "pluginId": "game.modding",
+        "matches": true
+      },
+      {
+        "moduleKey": "monetization",
+        "path": "src/plugins/monetization/plugin.ts",
+        "pluginId": "game.monetization",
+        "matches": true
+      },
+      {
+        "moduleKey": "game-loop",
+        "path": "src/plugins/game-loop/plugin.ts",
+        "pluginId": "game.loop",
+        "matches": true
+      },
+      {
+        "moduleKey": "render",
+        "path": "src/plugins/render/plugin.ts",
+        "pluginId": "game.render",
+        "matches": true
+      },
+      {
+        "moduleKey": "net",
+        "path": "src/plugins/net/plugin.ts",
+        "pluginId": "game.net",
+        "matches": true
+      }
+    ]
+  },
+  "bootstrapValidation": {
+    "path": "src/app/createEnginePlugins.ts",
+    "expectedBootstrappedPluginCount": 24,
+    "expectedBootstrappedPluginKeys": [
+      "steam",
+      "input",
+      "assets",
+      "physics",
+      "storage",
+      "world",
+      "ui",
+      "anim",
+      "sprites",
+      "audio",
+      "camera",
+      "ai",
+      "vfx",
+      "terrain",
+      "scripting",
+      "streaming",
+      "overlay",
+      "security",
+      "modding",
+      "monetization",
+      "game-loop",
+      "render",
+      "net",
+      "debug"
+    ],
+    "playerExcluded": true,
+    "matches": true
+  },
+  "notes": [
+    "scripts/architecture/module-map.mjs é a fonte única canônica para as próximas etapas.",
+    "Os 20 módulos funcionais preservam a numeração das camadas congeladas existentes.",
+    "game.loop, game.render e game.net são runtimes fundamentais first-party fora da numeração 1..20.",
+    "game.debug é tooling bootstrapped, não módulo de engine canônico.",
+    "game.player é experimental/orphaned e não participa de createEnginePlugins.",
+    "game.steam.net é capability secundária pertencente ao módulo steam, não um módulo separado.",
+    "Steam e game-loop não possuíam diretórios src/engine próprios no inventário da Etapa 3; seus diretórios-alvo continuam reservados no catálogo.",
+    "Esta etapa não cria public/internal e não move implementação alguma."
+  ]
+}

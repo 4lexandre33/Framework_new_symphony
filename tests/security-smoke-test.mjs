@@ -6,10 +6,10 @@ const ROOT_DIR = process.cwd();
 const REQUIRED_SECURITY_FILES = [
   "src/contracts/security/types.ts",
   "src/tokens/security.ts",
-  "src/engine/security/FrameProfiler.ts",
-  "src/engine/security/MemoryIntegrityGuard.ts",
-  "src/engine/security/CrashReportDumper.ts",
-  "src/engine/security/TauriSecurityDriver.ts",
+  "src/engine/security/internal/FrameProfiler.ts",
+  "src/engine/security/internal/MemoryIntegrityGuard.ts",
+  "src/engine/security/internal/CrashReportDumper.ts",
+  "src/engine/security/internal/TauriSecurityDriver.ts",
   "src-tauri/src/security.rs",
   "src/plugins/security/plugin.ts",
   "tests/security-system.test.ts",
@@ -114,25 +114,25 @@ function runSmokeTest() {
   );
 
   checkContains(
-    "src/engine/security/FrameProfiler.ts",
+    "src/engine/security/internal/FrameProfiler.ts",
     "totalDurationMs",
     "FrameProfiler mantém acumulador real de duração",
   );
 
   checkContains(
-    "src/engine/security/FrameProfiler.ts",
+    "src/engine/security/internal/FrameProfiler.ts",
     "existing.maxDurationMs = Math.max",
     "FrameProfiler calcula máximo real",
   );
 
   checkDoesNotContain(
-    "src/engine/security/MemoryIntegrityGuard.ts",
+    "src/engine/security/internal/MemoryIntegrityGuard.ts",
     "f64 = val",
     "atribuição inválida à referência Float64Array",
   );
 
   checkContains(
-    "src/engine/security/MemoryIntegrityGuard.ts",
+    "src/engine/security/internal/MemoryIntegrityGuard.ts",
     "this.scratchFloat64[0] = value",
     "MemoryIntegrityGuard escreve no elemento tipado corretamente",
   );

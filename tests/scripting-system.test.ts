@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { CutsceneTimeline } from "../src/engine/scripting/CutsceneTimeline";
-import { DialogueTreeParser } from "../src/engine/scripting/DialogueTreeParser";
-import { QuestManager } from "../src/engine/scripting/QuestManager";
-import { TriggerZoneManager } from "../src/engine/scripting/TriggerZoneManager";
+import { CutsceneTimeline } from "../src/engine/scripting/internal/CutsceneTimeline";
+import { DialogueTreeParser } from "../src/engine/scripting/internal/DialogueTreeParser";
+import { QuestManager } from "../src/engine/scripting/internal/QuestManager";
+import { TriggerZoneManager } from "../src/engine/scripting/internal/TriggerZoneManager";
 
 describe("Camada de Cutscenes, Diálogos & Quests (game.scripting)", () => {
   let timeline: CutsceneTimeline;

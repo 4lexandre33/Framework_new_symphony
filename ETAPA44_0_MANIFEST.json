@@ -1,0 +1,27 @@
+{
+  "stage": "44.0",
+  "name": "Fundação do domínio dimension-agnostic",
+  "files": [
+    "scripts/architecture/stage44-0-validate-domain-foundation.mjs",
+    "src/domain/entities/DomainId.ts",
+    "src/domain/entities/README.txt",
+    "src/domain/entities/VersionedSnapshot.ts",
+    "src/domain/entities/index.ts",
+    "src/domain/evaluation/DomainResult.ts",
+    "src/domain/evaluation/README.txt",
+    "src/domain/evaluation/index.ts",
+    "src/domain/ports/ClockPort.ts",
+    "src/domain/ports/ModdingPort.ts",
+    "src/domain/ports/README.txt",
+    "src/domain/ports/SaveGamePort.ts",
+    "src/domain/ports/index.ts",
+    "tests/domain-dimension-agnostic.test.ts",
+    "tests/domain-foundation.test.ts"
+  ],
+  "rules": [
+    "Camada 2 compatível com 2D, 2.5D e 3D.",
+    "Nenhum import de engine/services/app/plugins ou dependência externa em src/domain.",
+    "Nenhum placeholder vazio.",
+    "Sem tipos concretos de renderer, física, Tauri ou Steamworks no domínio."
+  ]
+}

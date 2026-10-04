@@ -1,5 +1,5 @@
-import type { Plugin, PluginContext } from "../../core/contracts/plugin-context";
-import { defineCapability } from "../../core/contracts/capability-token";
+import type { Plugin, PluginContext } from "@core";
+import { defineCapability } from "@core";
 
 export interface PlayerStats {
   readonly hp: number;
@@ -31,6 +31,7 @@ export const playerManifest: Plugin["manifest"] = {
         version: "1.0.0",
       },
     ],
+    conflicts: [],
   },
 };
 

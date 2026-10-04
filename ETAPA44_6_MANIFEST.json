@@ -1,0 +1,51 @@
+{
+  "stage": "44.6",
+  "name": "ModdingAppService",
+  "requires": [
+    "44.0",
+    "44.1",
+    "44.2",
+    "44.3",
+    "44.4",
+    "44.5"
+  ],
+  "scope": {
+    "implemented": [
+      "ModdingAppService"
+    ],
+    "explicitlyDeferred": [
+      "GameFlowFSM"
+    ]
+  },
+  "dependencies": [
+    "ModdingPort",
+    "DomainResult"
+  ],
+  "operations": [
+    "listInstalled",
+    "refresh",
+    "enable",
+    "disable",
+    "setEnabled"
+  ],
+  "validation": [
+    "duplicate ModId in list",
+    "duplicate ModId in refresh",
+    "returned ModId matches request",
+    "returned enabled state matches request"
+  ],
+  "rules": [
+    "Sem DynamicPluginLoader, ScriptSandbox, Steam Workshop, Tauri, plugins ou engine internals.",
+    "Falhas concretas permanecem atrás de ModdingPort.",
+    "Operações são discretas/assíncronas e não per-frame.",
+    "Compatível com 2D, 2.5D e 3D.",
+    "GameFlowFSM não é antecipado."
+  ],
+  "files": [
+    "scripts/architecture/stage44-6-validate-modding-service.mjs",
+    "src/services/usecases/ModdingAppService.ts",
+    "src/services/usecases/README.txt",
+    "src/services/usecases/index.ts",
+    "tests/modding-app-service.test.ts"
+  ]
+}

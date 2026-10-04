@@ -6,10 +6,10 @@ const ROOT_DIR = process.cwd();
 const REQUIRED_PHYSICS_FILES = [
   "src/contracts/physics/types.ts",
   "src/tokens/physics.ts",
-  "src/engine/physics/PhysicsWorld.ts",
-  "src/engine/physics/RigidBodyFactory.ts",
-  "src/engine/physics/RaycasterQueries.ts",
-  "src/engine/physics/CollisionEventManager.ts",
+  "src/engine/physics/internal/PhysicsWorld.ts",
+  "src/engine/physics/internal/RigidBodyFactory.ts",
+  "src/engine/physics/internal/RaycasterQueries.ts",
+  "src/engine/physics/internal/CollisionEventManager.ts",
   "src/plugins/physics/plugin.ts",
   "tests/physics-system.test.ts",
 ];

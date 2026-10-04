@@ -34,9 +34,9 @@ console.log("============================================================\n");
 // 1. Arquivos da camada de Input
 checkFileExists("src/contracts/input/types.ts");
 checkFileExists("src/tokens/input.ts");
-checkFileExists("src/engine/input/KeyboardMouseDriver.ts");
-checkFileExists("src/engine/input/GamepadDriver.ts");
-checkFileExists("src/engine/input/InputManager.ts");
+checkFileExists("src/engine/input/internal/KeyboardMouseDriver.ts");
+checkFileExists("src/engine/input/internal/GamepadDriver.ts");
+checkFileExists("src/engine/input/internal/InputManager.ts");
 checkFileExists("src/plugins/input/plugin.ts");
 
 // 2. Validação dos Contratos e Tipos
@@ -48,10 +48,10 @@ checkFileContains("src/tokens/input.ts", "InputToken", "Capability Token InputTo
 checkFileContains("src/tokens/input.ts", "requestPointerLock", "Método requestPointerLock na interface InputApi");
 
 // 4. Validação dos Drivers
-checkFileContains("src/engine/input/KeyboardMouseDriver.ts", "requestPointerLock", "Pointer Lock API no driver de mouse");
-checkFileContains("src/engine/input/GamepadDriver.ts", "deadzone", "Tratamento de Deadzone no Gamepad");
-checkFileContains("src/engine/input/InputManager.ts", "KeyboardMouseDriver", "Uso do driver de Teclado/Mouse no InputManager");
-checkFileContains("src/engine/input/InputManager.ts", "GamepadDriver", "Uso do driver de Gamepad no InputManager");
+checkFileContains("src/engine/input/internal/KeyboardMouseDriver.ts", "requestPointerLock", "Pointer Lock API no driver de mouse");
+checkFileContains("src/engine/input/internal/GamepadDriver.ts", "deadzone", "Tratamento de Deadzone no Gamepad");
+checkFileContains("src/engine/input/internal/InputManager.ts", "KeyboardMouseDriver", "Uso do driver de Teclado/Mouse no InputManager");
+checkFileContains("src/engine/input/internal/InputManager.ts", "GamepadDriver", "Uso do driver de Gamepad no InputManager");
 
 // 5. Validação do Plugin Bridge
 checkFileContains("src/plugins/input/plugin.ts", "InputToken", "Injeção da capability InputToken no plugin");

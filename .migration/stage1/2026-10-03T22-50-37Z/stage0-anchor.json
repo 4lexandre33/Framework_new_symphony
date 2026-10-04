@@ -1,0 +1,15 @@
+{
+  "baselineId": "2026-10-03T22-44-28Z",
+  "baselineJson": ".migration/stage0/2026-10-03T22-44-28Z/migration-baseline.json",
+  "sha256Manifest": ".migration/stage0/2026-10-03T22-44-28Z/project-files.sha256",
+  "treeSha256": "c75f48c3a023d7adbdd9ea98486d211737eca03b8cb95cb460136e38a387ade5",
+  "expectedFileCount": 387,
+  "verificationBefore": {
+    "baselineId": "2026-10-03T22-44-28Z",
+    "expectedFileCount": 387,
+    "changed": [],
+    "removed": [],
+    "intact": true,
+    "manifestSha256": "c75f48c3a023d7adbdd9ea98486d211737eca03b8cb95cb460136e38a387ade5"
+  }
+}

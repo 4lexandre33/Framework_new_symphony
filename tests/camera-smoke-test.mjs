@@ -6,10 +6,10 @@ const ROOT_DIR = process.cwd();
 const REQUIRED_CAMERA_FILES = [
   "src/contracts/camera/types.ts",
   "src/tokens/camera.ts",
-  "src/engine/camera/SpringArm3D.ts",
-  "src/engine/camera/TraumaCameraShake.ts",
-  "src/engine/camera/VirtualCameraStack.ts",
-  "src/engine/camera/CameraOcclusionDetector.ts",
+  "src/engine/camera/internal/SpringArm3D.ts",
+  "src/engine/camera/internal/TraumaCameraShake.ts",
+  "src/engine/camera/internal/VirtualCameraStack.ts",
+  "src/engine/camera/internal/CameraOcclusionDetector.ts",
   "src/plugins/camera/plugin.ts",
   "tests/camera-system.test.ts",
 ];

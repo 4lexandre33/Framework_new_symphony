@@ -1,0 +1,41 @@
+{
+  "stage": "44.1",
+  "name": "Agent + Item dimension-agnostic",
+  "requires": [
+    "44.0"
+  ],
+  "scope": {
+    "implemented": [
+      "Agent",
+      "Item"
+    ],
+    "explicitlyDeferred": [
+      "Inventory",
+      "AbilityAction",
+      "SkillTreeGraph",
+      "DialogueGraph",
+      "QuestGoal",
+      "SaveLoadUseCase",
+      "ModdingAppService",
+      "GameFlowFSM"
+    ]
+  },
+  "rules": [
+    "Camada 2 compatível com 2D, 2.5D e 3D.",
+    "Agent não possui posição, transform, renderer, física ou input concreto.",
+    "Item não possui sprite, mesh, asset de renderer, posição ou collider.",
+    "Mutações comuns de Agent são in-place e sem alocação de objetos.",
+    "Item é definição imutável; quantidade/ownership ficam para Inventory na 44.2."
+  ],
+  "files": [
+    "scripts/architecture/stage44-1-validate-agent-item.mjs",
+    "src/domain/economy/Item.ts",
+    "src/domain/economy/README.txt",
+    "src/domain/economy/index.ts",
+    "src/domain/entities/Agent.ts",
+    "src/domain/entities/README.txt",
+    "src/domain/entities/index.ts",
+    "tests/domain-agent.test.ts",
+    "tests/domain-item.test.ts"
+  ]
+}

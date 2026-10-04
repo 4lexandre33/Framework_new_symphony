@@ -1,0 +1,44 @@
+{
+  "stage": "44.2",
+  "name": "Inventory dimension-agnostic",
+  "requires": [
+    "44.0",
+    "44.1"
+  ],
+  "scope": {
+    "implemented": [
+      "Inventory"
+    ],
+    "explicitlyDeferred": [
+      "AbilityAction",
+      "SkillTreeGraph",
+      "DialogueGraph",
+      "QuestGoal",
+      "SaveLoadUseCase",
+      "ModdingAppService",
+      "GameFlowFSM"
+    ]
+  },
+  "architecture": {
+    "storage": "Map<ItemId, InventoryEntry>",
+    "quantityModel": "aggregate per ItemId",
+    "slotFormula": "ceil(quantity / item.maxStack)",
+    "capacity": "optional maxSlots",
+    "snapshot": "explicit, allocated on demand, sorted by ItemId"
+  },
+  "rules": [
+    "Compatível com 2D, 2.5D e 3D.",
+    "Sem renderer, física, input, plataforma ou persistência concreta.",
+    "add/remove/get/has não materializam arrays de stacks.",
+    "occupiedSlots e totalUnits são mantidos incrementalmente.",
+    "Falha de capacidade não pode mutar estado.",
+    "Mesmo ItemId não aceita definição conflitante."
+  ],
+  "files": [
+    "scripts/architecture/stage44-2-validate-inventory.mjs",
+    "src/domain/economy/Inventory.ts",
+    "src/domain/economy/README.txt",
+    "src/domain/economy/index.ts",
+    "tests/domain-inventory.test.ts"
+  ]
+}

@@ -1,4 +1,4 @@
-import { Kernel } from "../core/kernel";
+import { Kernel } from "@core";
 import { SteamToken } from "../tokens/steam";
 import { InputToken } from "../tokens/input";
 import { AssetsToken } from "../tokens/assets";

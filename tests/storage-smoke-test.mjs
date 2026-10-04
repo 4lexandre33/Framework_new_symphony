@@ -6,9 +6,9 @@ const ROOT_DIR = process.cwd();
 const REQUIRED_STORAGE_FILES = [
   "src/contracts/storage/types.ts",
   "src/tokens/storage.ts",
-  "src/engine/storage/SteamCloudDriver.ts",
-  "src/engine/storage/LocalDatabaseDriver.ts",
-  "src/engine/storage/CloudDatabaseDriver.ts",
+  "src/engine/storage/internal/SteamCloudDriver.ts",
+  "src/engine/storage/internal/LocalDatabaseDriver.ts",
+  "src/engine/storage/internal/CloudDatabaseDriver.ts",
   "src/plugins/storage/plugin.ts",
   "tests/storage-system.test.ts",
 ];

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { defineCapability } from "../core/contracts/capability-token";
+import { defineCapability } from "@core";
 import type {
   CameraMode,
   Vector3D,

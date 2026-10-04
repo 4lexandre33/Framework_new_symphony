@@ -1,0 +1,98 @@
+============================================================
+  PROJETO1 — ETAPA 3: INVENTÁRIO ARQUITETURAL AUTOMÁTICO
+============================================================
+
+Run ID: 2026-10-03T23-03-19Z
+Raiz: C:\Users\Alexandre\projeto1
+Branch: main
+HEAD: fcb03848fd1d36081ce72ef689e3ba4bfd58f857
+Etapa 1: 2026-10-03T22-50-37Z (passed)
+Etapa 2: 2026-10-03T22-56-00Z (unlocked)
+Freeze desbloqueado: SIM
+
+Árvore real inventariada:
+  Arquivos: 392
+  Diretórios: 101
+  Bytes: 4522441
+  Symlinks: 0
+  Tree SHA-256: 494a49015ffb5b28b104fca79a634f8f81bbeda6ec15a71c039f906bef60781f
+
+Áreas:
+  app: 4
+  assets: 3
+  contracts: 24
+  core: 88
+  debug: 5
+  engine: 93
+  plugins: 25
+  root: 30
+  scripts: 6
+  src-other: 4
+  styles: 1
+  tauri: 34
+  tests: 51
+  tokens: 24
+
+Módulos reais em src/engine: 21
+  - ai: 5 arquivo(s), public=não, internal=não
+  - anim: 5 arquivo(s), public=não, internal=não
+  - assets: 4 arquivo(s), public=não, internal=não
+  - audio: 4 arquivo(s), public=não, internal=não
+  - camera: 4 arquivo(s), public=não, internal=não
+  - input: 3 arquivo(s), public=não, internal=não
+  - modding: 5 arquivo(s), public=não, internal=não
+  - monetization: 5 arquivo(s), public=não, internal=não
+  - net: 4 arquivo(s), public=não, internal=não
+  - overlay: 3 arquivo(s), public=não, internal=não
+  - physics: 4 arquivo(s), public=não, internal=não
+  - render: 4 arquivo(s), public=não, internal=não
+  - scripting: 4 arquivo(s), public=não, internal=não
+  - security: 4 arquivo(s), public=não, internal=não
+  - sprites: 5 arquivo(s), public=não, internal=não
+  - storage: 3 arquivo(s), public=não, internal=não
+  - streaming: 5 arquivo(s), public=não, internal=não
+  - terrain: 6 arquivo(s), public=não, internal=não
+  - ui: 5 arquivo(s), public=não, internal=não
+  - vfx: 5 arquivo(s), public=não, internal=não
+  - world: 6 arquivo(s), public=não, internal=não
+
+Plugins encontrados: 25
+Tokens encontrados: 24
+Áreas de contracts encontradas: 23
+Arquivos Rust: 8
+Workers: 2
+Testes *.test.*: 31
+Smoke tests *.mjs: 22
+
+Grafo de imports/reexports:
+  Referências AST: 1062
+  Resolvidas para o projeto: 906
+  Externas: 69
+  Não resolvidas: 87
+  Pacotes externos únicos: 13
+
+Sinais arquiteturais inventariados (não corrigidos nesta etapa):
+  Imports externos para subpaths de Core: 89
+  Tokens importando implementação de engine: 1
+  Imports engine -> outro módulo engine: 0
+  Plugins importando engine de outro módulo: 0
+  Plugins importando engine do próprio módulo: 71
+
+Diretórios conceituais:
+  - src/domain/ports: conceptual-missing
+  - src/domain/entities: conceptual-missing
+  - src/domain/economy: conceptual-missing
+  - src/domain/mechanics: conceptual-missing
+  - src/domain/narrative: conceptual-missing
+  - src/domain/evaluation: conceptual-missing
+  - src/services/ui: conceptual-missing
+  - src/services/usecases: conceptual-missing
+  - src/services/diagnostics: conceptual-missing
+  - src/app/flows: conceptual-missing
+
+Referências textuais a paths: 985
+Erros de parsing AST: 0
+
+Esta etapa é somente inventário. Nenhum arquivo de src/, src-tauri/, tests/,
+package.json, tsconfig.json ou configuração da engine é modificado.
+

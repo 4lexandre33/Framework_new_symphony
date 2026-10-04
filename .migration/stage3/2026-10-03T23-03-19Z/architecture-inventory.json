@@ -1,0 +1,610 @@
+{
+  "schemaVersion": 1,
+  "stage": "stage-3-architecture-inventory",
+  "runId": "2026-10-03T23-03-19Z",
+  "generatedAtUtc": "2026-10-03T23:03:19.456Z",
+  "projectRoot": "C:\\Users\\Alexandre\\projeto1",
+  "repository": {
+    "branch": "main",
+    "head": "fcb03848fd1d36081ce72ef689e3ba4bfd58f857",
+    "hasCommits": true,
+    "gitVersion": "git version 2.52.0.windows.1"
+  },
+  "runtime": {
+    "nodeVersion": "v24.21.0",
+    "platform": "win32",
+    "arch": "x64",
+    "typescriptVersion": "5.6.3"
+  },
+  "preconditions": {
+    "stage1": {
+      "runId": "2026-10-03T22-50-37Z",
+      "reportPath": ".migration/stage1/2026-10-03T22-50-37Z/functional-baseline.json",
+      "status": "passed"
+    },
+    "stage2": {
+      "runId": "2026-10-03T22-56-00Z",
+      "reportPath": ".migration/stage2/2026-10-03T22-56-00Z/stage2-unlock-report.json",
+      "status": "unlocked"
+    },
+    "freezeUnlocked": true
+  },
+  "scanPolicy": {
+    "followsSymlinks": false,
+    "excludedTopLevelDirectories": [
+      ".git",
+      ".migration",
+      "coverage",
+      "dist",
+      "node_modules",
+      "target"
+    ],
+    "excludedRelativePrefixes": [
+      ".cache/",
+      ".turbo/",
+      ".vite/",
+      "src-tauri/target/"
+    ],
+    "sourceExtensions": [
+      ".cjs",
+      ".cts",
+      ".js",
+      ".jsx",
+      ".mjs",
+      ".mts",
+      ".ts",
+      ".tsx"
+    ]
+  },
+  "summary": {
+    "fileCount": 392,
+    "directoryCount": 101,
+    "symlinkCount": 0,
+    "totalBytes": 4522441,
+    "treeSha256": "494a49015ffb5b28b104fca79a634f8f81bbeda6ec15a71c039f906bef60781f",
+    "filesByArea": {
+      "app": 4,
+      "assets": 3,
+      "contracts": 24,
+      "core": 88,
+      "debug": 5,
+      "engine": 93,
+      "plugins": 25,
+      "root": 30,
+      "scripts": 6,
+      "src-other": 4,
+      "styles": 1,
+      "tauri": 34,
+      "tests": 51,
+      "tokens": 24
+    },
+    "filesByExtension": {
+      ".bat": 4,
+      ".css": 2,
+      ".exe": 1,
+      ".html": 1,
+      ".icns": 1,
+      ".ico": 1,
+      ".json": 10,
+      ".lock": 1,
+      ".log": 2,
+      ".md": 2,
+      ".mjs": 35,
+      ".png": 14,
+      ".rs": 8,
+      ".svg": 3,
+      ".toml": 1,
+      ".ts": 287,
+      ".txt": 12,
+      ".zip": 4,
+      "(sem extensão)": 3
+    }
+  },
+  "package": {
+    "name": "projeto1",
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+      "dev": "vite",
+      "build": "tsc && vite build",
+      "preview": "vite preview",
+      "tauri": "tauri",
+      "test": "vitest run",
+      "test:ui": "vitest run tests/ui-system.test.ts",
+      "test:ui:smoke": "node tests/ui-smoke-test.mjs"
+    },
+    "dependencies": {
+      "@dimforge/rapier3d-compat": "0.12.0",
+      "@tauri-apps/api": "^2.0.0",
+      "@tauri-apps/plugin-opener": "^2.0.0",
+      "three": "^0.170.0"
+    },
+    "devDependencies": {
+      "@tauri-apps/cli": "^2.0.0",
+      "@types/node": "^22.0.0",
+      "@types/three": "^0.169.0",
+      "jsdom": "^25.0.1",
+      "typescript": "^5.6.0",
+      "vite": "^5.4.0",
+      "vitest": "^2.1.0"
+    }
+  },
+  "tsconfig": {
+    "path": "tsconfig.json",
+    "diagnostics": []
+  },
+  "engineModules": [
+    {
+      "name": "ai",
+      "path": "src/engine/ai",
+      "fileCount": 5,
+      "sourceFileCount": 5,
+      "workerFiles": [],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    },
+    {
+      "name": "anim",
+      "path": "src/engine/anim",
+      "fileCount": 5,
+      "sourceFileCount": 5,
+      "workerFiles": [],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    },
+    {
+      "name": "assets",
+      "path": "src/engine/assets",
+      "fileCount": 4,
+      "sourceFileCount": 4,
+      "workerFiles": [],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    },
+    {
+      "name": "audio",
+      "path": "src/engine/audio",
+      "fileCount": 4,
+      "sourceFileCount": 4,
+      "workerFiles": [],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    },
+    {
+      "name": "camera",
+      "path": "src/engine/camera",
+      "fileCount": 4,
+      "sourceFileCount": 4,
+      "workerFiles": [],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    },
+    {
+      "name": "input",
+      "path": "src/engine/input",
+      "fileCount": 3,
+      "sourceFileCount": 3,
+      "workerFiles": [],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    },
+    {
+      "name": "modding",
+      "path": "src/engine/modding",
+      "fileCount": 5,
+      "sourceFileCount": 5,
+      "workerFiles": [],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    },
+    {
+      "name": "monetization",
+      "path": "src/engine/monetization",
+      "fileCount": 5,
+      "sourceFileCount": 5,
+      "workerFiles": [],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    },
+    {
+      "name": "net",
+      "path": "src/engine/net",
+      "fileCount": 4,
+      "sourceFileCount": 4,
+      "workerFiles": [],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    },
+    {
+      "name": "overlay",
+      "path": "src/engine/overlay",
+      "fileCount": 3,
+      "sourceFileCount": 3,
+      "workerFiles": [],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    },
+    {
+      "name": "physics",
+      "path": "src/engine/physics",
+      "fileCount": 4,
+      "sourceFileCount": 4,
+      "workerFiles": [],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    },
+    {
+      "name": "render",
+      "path": "src/engine/render",
+      "fileCount": 4,
+      "sourceFileCount": 4,
+      "workerFiles": [],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    },
+    {
+      "name": "scripting",
+      "path": "src/engine/scripting",
+      "fileCount": 4,
+      "sourceFileCount": 4,
+      "workerFiles": [],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    },
+    {
+      "name": "security",
+      "path": "src/engine/security",
+      "fileCount": 4,
+      "sourceFileCount": 4,
+      "workerFiles": [],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    },
+    {
+      "name": "sprites",
+      "path": "src/engine/sprites",
+      "fileCount": 5,
+      "sourceFileCount": 5,
+      "workerFiles": [],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    },
+    {
+      "name": "storage",
+      "path": "src/engine/storage",
+      "fileCount": 3,
+      "sourceFileCount": 3,
+      "workerFiles": [],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    },
+    {
+      "name": "streaming",
+      "path": "src/engine/streaming",
+      "fileCount": 5,
+      "sourceFileCount": 5,
+      "workerFiles": [
+        "src/engine/streaming/streaming.worker.ts"
+      ],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    },
+    {
+      "name": "terrain",
+      "path": "src/engine/terrain",
+      "fileCount": 6,
+      "sourceFileCount": 6,
+      "workerFiles": [
+        "src/engine/terrain/terrain.worker.ts"
+      ],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    },
+    {
+      "name": "ui",
+      "path": "src/engine/ui",
+      "fileCount": 5,
+      "sourceFileCount": 5,
+      "workerFiles": [],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    },
+    {
+      "name": "vfx",
+      "path": "src/engine/vfx",
+      "fileCount": 5,
+      "sourceFileCount": 5,
+      "workerFiles": [],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    },
+    {
+      "name": "world",
+      "path": "src/engine/world",
+      "fileCount": 6,
+      "sourceFileCount": 6,
+      "workerFiles": [],
+      "publicDirectoryPresent": false,
+      "internalDirectoryPresent": false
+    }
+  ],
+  "plugins": [
+    "ai",
+    "anim",
+    "assets",
+    "audio",
+    "camera",
+    "debug",
+    "game-loop",
+    "input",
+    "modding",
+    "monetization",
+    "net",
+    "overlay",
+    "physics",
+    "player",
+    "render",
+    "scripting",
+    "security",
+    "sprites",
+    "steam",
+    "storage",
+    "streaming",
+    "terrain",
+    "ui",
+    "vfx",
+    "world"
+  ],
+  "tokens": [
+    "ai",
+    "anim",
+    "assets",
+    "audio",
+    "camera",
+    "game-loop",
+    "input",
+    "modding",
+    "monetization",
+    "net",
+    "overlay",
+    "physics",
+    "render",
+    "scripting",
+    "security",
+    "sprites",
+    "steam-net",
+    "steam",
+    "storage",
+    "streaming",
+    "terrain",
+    "ui",
+    "vfx",
+    "world"
+  ],
+  "contractAreas": [
+    "ai",
+    "anim",
+    "assets",
+    "audio",
+    "camera",
+    "game-loop",
+    "input",
+    "modding",
+    "monetization",
+    "net",
+    "overlay",
+    "physics",
+    "render",
+    "scripting",
+    "security",
+    "sprites",
+    "steam",
+    "storage",
+    "streaming",
+    "terrain",
+    "ui",
+    "vfx",
+    "world"
+  ],
+  "rustTauri": {
+    "rustFiles": [
+      "src-tauri/build.rs",
+      "src-tauri/src/lib.rs",
+      "src-tauri/src/main.rs",
+      "src-tauri/src/modding.rs",
+      "src-tauri/src/monetization.rs",
+      "src-tauri/src/overlay.rs",
+      "src-tauri/src/security.rs",
+      "src-tauri/src/steam.rs"
+    ],
+    "configFiles": [
+      "src-tauri/capabilities/default.json",
+      "src-tauri/Cargo.lock",
+      "src-tauri/Cargo.toml",
+      "src-tauri/tauri.conf.json"
+    ]
+  },
+  "workers": [
+    "src/engine/streaming/streaming.worker.ts",
+    "src/engine/terrain/terrain.worker.ts"
+  ],
+  "tests": {
+    "testFiles": [
+      "src/core/contracts/commands/registry.test.ts",
+      "src/core/contracts/events/registry.test.ts",
+      "src/core/contracts/plugin-kind.test.ts",
+      "src/core/contracts/queries/registry.test.ts",
+      "src/core/internal/boot-order.test.ts",
+      "src/core/internal/capability-registry.test.ts",
+      "src/core/internal/event-bus.test.ts",
+      "src/core/internal/permissions.test.ts",
+      "src/core/runtime/hardening-failures.test.ts",
+      "tests/ai-system.test.ts",
+      "tests/anim-system.test.ts",
+      "tests/assets-pipeline.test.ts",
+      "tests/audio-system.test.ts",
+      "tests/camera-system.test.ts",
+      "tests/input-system.test.ts",
+      "tests/modding-system.test.ts",
+      "tests/monetization-system.test.ts",
+      "tests/overlay-system.test.ts",
+      "tests/physics-system.test.ts",
+      "tests/scripting-system.test.ts",
+      "tests/security-system.test.ts",
+      "tests/sprites-system.test.ts",
+      "tests/steam-integration.test.ts",
+      "tests/storage-cloud-db.test.ts",
+      "tests/storage-persistence.test.ts",
+      "tests/storage-system.test.ts",
+      "tests/streaming-system.test.ts",
+      "tests/terrain-system.test.ts",
+      "tests/ui-system.test.ts",
+      "tests/vfx-system.test.ts",
+      "tests/world-system.test.ts"
+    ],
+    "smokeFiles": [
+      "tests/ai-smoke-test.mjs",
+      "tests/anim-smoke-test.mjs",
+      "tests/assets-smoke-test.mjs",
+      "tests/audio-smoke-test.mjs",
+      "tests/camera-smoke-test.mjs",
+      "tests/hud-renderer-smoke-test.mjs",
+      "tests/input-smoke-test.mjs",
+      "tests/modding-smoke-test.mjs",
+      "tests/monetization-smoke-test.mjs",
+      "tests/overlay-smoke-test.mjs",
+      "tests/physics-smoke-test.mjs",
+      "tests/scripting-smoke-test.mjs",
+      "tests/security-smoke-test.mjs",
+      "tests/sprites-smoke-test.mjs",
+      "tests/steam-p2p-smoke.mjs",
+      "tests/steam-smoke-test.mjs",
+      "tests/storage-smoke-test.mjs",
+      "tests/streaming-smoke-test.mjs",
+      "tests/terrain-smoke-test.mjs",
+      "tests/ui-smoke-test.mjs",
+      "tests/vfx-smoke-test.mjs",
+      "tests/world-smoke-test.mjs"
+    ]
+  },
+  "conceptualDirectories": [
+    {
+      "path": "src/domain/ports",
+      "purpose": "Ports/interfaces puras do domínio para dependências externas.",
+      "status": "conceptual-missing",
+      "kind": "conceptual-directory"
+    },
+    {
+      "path": "src/domain/entities",
+      "purpose": "Entidades puras de gameplay, sem dependência da engine concreta.",
+      "status": "conceptual-missing",
+      "kind": "conceptual-directory"
+    },
+    {
+      "path": "src/domain/economy",
+      "purpose": "Regras de economia e progressão independentes da infraestrutura.",
+      "status": "conceptual-missing",
+      "kind": "conceptual-directory"
+    },
+    {
+      "path": "src/domain/mechanics",
+      "purpose": "Mecânicas e regras puras de gameplay.",
+      "status": "conceptual-missing",
+      "kind": "conceptual-directory"
+    },
+    {
+      "path": "src/domain/narrative",
+      "purpose": "Modelos e regras narrativas de alto nível.",
+      "status": "conceptual-missing",
+      "kind": "conceptual-directory"
+    },
+    {
+      "path": "src/domain/evaluation",
+      "purpose": "Avaliação de regras, condições e resultados do domínio.",
+      "status": "conceptual-missing",
+      "kind": "conceptual-directory"
+    },
+    {
+      "path": "src/services/ui",
+      "purpose": "Serviços de aplicação ligados à UI por APIs/ports.",
+      "status": "conceptual-missing",
+      "kind": "conceptual-directory"
+    },
+    {
+      "path": "src/services/usecases",
+      "purpose": "Casos de uso que orquestram domínio e portas.",
+      "status": "conceptual-missing",
+      "kind": "conceptual-directory"
+    },
+    {
+      "path": "src/services/diagnostics",
+      "purpose": "Serviços de diagnóstico acima das implementações concretas.",
+      "status": "conceptual-missing",
+      "kind": "conceptual-directory"
+    },
+    {
+      "path": "src/app/flows",
+      "purpose": "Fluxos/composition de aplicação e estados de alto nível.",
+      "status": "conceptual-missing",
+      "kind": "conceptual-directory"
+    }
+  ],
+  "dependencyOverview": {
+    "totalEdges": 1062,
+    "edgesByKind": {
+      "export-from": 104,
+      "import": 956,
+      "url-reference": 2
+    },
+    "edgesBySpecifierKind": {
+      "bare": 147,
+      "bare-or-alias": 9,
+      "relative": 906
+    },
+    "resolvedProjectEdges": 906,
+    "externalEdges": 69,
+    "unresolvedEdges": 87,
+    "externalPackages": [
+      "@dimforge/rapier3d-compat",
+      "@tauri-apps/api",
+      "node:child_process",
+      "node:crypto",
+      "node:fs",
+      "node:module",
+      "node:path",
+      "node:process",
+      "node:readline",
+      "node:url",
+      "three",
+      "vite",
+      "vitest"
+    ]
+  },
+  "signalsSummary": {
+    "externalCoreSubpathImports": 89,
+    "tokenImplementationImports": 1,
+    "crossEngineImports": 0,
+    "pluginCrossEngineImports": 0,
+    "pluginOwnEngineImports": 71
+  },
+  "textualReferenceCount": 985,
+  "parseErrorCount": 0,
+  "artifacts": {
+    "files": "files.json",
+    "directories": "directories.json",
+    "symlinks": "symlinks.json",
+    "imports": "imports.json",
+    "parseErrors": "parse-errors.json",
+    "textualPathReferences": "textual-path-references.json",
+    "architectureSignals": "architecture-signals.json",
+    "summary": "architecture-summary.txt",
+    "gitStatus": "git-status.txt",
+    "checksums": "artifact-checksums.sha256"
+  },
+  "notes": [
+    "Esta etapa é somente leitura do projeto, exceto pela gravação de relatórios em .migration/stage3/.",
+    "Nenhum arquivo de código é movido, renomeado ou reescrito nesta etapa.",
+    "Os diretórios conceituais são apenas reportados como present/conceptual-missing; eles não são criados aqui.",
+    "Os sinais arquiteturais são inventário para etapas posteriores e não são tratados como falhas nesta etapa."
+  ]
+}

@@ -12,6 +12,9 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+    "paths": {
+      "@core": ["./src/core/index.ts"]
+    },
 
     /* Linting */
     "strict": true,

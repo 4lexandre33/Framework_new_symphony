@@ -1,0 +1,16 @@
+{
+  "id": "build",
+  "label": "Build",
+  "command": "npm run build",
+  "startedAtUtc": "2026-10-03T22:51:16.166Z",
+  "finishedAtUtc": "2026-10-03T22:51:24.749Z",
+  "durationMs": 8582,
+  "timeoutMs": 1800000,
+  "passed": true,
+  "timedOut": false,
+  "exitCode": 0,
+  "signal": null,
+  "spawnError": null,
+  "stdoutFile": "commands/04-build.stdout.log",
+  "stderrFile": "commands/04-build.stderr.log"
+}

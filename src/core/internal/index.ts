@@ -63,6 +63,9 @@ export type { SchedulerEvent, SchedulerOptions } from "./scheduler";
 
 export { computeBootOrder } from "./boot-order";
 
+export { runArchitecturalPreflight } from "./preflight";
+export type { ArchitecturalPreflightOptions } from "./preflight";
+
 export { withTimeout } from "./ttl";
 
 export { guardAsync } from "./error-boundary";

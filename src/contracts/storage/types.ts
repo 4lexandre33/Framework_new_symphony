@@ -1,4 +1,4 @@
-import { defineEvent, defineCommand } from "../../core/contracts";
+import { defineEvent, defineCommand } from "@core";
 
 export type StorageDriverType = "steam_cloud" | "sqlite_local" | "cloud_database";
 

@@ -9,11 +9,11 @@ import {
 
 import {
   RaycastHitTestPassthrough,
-} from "../src/engine/overlay/RaycastHitTestPassthrough";
+} from "../src/engine/overlay/internal/RaycastHitTestPassthrough";
 
 import {
   OverlayWindowManager,
-} from "../src/engine/overlay/OverlayWindowManager";
+} from "../src/engine/overlay/internal/OverlayWindowManager";
 
 import {
   createOverlayPlugin,

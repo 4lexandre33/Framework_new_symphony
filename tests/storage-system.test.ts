@@ -9,15 +9,15 @@ import {
 
 import {
   LocalDatabaseDriver,
-} from "../src/engine/storage/LocalDatabaseDriver";
+} from "../src/engine/storage/internal/LocalDatabaseDriver";
 
 import {
   SteamCloudDriver,
-} from "../src/engine/storage/SteamCloudDriver";
+} from "../src/engine/storage/internal/SteamCloudDriver";
 
 import {
   CloudDatabaseDriver,
-} from "../src/engine/storage/CloudDatabaseDriver";
+} from "../src/engine/storage/internal/CloudDatabaseDriver";
 
 import type {
   PlayerOnlineProfile,

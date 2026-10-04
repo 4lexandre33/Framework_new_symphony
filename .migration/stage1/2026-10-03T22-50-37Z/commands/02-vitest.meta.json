@@ -1,0 +1,16 @@
+{
+  "id": "vitest",
+  "label": "Vitest",
+  "command": "npx vitest run",
+  "startedAtUtc": "2026-10-03T22:50:43.165Z",
+  "finishedAtUtc": "2026-10-03T22:50:50.730Z",
+  "durationMs": 7565,
+  "timeoutMs": 1800000,
+  "passed": true,
+  "timedOut": false,
+  "exitCode": 0,
+  "signal": null,
+  "spawnError": null,
+  "stdoutFile": "commands/02-vitest.stdout.log",
+  "stderrFile": "commands/02-vitest.stderr.log"
+}

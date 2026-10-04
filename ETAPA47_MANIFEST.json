@@ -1,0 +1,81 @@
+{
+  "stage": "47",
+  "name": "State foundation",
+  "requires": [
+    "44",
+    "45",
+    "46"
+  ],
+  "roadmapSource": "Camada 2 roadmap stages 45-70",
+  "scope": {
+    "implemented": [
+      "StateKey",
+      "StateValue",
+      "StateSnapshot",
+      "StateStore"
+    ],
+    "explicitlyDeferred": [
+      "SimulationTick",
+      "DomainDuration",
+      "SimulationTimer",
+      "TimerSnapshot",
+      "DomainEvents",
+      "Conditions"
+    ]
+  },
+  "stateValue": {
+    "allowed": [
+      "null",
+      "boolean",
+      "finite number",
+      "string",
+      "recursive arrays",
+      "recursive plain objects"
+    ],
+    "rejected": [
+      "undefined",
+      "bigint",
+      "symbol",
+      "function",
+      "NaN/Infinity",
+      "Date",
+      "Map",
+      "Set",
+      "class instances",
+      "cyclic references"
+    ],
+    "storagePolicy": "deep clone + deep freeze on write/restore"
+  },
+  "stateStore": {
+    "storage": "Map<StateKey, StateValue>",
+    "operations": [
+      "has",
+      "read",
+      "set",
+      "delete",
+      "compare",
+      "clear",
+      "forEach",
+      "toSnapshot",
+      "fromSnapshot"
+    ],
+    "snapshot": "deterministic, sorted by StateKey"
+  },
+  "rules": [
+    "No localStorage, IndexedDB, filesystem, database or world service.",
+    "No engine/services/app/plugins imports.",
+    "Compatible with 2D, 2.5D, 3D and headless execution.",
+    "ObjectStateRef remains opaque; no artificial cross-domain coupling yet.",
+    "Stage 48 Domain Time is not anticipated."
+  ],
+  "files": [
+    "scripts/architecture/stage47-validate-state-foundation.mjs",
+    "src/domain/state/README.txt",
+    "src/domain/state/StateKey.ts",
+    "src/domain/state/StateSnapshot.ts",
+    "src/domain/state/StateStore.ts",
+    "src/domain/state/StateValue.ts",
+    "src/domain/state/index.ts",
+    "tests/domain-state.test.ts"
+  ]
+}

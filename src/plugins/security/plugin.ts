@@ -1,28 +1,8 @@
-import type {
-  Plugin,
-  PluginContext,
-} from "../../core/contracts/plugin-context";
-import { SecurityToken, type SecurityApi } from "../../tokens/security";
+import type { Plugin, PluginContext } from "@core";
+import { SecurityToken } from "../../tokens/security";
 import type { GameTickPayload } from "../../contracts/game-loop/types";
-
-import {
-  CaptureFrameMetricsCommand,
-  CrashReportGeneratedEvent,
-  DumpCrashReportCommand,
-  SecurityAlertEvent,
-  ValidateMemoryIntegrityCommand,
-  type CaptureFrameMetricsPayload,
-  type CrashReportPayload,
-  type DumpCrashReportPayload,
-  type ProtectedValueDescriptor,
-  type SystemFrameMetric,
-  type ValidateMemoryIntegrityPayload,
-} from "../../contracts/security/types";
-
-import { FrameProfiler } from "../../engine/security/FrameProfiler";
-import { MemoryIntegrityGuard } from "../../engine/security/MemoryIntegrityGuard";
-import { CrashReportDumper } from "../../engine/security/CrashReportDumper";
-import { TauriSecurityDriver } from "../../engine/security/TauriSecurityDriver";
+import { CaptureFrameMetricsCommand, CrashReportGeneratedEvent, DumpCrashReportCommand, SecurityAlertEvent, ValidateMemoryIntegrityCommand, type CaptureFrameMetricsPayload, type CrashReportPayload, type DumpCrashReportPayload, type SystemFrameMetric, type ValidateMemoryIntegrityPayload } from "../../contracts/security/types";
+import { SecurityService } from "../../engine/security/internal/SecurityService";
 
 export const securityManifest: Plugin["manifest"] = {
   id: "game.security",
@@ -54,139 +34,9 @@ export const securityManifest: Plugin["manifest"] = {
         version: "1.0.0",
       },
     ],
+    conflicts: [],
   },
 };
-
-export class SecurityService implements SecurityApi {
-  private readonly profiler = new FrameProfiler();
-  private readonly guard = new MemoryIntegrityGuard();
-  private readonly dumper = new CrashReportDumper();
-  private readonly driver = new TauriSecurityDriver();
-
-  public constructor(
-    private readonly ctx: PluginContext,
-  ) {}
-
-  public beginSubsystemMetric(name: string): void {
-    this.profiler.beginSubsystem(name);
-  }
-
-  public endSubsystemMetric(name: string): void {
-    this.profiler.endSubsystem(name);
-  }
-
-  public getProfilerSnapshot(sampleCount?: number): SystemFrameMetric {
-    return this.profiler.getProfilerSnapshot(sampleCount);
-  }
-
-  public protectNumber(
-    id: string,
-    value: number,
-  ): ProtectedValueDescriptor {
-    return this.guard.protectNumber(id, value);
-  }
-
-  public readProtectedNumber(
-    descriptor: ProtectedValueDescriptor,
-  ): number | null {
-    const value = this.guard.readProtectedNumber(descriptor);
-
-    if (value === null) {
-      this.emitSecurityAlert(
-        "memory_tampering",
-        `Adulteração detectada na variável protegida: ${descriptor.id}`,
-      );
-    }
-
-    return value;
-  }
-
-  public verifyIntegrity(
-    descriptor: ProtectedValueDescriptor,
-  ): boolean {
-    return this.guard.verifyIntegrity(descriptor);
-  }
-
-  public validateMemoryIntegrity(
-    descriptors: ReadonlyArray<ProtectedValueDescriptor>,
-  ): boolean {
-    const invalidIds: string[] = [];
-
-    for (let index = 0; index < descriptors.length; index += 1) {
-      const descriptor = descriptors[index];
-
-      if (!descriptor) {
-        continue;
-      }
-
-      if (!this.guard.verifyIntegrity(descriptor)) {
-        invalidIds.push(descriptor.id);
-      }
-    }
-
-    if (invalidIds.length === 0) {
-      return true;
-    }
-
-    this.emitSecurityAlert(
-      "checksum_mismatch",
-      `Checksum inválido em ${invalidIds.length} variável(is): ${invalidIds.join(", ")}`,
-    );
-
-    return false;
-  }
-
-  public async validateSystemClock(browserDeltaMs: number): Promise<boolean> {
-    const result = await this.driver.validateSystemClock(browserDeltaMs);
-
-    if (!result.valid) {
-      this.emitSecurityAlert(
-        "speedhack_detected",
-        `Desvio de tempo detectado entre navegador e SO: ${browserDeltaMs}ms vs ${result.osDeltaMs}ms`,
-      );
-    }
-
-    return result.valid;
-  }
-
-  public async dumpCrashReport(
-    error: Error | string,
-  ): Promise<CrashReportPayload> {
-    const report = this.dumper.generateReport(error);
-
-    await this.driver.writeCrashDump(report);
-
-    this.ctx.events.emit(
-      CrashReportGeneratedEvent.type,
-      report,
-    );
-
-    return report;
-  }
-
-  public update(deltaSeconds: number): void {
-    this.profiler.updateFrame(deltaSeconds);
-  }
-
-  public clear(): void {
-    this.profiler.clear();
-    this.guard.rotateKey();
-  }
-
-  private emitSecurityAlert(
-    violationType: "memory_tampering" | "speedhack_detected" | "checksum_mismatch",
-    details: string,
-  ): void {
-    this.ctx.events.emit(
-      SecurityAlertEvent.type,
-      {
-        violationType,
-        details,
-        timestamp: Date.now(),
-      },
-    );
-  }
-}
 
 export function createSecurityPlugin(): Plugin {
   return {

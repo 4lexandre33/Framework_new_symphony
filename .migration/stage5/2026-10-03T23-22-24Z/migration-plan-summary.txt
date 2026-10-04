@@ -1,0 +1,55 @@
+============================================================
+  PROJETO1 — ETAPA 5: MAPA COMPLETO oldPath → newPath
+============================================================
+
+Run ID: 2026-10-03T23-22-24Z
+Status: PASSED
+Migração arquitetural: v20
+Etapa 4 usada: 2026-10-03T23-12-46Z
+Etapa 3 usada: 2026-10-03T23-03-19Z
+Tree SHA-256 Etapa 3: 494a49015ffb5b28b104fca79a634f8f81bbeda6ec15a71c039f906bef60781f
+Source scope SHA-256: 62177a32acdf70e44872424d7a87286980958c48b92c81d18532bc56095f5bb7
+Migration plan SHA-256: 42cc978082dc083f130cbd545844586c391f1ee9dae430b23377334beecb26c5
+
+Módulos canônicos: 23
+Módulos com arquivos a mover: 21
+Módulos sem move operation: 2
+Arquivos mapeados: 93
+Workers mapeados: 2
+Bytes cobertos: 396456
+Diretórios-alvo catalogados: 69
+Colisões de destino: 0
+
+Movimentos por módulo:
+  - steam: 0 arquivo(s), 0 worker(s), 0 bytes
+  - input: 3 arquivo(s), 0 worker(s), 25041 bytes
+  - assets: 4 arquivo(s), 0 worker(s), 5632 bytes
+  - physics: 4 arquivo(s), 0 worker(s), 14821 bytes
+  - storage: 3 arquivo(s), 0 worker(s), 6531 bytes
+  - world: 6 arquivo(s), 0 worker(s), 19296 bytes
+  - ui: 5 arquivo(s), 0 worker(s), 23707 bytes
+  - anim: 5 arquivo(s), 0 worker(s), 24340 bytes
+  - sprites: 5 arquivo(s), 0 worker(s), 11210 bytes
+  - audio: 4 arquivo(s), 0 worker(s), 8205 bytes
+  - camera: 4 arquivo(s), 0 worker(s), 20759 bytes
+  - ai: 5 arquivo(s), 0 worker(s), 45865 bytes
+  - vfx: 5 arquivo(s), 0 worker(s), 25115 bytes
+  - terrain: 6 arquivo(s), 1 worker(s), 52909 bytes
+  - scripting: 4 arquivo(s), 0 worker(s), 15508 bytes
+  - streaming: 5 arquivo(s), 1 worker(s), 15577 bytes
+  - overlay: 3 arquivo(s), 0 worker(s), 5839 bytes
+  - security: 4 arquivo(s), 0 worker(s), 15226 bytes
+  - modding: 5 arquivo(s), 0 worker(s), 21018 bytes
+  - monetization: 5 arquivo(s), 0 worker(s), 7601 bytes
+  - game-loop: 0 arquivo(s), 0 worker(s), 0 bytes
+  - render: 4 arquivo(s), 0 worker(s), 15376 bytes
+  - net: 4 arquivo(s), 0 worker(s), 16880 bytes
+
+Workers:
+  - src/engine/streaming/streaming.worker.ts -> src/engine/streaming/internal/streaming.worker.ts
+  - src/engine/terrain/terrain.worker.ts -> src/engine/terrain/internal/terrain.worker.ts
+
+old-to-new.json contém somente o objeto oldPath → newPath.
+migration-plan.json contém o plano completo, hashes, módulos, invariantes e operações.
+Nenhum arquivo de src/ foi criado, movido, renomeado ou reescrito pela Etapa 5.
+

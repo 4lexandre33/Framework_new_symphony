@@ -1,4 +1,4 @@
-import { defineEvent, defineCommand } from "../../core/contracts";
+import { defineEvent, defineCommand } from "@core";
 
 export type TransportType = "steam_p2p" | "websocket" | "webrtc" | "mock";
 
@@ -33,6 +33,16 @@ export interface WorldStateSnapshot {
   readonly tick: number;
   readonly hostSteamId: string;
   readonly entities: ReadonlyArray<EntitySnapshot>;
+}
+
+export interface StateReplicationApi {
+  registerEntity(entityId: string, initialSnapshot: EntitySnapshot): void;
+  unregisterEntity(entityId: string): void;
+  pushEntitySnapshot(snapshot: EntitySnapshot): void;
+  processWorldSnapshot(worldSnapshot: WorldStateSnapshot): void;
+  getInterpolatedState(entityId: string, alpha: number): EntitySnapshot | null;
+  generateWorldSnapshot(sequence: number, tick: number, hostSteamId: string): WorldStateSnapshot;
+  clear(): void;
 }
 
 export interface NetPacketHeader {

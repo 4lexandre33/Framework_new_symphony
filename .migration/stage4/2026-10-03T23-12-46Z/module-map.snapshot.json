@@ -1,0 +1,1822 @@
+{
+  "schemaVersion": 1,
+  "architectureMigrationVersion": "v20",
+  "functionalModules": [
+    {
+      "layer": 1,
+      "key": "steam",
+      "displayName": "Steamworks & P2P",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.steam",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "steam",
+        "root": "src/engine/steam",
+        "publicRoot": "src/engine/steam/public",
+        "internalRoot": "src/engine/steam/internal",
+        "presentInStage3": false,
+        "implementationOrigin": "plugin-native"
+      },
+      "contracts": [
+        "src/contracts/steam/types.ts",
+        "src/contracts/steam/net-types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/steam.ts",
+          "capabilityId": "game.steam",
+          "version": "1.0.0",
+          "primary": true
+        },
+        {
+          "path": "src/tokens/steam-net.ts",
+          "capabilityId": "game.steam.net",
+          "version": "1.0.0",
+          "primary": false
+        }
+      ],
+      "plugin": "src/plugins/steam/plugin.ts",
+      "nativeFiles": [
+        "src-tauri/src/steam.rs"
+      ],
+      "tests": [
+        "tests/steam-integration.test.ts",
+        "tests/steam-p2p-smoke.mjs",
+        "tests/steam-smoke-test.mjs"
+      ],
+      "extraFiles": [
+        "steam_appid.txt",
+        "src-tauri/steam_appid.txt"
+      ]
+    },
+    {
+      "layer": 2,
+      "key": "input",
+      "displayName": "Input Manager",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.input",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "input",
+        "root": "src/engine/input",
+        "publicRoot": "src/engine/input/public",
+        "internalRoot": "src/engine/input/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/input/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/input.ts",
+          "capabilityId": "game.input",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/input/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/input-system.test.ts",
+        "tests/input-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 3,
+      "key": "assets",
+      "displayName": "Asset Pipeline & VRAM Cache",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.assets",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "assets",
+        "root": "src/engine/assets",
+        "publicRoot": "src/engine/assets/public",
+        "internalRoot": "src/engine/assets/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/assets/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/assets.ts",
+          "capabilityId": "game.assets",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/assets/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/assets-pipeline.test.ts",
+        "tests/assets-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 4,
+      "key": "physics",
+      "displayName": "Motor de Física (Rapier WASM)",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.physics",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "physics",
+        "root": "src/engine/physics",
+        "publicRoot": "src/engine/physics/public",
+        "internalRoot": "src/engine/physics/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/physics/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/physics.ts",
+          "capabilityId": "game.physics",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/physics/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/physics-system.test.ts",
+        "tests/physics-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 5,
+      "key": "storage",
+      "displayName": "Persistência & Banco de Dados",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.storage",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "storage",
+        "root": "src/engine/storage",
+        "publicRoot": "src/engine/storage/public",
+        "internalRoot": "src/engine/storage/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/storage/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/storage.ts",
+          "capabilityId": "game.storage",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/storage/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/storage-system.test.ts",
+        "tests/storage-smoke-test.mjs",
+        "tests/storage-cloud-db.test.ts",
+        "tests/storage-persistence.test.ts"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 6,
+      "key": "world",
+      "displayName": "Gerenciador de Mundo, Cenas & ECS",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.world",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "world",
+        "root": "src/engine/world",
+        "publicRoot": "src/engine/world/public",
+        "internalRoot": "src/engine/world/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/world/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/world.ts",
+          "capabilityId": "game.world",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/world/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/world-system.test.ts",
+        "tests/world-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 7,
+      "key": "ui",
+      "displayName": "Interface de Usuário & HUD",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.ui",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "ui",
+        "root": "src/engine/ui",
+        "publicRoot": "src/engine/ui/public",
+        "internalRoot": "src/engine/ui/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/ui/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/ui.ts",
+          "capabilityId": "game.ui",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/ui/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/ui-system.test.ts",
+        "tests/ui-smoke-test.mjs"
+      ],
+      "extraFiles": [
+        "src/styles/ui.css"
+      ]
+    },
+    {
+      "layer": 8,
+      "key": "anim",
+      "displayName": "Pipeline de Animações & State Machines",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.anim",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "anim",
+        "root": "src/engine/anim",
+        "publicRoot": "src/engine/anim/public",
+        "internalRoot": "src/engine/anim/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/anim/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/anim.ts",
+          "capabilityId": "game.anim",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/anim/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/anim-system.test.ts",
+        "tests/anim-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 9,
+      "key": "sprites",
+      "displayName": "Motor 2D, Tilemaps & Pixel Art",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.sprites",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "sprites",
+        "root": "src/engine/sprites",
+        "publicRoot": "src/engine/sprites/public",
+        "internalRoot": "src/engine/sprites/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/sprites/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/sprites.ts",
+          "capabilityId": "game.sprites",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/sprites/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/sprites-system.test.ts",
+        "tests/sprites-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 10,
+      "key": "audio",
+      "displayName": "Mixer de Áudio Espacial 3D",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.audio",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "audio",
+        "root": "src/engine/audio",
+        "publicRoot": "src/engine/audio/public",
+        "internalRoot": "src/engine/audio/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/audio/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/audio.ts",
+          "capabilityId": "game.audio",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/audio/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/audio-system.test.ts",
+        "tests/audio-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 11,
+      "key": "camera",
+      "displayName": "Câmera Dinâmica & SpringArm",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.camera",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "camera",
+        "root": "src/engine/camera",
+        "publicRoot": "src/engine/camera/public",
+        "internalRoot": "src/engine/camera/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/camera/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/camera.ts",
+          "capabilityId": "game.camera",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/camera/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/camera-system.test.ts",
+        "tests/camera-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 12,
+      "key": "ai",
+      "displayName": "Inteligência Artificial & NavMesh",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.ai",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "ai",
+        "root": "src/engine/ai",
+        "publicRoot": "src/engine/ai/public",
+        "internalRoot": "src/engine/ai/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/ai/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/ai.ts",
+          "capabilityId": "game.ai",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/ai/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/ai-system.test.ts",
+        "tests/ai-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 13,
+      "key": "vfx",
+      "displayName": "Partículas GPU, Decals & Pós-Processamento",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.vfx",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "vfx",
+        "root": "src/engine/vfx",
+        "publicRoot": "src/engine/vfx/public",
+        "internalRoot": "src/engine/vfx/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/vfx/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/vfx.ts",
+          "capabilityId": "game.vfx",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/vfx/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/vfx-system.test.ts",
+        "tests/vfx-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 14,
+      "key": "terrain",
+      "displayName": "Terreno Procedural, Biomas & Voxels",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.terrain",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "terrain",
+        "root": "src/engine/terrain",
+        "publicRoot": "src/engine/terrain/public",
+        "internalRoot": "src/engine/terrain/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/terrain/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/terrain.ts",
+          "capabilityId": "game.terrain",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/terrain/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/terrain-system.test.ts",
+        "tests/terrain-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 15,
+      "key": "scripting",
+      "displayName": "Cutscenes, Diálogos & Quests",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.scripting",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "scripting",
+        "root": "src/engine/scripting",
+        "publicRoot": "src/engine/scripting/public",
+        "internalRoot": "src/engine/scripting/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/scripting/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/scripting.ts",
+          "capabilityId": "game.scripting",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/scripting/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/scripting-system.test.ts",
+        "tests/scripting-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 16,
+      "key": "streaming",
+      "displayName": "Streaming Espacial, LOD & HLOD",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.streaming",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "streaming",
+        "root": "src/engine/streaming",
+        "publicRoot": "src/engine/streaming/public",
+        "internalRoot": "src/engine/streaming/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/streaming/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/streaming.ts",
+          "capabilityId": "game.streaming",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/streaming/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/streaming-system.test.ts",
+        "tests/streaming-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 17,
+      "key": "overlay",
+      "displayName": "Desktop Overlay & Raycast Click Passthrough",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.overlay",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "overlay",
+        "root": "src/engine/overlay",
+        "publicRoot": "src/engine/overlay/public",
+        "internalRoot": "src/engine/overlay/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/overlay/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/overlay.ts",
+          "capabilityId": "game.overlay",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/overlay/plugin.ts",
+      "nativeFiles": [
+        "src-tauri/src/overlay.rs"
+      ],
+      "tests": [
+        "tests/overlay-system.test.ts",
+        "tests/overlay-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 18,
+      "key": "security",
+      "displayName": "Profiler, Anti-cheat & Crash Dumper",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.security",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "security",
+        "root": "src/engine/security",
+        "publicRoot": "src/engine/security/public",
+        "internalRoot": "src/engine/security/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/security/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/security.ts",
+          "capabilityId": "game.security",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/security/plugin.ts",
+      "nativeFiles": [
+        "src-tauri/src/security.rs"
+      ],
+      "tests": [
+        "tests/security-system.test.ts",
+        "tests/security-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 19,
+      "key": "modding",
+      "displayName": "Steam Workshop, Dynamic Loading & Asset Override",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.modding",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "modding",
+        "root": "src/engine/modding",
+        "publicRoot": "src/engine/modding/public",
+        "internalRoot": "src/engine/modding/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/modding/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/modding.ts",
+          "capabilityId": "game.modding",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/modding/plugin.ts",
+      "nativeFiles": [
+        "src-tauri/src/modding.rs"
+      ],
+      "tests": [
+        "tests/modding-system.test.ts",
+        "tests/modding-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 20,
+      "key": "monetization",
+      "displayName": "Microtransações Steam & Steam Inventory Service",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.monetization",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "monetization",
+        "root": "src/engine/monetization",
+        "publicRoot": "src/engine/monetization/public",
+        "internalRoot": "src/engine/monetization/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/monetization/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/monetization.ts",
+          "capabilityId": "game.monetization",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/monetization/plugin.ts",
+      "nativeFiles": [
+        "src-tauri/src/monetization.rs"
+      ],
+      "tests": [
+        "tests/monetization-system.test.ts",
+        "tests/monetization-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    }
+  ],
+  "runtimeModules": [
+    {
+      "layer": null,
+      "key": "game-loop",
+      "displayName": "Deterministic Game Loop",
+      "category": "runtime",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.loop",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "game-loop",
+        "root": "src/engine/game-loop",
+        "publicRoot": "src/engine/game-loop/public",
+        "internalRoot": "src/engine/game-loop/internal",
+        "presentInStage3": false,
+        "implementationOrigin": "plugin"
+      },
+      "contracts": [
+        "src/contracts/game-loop/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/game-loop.ts",
+          "capabilityId": "game.loop",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/game-loop/plugin.ts",
+      "nativeFiles": [],
+      "tests": [],
+      "extraFiles": []
+    },
+    {
+      "layer": null,
+      "key": "render",
+      "displayName": "Render Runtime",
+      "category": "runtime",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.render",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "render",
+        "root": "src/engine/render",
+        "publicRoot": "src/engine/render/public",
+        "internalRoot": "src/engine/render/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/render/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/render.ts",
+          "capabilityId": "game.render",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/render/plugin.ts",
+      "nativeFiles": [],
+      "tests": [],
+      "extraFiles": []
+    },
+    {
+      "layer": null,
+      "key": "net",
+      "displayName": "Multiplayer Network & State Replication",
+      "category": "runtime",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.net",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "net",
+        "root": "src/engine/net",
+        "publicRoot": "src/engine/net/public",
+        "internalRoot": "src/engine/net/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/net/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/net.ts",
+          "capabilityId": "game.net",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/net/plugin.ts",
+      "nativeFiles": [],
+      "tests": [],
+      "extraFiles": []
+    }
+  ],
+  "canonicalModules": [
+    {
+      "layer": 1,
+      "key": "steam",
+      "displayName": "Steamworks & P2P",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.steam",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "steam",
+        "root": "src/engine/steam",
+        "publicRoot": "src/engine/steam/public",
+        "internalRoot": "src/engine/steam/internal",
+        "presentInStage3": false,
+        "implementationOrigin": "plugin-native"
+      },
+      "contracts": [
+        "src/contracts/steam/types.ts",
+        "src/contracts/steam/net-types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/steam.ts",
+          "capabilityId": "game.steam",
+          "version": "1.0.0",
+          "primary": true
+        },
+        {
+          "path": "src/tokens/steam-net.ts",
+          "capabilityId": "game.steam.net",
+          "version": "1.0.0",
+          "primary": false
+        }
+      ],
+      "plugin": "src/plugins/steam/plugin.ts",
+      "nativeFiles": [
+        "src-tauri/src/steam.rs"
+      ],
+      "tests": [
+        "tests/steam-integration.test.ts",
+        "tests/steam-p2p-smoke.mjs",
+        "tests/steam-smoke-test.mjs"
+      ],
+      "extraFiles": [
+        "steam_appid.txt",
+        "src-tauri/steam_appid.txt"
+      ]
+    },
+    {
+      "layer": 2,
+      "key": "input",
+      "displayName": "Input Manager",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.input",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "input",
+        "root": "src/engine/input",
+        "publicRoot": "src/engine/input/public",
+        "internalRoot": "src/engine/input/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/input/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/input.ts",
+          "capabilityId": "game.input",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/input/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/input-system.test.ts",
+        "tests/input-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 3,
+      "key": "assets",
+      "displayName": "Asset Pipeline & VRAM Cache",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.assets",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "assets",
+        "root": "src/engine/assets",
+        "publicRoot": "src/engine/assets/public",
+        "internalRoot": "src/engine/assets/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/assets/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/assets.ts",
+          "capabilityId": "game.assets",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/assets/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/assets-pipeline.test.ts",
+        "tests/assets-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 4,
+      "key": "physics",
+      "displayName": "Motor de Física (Rapier WASM)",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.physics",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "physics",
+        "root": "src/engine/physics",
+        "publicRoot": "src/engine/physics/public",
+        "internalRoot": "src/engine/physics/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/physics/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/physics.ts",
+          "capabilityId": "game.physics",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/physics/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/physics-system.test.ts",
+        "tests/physics-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 5,
+      "key": "storage",
+      "displayName": "Persistência & Banco de Dados",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.storage",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "storage",
+        "root": "src/engine/storage",
+        "publicRoot": "src/engine/storage/public",
+        "internalRoot": "src/engine/storage/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/storage/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/storage.ts",
+          "capabilityId": "game.storage",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/storage/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/storage-system.test.ts",
+        "tests/storage-smoke-test.mjs",
+        "tests/storage-cloud-db.test.ts",
+        "tests/storage-persistence.test.ts"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 6,
+      "key": "world",
+      "displayName": "Gerenciador de Mundo, Cenas & ECS",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.world",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "world",
+        "root": "src/engine/world",
+        "publicRoot": "src/engine/world/public",
+        "internalRoot": "src/engine/world/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/world/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/world.ts",
+          "capabilityId": "game.world",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/world/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/world-system.test.ts",
+        "tests/world-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 7,
+      "key": "ui",
+      "displayName": "Interface de Usuário & HUD",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.ui",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "ui",
+        "root": "src/engine/ui",
+        "publicRoot": "src/engine/ui/public",
+        "internalRoot": "src/engine/ui/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/ui/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/ui.ts",
+          "capabilityId": "game.ui",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/ui/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/ui-system.test.ts",
+        "tests/ui-smoke-test.mjs"
+      ],
+      "extraFiles": [
+        "src/styles/ui.css"
+      ]
+    },
+    {
+      "layer": 8,
+      "key": "anim",
+      "displayName": "Pipeline de Animações & State Machines",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.anim",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "anim",
+        "root": "src/engine/anim",
+        "publicRoot": "src/engine/anim/public",
+        "internalRoot": "src/engine/anim/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/anim/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/anim.ts",
+          "capabilityId": "game.anim",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/anim/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/anim-system.test.ts",
+        "tests/anim-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 9,
+      "key": "sprites",
+      "displayName": "Motor 2D, Tilemaps & Pixel Art",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.sprites",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "sprites",
+        "root": "src/engine/sprites",
+        "publicRoot": "src/engine/sprites/public",
+        "internalRoot": "src/engine/sprites/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/sprites/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/sprites.ts",
+          "capabilityId": "game.sprites",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/sprites/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/sprites-system.test.ts",
+        "tests/sprites-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 10,
+      "key": "audio",
+      "displayName": "Mixer de Áudio Espacial 3D",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.audio",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "audio",
+        "root": "src/engine/audio",
+        "publicRoot": "src/engine/audio/public",
+        "internalRoot": "src/engine/audio/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/audio/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/audio.ts",
+          "capabilityId": "game.audio",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/audio/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/audio-system.test.ts",
+        "tests/audio-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 11,
+      "key": "camera",
+      "displayName": "Câmera Dinâmica & SpringArm",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.camera",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "camera",
+        "root": "src/engine/camera",
+        "publicRoot": "src/engine/camera/public",
+        "internalRoot": "src/engine/camera/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/camera/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/camera.ts",
+          "capabilityId": "game.camera",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/camera/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/camera-system.test.ts",
+        "tests/camera-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 12,
+      "key": "ai",
+      "displayName": "Inteligência Artificial & NavMesh",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.ai",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "ai",
+        "root": "src/engine/ai",
+        "publicRoot": "src/engine/ai/public",
+        "internalRoot": "src/engine/ai/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/ai/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/ai.ts",
+          "capabilityId": "game.ai",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/ai/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/ai-system.test.ts",
+        "tests/ai-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 13,
+      "key": "vfx",
+      "displayName": "Partículas GPU, Decals & Pós-Processamento",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.vfx",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "vfx",
+        "root": "src/engine/vfx",
+        "publicRoot": "src/engine/vfx/public",
+        "internalRoot": "src/engine/vfx/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/vfx/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/vfx.ts",
+          "capabilityId": "game.vfx",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/vfx/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/vfx-system.test.ts",
+        "tests/vfx-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 14,
+      "key": "terrain",
+      "displayName": "Terreno Procedural, Biomas & Voxels",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.terrain",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "terrain",
+        "root": "src/engine/terrain",
+        "publicRoot": "src/engine/terrain/public",
+        "internalRoot": "src/engine/terrain/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/terrain/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/terrain.ts",
+          "capabilityId": "game.terrain",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/terrain/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/terrain-system.test.ts",
+        "tests/terrain-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 15,
+      "key": "scripting",
+      "displayName": "Cutscenes, Diálogos & Quests",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.scripting",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "scripting",
+        "root": "src/engine/scripting",
+        "publicRoot": "src/engine/scripting/public",
+        "internalRoot": "src/engine/scripting/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/scripting/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/scripting.ts",
+          "capabilityId": "game.scripting",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/scripting/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/scripting-system.test.ts",
+        "tests/scripting-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 16,
+      "key": "streaming",
+      "displayName": "Streaming Espacial, LOD & HLOD",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.streaming",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "streaming",
+        "root": "src/engine/streaming",
+        "publicRoot": "src/engine/streaming/public",
+        "internalRoot": "src/engine/streaming/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/streaming/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/streaming.ts",
+          "capabilityId": "game.streaming",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/streaming/plugin.ts",
+      "nativeFiles": [],
+      "tests": [
+        "tests/streaming-system.test.ts",
+        "tests/streaming-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 17,
+      "key": "overlay",
+      "displayName": "Desktop Overlay & Raycast Click Passthrough",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.overlay",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "overlay",
+        "root": "src/engine/overlay",
+        "publicRoot": "src/engine/overlay/public",
+        "internalRoot": "src/engine/overlay/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/overlay/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/overlay.ts",
+          "capabilityId": "game.overlay",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/overlay/plugin.ts",
+      "nativeFiles": [
+        "src-tauri/src/overlay.rs"
+      ],
+      "tests": [
+        "tests/overlay-system.test.ts",
+        "tests/overlay-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 18,
+      "key": "security",
+      "displayName": "Profiler, Anti-cheat & Crash Dumper",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.security",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "security",
+        "root": "src/engine/security",
+        "publicRoot": "src/engine/security/public",
+        "internalRoot": "src/engine/security/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/security/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/security.ts",
+          "capabilityId": "game.security",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/security/plugin.ts",
+      "nativeFiles": [
+        "src-tauri/src/security.rs"
+      ],
+      "tests": [
+        "tests/security-system.test.ts",
+        "tests/security-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 19,
+      "key": "modding",
+      "displayName": "Steam Workshop, Dynamic Loading & Asset Override",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.modding",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "modding",
+        "root": "src/engine/modding",
+        "publicRoot": "src/engine/modding/public",
+        "internalRoot": "src/engine/modding/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/modding/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/modding.ts",
+          "capabilityId": "game.modding",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/modding/plugin.ts",
+      "nativeFiles": [
+        "src-tauri/src/modding.rs"
+      ],
+      "tests": [
+        "tests/modding-system.test.ts",
+        "tests/modding-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": 20,
+      "key": "monetization",
+      "displayName": "Microtransações Steam & Steam Inventory Service",
+      "category": "functional",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.monetization",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "monetization",
+        "root": "src/engine/monetization",
+        "publicRoot": "src/engine/monetization/public",
+        "internalRoot": "src/engine/monetization/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/monetization/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/monetization.ts",
+          "capabilityId": "game.monetization",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/monetization/plugin.ts",
+      "nativeFiles": [
+        "src-tauri/src/monetization.rs"
+      ],
+      "tests": [
+        "tests/monetization-system.test.ts",
+        "tests/monetization-smoke-test.mjs"
+      ],
+      "extraFiles": []
+    },
+    {
+      "layer": null,
+      "key": "game-loop",
+      "displayName": "Deterministic Game Loop",
+      "category": "runtime",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.loop",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "game-loop",
+        "root": "src/engine/game-loop",
+        "publicRoot": "src/engine/game-loop/public",
+        "internalRoot": "src/engine/game-loop/internal",
+        "presentInStage3": false,
+        "implementationOrigin": "plugin"
+      },
+      "contracts": [
+        "src/contracts/game-loop/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/game-loop.ts",
+          "capabilityId": "game.loop",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/game-loop/plugin.ts",
+      "nativeFiles": [],
+      "tests": [],
+      "extraFiles": []
+    },
+    {
+      "layer": null,
+      "key": "render",
+      "displayName": "Render Runtime",
+      "category": "runtime",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.render",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "render",
+        "root": "src/engine/render",
+        "publicRoot": "src/engine/render/public",
+        "internalRoot": "src/engine/render/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/render/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/render.ts",
+          "capabilityId": "game.render",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/render/plugin.ts",
+      "nativeFiles": [],
+      "tests": [],
+      "extraFiles": []
+    },
+    {
+      "layer": null,
+      "key": "net",
+      "displayName": "Multiplayer Network & State Replication",
+      "category": "runtime",
+      "firstParty": true,
+      "bootstrapped": true,
+      "capabilityId": "game.net",
+      "capabilityVersion": "1.0.0",
+      "engine": {
+        "directoryName": "net",
+        "root": "src/engine/net",
+        "publicRoot": "src/engine/net/public",
+        "internalRoot": "src/engine/net/internal",
+        "presentInStage3": true,
+        "implementationOrigin": "engine"
+      },
+      "contracts": [
+        "src/contracts/net/types.ts"
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/net.ts",
+          "capabilityId": "game.net",
+          "version": "1.0.0",
+          "primary": true
+        }
+      ],
+      "plugin": "src/plugins/net/plugin.ts",
+      "nativeFiles": [],
+      "tests": [],
+      "extraFiles": []
+    }
+  ],
+  "toolingPlugins": [
+    {
+      "key": "debug",
+      "pluginId": "game.debug",
+      "plugin": "src/plugins/debug/plugin.ts",
+      "category": "tooling",
+      "bootstrapped": true,
+      "canonicalEngineModule": false
+    }
+  ],
+  "experimentalPlugins": [
+    {
+      "key": "player",
+      "pluginId": "game.player",
+      "plugin": "src/plugins/player/plugin.ts",
+      "category": "experimental",
+      "bootstrapped": false,
+      "canonicalEngineModule": false,
+      "status": "orphaned-not-in-createEnginePlugins"
+    }
+  ],
+  "expectedStage3": {
+    "engineModules": [
+      "ai",
+      "anim",
+      "assets",
+      "audio",
+      "camera",
+      "input",
+      "modding",
+      "monetization",
+      "net",
+      "overlay",
+      "physics",
+      "render",
+      "scripting",
+      "security",
+      "sprites",
+      "storage",
+      "streaming",
+      "terrain",
+      "ui",
+      "vfx",
+      "world"
+    ],
+    "plugins": [
+      "ai",
+      "anim",
+      "assets",
+      "audio",
+      "camera",
+      "debug",
+      "game-loop",
+      "input",
+      "modding",
+      "monetization",
+      "net",
+      "overlay",
+      "physics",
+      "player",
+      "render",
+      "scripting",
+      "security",
+      "sprites",
+      "steam",
+      "storage",
+      "streaming",
+      "terrain",
+      "ui",
+      "vfx",
+      "world"
+    ],
+    "tokens": [
+      "ai",
+      "anim",
+      "assets",
+      "audio",
+      "camera",
+      "game-loop",
+      "input",
+      "modding",
+      "monetization",
+      "net",
+      "overlay",
+      "physics",
+      "render",
+      "scripting",
+      "security",
+      "sprites",
+      "steam",
+      "steam-net",
+      "storage",
+      "streaming",
+      "terrain",
+      "ui",
+      "vfx",
+      "world"
+    ],
+    "contractAreas": [
+      "ai",
+      "anim",
+      "assets",
+      "audio",
+      "camera",
+      "game-loop",
+      "input",
+      "modding",
+      "monetization",
+      "net",
+      "overlay",
+      "physics",
+      "render",
+      "scripting",
+      "security",
+      "sprites",
+      "steam",
+      "storage",
+      "streaming",
+      "terrain",
+      "ui",
+      "vfx",
+      "world"
+    ]
+  }
+}

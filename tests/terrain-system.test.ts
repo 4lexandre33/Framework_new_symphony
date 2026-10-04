@@ -11,23 +11,23 @@ import type {
 
 import {
   BiomeEvaluator,
-} from "../src/engine/terrain/BiomeEvaluator";
+} from "../src/engine/terrain/internal/BiomeEvaluator";
 
 import {
   GreedyMesher,
-} from "../src/engine/terrain/GreedyMesher";
+} from "../src/engine/terrain/internal/GreedyMesher";
 
 import {
   PerlinNoiseService,
-} from "../src/engine/terrain/PerlinNoiseService";
+} from "../src/engine/terrain/internal/PerlinNoiseService";
 
 import {
   ProceduralWorkerPool,
-} from "../src/engine/terrain/ProceduralWorkerPool";
+} from "../src/engine/terrain/internal/ProceduralWorkerPool";
 
 import {
   VoxelChunkManager,
-} from "../src/engine/terrain/VoxelChunkManager";
+} from "../src/engine/terrain/internal/VoxelChunkManager";
 
 import {
   createTerrainPlugin,

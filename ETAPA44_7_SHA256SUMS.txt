@@ -1,0 +1,6 @@
+2f81f26d9dc65d970920962337f17de9a4c8ee81dc33d9066cb3b9f05dfea564  ETAPA44_7_MANIFEST.json
+db02517337ed6b0099cfbccc862b07408ca8fbf175ed6ccd6ecc5f90af5548a8  scripts/architecture/stage44-7-validate-game-flow.mjs
+dbb5188e08540edef15856eddcf356fe5fb6c393a83258c94f977ff9a4fc511d  src/app/flows/GameFlowFSM.ts
+a4e04803930ce091064f349bce808e3f8123c8c0654abdf1edc8a4dca0162cbb  src/app/flows/README.txt
+cd9eed2638233e59877712f44edf7c80a528370de35555d2a28f9ee44ee5ab9d  src/app/flows/index.ts
+ff989f2147d58a6bc483be347a3a00d127fdbfbb454abea23da76f24fd6e7055  tests/game-flow-fsm.test.ts

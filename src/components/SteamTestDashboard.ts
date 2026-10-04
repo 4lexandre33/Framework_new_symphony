@@ -1,14 +1,14 @@
-import { SteamBridgeService } from "../plugins/steam/plugin";
-import { makeEnvelope } from "../core/contracts/envelope";
-import type { Kernel } from "../core/kernel";
+import type { SteamApi } from "../tokens/steam";
+import { makeEnvelope } from "@core";
+import type { Kernel } from "@core";
 
 export class SteamTestDashboard {
   private container: HTMLDivElement | null = null;
-  private steamService: SteamBridgeService;
+  private readonly steamService: SteamApi;
   private unsubscribeKernel: (() => void) | null = null;
 
-  constructor(private readonly kernel: Kernel) {
-    this.steamService = new SteamBridgeService();
+  constructor(private readonly kernel: Kernel, steamService: SteamApi) {
+    this.steamService = steamService;
     this.subscribeToKernelEvents();
   }
 

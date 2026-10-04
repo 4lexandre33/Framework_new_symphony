@@ -1,0 +1,89 @@
+{
+  "stage": "53",
+  "name": "Resources + Cooldowns",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51",
+    "52"
+  ],
+  "roadmapSource": "Camada 2 roadmap stages 45-70",
+  "scope": {
+    "implemented": [
+      "ResourceId",
+      "ResourcePool",
+      "CooldownId",
+      "Cooldown",
+      "CooldownSet"
+    ],
+    "explicitlyDeferred": [
+      "InteractionId",
+      "InteractionIntent",
+      "Affordance",
+      "InteractionRequirement",
+      "InteractionOutcome",
+      "AbilityAction resource/cooldown integration",
+      "StatusEffect resource integration",
+      "Modifier ResourcePool integration"
+    ]
+  },
+  "resourcePool": {
+    "numericModel": "finite number, current >= 0, max > 0, current <= max",
+    "operations": [
+      "canSpend",
+      "trySpend",
+      "gain",
+      "setCurrent",
+      "setMax",
+      "fill",
+      "empty",
+      "toSnapshot",
+      "fromSnapshot"
+    ],
+    "spendSemantics": "atomic all-or-nothing",
+    "gainSemantics": "saturates at max and returns applied amount"
+  },
+  "cooldown": {
+    "time": "DomainDuration + SimulationTimer",
+    "ready": "timer idle or completed",
+    "active": "timer running",
+    "operations": [
+      "start",
+      "restart",
+      "clear",
+      "advance",
+      "toSnapshot",
+      "fromSnapshot"
+    ]
+  },
+  "cooldownSet": {
+    "storage": "Map<CooldownId, Cooldown>",
+    "hotPath": "advance iterates Map directly without temporary arrays",
+    "snapshot": "deterministic sorted by CooldownId"
+  },
+  "rules": [
+    "Agent.health is not automatically migrated to ResourcePool.",
+    "No Ability/Status/Modifier integration before Stage 62.",
+    "No wall clock reads.",
+    "No renderer/physics/platform dependencies.",
+    "Compatible with 2D, 2.5D, 3D and headless execution.",
+    "Stage 54 Interaction is not anticipated."
+  ],
+  "files": [
+    "scripts/architecture/stage53-validate-resources-cooldowns.mjs",
+    "src/domain/mechanics/Cooldown.ts",
+    "src/domain/mechanics/CooldownId.ts",
+    "src/domain/mechanics/CooldownSet.ts",
+    "src/domain/mechanics/README.txt",
+    "src/domain/mechanics/ResourceId.ts",
+    "src/domain/mechanics/ResourcePool.ts",
+    "src/domain/mechanics/index.ts",
+    "tests/domain-resources-cooldowns-purity.test.ts",
+    "tests/domain-resources-cooldowns.test.ts"
+  ]
+}

@@ -1,4 +1,4 @@
-import { defineEvent } from "../../core/contracts";
+import { defineEvent } from "@core";
 
 export type InputDeviceType = "keyboard_mouse" | "gamepad" | "touch";
 

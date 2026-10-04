@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import * as THREE from "three";
-import { SpringArm3D } from "../src/engine/camera/SpringArm3D";
-import { TraumaCameraShake } from "../src/engine/camera/TraumaCameraShake";
-import { VirtualCameraStack } from "../src/engine/camera/VirtualCameraStack";
+import { SpringArm3D } from "../src/engine/camera/internal/SpringArm3D";
+import { TraumaCameraShake } from "../src/engine/camera/internal/TraumaCameraShake";
+import { VirtualCameraStack } from "../src/engine/camera/internal/VirtualCameraStack";
 
 describe("Camada de Câmera Dinâmica & SpringArm (game.camera)", () => {
   let springArm: SpringArm3D;

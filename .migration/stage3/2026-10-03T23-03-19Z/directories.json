@@ -1,0 +1,507 @@
+[
+  {
+    "path": ".vscode",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "scripts",
+    "directFileCount": 2,
+    "directDirectoryCount": 1
+  },
+  {
+    "path": "scripts/architecture",
+    "directFileCount": 4,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src",
+    "directFileCount": 3,
+    "directDirectoryCount": 10
+  },
+  {
+    "path": "src-tauri",
+    "directFileCount": 6,
+    "directDirectoryCount": 4
+  },
+  {
+    "path": "src-tauri/capabilities",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src-tauri/gen",
+    "directFileCount": 0,
+    "directDirectoryCount": 1
+  },
+  {
+    "path": "src-tauri/gen/schemas",
+    "directFileCount": 4,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src-tauri/icons",
+    "directFileCount": 16,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src-tauri/src",
+    "directFileCount": 7,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/app",
+    "directFileCount": 4,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/assets",
+    "directFileCount": 3,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/components",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts",
+    "directFileCount": 0,
+    "directDirectoryCount": 23
+  },
+  {
+    "path": "src/contracts/ai",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/anim",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/assets",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/audio",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/camera",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/game-loop",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/input",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/modding",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/monetization",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/net",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/overlay",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/physics",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/render",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/scripting",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/security",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/sprites",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/steam",
+    "directFileCount": 2,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/storage",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/streaming",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/terrain",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/ui",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/vfx",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/contracts/world",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/core",
+    "directFileCount": 4,
+    "directDirectoryCount": 5
+  },
+  {
+    "path": "src/core/api",
+    "directFileCount": 3,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/core/contracts",
+    "directFileCount": 22,
+    "directDirectoryCount": 3
+  },
+  {
+    "path": "src/core/contracts/commands",
+    "directFileCount": 3,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/core/contracts/events",
+    "directFileCount": 4,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/core/contracts/queries",
+    "directFileCount": 3,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/core/internal",
+    "directFileCount": 31,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/core/runtime",
+    "directFileCount": 17,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/core/scripts",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/debug",
+    "directFileCount": 0,
+    "directDirectoryCount": 2
+  },
+  {
+    "path": "src/debug/diagnostics",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/debug/hud",
+    "directFileCount": 4,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine",
+    "directFileCount": 0,
+    "directDirectoryCount": 21
+  },
+  {
+    "path": "src/engine/ai",
+    "directFileCount": 5,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine/anim",
+    "directFileCount": 5,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine/assets",
+    "directFileCount": 4,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine/audio",
+    "directFileCount": 4,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine/camera",
+    "directFileCount": 4,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine/input",
+    "directFileCount": 3,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine/modding",
+    "directFileCount": 5,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine/monetization",
+    "directFileCount": 5,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine/net",
+    "directFileCount": 4,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine/overlay",
+    "directFileCount": 3,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine/physics",
+    "directFileCount": 4,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine/render",
+    "directFileCount": 4,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine/scripting",
+    "directFileCount": 4,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine/security",
+    "directFileCount": 4,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine/sprites",
+    "directFileCount": 5,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine/storage",
+    "directFileCount": 3,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine/streaming",
+    "directFileCount": 5,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine/terrain",
+    "directFileCount": 6,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine/ui",
+    "directFileCount": 5,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine/vfx",
+    "directFileCount": 5,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/engine/world",
+    "directFileCount": 6,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins",
+    "directFileCount": 0,
+    "directDirectoryCount": 25
+  },
+  {
+    "path": "src/plugins/ai",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/anim",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/assets",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/audio",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/camera",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/debug",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/game-loop",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/input",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/modding",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/monetization",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/net",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/overlay",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/physics",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/player",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/render",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/scripting",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/security",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/sprites",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/steam",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/storage",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/streaming",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/terrain",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/ui",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/vfx",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/plugins/world",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/styles",
+    "directFileCount": 1,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "src/tokens",
+    "directFileCount": 24,
+    "directDirectoryCount": 0
+  },
+  {
+    "path": "tests",
+    "directFileCount": 51,
+    "directDirectoryCount": 1
+  },
+  {
+    "path": "tests/tests",
+    "directFileCount": 0,
+    "directDirectoryCount": 0
+  }
+]
