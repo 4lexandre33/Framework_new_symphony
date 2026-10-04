@@ -1,0 +1,133 @@
+PROJETO1 — ETAPA 66 / PORTABILITY GATE v2
+
+OBJETIVO
+Transformar o hard invariant da Camada 2 em auditoria executável global.
+
+ESCOPO
+Todos os arquivos:
+src/domain/**/*.ts
+
+O gate não depende de uma lista manual de subdomínios. Novos arquivos .ts
+adicionados futuramente em src/domain passam automaticamente pela auditoria.
+
+REGRAS
+
+PRT001 — IMPORT BOUNDARY
+Todo import/export/import-type/dynamic-import em src/domain deve usar caminho
+relativo que permaneça dentro de src/domain.
+
+Isso proíbe implicitamente:
+- src/core;
+- src/engine;
+- src/services;
+- src/app;
+- src/plugins;
+- packages externos;
+- Three.js;
+- Babylon.js;
+- Rapier;
+- Tauri;
+- bibliotecas Node.
+
+PRT002 — RUNTIME GLOBALS
+Proibidos globals de browser/DOM/Node/plataforma, incluindo:
+- window/document/navigator;
+- storage;
+- fetch/websocket/workers;
+- Canvas/WebGL/WebGPU;
+- DOM events/input;
+- AudioContext;
+- process/Buffer;
+- Steamworks globals.
+
+PRT003 — WALL CLOCK / HOST TIMERS
+Proibidos:
+- Date;
+- performance;
+- setTimeout/setInterval/setImmediate;
+- requestAnimationFrame/cancelAnimationFrame.
+
+ClockPort é permitido porque é somente contrato, não consulta relógio concreto.
+
+SimulationTick/DomainDuration são permitidos porque são dados determinísticos
+externamente avançados.
+
+PRT004 — GLOBAL ENTROPY
+Proibidos:
+- Math.random;
+- crypto.getRandomValues;
+- crypto.randomUUID.
+
+DeterministicRng/RandomStream da Etapa 64 são permitidos.
+
+PRT005 — SPATIAL/RENDER/PHYSICS IMPLEMENTATION SYMBOLS
+Proibidos símbolos concretos como:
+- Vector2/Vector3/Vector4;
+- Matrix3/Matrix4;
+- Quaternion/Euler;
+- Object3D/Mesh/Sprite/Camera/Scene;
+- renderer/material/texture types;
+- Collider/RigidBody/Rapier handles.
+
+PRT006 — DIMENSION-SPECIFIC DOMAIN MODEL
+Declarações top-level/class/interface/type/enum/function terminando em:
+- 2D
+- 3D
+
+são proibidas.
+
+Exemplos que o gate reprova:
+Agent2D
+Agent3D
+Combat3D
+Inventory2D
+
+A mesma entidade lógica precisa ser reutilizável em 2D / 2.5D / 3D.
+
+PRT007 — MODULE ESCAPES
+CommonJS require() é proibido em src/domain.
+Triple-slash path/types references também são proibidas.
+
+PRT008 — PARSE INTEGRITY
+Todo arquivo .ts de domínio deve ser parseável pelo TypeScript Compiler API.
+
+SELF-TEST
+tests/domain-portability-gate-v2-selftest.test.ts cria fixtures temporárias e
+prova que o auditor:
+- aceita domínio puro;
+- detecta package externo;
+- detecta DOM;
+- detecta Date;
+- detecta Math.random;
+- detecta Vector3 sem import;
+- detecta Agent3D;
+- detecta require;
+- detecta triple-slash types.
+
+Isso impede um gate "verde" apenas porque não existem casos negativos no
+repositório atual.
+
+AST
+A auditoria usa TypeScript Compiler API.
+
+Comentários e README não geram violações.
+A fiscalização é estrutural sobre código TypeScript, module specifiers,
+identifiers e declarações.
+
+COMPATIBILIDADE
+Gate esperado:
+2D
+2.5D
+3D
+headless
+Node/Vitest para testes do domínio
+
+Node só pode existir no harness de teste/auditoria; nunca dentro de src/domain.
+
+ETAPA 67
+Performance Audit não é antecipada.
+Esta etapa fiscaliza portabilidade e dimensionalidade, não orçamento de
+alocação, throughput ou benchmarks.
+
+PRÓXIMA ETAPA
+67 — Performance Audit.

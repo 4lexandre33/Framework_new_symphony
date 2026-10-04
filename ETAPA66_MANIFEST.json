@@ -1,0 +1,80 @@
+{
+  "stage": "66",
+  "name": "Portability Gate v2",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51",
+    "52",
+    "53",
+    "54",
+    "55",
+    "56",
+    "57",
+    "58",
+    "59",
+    "60",
+    "61",
+    "62",
+    "63",
+    "64",
+    "65"
+  ],
+  "gateVersion": "2.0.0",
+  "scope": "all src/domain/**/*.ts files discovered recursively",
+  "rules": {
+    "PRT001": "all module references must remain inside src/domain",
+    "PRT002": "Node/DOM/browser/platform runtime globals are forbidden",
+    "PRT003": "wall-clock and host timer globals are forbidden",
+    "PRT004": "global/external entropy is forbidden",
+    "PRT005": "concrete renderer/physics/spatial symbols are forbidden",
+    "PRT006": "dimension-specific *2D/*3D domain declarations are forbidden",
+    "PRT007": "CommonJS require and triple-slash external references are forbidden",
+    "PRT008": "domain TypeScript must parse without diagnostics"
+  },
+  "implementation": [
+    "TypeScript Compiler API AST audit",
+    "recursive automatic discovery of all domain TypeScript sources",
+    "human-readable audit CLI",
+    "machine-readable --json audit CLI",
+    "Vitest project gate",
+    "negative auditor self-tests with temporary fixtures",
+    "legacy dimension-agnostic gate retained in validator"
+  ],
+  "localValidation": {
+    "domainFilesAudited": 130,
+    "moduleReferencesAudited": 547,
+    "identifiersAudited": 7274,
+    "violations": 0,
+    "strictTypeScript": "PASS",
+    "negativeRulesDetected": [
+      "PRT001",
+      "PRT002",
+      "PRT003",
+      "PRT004",
+      "PRT005",
+      "PRT006",
+      "PRT007"
+    ]
+  },
+  "explicitlyDeferred": [
+    "Stage 67 Performance Audit",
+    "allocation budgets",
+    "microbenchmarks",
+    "hot-loop profiling",
+    "Stage 68 cross-domain invariants"
+  ],
+  "files": [
+    "scripts/architecture/lib/domain-portability-v2.mjs",
+    "scripts/architecture/stage66-audit-domain-portability-v2.mjs",
+    "scripts/architecture/stage66-validate-portability-gate-v2.mjs",
+    "tests/domain-portability-gate-v2.test.ts",
+    "tests/domain-portability-gate-v2-selftest.test.ts",
+    "ETAPA66_PORTABILITY_GATE_V2.txt"
+  ]
+}
