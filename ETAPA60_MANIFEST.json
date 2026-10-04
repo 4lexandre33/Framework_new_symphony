@@ -1,0 +1,60 @@
+{
+  "stage": "60",
+  "name": "Definitions",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51",
+    "52",
+    "53",
+    "54",
+    "55",
+    "56",
+    "57",
+    "58",
+    "59"
+  ],
+  "implemented": [
+    "DefinitionKindId",
+    "DefinitionId",
+    "DefinitionRef",
+    "DefinitionValidator",
+    "DefinitionSet",
+    "GameDefinitions"
+  ],
+  "rules": [
+    "Definition identity is qualified by kindId + definitionId.",
+    "DefinitionId does not need to be globally unique across kinds.",
+    "DefinitionSet is immutable after construction.",
+    "DefinitionSet validates all entries before successful construction.",
+    "Validator IDs and definition IDs must be unique within their scopes.",
+    "GameDefinitions is immutable after construction and rejects duplicate kinds.",
+    "Public ordered ID lists are precomputed and reused.",
+    "Definitions never execute gameplay or mutate runtime aggregates.",
+    "Existing domain-specific IDs are preserved.",
+    "Stage 61 semantic classification subsystem is not anticipated."
+  ],
+  "explicitlyDeferred": [
+    "semantic classification",
+    "cross-domain definition bindings",
+    "runtime save integration",
+    "official deterministic RNG integration"
+  ],
+  "files": [
+    "scripts/architecture/stage60-validate-definitions.mjs",
+    "src/domain/definitions/DefinitionId.ts",
+    "src/domain/definitions/DefinitionRef.ts",
+    "src/domain/definitions/DefinitionSet.ts",
+    "src/domain/definitions/DefinitionValidator.ts",
+    "src/domain/definitions/GameDefinitions.ts",
+    "src/domain/definitions/README.txt",
+    "src/domain/definitions/index.ts",
+    "tests/domain-definitions-purity.test.ts",
+    "tests/domain-definitions.test.ts"
+  ]
+}
