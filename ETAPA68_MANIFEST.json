@@ -1,0 +1,78 @@
+{
+  "stage": "68",
+  "name": "Cross-domain invariants",
+  "requires": [
+    "44",
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51",
+    "52",
+    "53",
+    "54",
+    "55",
+    "56",
+    "57",
+    "58",
+    "59",
+    "60",
+    "61",
+    "62",
+    "63",
+    "64",
+    "65",
+    "66",
+    "67"
+  ],
+  "catalogVersion": "1.0.0",
+  "invariantCount": 10,
+  "invariants": [
+    "XINV001 Reward rejection atomicity",
+    "XINV002 Reward exact-delta conservation",
+    "XINV003 Interaction authorization side-effect freedom",
+    "XINV004 Quest State/Event semantic coherence",
+    "XINV005 Progression unlock monotonicity/idempotency",
+    "XINV006 StatusEffect time monotonicity and explicit prune",
+    "XINV007 Location event identity coherence",
+    "XINV008 Snapshot preservation and instance isolation",
+    "XINV009 RNG stream isolation and restore continuation",
+    "XINV010 Deterministic cross-domain headless replay"
+  ],
+  "governance": [
+    "versioned invariant catalog",
+    "one declared test file per invariant",
+    "exactly one @invariant marker per catalog entry",
+    "coverage audit fails on missing or duplicate markers"
+  ],
+  "regressionGates": {
+    "stage67PerformanceAudit": {
+      "ok": true,
+      "violations": 0
+    },
+    "stage66PortabilityGate": {
+      "ok": true,
+      "violations": 0
+    },
+    "strictTypeScriptLayer2": "PASS",
+    "semanticTestTypecheck": "PASS",
+    "runtimeSmoke": "PASS"
+  },
+  "explicitlyDeferred": [
+    "Stage 69 global Layer 2 documentation",
+    "Stage 70 final Layer 2 gate",
+    "new gameplay mechanics",
+    "new cross-domain side effects"
+  ],
+  "files": [
+    "scripts/architecture/lib/domain-cross-invariants-v1.mjs",
+    "scripts/architecture/stage68-audit-cross-domain-invariants.mjs",
+    "scripts/architecture/stage68-validate-cross-domain-invariants.mjs",
+    "tests/domain-cross-domain-invariants.test.ts",
+    "tests/domain-cross-domain-invariants-replay.test.ts",
+    "tests/domain-cross-domain-invariant-catalog.test.ts",
+    "ETAPA68_CROSS_DOMAIN_INVARIANTS.txt"
+  ]
+}

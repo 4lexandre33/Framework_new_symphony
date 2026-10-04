@@ -1,0 +1,174 @@
+PROJETO1 — ETAPA 68 / CROSS-DOMAIN INVARIANTS
+
+OBJETIVO
+Congelar relações semânticas que atravessam subdomínios já implementados.
+
+A Etapa 68 NÃO adiciona gameplay.
+Ela transforma propriedades esperadas das integrações em um gate executável.
+
+CATÁLOGO
+Versão: 1.0.0
+
+XINV001 — REWARD REJECTION IS ATOMIC
+Domínios:
+economy + integration
+
+Se grantRewardAtomically() rejeitar:
+- nenhuma CurrencyAccount pode mudar;
+- Inventory não pode mudar.
+
+Isso protege o preflight all-or-nothing da Etapa 62.
+
+XINV002 — REWARD SUCCESS CONSERVES EXACT DELTAS
+Domínios:
+economy + integration
+
+Reward aceito deve alterar destinos exatamente pelas quantidades declaradas.
+Sem:
+- double grant;
+- perda parcial;
+- criação adicional implícita.
+
+XINV003 — INTERACTION AUTHORIZATION IS SIDE-EFFECT FREE
+Domínios:
+interaction + conditions/evaluation + state + integration
+
+Resolver:
+Affordance
+-> Condition
+-> StateStore
+
+pode autorizar/rejeitar, mas não altera StateStore e não executa a ação final.
+
+XINV004 — QUEST PROJECTION/EVENT COHERENCE
+Domínios:
+narrative + state + events + integration
+
+Para o mesmo QuestState:
+createQuestStateProjection()
+projectQuestStateToState()
+createQuestUpdatedEvent().payload.current
+
+precisam representar o mesmo estado semântico.
+
+O event source também precisa ser o QuestId correto.
+
+XINV005 — PROGRESSION UNLOCK MONOTONIC/IDEMPOTENT
+Domínios:
+progression + integration
+
+Aplicar o mesmo ProgressionUnlockPlan duas vezes no mesmo level:
+- primeira aplicação pode criar unlocks;
+- segunda aplicação não duplica;
+- estado final é idêntico.
+
+Subir de level pode adicionar novos unlocks sem revogar os anteriores.
+
+XINV006 — STATUS EFFECT TIME MONOTONICITY
+Domínios:
+mechanics + time + integration
+
+DomainDuration positivo:
+- não aumenta remaining time;
+- effect expira quando o timer completa;
+- effect terminal permanece observável;
+- remoção física do set ocorre somente via pruneTerminal() explícito.
+
+XINV007 — LOCATION EVENT IDENTITY
+Domínios:
+location + events + integration
+
+LocationEntered precisa preservar:
+- typeId;
+- current location no payload;
+- previous location no payload;
+- sourceId igual ao current LocationId;
+- tick/sequence fornecidos pelo chamador.
+
+XINV008 — SNAPSHOT RESTORE STATE + INSTANCE ISOLATION
+Domínios:
+snapshots + state + economy
+
+Restore:
+- preserva snapshot;
+- cria novas instâncias runtime;
+- mutar restored não pode alterar o aggregate original.
+
+Static definitions continuam externas ao bundle quando exigidas.
+
+XINV009 — RNG STREAM ISOLATION + CONTINUATION
+Domínios:
+random + economy + snapshots
+
+Consumir stream.ai não altera stream.loot.
+
+Loot com:
+same root seed
+same stream id
+same call sequence
+=> same result.
+
+Snapshot/restore do RandomStream precisa continuar exatamente da próxima amostra.
+
+XINV010 — DETERMINISTIC CROSS-DOMAIN REPLAY
+Domínios:
+random + economy + progression + narrative + state + snapshots + integration
+
+Mesmo seed + mesmas definições + mesma sequência de comandos:
+- mesmos LootEntryIds;
+- mesmo Inventory;
+- mesma CurrencyAccount;
+- mesma Progression;
+- mesmo UnlockSet;
+- mesma NarrativeState;
+- mesmo StateStore;
+- mesmo SnapshotBundle.
+
+GOVERNANÇA
+scripts/architecture/lib/domain-cross-invariants-v1.mjs
+mantém catálogo versionado.
+
+Cada invariant aponta para um testFile.
+
+Cada teste semântico possui exatamente um marcador:
+@invariant XINVnnn
+
+stage68-audit-cross-domain-invariants.mjs falha se:
+- invariant ID for duplicado;
+- arquivo de teste desaparecer;
+- marker desaparecer;
+- marker for duplicado.
+
+Isso impede redução silenciosa da cobertura.
+
+RELAÇÃO COM ETAPA 67
+Performance Audit permanece independente.
+
+Etapa 68 não altera:
+- budgets;
+- hot paths;
+- lifecycle policy.
+
+O validator roda o auditor estrutural da Etapa 67 para garantir regressão zero.
+
+RELAÇÃO COM ETAPA 66
+Portability Gate v2 continua obrigatório.
+
+Nenhum invariant introduz:
+- renderer;
+- physics;
+- DOM;
+- Tauri;
+- Steamworks;
+- wall-clock;
+- RNG global.
+
+2D / 2.5D / 3D / headless continuam equivalentes no modelo de domínio.
+
+ETAPA 69
+Documentação global da Layer 2 NÃO é antecipada.
+
+Este arquivo documenta somente o gate da Etapa 68 e seus invariantes executáveis.
+
+PRÓXIMA ETAPA
+69 — Documentation.
