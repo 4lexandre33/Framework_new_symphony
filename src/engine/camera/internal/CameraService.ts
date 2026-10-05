@@ -1,10 +1,37 @@
 import * as THREE from "three";
-import type { PluginContext } from "@core";
-import { type CameraApi } from "../../../tokens/camera";
-import { type PhysicsApi } from "../../../tokens/physics";
-import { type Render3DApi } from "../../../tokens/render";
-import { CameraStateChangedEvent, CameraShakeTriggeredEvent, CameraCollisionEvent, type CameraTransformSnapshot, type SpringArmConfig, type Vector3Camera, type VirtualCameraDescriptor } from "../../../contracts/camera/types";
-import { VirtualCameraStack } from "./VirtualCameraStack";
+
+import type {
+  PluginContext,
+} from "@core";
+
+import type {
+  CameraApi,
+} from "../../../tokens/camera";
+
+import type {
+  PhysicsApi,
+} from "../../../tokens/physics";
+
+import type {
+  Render3DApi,
+} from "../../../tokens/render";
+
+import {
+  CameraCollisionEvent,
+  CameraShakeTriggeredEvent,
+  CameraStateChangedEvent,
+} from "../../../contracts/camera/types";
+
+import type {
+  CameraTransformSnapshot,
+  SpringArmConfig,
+  Vector3Camera,
+  VirtualCameraDescriptor,
+} from "../../../contracts/camera/types";
+
+import {
+  VirtualCameraStack,
+} from "./VirtualCameraStack";
 
 export class CameraService
   implements CameraApi {
@@ -26,6 +53,9 @@ export class CameraService
     Render3DApi | null =
       null;
 
+  private disposed =
+    false;
+
   public constructor(
     private readonly ctx:
       PluginContext,
@@ -37,6 +67,12 @@ export class CameraService
     renderApi:
       Render3DApi,
   ): void {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
     this.physics =
       physics;
 
@@ -48,18 +84,33 @@ export class CameraService
     descriptor:
       VirtualCameraDescriptor,
   ): void {
-    this.stack.registerCamera(
-      descriptor,
-    );
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
+    this.stack
+      .registerCamera(
+        descriptor,
+      );
   }
 
   public unregisterVirtualCamera(
-    cameraId: string,
+    cameraId:
+      string,
   ): boolean {
+    if (
+      this.disposed
+    ) {
+      return false;
+    }
+
     const removed =
-      this.stack.unregisterCamera(
-        cameraId,
-      );
+      this.stack
+        .unregisterCamera(
+          cameraId,
+        );
 
     if (
       removed &&
@@ -77,10 +128,17 @@ export class CameraService
   }
 
   public setActiveCamera(
-    cameraId: string,
+    cameraId:
+      string,
     blendDurationSeconds =
       0.5,
   ): boolean {
+    if (
+      this.disposed
+    ) {
+      return false;
+    }
+
     const previousCameraId =
       this.stack
         .getActiveCameraId();
@@ -95,10 +153,11 @@ export class CameraService
       cameraId;
 
     const activated =
-      this.stack.setActiveCamera(
-        cameraId,
-        safeBlendDuration,
-      );
+      this.stack
+        .setActiveCamera(
+          cameraId,
+          safeBlendDuration,
+        );
 
     if (
       activated &&
@@ -122,12 +181,27 @@ export class CameraService
   }
 
   public addTrauma(
-    traumaAmount: number,
+    traumaAmount:
+      number,
   ): void {
     if (
+      this.disposed ||
       !Number.isFinite(
         traumaAmount,
       )
+    ) {
+      return;
+    }
+
+    const safeTrauma =
+      Math.max(
+        0,
+        traumaAmount,
+      );
+
+    if (
+      safeTrauma <=
+      0
     ) {
       return;
     }
@@ -136,18 +210,23 @@ export class CameraService
       this.stack
         .getActiveCameraState();
 
-    if (!active) {
+    if (
+      active ===
+      null
+    ) {
       return;
     }
 
-    active.shake.addTrauma(
-      traumaAmount,
-    );
+    active.shake
+      .addTrauma(
+        safeTrauma,
+      );
 
     this.ctx.events.emit(
       CameraShakeTriggeredEvent.type,
       {
-        traumaAmount,
+        traumaAmount:
+          safeTrauma,
 
         currentTotalTrauma:
           active.shake
@@ -157,29 +236,47 @@ export class CameraService
   }
 
   public setFollowTarget(
-    cameraId: string,
+    cameraId:
+      string,
     targetPosition:
       Vector3Camera,
   ): void {
-    this.stack.setFollowTarget(
-      cameraId,
-      targetPosition,
-    );
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
+    this.stack
+      .setFollowTarget(
+        cameraId,
+        targetPosition,
+      );
   }
 
   public configureSpringArm(
-    cameraId: string,
+    cameraId:
+      string,
     config:
       Partial<SpringArmConfig>,
   ): void {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
     const camera =
-      this.stack.getCameraState(
-        cameraId,
-      );
+      this.stack
+        .getCameraState(
+          cameraId,
+        );
 
     if (
-      !camera ||
-      !camera.springArm
+      camera ===
+        null ||
+      camera.springArm ===
+        null
     ) {
       return;
     }
@@ -192,32 +289,95 @@ export class CameraService
 
   public getActiveCameraId():
     string | null {
+    if (
+      this.disposed
+    ) {
+      return null;
+    }
+
     return this.stack
       .getActiveCameraId();
   }
 
   public getCurrentCameraSnapshot():
     CameraTransformSnapshot | null {
+    if (
+      this.disposed
+    ) {
+      return null;
+    }
+
     const active =
       this.stack
         .getActiveCameraState();
 
-    if (!active) {
+    if (
+      active ===
+      null
+    ) {
       return null;
     }
 
+    const renderCamera =
+      this.renderApi
+        ?.getActiveCamera();
+
+    const position =
+      renderCamera
+        ?.position;
+
+    const rotation =
+      renderCamera
+        ?.quaternion;
+
+    const fov =
+      renderCamera instanceof
+        THREE.PerspectiveCamera
+        ? renderCamera.fov
+        : active.descriptor
+            .fov;
+
     return {
-      position:
-        active.descriptor
-          .position,
+      position: {
+        x:
+          position?.x ??
+          active.descriptor
+            .position.x,
 
-      rotation:
-        active.descriptor
-          .rotation,
+        y:
+          position?.y ??
+          active.descriptor
+            .position.y,
 
-      fov:
-        active.descriptor
-          .fov,
+        z:
+          position?.z ??
+          active.descriptor
+            .position.z,
+      },
+
+      rotation: {
+        x:
+          rotation?.x ??
+          active.descriptor
+            .rotation.x,
+
+        y:
+          rotation?.y ??
+          active.descriptor
+            .rotation.y,
+
+        z:
+          rotation?.z ??
+          active.descriptor
+            .rotation.z,
+
+        w:
+          rotation?.w ??
+          active.descriptor
+            .rotation.w,
+      },
+
+      fov,
 
       isColliding:
         active.springArm
@@ -236,23 +396,30 @@ export class CameraService
   }
 
   public render(
-    deltaSeconds: number,
+    deltaSeconds:
+      number,
   ): void {
-    const safeDelta =
-      this.sanitizeDelta(
-        deltaSeconds,
-      );
+    if (
+      this.disposed
+    ) {
+      return;
+    }
 
     const renderApi =
       this.renderApi;
 
-    if (!renderApi) {
+    if (
+      renderApi ===
+      null
+    ) {
       return;
     }
 
     const cameraTransform =
       this.stack.update(
-        safeDelta,
+        this.sanitizeDelta(
+          deltaSeconds,
+        ),
         this.physics,
       );
 
@@ -272,31 +439,44 @@ export class CameraService
 
     if (
       activeThreeCamera instanceof
-      THREE.PerspectiveCamera
-    ) {
-      if (
-        activeThreeCamera.fov !==
+      THREE.PerspectiveCamera &&
+      activeThreeCamera.fov !==
         cameraTransform.fov
-      ) {
-        activeThreeCamera.fov =
-          cameraTransform.fov;
+    ) {
+      activeThreeCamera.fov =
+        cameraTransform.fov;
 
-        activeThreeCamera
-          .updateProjectionMatrix();
-      }
+      activeThreeCamera
+        .updateProjectionMatrix();
     }
 
     this.emitCollisionChangeIfNeeded();
   }
 
   public dispose(): void {
-    this.stack.clear();
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
+    this.disposed =
+      true;
+
+    this.stack
+      .clear();
 
     this.lastCollisionCameraId =
       null;
 
     this.lastCollisionState =
       false;
+
+    this.physics =
+      null;
+
+    this.renderApi =
+      null;
   }
 
   private emitCollisionChangeIfNeeded():
@@ -310,9 +490,12 @@ export class CameraService
         .getActiveCameraState();
 
     if (
-      !activeCameraId ||
-      !active ||
-      !active.springArm
+      activeCameraId ===
+        null ||
+      active ===
+        null ||
+      active.springArm ===
+        null
     ) {
       this.lastCollisionCameraId =
         activeCameraId;
@@ -336,42 +519,40 @@ export class CameraService
       isColliding;
 
     if (
-      cameraChanged ||
-      collisionChanged
+      !cameraChanged &&
+      !collisionChanged
     ) {
-      const targetLength =
-        active.descriptor
-          .springArmConfig
-          ?.targetArmLength ??
-        active.springArm
-          .armLength;
-
-      this.ctx.events.emit(
-        CameraCollisionEvent.type,
-        {
-          cameraId:
-            activeCameraId,
-
-          isColliding,
-
-          targetLength,
-
-          actualLength:
-            active.springArm
-              .armLength,
-        },
-      );
-
-      this.lastCollisionCameraId =
-        activeCameraId;
-
-      this.lastCollisionState =
-        isColliding;
+      return;
     }
+
+    this.ctx.events.emit(
+      CameraCollisionEvent.type,
+      {
+        cameraId:
+          activeCameraId,
+
+        isColliding,
+
+        targetLength:
+          active.springArm
+            .targetArmLength,
+
+        actualLength:
+          active.springArm
+            .armLength,
+      },
+    );
+
+    this.lastCollisionCameraId =
+      activeCameraId;
+
+    this.lastCollisionState =
+      isColliding;
   }
 
   private sanitizeDelta(
-    deltaSeconds: number,
+    deltaSeconds:
+      number,
   ): number {
     if (
       !Number.isFinite(
@@ -383,11 +564,15 @@ export class CameraService
       return 0;
     }
 
-    return deltaSeconds;
+    return Math.min(
+      deltaSeconds,
+      0.25,
+    );
   }
 
   private sanitizeNonNegative(
-    value: number,
+    value:
+      number,
   ): number {
     if (
       !Number.isFinite(

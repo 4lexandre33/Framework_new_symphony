@@ -258,7 +258,10 @@ export class SkeletalAnimationDriver {
       this.entityAnimations.values()
     ) {
       animation.mixer.update(
-        deltaSeconds,
+        Math.min(
+          deltaSeconds,
+          0.25,
+        ),
       );
     }
   }

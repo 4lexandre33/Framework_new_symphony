@@ -1,26 +1,88 @@
-import type { VFXPresetDescriptor } from "../../../contracts/vfx/types";
-import { GPUParticleSystem } from "./GPUParticleSystem";
-import { DecalManager } from "./DecalManager";
-import { PostProcessingPipeline } from "./PostProcessingPipeline";
+import type {
+  DecalConfig,
+  GPUParticleEmitterConfig,
+  VFXPresetDescriptor,
+} from "../../../contracts/vfx/types";
+
+export interface VFXEffectSink {
+  spawnParticleEmitter(
+    config:
+      GPUParticleEmitterConfig,
+  ): void;
+
+  projectDecal(
+    config:
+      DecalConfig,
+  ): void;
+
+  pulseBloom(
+    strength:
+      number,
+    durationSeconds:
+      number,
+  ): void;
+
+  triggerCameraTrauma(
+    traumaAmount:
+      number,
+  ): void;
+}
 
 export class VFXEffectManager {
   public constructor(
-    private readonly particles: GPUParticleSystem,
-    private readonly decals: DecalManager,
-    private readonly postProcessing: PostProcessingPipeline
+    private readonly sink:
+      VFXEffectSink,
   ) {}
 
-  public triggerPreset(preset: VFXPresetDescriptor, scene?: any, texture?: any): void {
-    if (preset.particleEmitter) {
-      this.particles.spawnEmitter(preset.particleEmitter, texture);
+  public triggerPreset(
+    preset:
+      VFXPresetDescriptor,
+  ): void {
+    if (
+      preset.particleEmitter !==
+      undefined
+    ) {
+      this.sink
+        .spawnParticleEmitter(
+          preset.particleEmitter,
+        );
     }
 
-    if (preset.decal && scene && texture) {
-      this.decals.projectDecal(preset.decal, texture, scene);
+    if (
+      preset.decal !==
+      undefined
+    ) {
+      this.sink
+        .projectDecal(
+          preset.decal,
+        );
     }
 
-    if (preset.postFXPulseBloomStrength) {
-      this.postProcessing.triggerBloomPulse(preset.postFXPulseBloomStrength, 0.3);
+    if (
+      preset.postFXPulseBloomStrength !==
+        undefined
+    ) {
+      this.sink
+        .pulseBloom(
+          preset
+            .postFXPulseBloomStrength,
+          0.3,
+        );
+    }
+
+    if (
+      preset.screenShakeTrauma !==
+        undefined &&
+      Number.isFinite(
+        preset.screenShakeTrauma,
+      ) &&
+      preset.screenShakeTrauma >
+        0
+    ) {
+      this.sink
+        .triggerCameraTrauma(
+          preset.screenShakeTrauma,
+        );
     }
   }
 }

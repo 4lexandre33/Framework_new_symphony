@@ -3,12 +3,68 @@ import type {
 } from "../../../contracts/camera/types";
 
 import type {
+  RaycastRequest,
+} from "../../../contracts/physics/types";
+
+import type {
   PhysicsApi,
 } from "../../../tokens/physics";
 
+interface MutableVector3 {
+  x:
+    number;
+
+  y:
+    number;
+
+  z:
+    number;
+}
+
+interface MutableRayRequest {
+  readonly origin:
+    MutableVector3;
+
+  readonly direction:
+    MutableVector3;
+
+  maxDistance:
+    number;
+
+  solid:
+    boolean;
+}
+
 export class CameraOcclusionDetector {
-  private readonly ocludedEntityIds =
+  private readonly occludedEntityIds =
     new Set<string>();
+
+  private readonly rayRequest:
+    MutableRayRequest = {
+      origin: {
+        x:
+          0,
+        y:
+          0,
+        z:
+          0,
+      },
+
+      direction: {
+        x:
+          0,
+        y:
+          0,
+        z:
+          1,
+      },
+
+      maxDistance:
+        0,
+
+      solid:
+        true,
+    };
 
   public checkOcclusion(
     cameraWorldPos:
@@ -18,7 +74,8 @@ export class CameraOcclusionDetector {
     physics:
       PhysicsApi,
   ): ReadonlySet<string> {
-    this.ocludedEntityIds.clear();
+    this.occludedEntityIds
+      .clear();
 
     const dirX =
       targetWorldPos.x -
@@ -32,55 +89,67 @@ export class CameraOcclusionDetector {
       targetWorldPos.z -
       cameraWorldPos.z;
 
-    const maxDist =
+    const maxDistance =
       Math.sqrt(
-        dirX * dirX +
-        dirY * dirY +
-        dirZ * dirZ,
+        dirX *
+          dirX +
+        dirY *
+          dirY +
+        dirZ *
+          dirZ,
       );
 
     if (
-      maxDist <=
+      maxDistance <=
       0.001
     ) {
-      return this.ocludedEntityIds;
+      return this.occludedEntityIds;
     }
 
+    const request =
+      this.rayRequest;
+
+    request.origin.x =
+      cameraWorldPos.x;
+
+    request.origin.y =
+      cameraWorldPos.y;
+
+    request.origin.z =
+      cameraWorldPos.z;
+
+    request.direction.x =
+      dirX /
+      maxDistance;
+
+    request.direction.y =
+      dirY /
+      maxDistance;
+
+    request.direction.z =
+      dirZ /
+      maxDistance;
+
+    request.maxDistance =
+      maxDistance;
+
     const hit =
-      physics.castRay({
-        origin:
-          cameraWorldPos,
-
-        direction: {
-          x:
-            dirX /
-            maxDist,
-
-          y:
-            dirY /
-            maxDist,
-
-          z:
-            dirZ /
-            maxDist,
-        },
-
-        maxDistance:
-          maxDist,
-
-        solid:
-          true,
-      });
+      physics.castRay(
+        request as
+          RaycastRequest,
+      );
 
     if (
       hit.hit &&
-      hit.entityId
+      hit.entityId !==
+        undefined
     ) {
-      this.ocludedEntityIds.add(
-        hit.entityId,
-      );
+      this.occludedEntityIds
+        .add(
+          hit.entityId,
+        );
     }
 
-    return this.ocludedEntityIds;
+    return this.occludedEntityIds;
   }
 }

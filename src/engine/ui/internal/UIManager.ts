@@ -4,47 +4,80 @@ import type {
 } from "../../../contracts/ui/types";
 
 interface ModalStackEntry {
-  readonly config: ModalConfig;
-  readonly element: HTMLDivElement;
+  readonly config:
+    ModalConfig;
+
+  readonly element:
+    HTMLDivElement;
+
+  readonly previousFocus:
+    HTMLElement | null;
 }
 
 export interface UIManagerHooks {
-  readonly onScreenChanged?: (
-    currentScreen: UIScreenId,
-    previousScreen: UIScreenId,
-  ) => void;
+  readonly onScreenChanged?:
+    (
+      currentScreen:
+        UIScreenId,
+      previousScreen:
+        UIScreenId,
+    ) => void;
 
-  readonly onModalPushed?: (
-    config: ModalConfig,
-    depth: number,
-  ) => void;
+  readonly onModalPushed?:
+    (
+      config:
+        ModalConfig,
+      depth:
+        number,
+    ) => void;
 
-  readonly onModalPopped?: (
-    config: ModalConfig,
-    depth: number,
-  ) => void;
+  readonly onModalPopped?:
+    (
+      config:
+        ModalConfig,
+      depth:
+        number,
+    ) => void;
 }
 
+const FOCUSABLE_SELECTOR =
+  [
+    "button:not([disabled])",
+    "[href]",
+    "input:not([disabled])",
+    "select:not([disabled])",
+    "textarea:not([disabled])",
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(",");
+
 export class UIManager {
-  private activeScreen: UIScreenId =
-    "hud";
+  private activeScreen:
+    UIScreenId =
+      "hud";
 
   private readonly modalStack:
-    ModalStackEntry[] = [];
+    ModalStackEntry[] =
+      [];
 
   private rootElement:
-    HTMLElement | null = null;
+    HTMLElement | null =
+      null;
 
   private readonly hooks:
     UIManagerHooks;
 
   public constructor(
-    hooks: UIManagerHooks = {},
+    hooks:
+      UIManagerHooks =
+        {},
   ) {
-    this.hooks = hooks;
+    this.hooks =
+      hooks;
 
     this.handleKeyDown =
-      this.handleKeyDown.bind(this);
+      this.handleKeyDown.bind(
+        this,
+      );
   }
 
   public get currentScreen():
@@ -59,11 +92,13 @@ export class UIManager {
 
   public get isMounted():
     boolean {
-    return this.rootElement !== null;
+    return this.rootElement !==
+      null;
   }
 
   public mount(
-    container: HTMLElement,
+    container:
+      HTMLElement,
   ): void {
     if (
       this.rootElement ===
@@ -74,14 +109,12 @@ export class UIManager {
       return;
     }
 
-    if (this.rootElement) {
-      this.unmount();
-    }
+    this.unmount();
 
     this.rootElement =
       container;
 
-    this.rootElement.classList.add(
+    container.classList.add(
       "ui-root-container",
     );
 
@@ -99,33 +132,31 @@ export class UIManager {
       this.handleKeyDown,
     );
 
-    for (
-      let index =
-        this.modalStack.length - 1;
-      index >= 0;
-      index -= 1
+    while (
+      this.modalStack.length >
+      0
     ) {
-      this.modalStack[
-        index
-      ]?.element.remove();
+      const entry =
+        this.modalStack.pop();
+
+      entry?.element.remove();
     }
 
-    this.modalStack.length = 0;
-
-    if (this.rootElement) {
-      this.rootElement.classList.remove(
+    this.rootElement
+      ?.classList.remove(
         "ui-root-container",
       );
-    }
 
-    this.rootElement = null;
+    this.rootElement =
+      null;
 
     this.activeScreen =
       "hud";
   }
 
   public openScreen(
-    screenId: UIScreenId,
+    screenId:
+      UIScreenId,
   ): void {
     const previousScreen =
       this.activeScreen;
@@ -149,21 +180,52 @@ export class UIManager {
         screenId,
         previousScreen,
       );
-
-    console.log(
-      `[UIManager] 🖥️ Transição de tela: '${previousScreen}' -> '${screenId}'`,
-    );
   }
 
   public pushModal(
-    config: ModalConfig,
+    config:
+      ModalConfig,
   ): boolean {
     const root =
       this.rootElement;
 
-    if (!root) {
+    if (
+      root ===
+      null
+    ) {
       return false;
     }
+
+    const normalizedId =
+      config.id.trim();
+
+    if (
+      normalizedId.length ===
+      0
+    ) {
+      return false;
+    }
+
+    const existingIndex =
+      this.findModalIndex(
+        normalizedId,
+      );
+
+    if (
+      existingIndex >=
+      0
+    ) {
+      this.removeModalAt(
+        existingIndex,
+        false,
+      );
+    }
+
+    const previousFocus =
+      document.activeElement instanceof
+        HTMLElement
+        ? document.activeElement
+        : null;
 
     const backdrop =
       document.createElement(
@@ -174,13 +236,13 @@ export class UIManager {
       "ui-modal-backdrop";
 
     backdrop.dataset.modalId =
-      config.id;
+      normalizedId;
 
     backdrop.style.zIndex =
       String(
         2000 +
-          this.modalStack.length *
-            10,
+        this.modalStack.length *
+          10,
       );
 
     const container =
@@ -200,6 +262,14 @@ export class UIManager {
       "aria-modal",
       "true",
     );
+
+    container.setAttribute(
+      "aria-label",
+      config.title,
+    );
+
+    container.tabIndex =
+      -1;
 
     const header =
       document.createElement(
@@ -250,16 +320,6 @@ export class UIManager {
       closeButton.textContent =
         "×";
 
-      /*
-       * Não adicionamos listener direto aqui.
-       *
-       * O DOMEventListenerBridge é o único
-       * proprietário das ações declarativas
-       * data-action.
-       *
-       * Isso impede que um único clique
-       * execute popModal() duas vezes.
-       */
       header.appendChild(
         closeButton,
       );
@@ -274,7 +334,8 @@ export class UIManager {
       "ui-modal-body";
 
     if (
-      config.contentHtml
+      config.contentHtml !==
+      undefined
     ) {
       body.innerHTML =
         config.contentHtml;
@@ -298,50 +359,49 @@ export class UIManager {
 
     const entry:
       ModalStackEntry = {
-        config,
+        config: {
+          ...config,
+          id:
+            normalizedId,
+        },
+
         element:
           backdrop,
+
+        previousFocus,
       };
 
     this.modalStack.push(
       entry,
     );
 
+    this.focusModal(
+      container,
+    );
+
     this.hooks
       .onModalPushed?.(
-        config,
+        entry.config,
         this.modalStack.length,
       );
-
-    console.log(
-      `[UIManager] 🪟 Modal empilhado: '${config.title}' (Profundidade: ${this.modalStack.length})`,
-    );
 
     return true;
   }
 
   public popModal():
     boolean {
-    const top =
-      this.modalStack.pop();
-
-    if (!top) {
+    if (
+      this.modalStack.length ===
+      0
+    ) {
       return false;
     }
 
-    top.element.remove();
-
-    this.hooks
-      .onModalPopped?.(
-        top.config,
-        this.modalStack.length,
-      );
-
-    console.log(
-      `[UIManager] 🪟 Modal desempilhado: '${top.config.title}'`,
+    return this.removeModalAt(
+      this.modalStack.length -
+        1,
+      true,
     );
-
-    return true;
   }
 
   private syncScreenVisibility():
@@ -349,25 +409,37 @@ export class UIManager {
     const root =
       this.rootElement;
 
-    if (!root) {
+    if (
+      root ===
+      null
+    ) {
       return;
     }
 
     const screens =
-      root.querySelectorAll<HTMLElement>(
+      root.querySelectorAll<
+        HTMLElement
+      >(
         ".ui-screen",
       );
 
     for (
-      let index = 0;
+      let index =
+        0;
       index <
       screens.length;
-      index += 1
+      index +=
+        1
     ) {
       const element =
-        screens[index];
+        screens[
+          index
+        ];
 
-      if (!element) {
+      if (
+        element ===
+        undefined
+      ) {
         continue;
       }
 
@@ -386,12 +458,34 @@ export class UIManager {
           ? "false"
           : "true",
       );
+
+      if (
+        "inert" in
+        element
+      ) {
+        element.inert =
+          !isActive;
+      }
     }
   }
 
   private handleKeyDown(
-    event: KeyboardEvent,
+    event:
+      KeyboardEvent,
   ): void {
+    if (
+      event.key ===
+      "Tab" &&
+      this.modalStack.length >
+        0
+    ) {
+      this.keepFocusInsideTopModal(
+        event,
+      );
+
+      return;
+    }
+
     if (
       event.key !==
       "Escape"
@@ -399,13 +493,24 @@ export class UIManager {
       return;
     }
 
-    if (
-      this.modalStack.length >
-      0
-    ) {
-      event.preventDefault();
+    const top =
+      this.modalStack[
+        this.modalStack.length -
+          1
+      ];
 
-      this.popModal();
+    if (
+      top !==
+      undefined
+    ) {
+      if (
+        top.config.closable !==
+        false
+      ) {
+        event.preventDefault();
+
+        this.popModal();
+      }
 
       return;
     }
@@ -433,5 +538,209 @@ export class UIManager {
         "hud",
       );
     }
+  }
+
+  private keepFocusInsideTopModal(
+    event:
+      KeyboardEvent,
+  ): void {
+    const top =
+      this.modalStack[
+        this.modalStack.length -
+          1
+      ];
+
+    if (
+      top ===
+      undefined
+    ) {
+      return;
+    }
+
+    const container =
+      top.element
+        .querySelector<
+          HTMLElement
+        >(
+          ".ui-modal-container",
+        );
+
+    if (
+      container ===
+      null
+    ) {
+      return;
+    }
+
+    const focusable =
+      container
+        .querySelectorAll<
+          HTMLElement
+        >(
+          FOCUSABLE_SELECTOR,
+        );
+
+    if (
+      focusable.length ===
+      0
+    ) {
+      event.preventDefault();
+
+      container.focus();
+
+      return;
+    }
+
+    const first =
+      focusable[
+        0
+      ];
+
+    const last =
+      focusable[
+        focusable.length -
+          1
+      ];
+
+    const active =
+      document.activeElement;
+
+    if (
+      event.shiftKey &&
+      active ===
+        first
+    ) {
+      event.preventDefault();
+
+      last?.focus();
+
+      return;
+    }
+
+    if (
+      !event.shiftKey &&
+      active ===
+        last
+    ) {
+      event.preventDefault();
+
+      first?.focus();
+    }
+  }
+
+  private removeModalAt(
+    index:
+      number,
+    restoreFocus:
+      boolean,
+  ): boolean {
+    if (
+      index <
+        0 ||
+      index >=
+        this.modalStack.length
+    ) {
+      return false;
+    }
+
+    const entry =
+      this.modalStack[
+        index
+      ];
+
+    if (
+      entry ===
+      undefined
+    ) {
+      return false;
+    }
+
+    this.modalStack.splice(
+      index,
+      1,
+    );
+
+    entry.element.remove();
+
+    this.hooks
+      .onModalPopped?.(
+        entry.config,
+        this.modalStack.length,
+      );
+
+    if (
+      restoreFocus &&
+      entry.previousFocus !==
+        null &&
+      entry.previousFocus
+        .isConnected
+    ) {
+      entry.previousFocus
+        .focus();
+    } else if (
+      restoreFocus
+    ) {
+      const newTop =
+        this.modalStack[
+          this.modalStack.length -
+            1
+        ];
+
+      const container =
+        newTop
+          ?.element
+          .querySelector<
+            HTMLElement
+          >(
+            ".ui-modal-container",
+          );
+
+      container?.focus();
+    }
+
+    return true;
+  }
+
+  private findModalIndex(
+    modalId:
+      string,
+  ): number {
+    for (
+      let index =
+        0;
+      index <
+      this.modalStack.length;
+      index +=
+        1
+    ) {
+      if (
+        this.modalStack[
+          index
+        ]?.config.id ===
+        modalId
+      ) {
+        return index;
+      }
+    }
+
+    return -1;
+  }
+
+  private focusModal(
+    container:
+      HTMLElement,
+  ): void {
+    const focusable =
+      container
+        .querySelector<
+          HTMLElement
+        >(
+          FOCUSABLE_SELECTOR,
+        );
+
+    (
+      focusable ??
+      container
+    ).focus();
   }
 }

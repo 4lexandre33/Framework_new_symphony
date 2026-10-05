@@ -1,88 +1,410 @@
 import * as THREE from "three";
-import type { DecalConfig } from "../../../contracts/vfx/types";
+
+import type {
+  DecalConfig,
+} from "../../../contracts/vfx/types";
 
 export interface ActiveDecalInstance {
-  readonly config: DecalConfig;
-  readonly mesh: THREE.Mesh;
-  createdAtTime: number;
+  readonly config:
+    DecalConfig;
+
+  readonly mesh:
+    THREE.Mesh;
+
+  elapsedSeconds:
+    number;
 }
 
 export class DecalManager {
-  private readonly activeDecals: ActiveDecalInstance[] = [];
-  private readonly maxDecalsLimit = 200;
+  private readonly activeDecals:
+    ActiveDecalInstance[] =
+      [];
 
-  // Scratch Objects pré-alocados para cálculo de matriz de alinhamento com a normal sem GC
-  private readonly scratchPosition = new THREE.Vector3();
-  private readonly scratchNormal = new THREE.Vector3();
-  private readonly scratchUp = new THREE.Vector3(0, 1, 0);
-  private readonly scratchMatrix = new THREE.Matrix4();
-  private readonly scratchQuaternion = new THREE.Quaternion();
+  private readonly maxDecalsLimit =
+    200;
+
+  private readonly scratchPosition =
+    new THREE.Vector3();
+
+  private readonly scratchNormal =
+    new THREE.Vector3();
+
+  private readonly scratchLookAtTarget =
+    new THREE.Vector3();
+
+  private readonly scratchUp =
+    new THREE.Vector3(
+      0,
+      1,
+      0,
+    );
+
+  private readonly scratchAlternateUp =
+    new THREE.Vector3(
+      0,
+      0,
+      1,
+    );
+
+  private readonly scratchMatrix =
+    new THREE.Matrix4();
+
+  private readonly scratchQuaternion =
+    new THREE.Quaternion();
 
   public projectDecal(
-    config: DecalConfig,
-    texture: THREE.Texture,
-    targetScene: THREE.Scene
+    config:
+      DecalConfig,
+    texture:
+      THREE.Texture,
+    targetScene:
+      THREE.Scene,
   ): THREE.Mesh {
-    // 1. Reciclagem circular em Ring Buffer (FIFO) ao atingir limite rígido de VRAM
-    if (this.activeDecals.length >= this.maxDecalsLimit) {
-      const oldest = this.activeDecals.shift();
-      if (oldest) {
-        targetScene.remove(oldest.mesh);
-        oldest.mesh.geometry.dispose();
-        if (oldest.mesh.material instanceof THREE.Material) {
-          oldest.mesh.material.dispose();
-        }
-      }
+    if (
+      this.activeDecals.length >=
+      this.maxDecalsLimit
+    ) {
+      this.removeAt(
+        0,
+        targetScene,
+      );
     }
 
-    // 2. Cálculo da Rotação Alinhada à Normal da Superfície
-    this.scratchPosition.set(config.position.x, config.position.y, config.position.z);
-    this.scratchNormal.set(config.orientationNormal.x, config.orientationNormal.y, config.orientationNormal.z).normalize();
-
-    this.scratchMatrix.lookAt(
-      this.scratchPosition,
-      this.scratchPosition.clone().add(this.scratchNormal),
-      Math.abs(this.scratchNormal.y) > 0.99 ? new THREE.Vector3(0, 0, 1) : this.scratchUp
+    this.scratchPosition.set(
+      config.position.x,
+      config.position.y,
+      config.position.z,
     );
-    this.scratchQuaternion.setFromRotationMatrix(this.scratchMatrix);
 
-    // 3. Geometria da Caixa Projetora
-    const geometry = new THREE.BoxGeometry(config.size.x, config.size.y, config.size.z);
-    const material = new THREE.MeshBasicMaterial({
-      map: texture,
-      transparent: true,
-      depthWrite: false,
-      polygonOffset: true,
-      polygonOffsetFactor: -2,
-    });
+    this.scratchNormal.set(
+      config.orientationNormal.x,
+      config.orientationNormal.y,
+      config.orientationNormal.z,
+    );
 
-    const decalMesh = new THREE.Mesh(geometry, material);
-    decalMesh.position.copy(this.scratchPosition);
-    decalMesh.quaternion.copy(this.scratchQuaternion);
+    if (
+      this.scratchNormal
+        .lengthSq() <=
+      0.000001
+    ) {
+      this.scratchNormal.set(
+        0,
+        1,
+        0,
+      );
+    } else {
+      this.scratchNormal
+        .normalize();
+    }
 
-    targetScene.add(decalMesh);
+    this.scratchLookAtTarget
+      .copy(
+        this.scratchPosition,
+      )
+      .add(
+        this.scratchNormal,
+      );
+
+    this.scratchMatrix
+      .lookAt(
+        this.scratchPosition,
+        this.scratchLookAtTarget,
+        Math.abs(
+          this.scratchNormal.y,
+        ) >
+          0.99
+          ? this.scratchAlternateUp
+          : this.scratchUp,
+      );
+
+    this.scratchQuaternion
+      .setFromRotationMatrix(
+        this.scratchMatrix,
+      );
+
+    const sizeX =
+      this.positiveFiniteOr(
+        config.size.x,
+        0.01,
+      );
+
+    const sizeY =
+      this.positiveFiniteOr(
+        config.size.y,
+        0.01,
+      );
+
+    const sizeZ =
+      this.positiveFiniteOr(
+        config.size.z,
+        0.01,
+      );
+
+    const geometry =
+      new THREE.BoxGeometry(
+        sizeX,
+        sizeY,
+        sizeZ,
+      );
+
+    const material =
+      new THREE.MeshBasicMaterial({
+        map:
+          texture,
+        transparent:
+          true,
+        opacity:
+          1,
+        depthWrite:
+          false,
+        polygonOffset:
+          true,
+        polygonOffsetFactor:
+          -2,
+      });
+
+    const decalMesh =
+      new THREE.Mesh(
+        geometry,
+        material,
+      );
+
+    decalMesh.position
+      .copy(
+        this.scratchPosition,
+      );
+
+    decalMesh.quaternion
+      .copy(
+        this.scratchQuaternion,
+      );
+
+    targetScene.add(
+      decalMesh,
+    );
 
     this.activeDecals.push({
       config,
-      mesh: decalMesh,
-      createdAtTime: performance.now(),
+      mesh:
+        decalMesh,
+      elapsedSeconds:
+        0,
     });
 
     return decalMesh;
   }
 
-  public getActiveDecalCount(): number {
-    return this.activeDecals.length;
-  }
+  public update(
+    deltaSeconds:
+      number,
+    targetScene?:
+      THREE.Scene,
+  ): void {
+    if (
+      !Number.isFinite(
+        deltaSeconds,
+      ) ||
+      deltaSeconds <=
+        0
+    ) {
+      return;
+    }
 
-  public clear(targetScene?: THREE.Scene): void {
-    for (const decal of this.activeDecals) {
-      if (targetScene) targetScene.remove(decal.mesh);
-      decal.mesh.geometry.dispose();
-      if (decal.mesh.material instanceof THREE.Material) {
-        decal.mesh.material.dispose();
+    const safeDelta =
+      Math.min(
+        deltaSeconds,
+        0.25,
+      );
+
+    for (
+      let index =
+        this.activeDecals.length -
+        1;
+      index >=
+        0;
+      index -=
+        1
+    ) {
+      const decal =
+        this.activeDecals[
+          index
+        ];
+
+      if (
+        decal ===
+        undefined
+      ) {
+        continue;
+      }
+
+      const lifetime =
+        decal.config
+          .lifetimeSeconds;
+
+      if (
+        lifetime ===
+          undefined ||
+        !Number.isFinite(
+          lifetime,
+        ) ||
+        lifetime <=
+          0
+      ) {
+        continue;
+      }
+
+      decal.elapsedSeconds +=
+        safeDelta;
+
+      const remaining =
+        lifetime -
+        decal.elapsedSeconds;
+
+      if (
+        remaining <=
+        0
+      ) {
+        this.removeAt(
+          index,
+          targetScene,
+        );
+
+        continue;
+      }
+
+      const fadeDuration =
+        decal.config
+          .fadeDurationSeconds;
+
+      if (
+        fadeDuration ===
+          undefined ||
+        !Number.isFinite(
+          fadeDuration,
+        ) ||
+        fadeDuration <=
+          0 ||
+        remaining >
+          fadeDuration
+      ) {
+        continue;
+      }
+
+      const material =
+        decal.mesh.material;
+
+      if (
+        material instanceof
+        THREE.MeshBasicMaterial
+      ) {
+        material.opacity =
+          Math.min(
+            1,
+            Math.max(
+              0,
+              remaining /
+                fadeDuration,
+            ),
+          );
       }
     }
-    this.activeDecals.length = 0;
+  }
+
+  public getActiveDecalCount():
+    number {
+    return this.activeDecals
+      .length;
+  }
+
+  public clear(
+    targetScene?:
+      THREE.Scene,
+  ): void {
+    for (
+      let index =
+        this.activeDecals.length -
+        1;
+      index >=
+        0;
+      index -=
+        1
+    ) {
+      this.removeAt(
+        index,
+        targetScene,
+      );
+    }
+  }
+
+  private removeAt(
+    index:
+      number,
+    targetScene?:
+      THREE.Scene,
+  ): void {
+    const decal =
+      this.activeDecals[
+        index
+      ];
+
+    if (
+      decal ===
+      undefined
+    ) {
+      return;
+    }
+
+    targetScene?.remove(
+      decal.mesh,
+    );
+
+    decal.mesh.geometry
+      .dispose();
+
+    const material =
+      decal.mesh.material;
+
+    if (
+      material instanceof
+      THREE.Material
+    ) {
+      if (
+        material instanceof
+          THREE.MeshBasicMaterial &&
+        material.map !==
+          null &&
+        material.map
+          .userData
+          .presentationOwned ===
+          true
+      ) {
+        material.map
+          .dispose();
+      }
+
+      material.dispose();
+    }
+
+    this.activeDecals.splice(
+      index,
+      1,
+    );
+  }
+
+  private positiveFiniteOr(
+    value:
+      number,
+    fallback:
+      number,
+  ): number {
+    return (
+      Number.isFinite(
+        value,
+      ) &&
+      value >
+        0
+    )
+      ? value
+      : fallback;
   }
 }

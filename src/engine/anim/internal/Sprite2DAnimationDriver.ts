@@ -191,7 +191,10 @@ export class Sprite2DAnimationDriver {
     }
 
     const deltaMs =
-      deltaSeconds *
+      Math.min(
+        deltaSeconds,
+        0.25,
+      ) *
       1000;
 
     for (

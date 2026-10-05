@@ -601,9 +601,25 @@ export class GPUParticleEmitter {
   }
 
   public dispose(): void {
+    const texture =
+      this.material
+        .uniforms
+        .uTexture
+        .value;
+
     this.geometry.dispose();
 
     this.material.dispose();
+
+    if (
+      texture instanceof
+        THREE.Texture &&
+      texture.userData
+        .presentationOwned ===
+        true
+    ) {
+      texture.dispose();
+    }
   }
 
   private sanitizeDelta(
@@ -664,6 +680,8 @@ export class GPUParticleSystem {
 
   public stopEmitter(
     emitterId: string,
+    disposeResources =
+      true,
   ): boolean {
     const emitter =
       this.emitters.get(
@@ -674,7 +692,11 @@ export class GPUParticleSystem {
       return false;
     }
 
-    emitter.dispose();
+    if (
+      disposeResources
+    ) {
+      emitter.dispose();
+    }
 
     this.emitters.delete(
       emitterId,
@@ -728,12 +750,19 @@ export class GPUParticleSystem {
     return total;
   }
 
-  public clear(): void {
-    for (
-      const emitter of
-      this.emitters.values()
+  public clear(
+    disposeResources =
+      true,
+  ): void {
+    if (
+      disposeResources
     ) {
-      emitter.dispose();
+      for (
+        const emitter of
+        this.emitters.values()
+      ) {
+        emitter.dispose();
+      }
     }
 
     this.emitters.clear();

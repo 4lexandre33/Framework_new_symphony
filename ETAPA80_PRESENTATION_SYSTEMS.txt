@@ -1,0 +1,238 @@
+PROJETO1 — ETAPA 80
+LAYER 1 — PRESENTATION SYSTEMS
+
+ESCOPO
+=====
+A Etapa 80 certifica e endurece os seis sistemas de apresentação já existentes
+na Camada 1:
+
+- game.ui
+- game.sprites
+- game.anim
+- game.audio
+- game.camera
+- game.vfx
+
+Não cria uma nova capability canônica.
+Não altera os contratos/tokens públicos congelados na Etapa 72.
+Não altera o capability graph congelado na Etapa 73.
+Não altera Layer 2, Layer 3 ou Layer 4.
+Não antecipa a Etapa 81.
+
+OBJETIVO
+========
+Transformar os módulos de apresentação em runtimes com lifecycle, ownership,
+delta timing e teardown explicitamente certificados para execução desktop Tauri.
+
+PUBLIC API
+==========
+As seguintes capabilities permanecem em 1.0.0:
+
+- game.ui
+- game.sprites
+- game.anim
+- game.audio
+- game.camera
+- game.vfx
+
+UI
+==
+- UI root externo é preservado no teardown.
+- UI root criado pelo plugin é removido no teardown.
+- listener global de Escape é removido de forma idempotente.
+- modais possuem foco inicial.
+- Tab/Shift+Tab permanecem dentro do modal superior.
+- Escape fecha primeiro o modal antes de alternar HUD/pause.
+- foco anterior é restaurado ao remover modal.
+- DOMEventListenerBridge continua sendo owner único dos data-action declarativos.
+- HUD binder mantém cache tipado e atualiza somente bindings afetados.
+
+SPRITES
+=======
+- TextureAtlasParser valida atlas e normaliza UV.
+- PixelArtScaler normaliza viewport/design sizes.
+- Tilemap usa InstancedMesh e um draw call por layer.
+- tilemap descriptor é validado antes de criar GPU resources.
+- Sprite2DRenderer governa geometry/material criados por sprite.
+- ParallaxController governa geometry/material criados por layer.
+- SpritesService coordena ownership com game.render para evitar double-dispose.
+- clear/dispose são idempotentes.
+
+ANIMATION
+=========
+- AnimationState normaliza nome, clip, duração e timeScale.
+- AnimationStateMachine clampa stalls em 250ms.
+- Sprite2DAnimationDriver clampa stalls em 250ms.
+- SkeletalAnimationDriver clampa stalls em 250ms.
+- AnimationService usa tick oficial para FSM e render delta oficial para drivers.
+- crossfades não usam fallback temporal legado.
+- teardown remove mixers, sprite animations, FSMs e trigger state.
+
+AUDIO
+=====
+- AudioMixer usa topologia:
+    child channel -> master -> AudioContext.destination
+- canais:
+    master
+    bgm
+    sfx
+    voice
+    ui
+- master volume/mute governa todos os canais filhos.
+- volume por voz é separado do volume do canal.
+- AudioVoiceRegistry governa todas as vozes one-shot/loop.
+- stopAllSounds encerra SFX/voice/UI/one-shot e BGM.
+- MusicCrossfader possui teardown de source/gain.
+- PositionalAudio3D conecta panner -> voice gain -> sfx channel.
+- AudioContext criado internamente é fechado no dispose.
+- AudioContext injetado externamente é preservado.
+
+CAMERA
+======
+- SpringArm3D reutiliza scratch Vector3 e RaycastRequest.
+- computeCameraPosition possui zero object/array/new allocation explícita.
+- recovery do spring arm usa delta real e smooth time.
+- TraumaCameraShake reutiliza Vector3/Euler de saída.
+- Trauma decay usa o tempo decorrido sanitizado para preservar a dissipação histórica.
+- somente a fase/oscilação do shake clampa stalls em 250ms, evitando salto visual após pausa/stall.
+- CameraOcclusionDetector reutiliza RaycastRequest.
+- CameraService publica CameraCollisionEvent somente em mudança de estado/câmera.
+- teardown remove state e dependências.
+
+VFX
+===
+- GPUParticleEmitter faz simulação de movimento no shader.
+- update de particles possui zero allocation literal/new explícita.
+- spawn burst é limitado à capacidade do buffer.
+- decals usam limite fixo de 200 instâncias e reciclagem.
+- lifetime/fade usam delta clampado.
+- texturas clonadas/fallback recebem flag presentationOwned.
+- remove via game.render transfere ownership do dispose para SceneGraphManager.
+- decals adicionados diretamente à scene permanecem owner do próprio teardown.
+- PostProcessingPipeline mantém estado/pulse determinístico e restaura bloom base.
+- VFX presets podem combinar particle/decal/bloom/camera trauma.
+
+HOT PATH POLICY
+===============
+Treze métodos são certificados com:
+- zero ObjectLiteralExpression;
+- zero ArrayLiteralExpression;
+- zero NewExpression.
+
+Hot paths:
+- ParallaxController.update
+- AnimationService.tick
+- AnimationStateMachine.update
+- Sprite2DAnimationDriver.update
+- SkeletalAnimationDriver.update
+- SpringArm3D.computeCameraPosition
+- TraumaCameraShake.update
+- CameraService.render
+- GPUParticleEmitter.update
+- GPUParticleSystem.update
+- DecalManager.update
+- PostProcessingPipeline.update
+- VFXService.update
+
+BASELINE
+========
+LAYER1_PRESENTATION_BASELINE_V1.json contém fingerprints semânticos de todos os
+41 arquivos runtime certificados. Todos esses 41 arquivos são empacotados no
+ZIP da Etapa 80. Isso evita divergência entre baseline e pacote.
+
+AUDITOR
+=======
+node scripts/architecture/stage80-audit-presentation.mjs
+
+JSON:
+node scripts/architecture/stage80-audit-presentation.mjs --json
+
+VALIDATOR
+=========
+node scripts/architecture/stage80-validate-presentation.mjs
+
+O validator executa:
+1. presença dos arquivos obrigatórios;
+2. cobertura integral baseline/manifest;
+3. ausência de Etapa 81;
+4. regressão Stage 79;
+5. Stage 80 semantic audit;
+6. npm run arch:check;
+7. npx tsc --noEmit;
+8. Vitest focado de Presentation + testes existentes dos seis módulos;
+9. seis smoke tests existentes;
+10. Vitest completo;
+11. cargo check;
+12. npm run build.
+
+PASS ESPERADO
+=============
+============================================================
+  ETAPA 80: PASS
+============================================================
+
+Somente esse PASS no terminal do projeto torna a Etapa 80 oficialmente concluída.
+
+CORREÇÃO DE COMPATIBILIDADE COM ETAPA 74
+========================================
+A primeira revisão da Etapa 80 introduzia lifecycleHooks.onBoot nos plugins
+game.sprites e game.vfx. Isso alterava a assinatura lifecycle congelada pela
+Etapa 74 e fazia as regressões 74, 75, 76, 77, 78 e 79 falharem em cascata.
+
+A revisão corrigida NÃO altera a baseline nem o auditor da Etapa 74.
+
+Assinaturas preservadas:
+- game.sprites: ready=1, onDispose=1, onBoot=0, onStop=0
+- game.vfx:     ready=1, onDispose=1, onBoot=0, onStop=0
+
+Dependências de Assets/Render necessárias ao hardening são resolvidas de forma
+lazy dentro dos serviços, sem introduzir novos lifecycle hooks.
+
+Regressões locais após a correção:
+- Stage 72: PASS
+- Stage 73: PASS
+- Stage 74: PASS
+- Stage 75: PASS
+- Stage 76: PASS
+- Stage 77: PASS
+- Stage 78: PASS
+- Stage 79: PASS
+- Stage 80 semantic audit: PASS
+
+CORREÇÃO R2 — TYPESCRIPT
+========================
+O validator executado no projeto real detectou TS2339 em VFXService.update():
+a implementação referenciava `this.render`, mas o serviço usa resolução lazy por
+`getRender()` e não possui campo `render`. A revisão R2 substitui apenas essa
+referência residual por `this.getRender()?.getScene()`.
+
+Esta correção NÃO altera:
+- API pública;
+- capability graph;
+- lifecycle hooks congelados na Etapa 74;
+- ownership de recursos;
+- política de hot paths.
+
+CORREÇÃO R3 — CAMERA TRAUMA DECAY
+==================================
+Após a R2 fazer o TypeScript passar, o Vitest existente de game.camera revelou
+uma regressão comportamental: o clamp de stall de 250ms estava sendo usado
+também para dissipar trauma. Com trauma 0.7 e decayRate 1.0, update(1.0) deixava
+0.45 em vez de zerar.
+
+A R3 separa explicitamente dois tempos em TraumaCameraShake.update():
+- elapsedDelta: tempo decorrido finito e não-negativo, usado pelo trauma decay;
+- phaseDelta: min(0.25, elapsedDelta), usado apenas para avançar a fase do ruído.
+
+Assim, stalls não fazem a oscilação saltar visualmente, mas a intensidade do
+shake continua dissipando conforme o tempo efetivamente transcorrido.
+
+Foi adicionado teste Stage 80 que fixa os dois contratos e preservado o teste
+legado camera-system.test.ts sem afrouxamento.
+
+Esta correção NÃO altera:
+- API pública;
+- capability graph;
+- lifecycle hooks da Etapa 74;
+- quantidade de hot paths certificados;
+- política de zero allocations explícitas no hot path.

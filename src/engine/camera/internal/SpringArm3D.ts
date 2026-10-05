@@ -1,97 +1,353 @@
 import * as THREE from "three";
-import type { SpringArmConfig, Vector3Camera } from "../../../contracts/camera/types";
-import type { PhysicsApi } from "../../../tokens/physics";
+
+import type {
+  SpringArmConfig,
+  Vector3Camera,
+} from "../../../contracts/camera/types";
+
+import type {
+  RaycastRequest,
+} from "../../../contracts/physics/types";
+
+import type {
+  PhysicsApi,
+} from "../../../tokens/physics";
+
+interface MutableVector3DTO {
+  x:
+    number;
+
+  y:
+    number;
+
+  z:
+    number;
+}
+
+interface MutableRaycastRequest {
+  readonly origin:
+    MutableVector3DTO;
+
+  readonly direction:
+    MutableVector3DTO;
+
+  maxDistance:
+    number;
+
+  solid:
+    boolean;
+}
+
+function finiteNonNegative(
+  value:
+    number,
+  fallback:
+    number,
+): number {
+  return (
+    Number.isFinite(
+      value,
+    ) &&
+    value >=
+      0
+  )
+    ? value
+    : fallback;
+}
 
 export class SpringArm3D {
-  private currentArmLength: number;
-  private isColliding = false;
+  private currentArmLength:
+    number;
 
-  // Objeto de riscado (Scratch Vectors) pré-alocados para Zero GC no loop de render
-  private readonly scratchTargetPos = new THREE.Vector3();
-  private readonly scratchSocketPos = new THREE.Vector3();
-  private readonly scratchArmDir = new THREE.Vector3();
-  private readonly scratchDesiredCamPos = new THREE.Vector3();
-  private readonly scratchActualCamPos = new THREE.Vector3();
+  private isColliding =
+    false;
 
-  public constructor(private config: SpringArmConfig) {
-    this.currentArmLength = config.targetArmLength;
+  private readonly scratchTargetPos =
+    new THREE.Vector3();
+
+  private readonly scratchTargetOffset =
+    new THREE.Vector3();
+
+  private readonly scratchSocketPos =
+    new THREE.Vector3();
+
+  private readonly scratchSocketOffset =
+    new THREE.Vector3();
+
+  private readonly scratchArmDir =
+    new THREE.Vector3();
+
+  private readonly scratchActualCamPos =
+    new THREE.Vector3();
+
+  private readonly rayRequest:
+    MutableRaycastRequest = {
+      origin: {
+        x:
+          0,
+        y:
+          0,
+        z:
+          0,
+      },
+
+      direction: {
+        x:
+          0,
+        y:
+          0,
+        z:
+          1,
+      },
+
+      maxDistance:
+        0,
+
+      solid:
+        true,
+    };
+
+  public constructor(
+    private config:
+      SpringArmConfig,
+  ) {
+    this.currentArmLength =
+      finiteNonNegative(
+        config.targetArmLength,
+        0,
+      );
   }
 
-  public get armLength(): number {
+  public get armLength():
+    number {
     return this.currentArmLength;
   }
 
-  public get isCurrentlyColliding(): boolean {
+  public get targetArmLength():
+    number {
+    return finiteNonNegative(
+      this.config.targetArmLength,
+      0,
+    );
+  }
+
+  public get isCurrentlyColliding():
+    boolean {
     return this.isColliding;
   }
 
-  public updateConfig(newConfig: Partial<SpringArmConfig>): void {
-    this.config = { ...this.config, ...newConfig };
+  public updateConfig(
+    newConfig:
+      Partial<SpringArmConfig>,
+  ): void {
+    this.config = {
+      ...this.config,
+      ...newConfig,
+    };
+
+    const targetLength =
+      this.targetArmLength;
+
+    if (
+      this.currentArmLength >
+      targetLength
+    ) {
+      this.currentArmLength =
+        targetLength;
+    }
   }
 
   public computeCameraPosition(
-    targetWorldPos: Vector3Camera,
-    cameraRotation: THREE.Quaternion,
-    physics?: PhysicsApi | null
+    targetWorldPos:
+      Vector3Camera,
+    cameraRotation:
+      THREE.Quaternion,
+    physics?:
+      PhysicsApi | null,
+    deltaSeconds =
+      1 /
+      60,
   ): THREE.Vector3 {
-    const { targetArmLength, probeRadius, socketOffset, targetOffset, enableCollision } =
-      this.config;
+    const targetArmLength =
+      this.targetArmLength;
 
-    // 1. Posição Base do Alvo com Offset
-    this.scratchTargetPos
-      .set(targetWorldPos.x, targetWorldPos.y, targetWorldPos.z)
-      .add(new THREE.Vector3(targetOffset.x, targetOffset.y, targetOffset.z));
+    const probeRadius =
+      finiteNonNegative(
+        this.config.probeRadius,
+        0,
+      );
 
-    // 2. Calcular Direção Normalizada do Braço a partir da rotação
-    this.scratchArmDir.set(0, 0, 1).applyQuaternion(cameraRotation).normalize();
+    const socketOffset =
+      this.config.socketOffset;
 
-    // 3. Posição Desejada sem Colisão
-    const socket = new THREE.Vector3(socketOffset.x, socketOffset.y, socketOffset.z).applyQuaternion(
-      cameraRotation
+    const targetOffset =
+      this.config.targetOffset;
+
+    this.scratchTargetPos.set(
+      targetWorldPos.x,
+      targetWorldPos.y,
+      targetWorldPos.z,
     );
-    this.scratchSocketPos.copy(this.scratchTargetPos).add(socket);
 
-    this.scratchDesiredCamPos
-      .copy(this.scratchSocketPos)
-      .addScaledVector(this.scratchArmDir, targetArmLength);
+    this.scratchTargetOffset.set(
+      targetOffset.x,
+      targetOffset.y,
+      targetOffset.z,
+    );
 
-    let effectiveLength = targetArmLength;
-    this.isColliding = false;
+    this.scratchTargetPos.add(
+      this.scratchTargetOffset,
+    );
 
-    // 4. Teste de Colisão por Raycast se a física estiver disponível
-    if (enableCollision !== false && physics) {
-      const rayHit = physics.castRay({
-        origin: {
-          x: this.scratchSocketPos.x,
-          y: this.scratchSocketPos.y,
-          z: this.scratchSocketPos.z,
-        },
-        direction: {
-          x: this.scratchArmDir.x,
-          y: this.scratchArmDir.y,
-          z: this.scratchArmDir.z,
-        },
-        maxDistance: targetArmLength,
-        solid: true,
-      });
+    this.scratchArmDir
+      .set(
+        0,
+        0,
+        1,
+      )
+      .applyQuaternion(
+        cameraRotation,
+      )
+      .normalize();
 
-      if (rayHit.hit) {
-        this.isColliding = true;
-        effectiveLength = Math.max(0.2, rayHit.distance - probeRadius);
+    this.scratchSocketOffset
+      .set(
+        socketOffset.x,
+        socketOffset.y,
+        socketOffset.z,
+      )
+      .applyQuaternion(
+        cameraRotation,
+      );
+
+    this.scratchSocketPos
+      .copy(
+        this.scratchTargetPos,
+      )
+      .add(
+        this.scratchSocketOffset,
+      );
+
+    let effectiveLength =
+      targetArmLength;
+
+    this.isColliding =
+      false;
+
+    if (
+      this.config.enableCollision !==
+        false &&
+      physics !==
+        null &&
+      physics !==
+        undefined &&
+      targetArmLength >
+        0
+    ) {
+      const origin =
+        this.rayRequest
+          .origin;
+
+      origin.x =
+        this.scratchSocketPos.x;
+
+      origin.y =
+        this.scratchSocketPos.y;
+
+      origin.z =
+        this.scratchSocketPos.z;
+
+      const direction =
+        this.rayRequest
+          .direction;
+
+      direction.x =
+        this.scratchArmDir.x;
+
+      direction.y =
+        this.scratchArmDir.y;
+
+      direction.z =
+        this.scratchArmDir.z;
+
+      this.rayRequest
+        .maxDistance =
+          targetArmLength;
+
+      const rayHit =
+        physics.castRay(
+          this.rayRequest as
+            RaycastRequest,
+        );
+
+      if (
+        rayHit.hit
+      ) {
+        this.isColliding =
+          true;
+
+        effectiveLength =
+          Math.max(
+            0.2,
+            rayHit.distance -
+              probeRadius,
+          );
       }
     }
 
-    // 5. Retração instantânea em colisão / Retorno suave sem colisão
-    if (effectiveLength < this.currentArmLength) {
-      this.currentArmLength = effectiveLength;
+    if (
+      effectiveLength <
+      this.currentArmLength
+    ) {
+      this.currentArmLength =
+        effectiveLength;
     } else {
-      const smoothFactor = 0.1;
-      this.currentArmLength += (effectiveLength - this.currentArmLength) * smoothFactor;
+      const safeDelta =
+        Number.isFinite(
+          deltaSeconds,
+        ) &&
+        deltaSeconds >
+          0
+          ? Math.min(
+              deltaSeconds,
+              0.25,
+            )
+          : 0;
+
+      const smoothTime =
+        finiteNonNegative(
+          this.config
+            .smoothTimeSeconds ??
+            0.15,
+          0.15,
+        );
+
+      const alpha =
+        smoothTime <=
+          0
+          ? 1
+          : 1 -
+            Math.exp(
+              -safeDelta /
+                smoothTime,
+            );
+
+      this.currentArmLength +=
+        (
+          effectiveLength -
+          this.currentArmLength
+        ) *
+        alpha;
     }
 
     this.scratchActualCamPos
-      .copy(this.scratchSocketPos)
-      .addScaledVector(this.scratchArmDir, this.currentArmLength);
+      .copy(
+        this.scratchSocketPos,
+      )
+      .addScaledVector(
+        this.scratchArmDir,
+        this.currentArmLength,
+      );
 
     return this.scratchActualCamPos;
   }

@@ -1,39 +1,148 @@
 import * as THREE from "three";
 
+function positiveFiniteOr(
+  value:
+    number,
+  fallback:
+    number,
+): number {
+  return (
+    Number.isFinite(
+      value,
+    ) &&
+    value >
+      0
+  )
+    ? value
+    : fallback;
+}
+
 export class PixelArtScaler {
   public static calculateIntegerScale(
-    viewportWidth: number,
-    viewportHeight: number,
-    designWidth: number,
-    designHeight: number
+    viewportWidth:
+      number,
+    viewportHeight:
+      number,
+    designWidth:
+      number,
+    designHeight:
+      number,
   ): number {
-    const scaleX = Math.floor(viewportWidth / designWidth);
-    const scaleY = Math.floor(viewportHeight / designHeight);
-    const scale = Math.max(1, Math.min(scaleX, scaleY));
-    return scale;
+    const safeDesignWidth =
+      positiveFiniteOr(
+        designWidth,
+        1,
+      );
+
+    const safeDesignHeight =
+      positiveFiniteOr(
+        designHeight,
+        1,
+      );
+
+    const safeViewportWidth =
+      positiveFiniteOr(
+        viewportWidth,
+        safeDesignWidth,
+      );
+
+    const safeViewportHeight =
+      positiveFiniteOr(
+        viewportHeight,
+        safeDesignHeight,
+      );
+
+    const scaleX =
+      Math.floor(
+        safeViewportWidth /
+        safeDesignWidth,
+      );
+
+    const scaleY =
+      Math.floor(
+        safeViewportHeight /
+        safeDesignHeight,
+      );
+
+    return Math.max(
+      1,
+      Math.min(
+        scaleX,
+        scaleY,
+      ),
+    );
   }
 
   public static applyPixelPerfectZoom(
-    camera: THREE.OrthographicCamera,
-    viewportWidth: number,
-    viewportHeight: number,
-    designWidth: number,
-    designHeight: number
+    camera:
+      THREE.OrthographicCamera,
+    viewportWidth:
+      number,
+    viewportHeight:
+      number,
+    designWidth:
+      number,
+    designHeight:
+      number,
   ): number {
-    const integerScale = this.calculateIntegerScale(
-      viewportWidth,
-      viewportHeight,
-      designWidth,
-      designHeight
-    );
+    const safeDesignWidth =
+      positiveFiniteOr(
+        designWidth,
+        1,
+      );
 
-    const halfW = viewportWidth / (2 * integerScale);
-    const halfH = viewportHeight / (2 * integerScale);
+    const safeDesignHeight =
+      positiveFiniteOr(
+        designHeight,
+        1,
+      );
 
-    camera.left = -halfW;
-    camera.right = halfW;
-    camera.top = halfH;
-    camera.bottom = -halfH;
+    const safeViewportWidth =
+      positiveFiniteOr(
+        viewportWidth,
+        safeDesignWidth,
+      );
+
+    const safeViewportHeight =
+      positiveFiniteOr(
+        viewportHeight,
+        safeDesignHeight,
+      );
+
+    const integerScale =
+      this.calculateIntegerScale(
+        safeViewportWidth,
+        safeViewportHeight,
+        safeDesignWidth,
+        safeDesignHeight,
+      );
+
+    const halfWidth =
+      safeViewportWidth /
+      (
+        2 *
+        integerScale
+      );
+
+    const halfHeight =
+      safeViewportHeight /
+      (
+        2 *
+        integerScale
+      );
+
+    camera.left =
+      -halfWidth;
+
+    camera.right =
+      halfWidth;
+
+    camera.top =
+      halfHeight;
+
+    camera.bottom =
+      -halfHeight;
+
     camera.updateProjectionMatrix();
 
     return integerScale;

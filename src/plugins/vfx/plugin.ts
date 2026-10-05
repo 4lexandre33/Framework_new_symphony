@@ -1,99 +1,254 @@
-import type { Plugin, PluginContext } from "@core";
-import { VfxToken } from "../../tokens/vfx";
-import { RenderToken } from "../../tokens/render";
-import { AssetsToken } from "../../tokens/assets";
-import { VFXSpawnedEvent, DecalProjectedEvent, PostFXStateChangedEvent, SpawnParticleEmitterCommand, ProjectDecalCommand, SetPostFXConfigCommand, TriggerVFXPresetCommand, type GPUParticleEmitterConfig, type DecalConfig, type PostProcessingConfig, type VFXPresetDescriptor } from "../../contracts/vfx/types";
-import { VFXService } from "../../engine/vfx/internal/VFXService";
+import type {
+  Plugin,
+  PluginContext,
+} from "@core";
 
-export const vfxManifest: Plugin["manifest"] = {
-  id: "game.vfx",
-  name: "GPU Particle System, Decals & PostProcessing Plugin",
-  version: "1.0.0",
-  kind: "preloaded",
-  authority: "game",
-  permissions: {
-    capabilities: [VfxToken.id, RenderToken.id, AssetsToken.id],
-    events: [
-      "game.vfx.spawned",
-      "game.vfx.decal-projected",
-      "game.vfx.postfx-changed",
-      "game.loop.render",
-    ],
-  },
-  capabilities: {
-    provides: [
-      {
-        id: VfxToken.id,
-        version: "1.0.0",
-      },
-    ],
-    consumes: [
-      {
-        id: RenderToken.id,
-        range: "^1.0.0",
-        optional: false,
-      },
-      {
-        id: AssetsToken.id,
-        range: "^1.0.0",
-        optional: false,
-      },
-    ],
-    conflicts: [],
-  },
-};
+import {
+  AssetsToken,
+} from "../../tokens/assets";
 
-export function createVFXPlugin(): Plugin {
+import {
+  RenderToken,
+} from "../../tokens/render";
+
+import {
+  VfxToken,
+} from "../../tokens/vfx";
+
+import type {
+  GameRenderPayload,
+} from "../../contracts/game-loop/types";
+
+import {
+  DecalProjectedEvent,
+  PostFXStateChangedEvent,
+  ProjectDecalCommand,
+  SetPostFXConfigCommand,
+  SpawnParticleEmitterCommand,
+  TriggerVFXPresetCommand,
+  VFXSpawnedEvent,
+} from "../../contracts/vfx/types";
+
+import type {
+  ProjectDecalRequest,
+  SetPostFXConfigRequest,
+  SpawnParticleEmitterRequest,
+  TriggerVFXPresetRequest,
+} from "../../contracts/vfx/types";
+
+import {
+  VFXService,
+} from "../../engine/vfx/internal/VFXService";
+
+export const vfxManifest:
+  Plugin["manifest"] = {
+    id:
+      "game.vfx",
+
+    name:
+      "GPU Particle System, Decals & PostProcessing Plugin",
+
+    version:
+      "1.0.0",
+
+    kind:
+      "preloaded",
+
+    authority:
+      "game",
+
+    permissions: {
+      capabilities: [
+        VfxToken.id,
+        RenderToken.id,
+        AssetsToken.id,
+      ],
+
+      events: [
+        VFXSpawnedEvent.type,
+        DecalProjectedEvent.type,
+        PostFXStateChangedEvent.type,
+        "game.loop.render",
+      ],
+    },
+
+    capabilities: {
+      provides: [
+        {
+          id:
+            VfxToken.id,
+          version:
+            "1.0.0",
+        },
+      ],
+
+      consumes: [
+        {
+          id:
+            RenderToken.id,
+          range:
+            "^1.0.0",
+          optional:
+            false,
+        },
+        {
+          id:
+            AssetsToken.id,
+          range:
+            "^1.0.0",
+          optional:
+            false,
+        },
+      ],
+
+      conflicts:
+        [],
+    },
+  };
+
+export function createVFXPlugin():
+  Plugin {
   return {
-    manifest: vfxManifest,
+    manifest:
+      vfxManifest,
 
-    setup(ctx: PluginContext) {
-      const vfxService = new VFXService(ctx);
+    setup(
+      ctx:
+        PluginContext,
+    ): void {
+      const vfxService =
+        new VFXService(
+          ctx,
+        );
 
-      ctx.caps.provide(VfxToken, vfxService);
+      ctx.caps.provide(
+        VfxToken,
+        vfxService,
+      );
 
-      ctx.events.define(VFXSpawnedEvent);
-      ctx.events.define(DecalProjectedEvent);
-      ctx.events.define(PostFXStateChangedEvent);
+      ctx.events.define(
+        VFXSpawnedEvent,
+      );
 
-      ctx.commands.define(SpawnParticleEmitterCommand);
-      ctx.commands.define(ProjectDecalCommand);
-      ctx.commands.define(SetPostFXConfigCommand);
-      ctx.commands.define(TriggerVFXPresetCommand);
+      ctx.events.define(
+        DecalProjectedEvent,
+      );
 
-      const unbindRender = ctx.events.on("game.loop.render", (env) => {
-        const payload = env.payload as { deltaSeconds: number };
-        vfxService.update(payload.deltaSeconds || 0.016);
-      });
+      ctx.events.define(
+        PostFXStateChangedEvent,
+      );
 
-      const unbindSpawnEmitter = ctx.commands.handle("game.vfx.spawn-emitter", (env) => {
-        const p = env.payload as { config: GPUParticleEmitterConfig };
-        vfxService.spawnParticleEmitter(p.config);
-      });
+      ctx.commands.define(
+        SpawnParticleEmitterCommand,
+      );
 
-      const unbindProjectDecal = ctx.commands.handle("game.vfx.project-decal", (env) => {
-        const p = env.payload as { config: DecalConfig };
-        vfxService.projectDecal(p.config);
-      });
+      ctx.commands.define(
+        ProjectDecalCommand,
+      );
 
-      const unbindSetPostFX = ctx.commands.handle("game.vfx.set-postfx-config", (env) => {
-        const p = env.payload as { config: Partial<PostProcessingConfig> };
-        vfxService.configurePostProcessing(p.config);
-      });
+      ctx.commands.define(
+        SetPostFXConfigCommand,
+      );
 
-      const unbindPreset = ctx.commands.handle("game.vfx.trigger-preset", (env) => {
-        const p = env.payload as { preset: VFXPresetDescriptor };
-        vfxService.triggerVFXPreset(p.preset);
-      });
+      ctx.commands.define(
+        TriggerVFXPresetCommand,
+      );
 
-      ctx.lifecycle.onDispose(() => {
-        unbindRender();
-        unbindSpawnEmitter();
-        unbindProjectDecal();
-        unbindSetPostFX();
-        unbindPreset();
-        vfxService.clear();
-      });
+      const unbindRender =
+        ctx.events.on(
+          "game.loop.render",
+          (
+            envelope,
+          ): void => {
+            const payload =
+              envelope.payload as
+                GameRenderPayload;
+
+            vfxService.update(
+              payload.deltaSeconds,
+            );
+          },
+        );
+
+      const unbindSpawnEmitter =
+        ctx.commands.handle(
+          SpawnParticleEmitterCommand.type,
+          (
+            envelope,
+          ): void => {
+            const payload =
+              envelope.payload as
+                SpawnParticleEmitterRequest;
+
+            vfxService
+              .spawnParticleEmitter(
+                payload.config,
+              );
+          },
+        );
+
+      const unbindProjectDecal =
+        ctx.commands.handle(
+          ProjectDecalCommand.type,
+          (
+            envelope,
+          ): void => {
+            const payload =
+              envelope.payload as
+                ProjectDecalRequest;
+
+            vfxService
+              .projectDecal(
+                payload.config,
+              );
+          },
+        );
+
+      const unbindSetPostFX =
+        ctx.commands.handle(
+          SetPostFXConfigCommand.type,
+          (
+            envelope,
+          ): void => {
+            const payload =
+              envelope.payload as
+                SetPostFXConfigRequest;
+
+            vfxService
+              .configurePostProcessing(
+                payload.config,
+              );
+          },
+        );
+
+      const unbindPreset =
+        ctx.commands.handle(
+          TriggerVFXPresetCommand.type,
+          (
+            envelope,
+          ): void => {
+            const payload =
+              envelope.payload as
+                TriggerVFXPresetRequest;
+
+            vfxService
+              .triggerVFXPreset(
+                payload.preset,
+              );
+          },
+        );
+
+      ctx.lifecycle.onDispose(
+        (): void => {
+          unbindRender();
+          unbindSpawnEmitter();
+          unbindProjectDecal();
+          unbindSetPostFX();
+          unbindPreset();
+
+          vfxService.dispose();
+        },
+      );
 
       ctx.lifecycle.ready();
     },

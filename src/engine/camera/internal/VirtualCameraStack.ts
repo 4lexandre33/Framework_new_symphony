@@ -102,6 +102,9 @@ export class VirtualCameraStack {
         60,
     };
 
+  private lastDeltaSeconds =
+    0;
+
   private readonly shakeRotation =
     new THREE.Quaternion();
 
@@ -335,6 +338,9 @@ export class VirtualCameraStack {
         deltaSeconds,
       );
 
+    this.lastDeltaSeconds =
+      safeDelta;
+
     const activeState =
       this.getActiveCameraState();
 
@@ -551,6 +557,7 @@ export class VirtualCameraStack {
             state.followTargetPos,
             output.rotation,
             physics,
+            this.lastDeltaSeconds,
           );
 
       output.position.copy(

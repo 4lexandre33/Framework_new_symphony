@@ -1,127 +1,577 @@
-import type { PluginContext } from "@core";
-import { type AudioApi } from "../../../tokens/audio";
-import { AssetsToken, type AssetsApi } from "../../../tokens/assets";
-import { type AudioChannelType, type PositionalAudioOptions, type MusicCrossfadeOptions, type Vector3Audio } from "../../../contracts/audio/types";
-import { AudioMixer } from "./AudioMixer";
-import { PositionalAudio3D } from "./PositionalAudio3D";
-import { MusicCrossfader } from "./MusicCrossfader";
-import { AudioListenerBridge } from "./AudioListenerBridge";
+import type {
+  PluginContext,
+} from "@core";
 
-export class AudioService implements AudioApi {
-  private readonly mixer = new AudioMixer();
-  private readonly positional = new PositionalAudio3D(this.mixer);
-  private readonly crossfader = new MusicCrossfader(this.mixer);
-  private readonly listenerBridge = new AudioListenerBridge(this.mixer);
+import type {
+  AudioApi,
+} from "../../../tokens/audio";
 
-  public constructor(private readonly ctx: PluginContext) {}
+import {
+  AssetsToken,
+} from "../../../tokens/assets";
+
+import type {
+  AssetsApi,
+} from "../../../tokens/assets";
+
+import type {
+  AudioChannelType,
+  MusicCrossfadeOptions,
+  PositionalAudioOptions,
+  Vector3Audio,
+} from "../../../contracts/audio/types";
+
+import {
+  AudioListenerBridge,
+} from "./AudioListenerBridge";
+
+import {
+  AudioMixer,
+} from "./AudioMixer";
+
+import {
+  AudioVoiceRegistry,
+} from "./AudioVoiceRegistry";
+
+import {
+  MusicCrossfader,
+} from "./MusicCrossfader";
+
+import {
+  PositionalAudio3D,
+} from "./PositionalAudio3D";
+
+function clampVolume(
+  value:
+    number,
+): number {
+  if (
+    !Number.isFinite(
+      value,
+    )
+  ) {
+    return 0;
+  }
+
+  return Math.min(
+    1,
+    Math.max(
+      0,
+      value,
+    ),
+  );
+}
+
+function normalizeUrl(
+  value:
+    string,
+): string {
+  return value.trim();
+}
+
+export class AudioService
+  implements AudioApi {
+  private readonly mixer:
+    AudioMixer;
+
+  private readonly positional:
+    PositionalAudio3D;
+
+  private readonly crossfader:
+    MusicCrossfader;
+
+  private readonly listenerBridge:
+    AudioListenerBridge;
+
+  private readonly voices =
+    new AudioVoiceRegistry();
+
+  private musicRequestGeneration =
+    0;
+
+  private disposed =
+    false;
+
+  public constructor(
+    private readonly ctx:
+      PluginContext,
+    mixer?:
+      AudioMixer,
+  ) {
+    this.mixer =
+      mixer ??
+      new AudioMixer();
+
+    this.positional =
+      new PositionalAudio3D(
+        this.mixer,
+      );
+
+    this.crossfader =
+      new MusicCrossfader(
+        this.mixer,
+      );
+
+    this.listenerBridge =
+      new AudioListenerBridge(
+        this.mixer,
+      );
+  }
 
   public playSound(
-    soundUrl: string,
-    channel: AudioChannelType = "sfx",
-    volume = 1.0,
-    loop = false
+    soundUrl:
+      string,
+    channel:
+      AudioChannelType =
+        "sfx",
+    volume =
+      1,
+    loop =
+      false,
   ): void {
-    const assets = this.ctx.caps.get(AssetsToken) as AssetsApi | null;
-    const buffer = assets?.getAsset<AudioBuffer>(soundUrl);
-
-    if (!buffer) {
-      console.warn(`[AudioService] Áudio não encontrado no cache de assets: ${soundUrl}`);
+    if (
+      this.disposed
+    ) {
       return;
     }
 
-    this.mixer.resumeIfSuspended();
-    const ctx = this.mixer.audioContext;
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.loop = loop;
+    const normalizedUrl =
+      normalizeUrl(
+        soundUrl,
+      );
 
-    const voiceGain = ctx.createGain();
-    voiceGain.gain.setValueAtTime(Math.max(0, Math.min(1, volume)), ctx.currentTime);
-
-    const channelGain = this.mixer.getChannelGainNode(channel);
-
-    source.connect(voiceGain);
-    voiceGain.connect(channelGain);
-
-    source.start(0);
-
-    source.onended = () => {
-      source.disconnect();
-      voiceGain.disconnect();
-    };
-  }
-
-  public playPositionalSound(soundUrl: string, options: PositionalAudioOptions): void {
-    const assets = this.ctx.caps.get(AssetsToken) as AssetsApi | null;
-    const buffer = assets?.getAsset<AudioBuffer>(soundUrl);
-
-    if (!buffer) {
-      console.warn(`[AudioService] Áudio posicional não encontrado no cache: ${soundUrl}`);
+    if (
+      normalizedUrl.length ===
+      0
+    ) {
       return;
     }
 
-    this.positional.play(buffer, options);
+    const assets =
+      this.getAssets();
 
-    this.ctx.events.emit("game.audio.positional-sound-triggered", {
-      soundUrl,
-      position: options.position,
-    });
+    const buffer =
+      assets?.getAsset<
+        AudioBuffer
+      >(
+        normalizedUrl,
+      );
+
+    if (
+      buffer ===
+      null ||
+      buffer ===
+      undefined
+    ) {
+      console.warn(
+        `[AudioService] Áudio não encontrado no cache de assets: ${normalizedUrl}`,
+      );
+
+      return;
+    }
+
+    void this.mixer
+      .resumeIfSuspended();
+
+    const audioContext =
+      this.mixer
+        .audioContext;
+
+    const source =
+      audioContext
+        .createBufferSource();
+
+    source.buffer =
+      buffer;
+
+    source.loop =
+      loop;
+
+    const voiceGain =
+      audioContext
+        .createGain();
+
+    voiceGain.gain
+      .setValueAtTime(
+        clampVolume(
+          volume,
+        ),
+        audioContext
+          .currentTime,
+      );
+
+    source.connect(
+      voiceGain,
+    );
+
+    voiceGain.connect(
+      this.mixer
+        .getChannelGainNode(
+          channel,
+        ),
+    );
+
+    if (
+      !this.voices.register({
+        source,
+        gainNode:
+          voiceGain,
+      })
+    ) {
+      return;
+    }
+
+    try {
+      source.start(
+        0,
+      );
+    } catch {
+      this.voices.release(
+        source,
+      );
+    }
   }
 
-  public setChannelVolume(channel: AudioChannelType, volume: number, muted = false): void {
-    this.mixer.setChannelVolume(channel, volume, muted);
-    this.ctx.events.emit("game.audio.channel-volume-changed", {
-      channel,
-      volume,
-      muted,
-    });
+  public playPositionalSound(
+    soundUrl:
+      string,
+    options:
+      PositionalAudioOptions,
+  ): void {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
+    const normalizedUrl =
+      normalizeUrl(
+        soundUrl,
+      );
+
+    const assets =
+      this.getAssets();
+
+    const buffer =
+      assets?.getAsset<
+        AudioBuffer
+      >(
+        normalizedUrl,
+      );
+
+    if (
+      buffer ===
+        null ||
+      buffer ===
+        undefined
+    ) {
+      console.warn(
+        `[AudioService] Áudio posicional não encontrado no cache: ${normalizedUrl}`,
+      );
+
+      return;
+    }
+
+    const handle =
+      this.positional.play(
+        buffer,
+        options,
+      );
+
+    if (
+      !this.voices.register(
+        handle,
+      )
+    ) {
+      return;
+    }
+
+    this.ctx.events.emit(
+      "game.audio.positional-sound-triggered",
+      {
+        soundUrl:
+          normalizedUrl,
+
+        position: {
+          x:
+            options.position.x,
+          y:
+            options.position.y,
+          z:
+            options.position.z,
+        },
+      },
+    );
   }
 
-  public getChannelVolume(channel: AudioChannelType): number {
-    return this.mixer.getChannelVolume(channel);
+  public setChannelVolume(
+    channel:
+      AudioChannelType,
+    volume:
+      number,
+    muted =
+      false,
+  ): void {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
+    this.mixer
+      .setChannelVolume(
+        channel,
+        volume,
+        muted,
+      );
+
+    this.ctx.events.emit(
+      "game.audio.channel-volume-changed",
+      {
+        channel,
+
+        volume:
+          this.mixer
+            .getChannelVolume(
+              channel,
+            ),
+
+        muted:
+          this.mixer
+            .isChannelMuted(
+              channel,
+            ),
+      },
+    );
   }
 
-  public isChannelMuted(channel: AudioChannelType): boolean {
-    return this.mixer.isChannelMuted(channel);
+  public getChannelVolume(
+    channel:
+      AudioChannelType,
+  ): number {
+    return this.mixer
+      .getChannelVolume(
+        channel,
+      );
   }
 
-  public async crossfadeMusic(trackUrl: string, options?: MusicCrossfadeOptions): Promise<void> {
-    const assets = this.ctx.caps.get(AssetsToken) as AssetsApi | null;
-    let buffer = assets?.getAsset<AudioBuffer>(trackUrl);
+  public isChannelMuted(
+    channel:
+      AudioChannelType,
+  ): boolean {
+    return this.mixer
+      .isChannelMuted(
+        channel,
+      );
+  }
 
-    if (!buffer && assets) {
+  public async crossfadeMusic(
+    trackUrl:
+      string,
+    options?:
+      MusicCrossfadeOptions,
+  ): Promise<void> {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
+    const normalizedUrl =
+      normalizeUrl(
+        trackUrl,
+      );
+
+    if (
+      normalizedUrl.length ===
+      0
+    ) {
+      return;
+    }
+
+    const requestGeneration =
+      this.musicRequestGeneration +
+      1;
+
+    this.musicRequestGeneration =
+      requestGeneration;
+
+    const assets =
+      this.getAssets();
+
+    let buffer =
+      assets?.getAsset<
+        AudioBuffer
+      >(
+        normalizedUrl,
+      );
+
+    let retainedByLoad =
+      false;
+
+    if (
+      (
+        buffer ===
+          null ||
+        buffer ===
+          undefined
+      ) &&
+      assets !==
+        null
+    ) {
       try {
-        buffer = await assets.loadAudio(trackUrl);
-      } catch (err) {
-        console.error(`[AudioService] Erro ao carregar música para crossfade: ${trackUrl}`, err);
+        buffer =
+          await assets
+            .loadAudio(
+              normalizedUrl,
+            );
+
+        retainedByLoad =
+          true;
+      } catch (
+        error:
+          unknown
+      ) {
+        if (
+          !this.disposed &&
+          requestGeneration ===
+            this.musicRequestGeneration
+        ) {
+          console.error(
+            `[AudioService] Erro ao carregar música para crossfade: ${normalizedUrl}`,
+            error,
+          );
+        }
+
         return;
       }
     }
 
-    if (!buffer) return;
+    if (
+      this.disposed ||
+      requestGeneration !==
+        this.musicRequestGeneration ||
+      buffer ===
+        null ||
+      buffer ===
+        undefined
+    ) {
+      if (
+        retainedByLoad
+      ) {
+        assets?.releaseAsset(
+          normalizedUrl,
+        );
+      }
 
-    await this.crossfader.crossfade(buffer, trackUrl, options);
+      return;
+    }
 
-    this.ctx.events.emit("game.audio.crossfade-completed", {
-      trackUrl,
-      durationSeconds: options?.durationSeconds ?? 1.5,
-    });
+    await this.crossfader
+      .crossfade(
+        buffer,
+        normalizedUrl,
+        options,
+      );
+
+    if (
+      retainedByLoad
+    ) {
+      assets?.releaseAsset(
+        normalizedUrl,
+      );
+    }
+
+    if (
+      this.disposed ||
+      requestGeneration !==
+        this.musicRequestGeneration
+    ) {
+      return;
+    }
+
+    this.ctx.events.emit(
+      "game.audio.crossfade-completed",
+      {
+        trackUrl:
+          normalizedUrl,
+
+        durationSeconds:
+          this.crossfader
+            .lastCrossfadeDurationSeconds,
+      },
+    );
   }
 
   public updateListenerPosition(
-    position: Vector3Audio,
-    forward?: Vector3Audio,
-    up?: Vector3Audio
+    position:
+      Vector3Audio,
+    forward?:
+      Vector3Audio,
+    up?:
+      Vector3Audio,
   ): void {
-    this.listenerBridge.updateListenerPosition(position, forward, up);
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
+    this.listenerBridge
+      .updateListenerPosition(
+        position,
+        forward,
+        up,
+      );
   }
 
   public stopAllSounds(): void {
-    this.crossfader.stop();
+    this.musicRequestGeneration +=
+      1;
+
+    this.voices
+      .stopAll();
+
+    this.crossfader
+      .stop();
+  }
+
+  public get activeVoiceCount():
+    number {
+    return this.voices
+      .activeVoiceCount;
   }
 
   public dispose(): void {
-    this.crossfader.stop();
-    this.mixer.dispose();
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
+    this.disposed =
+      true;
+
+    this.musicRequestGeneration +=
+      1;
+
+    this.voices
+      .dispose();
+
+    this.crossfader
+      .dispose();
+
+    this.mixer
+      .dispose();
+  }
+
+  private getAssets():
+    AssetsApi | null {
+    return (
+      this.ctx.caps.get(
+        AssetsToken,
+      ) ??
+      null
+    );
   }
 }

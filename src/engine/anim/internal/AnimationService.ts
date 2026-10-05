@@ -25,6 +25,9 @@ export class AnimationService
   private readonly eventManager:
     AnimationEventManager;
 
+  private disposed =
+    false;
+
   public constructor(
     private readonly ctx:
       PluginContext,
@@ -445,6 +448,13 @@ export class AnimationService
   }
 
   public dispose(): void {
+    if (this.disposed) {
+      return;
+    }
+
+    this.disposed =
+      true;
+
     this.fsms.clear();
 
     this.skeletalDriver.dispose();
@@ -537,6 +547,9 @@ export class AnimationService
       return 0;
     }
 
-    return deltaSeconds;
+    return Math.min(
+      deltaSeconds,
+      0.25,
+    );
   }
 }

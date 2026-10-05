@@ -2,6 +2,7 @@ import * as THREE from "three";
 
 import type {
   CameraShakeConfig,
+  Vector3Camera,
 } from "../../../contracts/camera/types";
 
 export interface CameraShakeSnapshot {
@@ -11,6 +12,32 @@ export interface CameraShakeSnapshot {
   readonly rotationOffset:
     THREE.Euler;
 }
+
+const DEFAULT_TRANSLATION:
+  Readonly<Vector3Camera> =
+    Object.freeze({
+      x:
+        0.3,
+      y:
+        0.3,
+      z:
+        0.2,
+    });
+
+const DEFAULT_ROTATION_DEGREES:
+  Readonly<Vector3Camera> =
+    Object.freeze({
+      x:
+        4,
+      y:
+        4,
+      z:
+        6,
+    });
+
+const DEGREES_TO_RADIANS =
+  Math.PI /
+  180;
 
 export class TraumaCameraShake {
   private trauma =
@@ -79,7 +106,7 @@ export class TraumaCameraShake {
     deltaSeconds:
       number,
   ): CameraShakeSnapshot {
-    const safeDelta =
+    const elapsedDelta =
       Number.isFinite(
         deltaSeconds,
       )
@@ -88,6 +115,12 @@ export class TraumaCameraShake {
             deltaSeconds,
           )
         : 0;
+
+    const phaseDelta =
+      Math.min(
+        0.25,
+        elapsedDelta,
+      );
 
     const decay =
       Math.max(
@@ -102,7 +135,7 @@ export class TraumaCameraShake {
         0,
         this.trauma -
           decay *
-            safeDelta,
+            elapsedDelta,
       );
 
     if (
@@ -137,24 +170,18 @@ export class TraumaCameraShake {
       );
 
     this.timeAccumulator +=
-      safeDelta *
+      phaseDelta *
       frequency;
 
     const maxTranslation =
       this.config
-        .maxTranslationOffset ?? {
-        x: 0.3,
-        y: 0.3,
-        z: 0.2,
-      };
+        .maxTranslationOffset ??
+      DEFAULT_TRANSLATION;
 
     const maxRotation =
       this.config
-        .maxPitchYawRollDegrees ?? {
-        x: 4,
-        y: 4,
-        z: 6,
-      };
+        .maxPitchYawRollDegrees ??
+      DEFAULT_ROTATION_DEGREES;
 
     const noiseX =
       Math.sin(
@@ -204,35 +231,27 @@ export class TraumaCameraShake {
       maxTranslation.x *
         shake *
         noiseX,
-
       maxTranslation.y *
         shake *
         noiseY,
-
       maxTranslation.z *
         shake *
         noiseZ,
     );
 
-    const degreesToRadians =
-      Math.PI /
-      180;
-
     this.scratchRotation.set(
       maxRotation.x *
         shake *
         noisePitch *
-        degreesToRadians,
-
+        DEGREES_TO_RADIANS,
       maxRotation.y *
         shake *
         noiseYaw *
-        degreesToRadians,
-
+        DEGREES_TO_RADIANS,
       maxRotation.z *
         shake *
         noiseRoll *
-        degreesToRadians,
+        DEGREES_TO_RADIANS,
     );
 
     return this.snapshot;

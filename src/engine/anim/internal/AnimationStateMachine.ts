@@ -385,9 +385,12 @@ export class AnimationStateMachine {
       Number.isFinite(
         deltaSeconds,
       )
-        ? Math.max(
-            0,
-            deltaSeconds,
+        ? Math.min(
+            0.25,
+            Math.max(
+              0,
+              deltaSeconds,
+            ),
           )
         : 0;
 

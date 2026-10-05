@@ -30,6 +30,9 @@ export class UIService
   private ownsUIRoot =
     false;
 
+  private disposed =
+    false;
+
   public constructor(
     private readonly ctx:
       PluginContext,
@@ -94,6 +97,10 @@ export class UIService
   public openScreen(
     screenId: UIScreenId,
   ): void {
+    if (this.disposed) {
+      return;
+    }
+
     this.uiManager.openScreen(
       screenId,
     );
@@ -102,6 +109,10 @@ export class UIService
   public pushModal(
     config: ModalConfig,
   ): void {
+    if (this.disposed) {
+      return;
+    }
+
     this.uiManager.pushModal(
       config,
     );
@@ -109,6 +120,10 @@ export class UIService
 
   public popModal():
     boolean {
+    if (this.disposed) {
+      return false;
+    }
+
     return this.uiManager
       .popModal();
   }
@@ -117,6 +132,10 @@ export class UIService
     data:
       Partial<PlayerHUDData>,
   ): void {
+    if (this.disposed) {
+      return;
+    }
+
     this.dataBinder
       .bindHUDData(
         data,
@@ -136,6 +155,10 @@ export class UIService
     value:
       unknown,
   ): void {
+    if (this.disposed) {
+      return;
+    }
+
     const changed =
       this.dataBinder
         .updateValue(
@@ -163,6 +186,10 @@ export class UIService
   public setLocale(
     locale: string,
   ): void {
+    if (this.disposed) {
+      return;
+    }
+
     this.localization
       .setLocale(
         locale,
@@ -204,6 +231,10 @@ export class UIService
     templateId: string,
     htmlContent: string,
   ): void {
+    if (this.disposed) {
+      return;
+    }
+
     this.templates
       .registerTemplate(
         templateId,
@@ -212,6 +243,13 @@ export class UIService
   }
 
   public dispose(): void {
+    if (this.disposed) {
+      return;
+    }
+
+    this.disposed =
+      true;
+
     this.domBridge.detach();
 
     this.dataBinder.detach();
