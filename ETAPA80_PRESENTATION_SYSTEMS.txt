@@ -48,7 +48,7 @@ UI
 - HUD binder mantém cache tipado e atualiza somente bindings afetados.
 
 SPRITES
-=======
+-------
 - TextureAtlasParser valida atlas e normaliza UV.
 - PixelArtScaler normaliza viewport/design sizes.
 - Tilemap usa InstancedMesh e um draw call por layer.
@@ -141,7 +141,7 @@ LAYER1_PRESENTATION_BASELINE_V1.json contém fingerprints semânticos de todos o
 ZIP da Etapa 80. Isso evita divergência entre baseline e pacote.
 
 AUDITOR
-=======
+-------
 node scripts/architecture/stage80-audit-presentation.mjs
 
 JSON:
