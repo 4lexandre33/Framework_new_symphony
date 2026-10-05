@@ -1,0 +1,102 @@
+{
+  "stage": "73",
+  "name": "Plugin Manifests & Capability Graph",
+  "layer": 1,
+  "requiresStages": [
+    71,
+    72
+  ],
+  "graphBaselineId": "layer1-capability-graph-v1-stage73",
+  "readOnlyGraphAudit": true,
+  "checkerEvolution": {
+    "checkDependenciesNowDerivesCanonicalCountFromModuleMap": true,
+    "toolingAndExperimentalActivationNowDerivedFromModuleMap": true,
+    "hardcodedCanonicalCountRemoved": true,
+    "hardcodedDebugPlayerCompositionPolicyRemoved": true
+  },
+  "capture": {
+    "canonicalModules": 23,
+    "bootstrappedTooling": 1,
+    "inactiveExperimental": 1,
+    "activePlugins": 24,
+    "provisions": 23,
+    "providedCapabilityIds": 23,
+    "requiredCapabilityRequirements": 29,
+    "optionalCapabilityRequirements": 2,
+    "resolvedCapabilityRequirements": 31,
+    "optionalUnresolved": 0,
+    "conflictsDeclared": 0,
+    "pluginDependencies": 15,
+    "requiredPluginDependencies": 15,
+    "optionalPluginDependencies": 0,
+    "cycles": 0,
+    "providerAmbiguities": 0,
+    "semverViolations": 0,
+    "pluginKindViolations": 0,
+    "graphViolations": 0
+  },
+  "dormantOwnedCapabilitiesAtCapture": [
+    "game.steam.net"
+  ],
+  "policy": {
+    "canonicalCountDerivedFromModuleMap": true,
+    "auxiliaryActivationDerivedFromModuleMap": true,
+    "additionalRegisteredPluginsAllowed": true,
+    "additionalProvidersAllowedWhenUnambiguous": true,
+    "existingBaselinePluginsRequireRecertificationForIdentityVersionPathChanges": true,
+    "existingBaselineProviderChangesRequireRecertification": true,
+    "existingBaselineRequirementRoutingChangesRequireRecertification": true,
+    "existingBootOrderRelativeOrderChangesRequireRecertification": true,
+    "dependencyCheckerMustRemainReadOnly": true,
+    "dormantSecondaryCapabilitiesMayRemainDormantWhenExplicitlyBaselined": true
+  },
+  "stage19RulesPreserved": [
+    "DEP001 composition",
+    "DEP002 manifest",
+    "DEP003 semver",
+    "DEP004 capability provision",
+    "DEP005 required capability",
+    "DEP006 optional capability",
+    "DEP007 conflicts",
+    "DEP008 plugin dependency",
+    "DEP009 plugin cycle",
+    "DEP010 provider ambiguity",
+    "DEP011 PluginKind"
+  ],
+  "localValidation": {
+    "nodeSyntax": "PASS",
+    "patchedDependencyChecker": "PASS",
+    "stage71Regression": "PASS",
+    "stage72Regression": "PASS",
+    "stage73Audit": "PASS",
+    "activePlugins": 24,
+    "provisions": 23,
+    "providedCapabilityIds": 23,
+    "resolvedCapabilityRequirements": 31,
+    "pluginDependencies": 15,
+    "cycles": 0,
+    "providerAmbiguities": 0,
+    "violations": 0,
+    "policySelftest": "PASS",
+    "typescriptStage73Tests": "PASS"
+  },
+  "explicitlyDeferred": [
+    "Stage 74 Lifecycle / Boot / Shutdown",
+    "setup/ready/stop/dispose behavior",
+    "partial boot rollback",
+    "restart and teardown resource audit",
+    "Stage 84 activation/completion of game.steam.net if implementation is complete"
+  ],
+  "files": [
+    "LAYER1_CAPABILITY_GRAPH_BASELINE_V1.json",
+    "ETAPA73_PLUGIN_MANIFESTS_CAPABILITY_GRAPH.txt",
+    "scripts/architecture/check-dependencies.mjs",
+    "scripts/architecture/lib/layer1-capability-graph-v1.mjs",
+    "scripts/architecture/stage73-audit-capability-graph.mjs",
+    "scripts/architecture/stage73-validate-capability-graph.mjs",
+    "tests/layer1-capability-graph.test.ts",
+    "tests/layer1-capability-graph-selftest.test.ts",
+    "ETAPA73_MANIFEST.json",
+    "ETAPA73_SHA256SUMS.txt"
+  ]
+}

@@ -1,0 +1,186 @@
+PROJETO1 — ETAPA 73 / PLUGIN MANIFESTS & CAPABILITY GRAPH
+
+OBJETIVO
+Certificar o grafo ativo de plugins/capabilities da Camada 1 sobre as
+baselines das Etapas 71 e 72.
+
+ESCOPO
+- composition root;
+- manifests;
+- provides;
+- consumes;
+- conflicts;
+- semver;
+- provider priority;
+- provider ambiguity;
+- dependsOn;
+- PluginKind;
+- boot order;
+- cycles;
+- read-only proof.
+
+PRECONDIÇÕES
+Etapa 71 — Layer 1 Baseline & Inventory
+Etapa 72 — Public APIs / Contracts / Tokens
+
+SOURCE OF TRUTH
+scripts/architecture/module-map.mjs
+src/app/createEnginePlugins.ts
+src/plugins/**/plugin.ts
+src/tokens/*.ts
+
+BASELINE DE GRAFO
+LAYER1_CAPABILITY_GRAPH_BASELINE_V1.json
+
+ID:
+layer1-capability-graph-v1-stage73
+
+CAPTURE V1
+23 módulos canônicos
+1 tooling bootstrapped: game.debug
+1 experimental inativo: game.player
+
+24 plugins ativos:
+23 canônicos + game.debug
+
+23 provisions ativos
+23 capability IDs providos
+
+29 requirements obrigatórios de capability
+2 requirements opcionais
+31 requirements resolvidos
+
+0 opcionais sem provider
+0 conflicts declarados
+15 dependsOn
+0 cycles
+0 provider ambiguity
+0 semver violation
+0 PluginKind violation
+0 dependency violation
+
+DORMANT OWNED CAPABILITY
+O module-map possui 24 tokens/capabilities owned.
+
+O grafo ativo atualmente provê 23.
+
+A diferença é:
+
+game.steam.net
+
+Essa secondary capability possui token/API pública certificada pela Etapa 72,
+mas não é um provider ativo no manifest Steam atual e nenhum consumidor do
+grafo ativo depende dela.
+
+A Etapa 73 NÃO inventa implementação SteamNetworkingApi apenas para aumentar
+uma contagem.
+
+Ativação completa dessa secondary capability deve ocorrer somente quando sua
+implementação estiver completa e será reavaliada especialmente na Etapa 84 —
+Steamworks Integration.
+
+PRIMARY CAPABILITY RULE
+Toda capability primária de módulo canônico DEVE possuir provider ativo.
+
+Secondary owned capabilities podem permanecer dormentes quando isso estiver
+explicitamente registrado na baseline.
+
+CHECK-DEPENDENCIES EXTENSÍVEL
+A versão anterior de:
+
+scripts/architecture/check-dependencies.mjs
+
+carregava três suposições históricas:
+
+- canonical count = 23 hardcoded;
+- game.debug path hardcoded;
+- game.player path hardcoded.
+
+A Etapa 73 remove esse acoplamento.
+
+Agora o checker deriva de module-map:
+
+CANONICAL_MODULES
+TOOLING_PLUGINS
+EXPERIMENTAL_PLUGINS
+
+Regras:
+
+- todos os canonical module plugins devem estar ativos;
+- auxiliares bootstrapped devem estar ativos;
+- auxiliares não-bootstrapped devem permanecer inativos;
+- nenhum plugin first-party fora do registry pode entrar silenciosamente.
+
+Isso preserva a arquitetura atual e permite expansão futura.
+
+EXEMPLO FUTURO
+Se game.weather for adicionado oficialmente:
+
+module-map
+  -> CANONICAL_MODULES inclui weather
+  -> createEnginePlugins inclui weather
+  -> manifest válido
+  -> provider/requirements válidos
+  -> zero ambiguity/cycle
+  -> Stage 73 passa após recertificação do graph baseline
+
+A contagem atual não é limite permanente.
+
+BASELINE COMPATIBILITY
+A baseline v1 protege:
+
+- plugin id;
+- version;
+- kind;
+- plugin path;
+- providers;
+- provider version/kind/priority;
+- resolved requirements;
+- range;
+- optional flag;
+- provider selecionado;
+- ordem relativa de boot.
+
+Novos plugins registrados são permitidos.
+
+Mudanças no grafo certificado existente exigem recertificação explícita.
+
+SEMVER / PRIORITY / KIND
+O checker existente continua validando:
+
+DEP001 composition
+DEP002 manifest
+DEP003 semver
+DEP004 capability provision
+DEP005 required capability
+DEP006 optional capability
+DEP007 conflicts
+DEP008 plugin dependency
+DEP009 plugin cycle
+DEP010 provider ambiguity
+DEP011 PluginKind
+
+READ-ONLY
+O checker faz snapshot/digest dos inputs antes e depois.
+
+A Etapa 73 exige:
+
+readOnly.unchanged = true
+
+A auditoria nunca deve reescrever manifests/plugins/tokens.
+
+NÃO ANTECIPADO
+A Etapa 73 não audita profundamente:
+
+- setup/ready/stop/dispose;
+- rollback de boot;
+- resources/leaks;
+- game loop;
+- render;
+- physics;
+- input.
+
+Isso começa na Etapa 74 — Lifecycle / Boot / Shutdown.
+
+PRÓXIMA ETAPA
+74 — Lifecycle / Boot / Shutdown.

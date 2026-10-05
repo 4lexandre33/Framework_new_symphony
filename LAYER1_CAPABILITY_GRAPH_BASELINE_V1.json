@@ -1,0 +1,709 @@
+{
+  "schemaVersion": 1,
+  "baselineId": "layer1-capability-graph-v1-stage73",
+  "architectureMigrationVersion": "v20",
+  "sourceChecker": "scripts/architecture/check-dependencies.mjs",
+  "sourceOfTruth": [
+    "scripts/architecture/module-map.mjs",
+    "src/app/createEnginePlugins.ts",
+    "src/plugins/**/plugin.ts",
+    "src/tokens/*.ts"
+  ],
+  "capturedCounts": {
+    "canonicalModules": 23,
+    "bootstrappedTooling": 1,
+    "inactiveExperimental": 1,
+    "activePlugins": 24,
+    "provisions": 23,
+    "providedCapabilityIds": 23,
+    "requiredCapabilityRequirements": 29,
+    "optionalCapabilityRequirements": 2,
+    "resolvedCapabilityRequirements": 31,
+    "optionalUnresolved": 0,
+    "conflictsDeclared": 0,
+    "pluginDependencies": 15,
+    "requiredPluginDependencies": 15,
+    "optionalPluginDependencies": 0,
+    "cycles": 0,
+    "providerAmbiguities": 0,
+    "semverViolations": 0,
+    "pluginKindViolations": 0,
+    "graphViolations": 0
+  },
+  "dormantOwnedCapabilitiesAtCapture": [
+    "game.steam.net"
+  ],
+  "policy": {
+    "canonicalCountDerivedFromModuleMap": true,
+    "auxiliaryActivationDerivedFromModuleMap": true,
+    "additionalRegisteredPluginsAllowed": true,
+    "additionalProvidersAllowedWhenUnambiguous": true,
+    "existingBaselinePluginsRequireRecertificationForIdentityVersionPathChanges": true,
+    "existingBaselineProviderChangesRequireRecertification": true,
+    "existingBaselineRequirementRoutingChangesRequireRecertification": true,
+    "existingBootOrderRelativeOrderChangesRequireRecertification": true,
+    "dependencyCheckerMustRemainReadOnly": true,
+    "dormantSecondaryCapabilitiesMayRemainDormantWhenExplicitlyBaselined": true
+  },
+  "graph": {
+    "architectureMigrationVersion": "v20",
+    "composition": {
+      "path": "src/app/createEnginePlugins.ts",
+      "activePlugins": [
+        {
+          "id": "game.steam",
+          "version": "1.1.0",
+          "kind": "preloaded",
+          "path": "src/plugins/steam/plugin.ts",
+          "manifestSource": "export const steamManifest"
+        },
+        {
+          "id": "game.input",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/input/plugin.ts",
+          "manifestSource": "export const inputManifest"
+        },
+        {
+          "id": "game.assets",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/assets/plugin.ts",
+          "manifestSource": "export const assetsManifest"
+        },
+        {
+          "id": "game.loop",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/game-loop/plugin.ts",
+          "manifestSource": "export const gameLoopManifest"
+        },
+        {
+          "id": "game.render",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/render/plugin.ts",
+          "manifestSource": "export const renderManifest"
+        },
+        {
+          "id": "game.net",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/net/plugin.ts",
+          "manifestSource": "export const netManifest"
+        },
+        {
+          "id": "game.physics",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/physics/plugin.ts",
+          "manifestSource": "export const physicsManifest"
+        },
+        {
+          "id": "game.storage",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/storage/plugin.ts",
+          "manifestSource": "export const storageManifest"
+        },
+        {
+          "id": "game.world",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/world/plugin.ts",
+          "manifestSource": "export const worldManifest"
+        },
+        {
+          "id": "game.ui",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/ui/plugin.ts",
+          "manifestSource": "export const uiManifest"
+        },
+        {
+          "id": "game.anim",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/anim/plugin.ts",
+          "manifestSource": "export const animManifest"
+        },
+        {
+          "id": "game.sprites",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/sprites/plugin.ts",
+          "manifestSource": "export const spritesManifest"
+        },
+        {
+          "id": "game.audio",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/audio/plugin.ts",
+          "manifestSource": "export const audioManifest"
+        },
+        {
+          "id": "game.camera",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/camera/plugin.ts",
+          "manifestSource": "export const cameraManifest"
+        },
+        {
+          "id": "game.ai",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/ai/plugin.ts",
+          "manifestSource": "export const aiManifest"
+        },
+        {
+          "id": "game.vfx",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/vfx/plugin.ts",
+          "manifestSource": "export const vfxManifest"
+        },
+        {
+          "id": "game.terrain",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/terrain/plugin.ts",
+          "manifestSource": "export const terrainManifest"
+        },
+        {
+          "id": "game.scripting",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/scripting/plugin.ts",
+          "manifestSource": "export const scriptingManifest"
+        },
+        {
+          "id": "game.streaming",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/streaming/plugin.ts",
+          "manifestSource": "export const streamingManifest"
+        },
+        {
+          "id": "game.overlay",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/overlay/plugin.ts",
+          "manifestSource": "export const overlayManifest"
+        },
+        {
+          "id": "game.security",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/security/plugin.ts",
+          "manifestSource": "export const securityManifest"
+        },
+        {
+          "id": "game.modding",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/modding/plugin.ts",
+          "manifestSource": "export const moddingManifest"
+        },
+        {
+          "id": "game.monetization",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/monetization/plugin.ts",
+          "manifestSource": "export const monetizationManifest"
+        },
+        {
+          "id": "game.debug",
+          "version": "1.0.0",
+          "kind": "preloaded",
+          "path": "src/plugins/debug/plugin.ts",
+          "manifestSource": "manifest inline da factory"
+        }
+      ]
+    },
+    "bootOrder": [
+      "game.steam",
+      "game.input",
+      "game.assets",
+      "game.loop",
+      "game.render",
+      "game.net",
+      "game.physics",
+      "game.storage",
+      "game.world",
+      "game.ui",
+      "game.anim",
+      "game.sprites",
+      "game.audio",
+      "game.camera",
+      "game.ai",
+      "game.vfx",
+      "game.terrain",
+      "game.scripting",
+      "game.streaming",
+      "game.overlay",
+      "game.security",
+      "game.modding",
+      "game.monetization",
+      "game.debug"
+    ],
+    "providers": [
+      {
+        "capabilityId": "game.ai",
+        "pluginId": "game.ai",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.anim",
+        "pluginId": "game.anim",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.assets",
+        "pluginId": "game.assets",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.audio",
+        "pluginId": "game.audio",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.camera",
+        "pluginId": "game.camera",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.input",
+        "pluginId": "game.input",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.loop",
+        "pluginId": "game.loop",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.modding",
+        "pluginId": "game.modding",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.monetization",
+        "pluginId": "game.monetization",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.net",
+        "pluginId": "game.net",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.overlay",
+        "pluginId": "game.overlay",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.physics",
+        "pluginId": "game.physics",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.render",
+        "pluginId": "game.render",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.scripting",
+        "pluginId": "game.scripting",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.security",
+        "pluginId": "game.security",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.sprites",
+        "pluginId": "game.sprites",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.steam",
+        "pluginId": "game.steam",
+        "kind": "preloaded",
+        "version": "1.1.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.storage",
+        "pluginId": "game.storage",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.streaming",
+        "pluginId": "game.streaming",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.terrain",
+        "pluginId": "game.terrain",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.ui",
+        "pluginId": "game.ui",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.vfx",
+        "pluginId": "game.vfx",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
+        "capabilityId": "game.world",
+        "pluginId": "game.world",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      }
+    ],
+    "resolvedRequirements": [
+      {
+        "consumerPluginId": "game.debug",
+        "capabilityId": "game.ai",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.ai",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.debug",
+        "capabilityId": "game.anim",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.anim",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.audio",
+        "capabilityId": "game.assets",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.assets",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.debug",
+        "capabilityId": "game.assets",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.assets",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.vfx",
+        "capabilityId": "game.assets",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.assets",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.debug",
+        "capabilityId": "game.audio",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.audio",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.debug",
+        "capabilityId": "game.camera",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.camera",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.streaming",
+        "capabilityId": "game.camera",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.camera",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.debug",
+        "capabilityId": "game.input",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.input",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.debug",
+        "capabilityId": "game.modding",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.modding",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.debug",
+        "capabilityId": "game.overlay",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.overlay",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.ai",
+        "capabilityId": "game.physics",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.physics",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.camera",
+        "capabilityId": "game.physics",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.physics",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.debug",
+        "capabilityId": "game.physics",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.physics",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.camera",
+        "capabilityId": "game.render",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.render",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.terrain",
+        "capabilityId": "game.render",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.render",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.vfx",
+        "capabilityId": "game.render",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.render",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.debug",
+        "capabilityId": "game.scripting",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.scripting",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.debug",
+        "capabilityId": "game.security",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.security",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.debug",
+        "capabilityId": "game.sprites",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.sprites",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.debug",
+        "capabilityId": "game.steam",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.steam",
+        "providerVersion": "1.1.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.net",
+        "capabilityId": "game.steam",
+        "range": "^1.0.0",
+        "optional": true,
+        "providerPluginId": "game.steam",
+        "providerVersion": "1.1.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.storage",
+        "capabilityId": "game.steam",
+        "range": "^1.0.0",
+        "optional": true,
+        "providerPluginId": "game.steam",
+        "providerVersion": "1.1.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.debug",
+        "capabilityId": "game.storage",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.storage",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.debug",
+        "capabilityId": "game.streaming",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.streaming",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.debug",
+        "capabilityId": "game.terrain",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.terrain",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.debug",
+        "capabilityId": "game.ui",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.ui",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.debug",
+        "capabilityId": "game.vfx",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.vfx",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.ai",
+        "capabilityId": "game.world",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.world",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.debug",
+        "capabilityId": "game.world",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.world",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.scripting",
+        "capabilityId": "game.world",
+        "range": "^1.0.0",
+        "optional": false,
+        "providerPluginId": "game.world",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      }
+    ],
+    "optionalUnresolved": [],
+    "counts": {
+      "plugins": 24,
+      "provisions": 23,
+      "providedCapabilityIds": 23,
+      "requiredCapabilityRequirements": 29,
+      "optionalCapabilityRequirements": 2,
+      "resolvedCapabilityRequirements": 31,
+      "optionalUnresolved": 0,
+      "conflictsDeclared": 0,
+      "pluginDependencies": 15,
+      "requiredPluginDependencies": 15,
+      "optionalPluginDependencies": 0
+    },
+    "semanticSha256": "ead3b4fce5c384ad58cab7b1c3e6cd7de252e95908777982b8ad797418eb04ca"
+  }
+}

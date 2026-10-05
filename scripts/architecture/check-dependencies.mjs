@@ -9,6 +9,8 @@ import { fileURLToPath } from "node:url";
 import {
   ARCHITECTURE_MIGRATION_VERSION,
   CANONICAL_MODULES,
+  TOOLING_PLUGINS,
+  EXPERIMENTAL_PLUGINS,
 } from "./module-map.mjs";
 
 export const STAGE_NAME =
@@ -17,17 +19,48 @@ export const STAGE_NAME =
 const EXPECTED_ARCHITECTURE_VERSION =
   "v20";
 
-const EXPECTED_CANONICAL_MODULE_COUNT =
-  23;
-
 const COMPOSITION_ROOT =
   "src/app/createEnginePlugins.ts";
 
+const BOOTSTRAPPED_AUXILIARY_PLUGINS =
+  Object.freeze(
+    [
+      ...TOOLING_PLUGINS,
+      ...EXPERIMENTAL_PLUGINS,
+    ].filter(
+      (record) =>
+        record.bootstrapped ===
+        true,
+    ),
+  );
+
+const INACTIVE_AUXILIARY_PLUGINS =
+  Object.freeze(
+    [
+      ...TOOLING_PLUGINS,
+      ...EXPERIMENTAL_PLUGINS,
+    ].filter(
+      (record) =>
+        record.bootstrapped !==
+        true,
+    ),
+  );
+
 const DEBUG_PLUGIN_PATH =
-  "src/plugins/debug/plugin.ts";
+  TOOLING_PLUGINS.find(
+    (record) =>
+      record.pluginId ===
+      "game.debug",
+  )?.plugin ??
+  null;
 
 const PLAYER_PLUGIN_PATH =
-  "src/plugins/player/plugin.ts";
+  EXPERIMENTAL_PLUGINS.find(
+    (record) =>
+      record.pluginId ===
+      "game.player",
+  )?.plugin ??
+  null;
 
 const PLUGIN_KIND_RANK =
   Object.freeze({
@@ -300,9 +333,10 @@ O checker é estritamente read-only e valida:
   - regras de PluginKind usadas pelo Kernel.
 
 O grafo analisado é o conjunto realmente registrado por
-src/app/createEnginePlugins.ts. Os 23 módulos canônicos devem estar
-presentes, game.debug é tooling ativo e game.player permanece fora
-da composição.
+src/app/createEnginePlugins.ts. Todos os módulos canônicos do
+module-map e todos os plugins auxiliares marcados bootstrapped devem
+estar presentes; auxiliares não-bootstrapped permanecem fora da
+composição.
 `);
 }
 
@@ -390,14 +424,6 @@ function assertArchitectureVersion() {
     );
   }
 
-  if (
-    CANONICAL_MODULES.length !==
-      EXPECTED_CANONICAL_MODULE_COUNT
-  ) {
-    fail(
-      `Module map deveria conter ${String(EXPECTED_CANONICAL_MODULE_COUNT)} módulos canônicos; atual: ${String(CANONICAL_MODULES.length)}.`,
-    );
-  }
 }
 
 function loadTypeScript() {
@@ -3510,34 +3536,56 @@ function validateComposition(
     }
   }
 
-  if (
-    !activePaths.has(
-      DEBUG_PLUGIN_PATH,
-    )
+  for (
+    const record of
+      BOOTSTRAPPED_AUXILIARY_PLUGINS
   ) {
-    violations.push(
-      violation(
-        RULES.COMPOSITION,
-        "game.debug",
-        COMPOSITION_ROOT,
-        `Tooling esperado não está ativo: ${DEBUG_PLUGIN_PATH}`,
-      ),
-    );
+    if (
+      !activePaths.has(
+        record.plugin,
+      )
+    ) {
+      violations.push(
+        violation(
+          RULES.COMPOSITION,
+          record.pluginId,
+          COMPOSITION_ROOT,
+          `Plugin auxiliar bootstrapped esperado não está ativo: ${record.plugin}`,
+          {
+            category:
+              record.category,
+            pluginPath:
+              record.plugin,
+          },
+        ),
+      );
+    }
   }
 
-  if (
-    activePaths.has(
-      PLAYER_PLUGIN_PATH,
-    )
+  for (
+    const record of
+      INACTIVE_AUXILIARY_PLUGINS
   ) {
-    violations.push(
-      violation(
-        RULES.COMPOSITION,
-        "game.player",
-        COMPOSITION_ROOT,
-        "src/plugins/player/plugin.ts é experimental/orphaned e não pode ser autoativado pela composição v20.",
-      ),
-    );
+    if (
+      activePaths.has(
+        record.plugin,
+      )
+    ) {
+      violations.push(
+        violation(
+          RULES.COMPOSITION,
+          record.pluginId,
+          COMPOSITION_ROOT,
+          `Plugin auxiliar não-bootstrapped não pode estar ativo: ${record.plugin}`,
+          {
+            category:
+              record.category,
+            pluginPath:
+              record.plugin,
+          },
+        ),
+      );
+    }
   }
 
   const expectedPaths =
@@ -3547,7 +3595,10 @@ function validateComposition(
           (moduleRecord) =>
             moduleRecord.plugin,
         ),
-        DEBUG_PLUGIN_PATH,
+        ...BOOTSTRAPPED_AUXILIARY_PLUGINS.map(
+          (record) =>
+            record.plugin,
+        ),
       ],
     );
 
@@ -5298,7 +5349,29 @@ function runStage19() {
         activePluginCount:
           activePlugins.length,
         canonicalExpected:
-          EXPECTED_CANONICAL_MODULE_COUNT,
+          CANONICAL_MODULES.length,
+        bootstrappedAuxiliaryExpected:
+          BOOTSTRAPPED_AUXILIARY_PLUGINS.map(
+            (record) => ({
+              id:
+                record.pluginId,
+              path:
+                record.plugin,
+              category:
+                record.category,
+            }),
+          ),
+        inactiveAuxiliaryExpected:
+          INACTIVE_AUXILIARY_PLUGINS.map(
+            (record) => ({
+              id:
+                record.pluginId,
+              path:
+                record.plugin,
+              category:
+                record.category,
+            }),
+          ),
         debugExpected:
           DEBUG_PLUGIN_PATH,
         playerExpectedInactive:
@@ -5398,7 +5471,7 @@ function runStage19() {
       `[OK] TypeScript Compiler API: ${String(ts.version)}`,
     );
     console.log(
-      `[OK] Plugins ativos: ${String(activePlugins.length)} (${String(EXPECTED_CANONICAL_MODULE_COUNT)} canônicos + game.debug).`,
+      `[OK] Plugins ativos: ${String(activePlugins.length)} (${String(CANONICAL_MODULES.length)} canônicos + ${String(BOOTSTRAPPED_AUXILIARY_PLUGINS.length)} auxiliares bootstrapped).`,
     );
     console.log(
       `[OK] game.player ativo: ${
@@ -5413,6 +5486,9 @@ function runStage19() {
     );
     console.log(
       `[OK] Manifests analisados estaticamente: ${String(manifestRecords.length)}`,
+    );
+    console.log(
+      `[OK] Registry auxiliar: ${String(BOOTSTRAPPED_AUXILIARY_PLUGINS.length)} ativo(s), ${String(INACTIVE_AUXILIARY_PLUGINS.length)} inativo(s).`,
     );
     console.log("");
 
