@@ -109,13 +109,12 @@ export class InputDiagnostics {
     input: InputApi,
   ): Readonly<InputDiagnosticsSnapshot> {
     /*
-     * Único owner atual do update() de Input.
+     * Stage 78: o snapshot é atualizado pelo InputFramePump,
+     * iniciado pelo plugin game.input em kernel.booted.
      *
-     * Quando o game loop de produção assumir
-     * oficialmente esse lifecycle, esta chamada
-     * deverá migrar para ele.
+     * Diagnostics é consumidor somente-leitura e não pode avançar
+     * o frame de input, pois isso apagaria edges PRESSED/RELEASED.
      */
-    input.update();
 
     const moveForward =
       input.getAxis(

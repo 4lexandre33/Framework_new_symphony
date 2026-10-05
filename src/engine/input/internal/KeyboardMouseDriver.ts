@@ -1,116 +1,141 @@
-import type { Vector2D } from "../../../contracts/input/types";
+import type {
+  Vector2D,
+} from "../../../contracts/input/types";
+
+function finiteOrZero(
+  value: number,
+): number {
+  return Number.isFinite(
+    value,
+  )
+    ? value
+    : 0;
+}
 
 export class KeyboardMouseDriver {
-  /*
-   * Estado contínuo.
-   *
-   * Enquanto uma tecla estiver fisicamente pressionada,
-   * ela permanece neste Set.
-   */
-  private readonly keysDown = new Set<string>();
+  private readonly keysDown =
+    new Set<string>();
 
-  /*
-   * Eventos recebidos pelo DOM desde o último update().
-   */
-  private readonly keysPressedPending = new Set<string>();
-  private readonly keysReleasedPending = new Set<string>();
+  private readonly keysPressedPending =
+    new Set<string>();
 
-  /*
-   * Snapshot público do frame atual.
-   *
-   * Gameplay consulta estes Sets.
-   */
-  private readonly keysPressedFrame = new Set<string>();
-  private readonly keysReleasedFrame = new Set<string>();
+  private readonly keysReleasedPending =
+    new Set<string>();
 
-  /*
-   * Mouse contínuo.
-   */
-  private readonly mouseButtonsDown = new Set<number>();
+  private readonly keysPressedFrame =
+    new Set<string>();
 
-  /*
-   * Mouse pending.
-   */
-  private readonly mouseButtonsPressedPending = new Set<number>();
-  private readonly mouseButtonsReleasedPending = new Set<number>();
+  private readonly keysReleasedFrame =
+    new Set<string>();
 
-  /*
-   * Mouse snapshot do frame.
-   */
-  private readonly mouseButtonsPressedFrame = new Set<number>();
-  private readonly mouseButtonsReleasedFrame = new Set<number>();
+  private readonly mouseButtonsDown =
+    new Set<number>();
 
-  /*
-   * Delta recebido entre frames.
-   */
-  private readonly mouseDeltaPending: Vector2D = {
-    x: 0,
-    y: 0,
-  };
+  private readonly mouseButtonsPressedPending =
+    new Set<number>();
 
-  /*
-   * Delta congelado para o frame atual.
-   *
-   * O objeto é reutilizado para não gerar garbage
-   * no game loop.
-   */
-  private readonly mouseDeltaFrame: Vector2D = {
-    x: 0,
-    y: 0,
-  };
+  private readonly mouseButtonsReleasedPending =
+    new Set<number>();
 
-  /*
-   * Indica atividade de teclado/mouse no snapshot
-   * atual.
-   *
-   * Usado pelo InputManager para alternar
-   * activeDevice.
-   */
-  private activityThisFrame = false;
+  private readonly mouseButtonsPressedFrame =
+    new Set<number>();
 
-  private isLocked = false;
-  private isBound = false;
+  private readonly mouseButtonsReleasedFrame =
+    new Set<number>();
 
-  private targetElement: HTMLElement | null = null;
+  private readonly mouseDeltaPending:
+    Vector2D = {
+      x:
+        0,
+      y:
+        0,
+    };
+
+  private readonly mouseDeltaFrame:
+    Vector2D = {
+      x:
+        0,
+      y:
+        0,
+    };
+
+  private activityThisFrame =
+    false;
+
+  private isLocked =
+    false;
+
+  private isBound =
+    false;
+
+  private disposed =
+    false;
+
+  private targetElement:
+    HTMLElement |
+    null = null;
 
   public constructor() {
     this.handleKeyDown =
-      this.handleKeyDown.bind(this);
+      this.handleKeyDown.bind(
+        this,
+      );
 
     this.handleKeyUp =
-      this.handleKeyUp.bind(this);
+      this.handleKeyUp.bind(
+        this,
+      );
 
     this.handleMouseMove =
-      this.handleMouseMove.bind(this);
+      this.handleMouseMove.bind(
+        this,
+      );
 
     this.handleMouseDown =
-      this.handleMouseDown.bind(this);
+      this.handleMouseDown.bind(
+        this,
+      );
 
     this.handleMouseUp =
-      this.handleMouseUp.bind(this);
+      this.handleMouseUp.bind(
+        this,
+      );
 
     this.handlePointerLockChange =
-      this.handlePointerLockChange.bind(this);
+      this.handlePointerLockChange.bind(
+        this,
+      );
 
     this.handleContextMenu =
-      this.handleContextMenu.bind(this);
+      this.handleContextMenu.bind(
+        this,
+      );
 
     this.handleWindowBlur =
-      this.handleWindowBlur.bind(this);
+      this.handleWindowBlur.bind(
+        this,
+      );
+
+    this.handleVisibilityChange =
+      this.handleVisibilityChange.bind(
+        this,
+      );
   }
 
-  /* ==========================================================================
-   * LIFECYCLE
-   * ======================================================================== */
-
   public attach(
-    element: HTMLElement = document.body,
+    element:
+      HTMLElement =
+        document.body,
   ): void {
-    if (this.isBound) {
+    if (
+      this.disposed ||
+      this.isBound
+    ) {
       return;
     }
 
-    this.targetElement = element;
+    this.targetElement =
+      element;
 
     window.addEventListener(
       "keydown",
@@ -152,12 +177,28 @@ export class KeyboardMouseDriver {
       this.handlePointerLockChange,
     );
 
-    this.isBound = true;
+    document.addEventListener(
+      "visibilitychange",
+      this.handleVisibilityChange,
+    );
+
+    this.handlePointerLockChange();
+
+    this.isBound =
+      true;
   }
 
   public detach(): void {
-    if (!this.isBound) {
+    if (
+      !this.isBound
+    ) {
       return;
+    }
+
+    if (
+      this.isPointerLocked
+    ) {
+      this.exitPointerLock();
     }
 
     window.removeEventListener(
@@ -200,60 +241,64 @@ export class KeyboardMouseDriver {
       this.handlePointerLockChange,
     );
 
+    document.removeEventListener(
+      "visibilitychange",
+      this.handleVisibilityChange,
+    );
+
     this.clearAllState();
 
-    this.targetElement = null;
-    this.isBound = false;
+    this.targetElement =
+      null;
+
+    this.isBound =
+      false;
   }
 
-  /* ==========================================================================
-   * FRAME UPDATE
-   * ======================================================================== */
+  public dispose(): void {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
 
-  /**
-   * Cria o snapshot do input para o frame atual.
-   *
-   * Ordem:
-   *
-   * pending DOM
-   *      ↓
-   * frame snapshot
-   *      ↓
-   * pending.clear()
-   *
-   * Dessa forma pressed/released permanecem disponíveis
-   * até o próximo update().
-   */
+    this.detach();
+
+    this.disposed =
+      true;
+  }
+
   public update(): void {
-    /*
-     * Limpa apenas o snapshot anterior.
-     */
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
     this.keysPressedFrame.clear();
     this.keysReleasedFrame.clear();
 
     this.mouseButtonsPressedFrame.clear();
     this.mouseButtonsReleasedFrame.clear();
 
-    /*
-     * Transfere teclado pending → frame.
-     */
     for (
       const code of
       this.keysPressedPending
     ) {
-      this.keysPressedFrame.add(code);
+      this.keysPressedFrame.add(
+        code,
+      );
     }
 
     for (
       const code of
       this.keysReleasedPending
     ) {
-      this.keysReleasedFrame.add(code);
+      this.keysReleasedFrame.add(
+        code,
+      );
     }
 
-    /*
-     * Transfere mouse pending → frame.
-     */
     for (
       const button of
       this.mouseButtonsPressedPending
@@ -272,47 +317,49 @@ export class KeyboardMouseDriver {
       );
     }
 
-    /*
-     * Congela o delta acumulado para este frame.
-     */
     this.mouseDeltaFrame.x =
       this.mouseDeltaPending.x;
 
     this.mouseDeltaFrame.y =
       this.mouseDeltaPending.y;
 
-    /*
-     * Detecta atividade antes de limpar pending.
-     */
     this.activityThisFrame =
-      this.keysPressedFrame.size > 0 ||
-      this.keysReleasedFrame.size > 0 ||
-      this.mouseButtonsPressedFrame.size > 0 ||
-      this.mouseButtonsReleasedFrame.size > 0 ||
-      this.mouseDeltaFrame.x !== 0 ||
-      this.mouseDeltaFrame.y !== 0;
+      this.keysDown.size >
+        0 ||
+      this.keysPressedFrame.size >
+        0 ||
+      this.keysReleasedFrame.size >
+        0 ||
+      this.mouseButtonsDown.size >
+        0 ||
+      this.mouseButtonsPressedFrame.size >
+        0 ||
+      this.mouseButtonsReleasedFrame.size >
+        0 ||
+      this.mouseDeltaFrame.x !==
+        0 ||
+      this.mouseDeltaFrame.y !==
+        0;
 
-    /*
-     * Agora sim podemos liberar o pending.
-     */
     this.keysPressedPending.clear();
     this.keysReleasedPending.clear();
 
     this.mouseButtonsPressedPending.clear();
     this.mouseButtonsReleasedPending.clear();
 
-    this.mouseDeltaPending.x = 0;
-    this.mouseDeltaPending.y = 0;
-  }
+    this.mouseDeltaPending.x =
+      0;
 
-  /* ==========================================================================
-   * KEYBOARD QUERIES
-   * ======================================================================== */
+    this.mouseDeltaPending.y =
+      0;
+  }
 
   public isKeyDown(
     code: string,
   ): boolean {
-    return this.keysDown.has(code);
+    return this.keysDown.has(
+      code,
+    );
   }
 
   public isKeyPressed(
@@ -330,10 +377,6 @@ export class KeyboardMouseDriver {
       code,
     );
   }
-
-  /* ==========================================================================
-   * MOUSE QUERIES
-   * ======================================================================== */
 
   public isMouseButtonDown(
     button: number,
@@ -359,35 +402,56 @@ export class KeyboardMouseDriver {
     );
   }
 
-  public getMouseDelta(): Readonly<Vector2D> {
+  public getMouseDelta():
+    Readonly<Vector2D> {
     return this.mouseDeltaFrame;
   }
 
-  public get hasActivityThisFrame(): boolean {
+  public get hasActivityThisFrame():
+    boolean {
     return this.activityThisFrame;
   }
 
-  /* ==========================================================================
-   * POINTER LOCK
-   * ======================================================================== */
-
-  public get isPointerLocked(): boolean {
+  public get isPointerLocked():
+    boolean {
     return this.isLocked;
   }
 
   public async requestPointerLock(
-    element?: HTMLElement,
+    element?:
+      HTMLElement,
   ): Promise<boolean> {
+    if (
+      this.disposed
+    ) {
+      return false;
+    }
+
     const target =
       element ??
       this.targetElement ??
       document.body;
 
+    const request =
+      target.requestPointerLock;
+
+    if (
+      typeof request !==
+      "function"
+    ) {
+      return false;
+    }
+
     try {
-      await target.requestPointerLock();
+      await request.call(
+        target,
+      );
 
       return true;
-    } catch (error: unknown) {
+    } catch (
+      error:
+        unknown
+    ) {
       console.warn(
         "[KeyboardMouseDriver] Pointer Lock recusado:",
         error,
@@ -398,25 +462,32 @@ export class KeyboardMouseDriver {
   }
 
   public exitPointerLock(): void {
+    const exit =
+      document.exitPointerLock;
+
+    const lockedElement =
+      document.pointerLockElement ??
+      null;
+
     if (
-      document.pointerLockElement !== null
+      typeof exit ===
+        "function" &&
+      lockedElement !==
+        null
     ) {
-      document.exitPointerLock();
+      exit.call(
+        document,
+      );
     }
   }
 
-  /* ==========================================================================
-   * DOM EVENTS
-   * ======================================================================== */
-
   private handleKeyDown(
-    event: KeyboardEvent,
+    event:
+      KeyboardEvent,
   ): void {
-    /*
-     * Não gera múltiplos "pressed" enquanto
-     * a tecla estiver sendo mantida.
-     */
-    if (event.repeat) {
+    if (
+      event.repeat
+    ) {
       return;
     }
 
@@ -424,12 +495,18 @@ export class KeyboardMouseDriver {
       event.code;
 
     if (
-      this.keysDown.has(code)
+      code.length ===
+        0 ||
+      this.keysDown.has(
+        code,
+      )
     ) {
       return;
     }
 
-    this.keysDown.add(code);
+    this.keysDown.add(
+      code,
+    );
 
     this.keysPressedPending.add(
       code,
@@ -437,19 +514,20 @@ export class KeyboardMouseDriver {
   }
 
   private handleKeyUp(
-    event: KeyboardEvent,
+    event:
+      KeyboardEvent,
   ): void {
     const code =
       event.code;
 
     const wasDown =
-      this.keysDown.delete(code);
+      this.keysDown.delete(
+        code,
+      );
 
-    /*
-     * Só gera released se realmente conhecíamos
-     * a tecla como pressionada.
-     */
-    if (wasDown) {
+    if (
+      wasDown
+    ) {
       this.keysReleasedPending.add(
         code,
       );
@@ -457,22 +535,33 @@ export class KeyboardMouseDriver {
   }
 
   private handleMouseMove(
-    event: MouseEvent,
+    event:
+      MouseEvent,
   ): void {
     this.mouseDeltaPending.x +=
-      event.movementX;
+      finiteOrZero(
+        event.movementX,
+      );
 
     this.mouseDeltaPending.y +=
-      event.movementY;
+      finiteOrZero(
+        event.movementY,
+      );
   }
 
   private handleMouseDown(
-    event: MouseEvent,
+    event:
+      MouseEvent,
   ): void {
     const button =
       event.button;
 
     if (
+      !Number.isInteger(
+        button,
+      ) ||
+      button <
+        0 ||
       this.mouseButtonsDown.has(
         button,
       )
@@ -490,7 +579,8 @@ export class KeyboardMouseDriver {
   }
 
   private handleMouseUp(
-    event: MouseEvent,
+    event:
+      MouseEvent,
   ): void {
     const button =
       event.button;
@@ -500,7 +590,9 @@ export class KeyboardMouseDriver {
         button,
       );
 
-    if (wasDown) {
+    if (
+      wasDown
+    ) {
       this.mouseButtonsReleasedPending.add(
         button,
       );
@@ -508,24 +600,40 @@ export class KeyboardMouseDriver {
   }
 
   private handleContextMenu(
-    event: MouseEvent,
+    event:
+      MouseEvent,
   ): void {
-    event.preventDefault();
+    if (
+      this.isLocked
+    ) {
+      event.preventDefault();
+    }
   }
 
   private handlePointerLockChange(): void {
+    const lockedElement =
+      document.pointerLockElement ??
+      null;
+
     this.isLocked =
-      document.pointerLockElement !== null;
+      lockedElement !==
+      null;
   }
 
-  /**
-   * Quando a janela perde foco não podemos manter
-   * teclas "presas" no estado Down.
-   *
-   * Isso é especialmente importante no Tauri:
-   * Alt+Tab pode fazer o keyup acontecer fora da WebView.
-   */
   private handleWindowBlur(): void {
+    this.releaseAllContinuousState();
+  }
+
+  private handleVisibilityChange(): void {
+    if (
+      document.visibilityState ===
+      "hidden"
+    ) {
+      this.releaseAllContinuousState();
+    }
+  }
+
+  private releaseAllContinuousState(): void {
     for (
       const code of
       this.keysDown
@@ -545,16 +653,14 @@ export class KeyboardMouseDriver {
     }
 
     this.keysDown.clear();
-
     this.mouseButtonsDown.clear();
 
-    this.mouseDeltaPending.x = 0;
-    this.mouseDeltaPending.y = 0;
-  }
+    this.mouseDeltaPending.x =
+      0;
 
-  /* ==========================================================================
-   * STATE RESET
-   * ======================================================================== */
+    this.mouseDeltaPending.y =
+      0;
+  }
 
   private clearAllState(): void {
     this.keysDown.clear();
@@ -573,13 +679,22 @@ export class KeyboardMouseDriver {
     this.mouseButtonsPressedFrame.clear();
     this.mouseButtonsReleasedFrame.clear();
 
-    this.mouseDeltaPending.x = 0;
-    this.mouseDeltaPending.y = 0;
+    this.mouseDeltaPending.x =
+      0;
 
-    this.mouseDeltaFrame.x = 0;
-    this.mouseDeltaFrame.y = 0;
+    this.mouseDeltaPending.y =
+      0;
 
-    this.activityThisFrame = false;
-    this.isLocked = false;
+    this.mouseDeltaFrame.x =
+      0;
+
+    this.mouseDeltaFrame.y =
+      0;
+
+    this.activityThisFrame =
+      false;
+
+    this.isLocked =
+      false;
   }
 }

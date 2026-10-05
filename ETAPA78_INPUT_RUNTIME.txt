@@ -1,0 +1,294 @@
+PROJETO1 — ETAPA 78 / INPUT RUNTIME
+
+OBJETIVO
+Certificar e endurecer game.input para desktop/Tauri e Steam sem alterar a
+Public API v1 congelada na Etapa 72.
+
+PRECONDIÇÕES
+71 — Layer 1 Baseline & Inventory
+72 — Public APIs / Contracts / Tokens
+73 — Plugin Manifests & Capability Graph
+74 — Lifecycle / Boot / Shutdown
+75 — Deterministic Game Loop
+76 — Rendering Runtime
+77 — Physics Runtime
+
+PUBLIC API
+NÃO ALTERADA:
+
+src/contracts/input/types.ts
+src/tokens/input.ts
+src/engine/input/public/index.ts
+
+A capability continua:
+
+game.input@1.0.0
+
+InputApi continua oferecendo:
+- activeDevice;
+- isPointerLocked;
+- update();
+- isActionPressed();
+- isActionHeld();
+- isActionReleased();
+- getAxis();
+- getMouseDelta();
+- setBindingMap();
+- requestPointerLock();
+- exitPointerLock().
+
+FRAME OWNERSHIP
+Antes da Stage 78, InputDiagnostics chamava InputApi.update() diretamente.
+Isso tornava um componente de debug o owner implícito do frame de input e
+permitia double-update se outro runtime também chamasse update().
+
+Stage 78 instala:
+
+InputFramePump
+  -> requestAnimationFrame
+  -> InputManager.update()
+  -> requestAnimationFrame seguinte
+
+O pump:
+- inicia somente após kernel.booted;
+- é independente de game.loop;
+- continua apto a operar quando o jogo está pausado;
+- permite game.input em aplicações desktop/Steam que não usam game.loop;
+- cancela RAF no dispose;
+- é idempotente em start/stop/dispose.
+
+InputDiagnostics passa a ser somente leitor e não chama input.update().
+
+BOOT ORDER
+O bootstrap atual registra game.input antes de game.loop.
+
+Em uma aplicação com ambos:
+kernel.booted
+  -> input agenda RAF
+  -> game.loop agenda RAF
+
+Isso favorece amostragem de input antes do loop no mesmo ciclo de browser.
+
+A arquitetura não cria dependência capability input -> loop.
+
+KEYBOARD / MOUSE
+KeyboardMouseDriver mantém:
+- continuous state em Set;
+- pending edges recebidos pelo DOM;
+- frame snapshot de pressed/released;
+- mouse delta acumulado e snapshot reutilizado;
+- repeat keydown não cria pressed duplicado;
+- detach idempotente.
+
+Stage 78 acrescenta:
+- visibilitychange hidden limpa continuous state;
+- blur continua liberando teclas/botões para evitar stuck input no Tauri;
+- mouse movement não-finito é descartado;
+- contextmenu é bloqueado apenas durante Pointer Lock;
+- Pointer Lock é liberado no detach quando ativo;
+- requestPointerLock ausente/rejeitado retorna false;
+- dispose torna a instância terminal.
+
+
+CORREÇÃO DE COMPATIBILIDADE — POINTER LOCK AUSENTE
+Em ambientes WebView/teste que não expõem document.pointerLockElement, a
+propriedade pode ser undefined em vez de null.
+
+Semântica certificada:
+- null      -> unlocked;
+- undefined -> unlocked;
+- Element   -> locked.
+
+A leitura é normalizada com:
+document.pointerLockElement ?? null
+
+Isso preserva o estado inicial isPointerLocked === false no browser, em jsdom e
+em ambientes sem suporte à Pointer Lock API, sem alterar a Public API v1.
+
+GAMEPAD
+GamepadDriver passa a ser snapshot-based.
+
+Antes:
+- getGamepad() chamava navigator.getGamepads() em cada query;
+- pressed era tratado como down;
+- released não existia;
+- um mesmo frame podia ler snapshots diferentes do browser.
+
+Agora:
+1x InputManager.update()
+  -> 1 polling snapshot de gamepad
+  -> buttonsDown
+  -> buttonsPressedFrame
+  -> buttonsReleasedFrame
+  -> axesFrame
+  -> activity flag
+
+Sem polling adicional em:
+- isButtonDown();
+- isButtonPressed();
+- isButtonReleased();
+- getAxisValue();
+- getGamepadName().
+
+GAMEPAD EDGES
+Primeiro frame com botão:
+down=false -> true
+pressed=true
+held=true
+released=false
+
+Frame seguinte mantido:
+pressed=false
+held=true
+released=false
+
+Frame de soltura:
+pressed=false
+held=false
+released=true
+
+Depois:
+todos edges=false
+
+Quando o gamepad desaparece, botões que estavam down geram released no snapshot
+seguinte para não manter ações travadas.
+
+DEADZONE
+Deadzone padrão:
+0.15
+
+Fórmula:
+abs(raw) <= deadzone -> 0
+
+fora da deadzone:
+sign(raw) * ((abs(raw) - deadzone) / (1 - deadzone))
+
+Entrada é clampada em -1..1.
+NaN/Infinity viram zero.
+
+ACTIVE DEVICE
+Prioridade por frame:
+1. atividade keyboard/mouse;
+2. atividade significativa de gamepad;
+3. se o device atual era gamepad e ele desconectou, volta para keyboard_mouse.
+
+Isso evita trocar para gamepad apenas porque ele está conectado.
+
+INPUT ACTION EVENTS
+InputActionEvent deixa de ser apenas definido e passa a ser publicado.
+
+Por ação lógica:
+- pressed no edge inicial;
+- held nos frames seguintes enquanto ativa;
+- released no edge final.
+
+Payload:
+{
+  action,
+  state,
+  value,
+  device
+}
+
+value:
+pressed/held = 1
+released = 0
+
+Payloads digitais por ação/device/state são pré-alocados quando o binding map é
+instalado. O frame de input reutiliza essas referências e não instancia payload
+a cada ação.
+
+DEVICE CHANGED EVENTS
+InputDeviceChangedEvent passa a ser publicado somente quando activeDevice muda.
+
+Keyboard/mouse:
+deviceName = "Keyboard + Mouse"
+
+Gamepad:
+deviceName = id reportado pelo Gamepad API.
+
+BINDING MAP
+setBindingMap() agora:
+- valida nomes vazios;
+- valida bindings vazios;
+- copia ações/eixos para storage interno;
+- evita depender de mutação externa posterior;
+- recompila payloads de ação fora do hot path.
+
+O contrato público InputBindingMap não muda.
+
+BINDING PARSER
+GamepadButtonN / MouseN não usam mais substring + parseInt por consulta.
+
+O índice é parseado por charCode, evitando string temporária no caminho de
+consulta.
+
+AXES
+MoveForward e MoveRight preservam a semântica v1:
+- teclado digital tem prioridade;
+- sem tecla ativa, usa axes 1 e 0 do gamepad;
+- valor final permanece em -1..1.
+
+Nenhuma extensão pública de AxisBinding é introduzida nesta etapa.
+
+HOT PATHS CERTIFICADOS
+KeyboardMouseDriver.update:
+- zero object literal;
+- zero array literal;
+- zero new expression.
+
+GamepadDriver.update:
+- zero object literal;
+- zero array literal;
+- zero new expression.
+
+InputManager.update:
+- zero object literal;
+- zero array literal;
+- zero new expression.
+
+InputFramePump.processFrame:
+- zero object literal;
+- zero array literal;
+- zero new expression.
+
+Alocações de TypedArray podem ocorrer apenas fora do steady-state, quando um
+gamepad com capacidade diferente é detectado.
+
+LIFECYCLE
+Plugin setup:
+- cria InputManager;
+- cria InputFramePump;
+- fornece InputToken;
+- define eventos públicos;
+- registra kernel.booted;
+- ready().
+
+kernel.booted:
+- start InputFramePump.
+
+dispose:
+- unbind kernel.booted;
+- cancel RAF;
+- dispose InputManager;
+- remove keyboard/mouse listeners;
+- remove gamepad listeners;
+- libera Pointer Lock quando aplicável;
+- limpa snapshots.
+
+FRAMEWORK PORTABILITY
+game.input não consome game.loop.
+
+Logo:
+- jogos podem registrar game.input + game.loop;
+- aplicações desktop podem registrar game.input sem game.loop;
+- apps Steam podem usar keyboard/mouse/gamepad sem renderer ou physics.
+
+NÃO ANTECIPADO
+79 — Assets / Streaming / Terrain / Workers
+80 — Presentation Systems
+86 — Performance & Resource Lifecycle
+87 — Failure Recovery & Resilience
+
+PRÓXIMA ETAPA
+79 — Assets / Streaming / Terrain / Workers.

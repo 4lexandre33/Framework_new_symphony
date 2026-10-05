@@ -3,133 +3,234 @@ import type {
 } from "../../../tokens/input";
 
 import type {
+  InputActionPayload,
+  InputBindingMap,
+  InputDeviceChangedPayload,
   InputDeviceType,
   Vector2D,
-  InputBindingMap,
 } from "../../../contracts/input/types";
-
-import {
-  KeyboardMouseDriver,
-} from "./KeyboardMouseDriver";
 
 import {
   GamepadDriver,
 } from "./GamepadDriver";
 
-export class InputManager
-  implements InputApi
-{
-  private readonly kmDriver =
-    new KeyboardMouseDriver();
+import {
+  KeyboardMouseDriver,
+} from "./KeyboardMouseDriver";
 
-  private readonly gamepadDriver =
-    new GamepadDriver();
+const KEYBOARD_MOUSE_DEVICE_NAME =
+  "Keyboard + Mouse";
+
+const DEFAULT_BINDING_MAP:
+  InputBindingMap = {
+    actions: {
+      Jump: [
+        "Space",
+        "GamepadButton0",
+      ],
+
+      Interact: [
+        "KeyE",
+        "GamepadButton2",
+      ],
+
+      Attack: [
+        "Mouse0",
+        "GamepadButton1",
+      ],
+    },
+
+    axes: {
+      MoveForward: {
+        positive:
+          "KeyW",
+        negative:
+          "KeyS",
+      },
+
+      MoveRight: {
+        positive:
+          "KeyD",
+        negative:
+          "KeyA",
+      },
+    },
+  };
+
+export interface InputEventSink {
+  onAction(
+    payload:
+      InputActionPayload,
+  ): void;
+
+  onDeviceChanged(
+    payload:
+      InputDeviceChangedPayload,
+  ): void;
+}
+
+interface ActionRuntimeEntry {
+  readonly action:
+    string;
+
+  readonly bindings:
+    readonly string[];
+
+  readonly keyboardPressed:
+    InputActionPayload;
+
+  readonly keyboardHeld:
+    InputActionPayload;
+
+  readonly keyboardReleased:
+    InputActionPayload;
+
+  readonly gamepadPressed:
+    InputActionPayload;
+
+  readonly gamepadHeld:
+    InputActionPayload;
+
+  readonly gamepadReleased:
+    InputActionPayload;
+}
+
+function assertNonEmpty(
+  value: string,
+  label: string,
+): void {
+  if (
+    value.trim()
+      .length ===
+    0
+  ) {
+    throw new RangeError(
+      `${label} não pode ser vazio.`,
+    );
+  }
+}
+
+function createActionPayload(
+  action:
+    string,
+  state:
+    InputActionPayload["state"],
+  value:
+    number,
+  device:
+    InputDeviceType,
+): InputActionPayload {
+  return Object.freeze({
+    action,
+    state,
+    value,
+    device,
+  });
+}
+
+export class InputManager
+  implements InputApi {
+  private readonly kmDriver:
+    KeyboardMouseDriver;
+
+  private readonly gamepadDriver:
+    GamepadDriver;
+
+  private eventSink:
+    InputEventSink |
+    null;
 
   private currentDevice:
     InputDeviceType =
       "keyboard_mouse";
 
   private bindingMap:
-    InputBindingMap = {
-      actions: {
-        Jump: [
-          "Space",
-          "GamepadButton0",
-        ],
+    InputBindingMap =
+      DEFAULT_BINDING_MAP;
 
-        Interact: [
-          "KeyE",
-          "GamepadButton2",
-        ],
+  private actionEntries:
+    readonly ActionRuntimeEntry[] =
+      [];
 
-        Attack: [
-          "Mouse0",
-          "GamepadButton1",
-        ],
-      },
+  private disposed =
+    false;
 
-      axes: {
-        MoveForward: {
-          positive: "KeyW",
-          negative: "KeyS",
-        },
+  public constructor(
+    eventSink:
+      InputEventSink |
+      null =
+        null,
+    kmDriver:
+      KeyboardMouseDriver =
+        new KeyboardMouseDriver(),
+    gamepadDriver:
+      GamepadDriver =
+        new GamepadDriver(),
+  ) {
+    this.eventSink =
+      eventSink;
 
-        MoveRight: {
-          positive: "KeyD",
-          negative: "KeyA",
-        },
-      },
-    };
+    this.kmDriver =
+      kmDriver;
 
-  public constructor() {
+    this.gamepadDriver =
+      gamepadDriver;
+
+    this.installBindingMap(
+      DEFAULT_BINDING_MAP,
+    );
+
     this.kmDriver.attach();
+    this.gamepadDriver.attach();
   }
-
-  /* ==========================================================================
-   * LIFECYCLE
-   * ======================================================================== */
 
   public dispose(): void {
-    this.kmDriver.detach();
+    if (
+      this.disposed
+    ) {
+      return;
+    }
 
+    this.disposed =
+      true;
+
+    this.eventSink =
+      null;
+
+    this.kmDriver.dispose();
     this.gamepadDriver.dispose();
-  }
 
-  /* ==========================================================================
-   * DEVICE
-   * ======================================================================== */
+    this.currentDevice =
+      "keyboard_mouse";
+  }
 
   public get activeDevice():
     InputDeviceType {
     return this.currentDevice;
   }
 
-  public get isPointerLocked(): boolean {
-    return this.kmDriver.isPointerLocked;
+  public get isPointerLocked():
+    boolean {
+    return (
+      !this.disposed &&
+      this.kmDriver
+        .isPointerLocked
+    );
   }
 
-  /* ==========================================================================
-   * FRAME UPDATE
-   * ======================================================================== */
-
-  /**
-   * Deve ser chamado exatamente uma vez por frame.
-   *
-   * Produz o snapshot de teclado/mouse e depois
-   * detecta qual dispositivo está ativo.
-   */
   public update(): void {
-    this.kmDriver.update();
-
-    /*
-     * Teclado/mouse teve atividade neste frame.
-     *
-     * Isso permite retornar de gamepad para KB/M.
-     */
     if (
-      this.kmDriver.hasActivityThisFrame
+      this.disposed
     ) {
-      this.currentDevice =
-        "keyboard_mouse";
-
       return;
     }
 
-    /*
-     * Só considera gamepad ativo quando realmente
-     * existe alguma entrada significativa.
-     */
-    if (
-      this.hasGamepadActivity()
-    ) {
-      this.currentDevice =
-        "gamepad";
-    }
-  }
+    this.kmDriver.update();
+    this.gamepadDriver.update();
 
-  /* ==========================================================================
-   * ACTIONS
-   * ======================================================================== */
+    this.updateActiveDevice();
+    this.publishActionSnapshot();
+  }
 
   public isActionPressed(
     action: string,
@@ -139,15 +240,29 @@ export class InputManager
         action
       ];
 
-    if (!bindings) {
+    if (
+      bindings ===
+      undefined
+    ) {
       return false;
     }
 
     for (
-      const binding of
-      bindings
+      let index =
+        0;
+      index <
+      bindings.length;
+      index +=
+        1
     ) {
+      const binding =
+        bindings[
+          index
+        ];
+
       if (
+        binding !==
+          undefined &&
         this.isBindingPressed(
           binding,
         )
@@ -167,15 +282,29 @@ export class InputManager
         action
       ];
 
-    if (!bindings) {
+    if (
+      bindings ===
+      undefined
+    ) {
       return false;
     }
 
     for (
-      const binding of
-      bindings
+      let index =
+        0;
+      index <
+      bindings.length;
+      index +=
+        1
     ) {
+      const binding =
+        bindings[
+          index
+        ];
+
       if (
+        binding !==
+          undefined &&
         this.isBindingHeld(
           binding,
         )
@@ -195,29 +324,56 @@ export class InputManager
         action
       ];
 
-    if (!bindings) {
+    if (
+      bindings ===
+      undefined
+    ) {
       return false;
     }
 
+    let released =
+      false;
+
     for (
-      const binding of
-      bindings
+      let index =
+        0;
+      index <
+      bindings.length;
+      index +=
+        1
     ) {
+      const binding =
+        bindings[
+          index
+        ];
+
+      if (
+        binding ===
+        undefined
+      ) {
+        continue;
+      }
+
+      if (
+        this.isBindingHeld(
+          binding,
+        )
+      ) {
+        return false;
+      }
+
       if (
         this.isBindingReleased(
           binding,
         )
       ) {
-        return true;
+        released =
+          true;
       }
     }
 
-    return false;
+    return released;
   }
-
-  /* ==========================================================================
-   * AXES
-   * ======================================================================== */
 
   public getAxis(
     axisName: string,
@@ -227,18 +383,23 @@ export class InputManager
         axisName
       ];
 
-    if (!axisBinding) {
+    if (
+      axisBinding ===
+      undefined
+    ) {
       return 0;
     }
 
-    let value = 0;
+    let value =
+      0;
 
     if (
       this.kmDriver.isKeyDown(
         axisBinding.positive,
       )
     ) {
-      value += 1;
+      value +=
+        1;
     }
 
     if (
@@ -246,82 +407,388 @@ export class InputManager
         axisBinding.negative,
       )
     ) {
-      value -= 1;
+      value -=
+        1;
     }
 
-    /*
-     * Teclado tem prioridade.
-     *
-     * Se nenhuma tecla do eixo estiver ativa,
-     * consulta o analógico.
-     */
     if (
-      value === 0 &&
-      this.gamepadDriver.isConnected
+      value ===
+        0 &&
+      this.gamepadDriver
+        .isConnected
     ) {
       if (
         axisName ===
         "MoveForward"
       ) {
         value =
-          -this.gamepadDriver.getAxisValue(
-            1,
-          );
+          -this.gamepadDriver
+            .getAxisValue(
+              1,
+            );
       } else if (
         axisName ===
         "MoveRight"
       ) {
         value =
-          this.gamepadDriver.getAxisValue(
-            0,
-          );
+          this.gamepadDriver
+            .getAxisValue(
+              0,
+            );
       }
     }
 
-    return Math.max(
-      -1,
-      Math.min(1, value),
-    );
-  }
+    if (
+      value >
+      1
+    ) {
+      return 1;
+    }
 
-  /* ==========================================================================
-   * MOUSE
-   * ======================================================================== */
+    if (
+      value <
+      -1
+    ) {
+      return -1;
+    }
+
+    return value;
+  }
 
   public getMouseDelta():
     Readonly<Vector2D> {
-    return this.kmDriver.getMouseDelta();
+    return this.kmDriver
+      .getMouseDelta();
   }
-
-  /* ==========================================================================
-   * BINDINGS
-   * ======================================================================== */
 
   public setBindingMap(
-    map: InputBindingMap,
+    map:
+      InputBindingMap,
   ): void {
-    this.bindingMap = map;
-  }
+    if (
+      this.disposed
+    ) {
+      return;
+    }
 
-  /* ==========================================================================
-   * POINTER LOCK
-   * ======================================================================== */
-
-  public async requestPointerLock(
-    element?: HTMLElement,
-  ): Promise<boolean> {
-    return this.kmDriver.requestPointerLock(
-      element,
+    this.installBindingMap(
+      map,
     );
   }
 
-  public exitPointerLock(): void {
-    this.kmDriver.exitPointerLock();
+  public async requestPointerLock(
+    element?:
+      HTMLElement,
+  ): Promise<boolean> {
+    if (
+      this.disposed
+    ) {
+      return false;
+    }
+
+    return this.kmDriver
+      .requestPointerLock(
+        element,
+      );
   }
 
-  /* ==========================================================================
-   * BINDING RESOLUTION
-   * ======================================================================== */
+  public exitPointerLock(): void {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
+    this.kmDriver
+      .exitPointerLock();
+  }
+
+  public getActiveDeviceName():
+    string {
+    if (
+      this.currentDevice ===
+      "gamepad"
+    ) {
+      return this.gamepadDriver
+        .getGamepadName();
+    }
+
+    return KEYBOARD_MOUSE_DEVICE_NAME;
+  }
+
+  private updateActiveDevice(): void {
+    const previousDevice =
+      this.currentDevice;
+
+    if (
+      this.kmDriver
+        .hasActivityThisFrame
+    ) {
+      this.currentDevice =
+        "keyboard_mouse";
+    } else if (
+      this.gamepadDriver
+        .isConnected &&
+      this.gamepadDriver
+        .hasActivityThisFrame
+    ) {
+      this.currentDevice =
+        "gamepad";
+    } else if (
+      this.currentDevice ===
+        "gamepad" &&
+      !this.gamepadDriver
+        .isConnected
+    ) {
+      this.currentDevice =
+        "keyboard_mouse";
+    }
+
+    if (
+      previousDevice !==
+      this.currentDevice
+    ) {
+      this.publishDeviceChanged();
+    }
+  }
+
+  private publishDeviceChanged(): void {
+    const sink =
+      this.eventSink;
+
+    if (
+      sink ===
+      null
+    ) {
+      return;
+    }
+
+    sink.onDeviceChanged({
+      currentDevice:
+        this.currentDevice,
+      deviceName:
+        this.getActiveDeviceName(),
+    });
+  }
+
+  private publishActionSnapshot(): void {
+    const sink =
+      this.eventSink;
+
+    if (
+      sink ===
+      null
+    ) {
+      return;
+    }
+
+    for (
+      let index =
+        0;
+      index <
+      this.actionEntries.length;
+      index +=
+        1
+    ) {
+      const entry =
+        this.actionEntries[
+          index
+        ];
+
+      if (
+        entry ===
+        undefined
+      ) {
+        continue;
+      }
+
+      const payload =
+        this.resolveActionPayload(
+          entry,
+        );
+
+      if (
+        payload !==
+        null
+      ) {
+        sink.onAction(
+          payload,
+        );
+      }
+    }
+  }
+
+  private resolveActionPayload(
+    entry:
+      ActionRuntimeEntry,
+  ): InputActionPayload |
+    null {
+    let keyboardPressed =
+      false;
+
+    let keyboardHeld =
+      false;
+
+    let keyboardReleased =
+      false;
+
+    let gamepadPressed =
+      false;
+
+    let gamepadHeld =
+      false;
+
+    let gamepadReleased =
+      false;
+
+    for (
+      let index =
+        0;
+      index <
+      entry.bindings.length;
+      index +=
+        1
+    ) {
+      const binding =
+        entry.bindings[
+          index
+        ];
+
+      if (
+        binding ===
+        undefined
+      ) {
+        continue;
+      }
+
+      const isGamepad =
+        binding.startsWith(
+          "GamepadButton",
+        );
+
+      if (
+        this.isBindingPressed(
+          binding,
+        )
+      ) {
+        if (
+          isGamepad
+        ) {
+          gamepadPressed =
+            true;
+        } else {
+          keyboardPressed =
+            true;
+        }
+      }
+
+      if (
+        this.isBindingHeld(
+          binding,
+        )
+      ) {
+        if (
+          isGamepad
+        ) {
+          gamepadHeld =
+            true;
+        } else {
+          keyboardHeld =
+            true;
+        }
+      }
+
+      if (
+        this.isBindingReleased(
+          binding,
+        )
+      ) {
+        if (
+          isGamepad
+        ) {
+          gamepadReleased =
+            true;
+        } else {
+          keyboardReleased =
+            true;
+        }
+      }
+    }
+
+    if (
+      keyboardPressed ||
+      gamepadPressed
+    ) {
+      if (
+        this.currentDevice ===
+          "gamepad" &&
+        gamepadPressed
+      ) {
+        return entry
+          .gamepadPressed;
+      }
+
+      if (
+        keyboardPressed
+      ) {
+        return entry
+          .keyboardPressed;
+      }
+
+      return entry
+        .gamepadPressed;
+    }
+
+    if (
+      keyboardHeld ||
+      gamepadHeld
+    ) {
+      if (
+        this.currentDevice ===
+          "gamepad" &&
+        gamepadHeld
+      ) {
+        return entry
+          .gamepadHeld;
+      }
+
+      if (
+        keyboardHeld
+      ) {
+        return entry
+          .keyboardHeld;
+      }
+
+      return entry
+        .gamepadHeld;
+    }
+
+    if (
+      keyboardReleased ||
+      gamepadReleased
+    ) {
+      if (
+        this.currentDevice ===
+          "gamepad" &&
+        gamepadReleased
+      ) {
+        return entry
+          .gamepadReleased;
+      }
+
+      if (
+        keyboardReleased
+      ) {
+        return entry
+          .keyboardReleased;
+      }
+
+      return entry
+        .gamepadReleased;
+    }
+
+    return null;
+  }
 
   private isBindingPressed(
     binding: string,
@@ -338,10 +805,12 @@ export class InputManager
         );
 
       return (
-        button !== null &&
-        this.kmDriver.isMouseButtonPressed(
-          button,
-        )
+        button !==
+          null &&
+        this.kmDriver
+          .isMouseButtonPressed(
+            button,
+          )
       );
     }
 
@@ -356,24 +825,20 @@ export class InputManager
           "GamepadButton",
         );
 
-      /*
-       * GamepadDriver atualmente trabalha com
-       * estado Down, não possui edge buffer.
-       *
-       * Mantemos a semântica existente até
-       * implementar snapshots de gamepad.
-       */
       return (
-        button !== null &&
-        this.gamepadDriver.isButtonDown(
-          button,
-        )
+        button !==
+          null &&
+        this.gamepadDriver
+          .isButtonPressed(
+            button,
+          )
       );
     }
 
-    return this.kmDriver.isKeyPressed(
-      binding,
-    );
+    return this.kmDriver
+      .isKeyPressed(
+        binding,
+      );
   }
 
   private isBindingHeld(
@@ -391,10 +856,12 @@ export class InputManager
         );
 
       return (
-        button !== null &&
-        this.kmDriver.isMouseButtonDown(
-          button,
-        )
+        button !==
+          null &&
+        this.kmDriver
+          .isMouseButtonDown(
+            button,
+          )
       );
     }
 
@@ -410,16 +877,19 @@ export class InputManager
         );
 
       return (
-        button !== null &&
-        this.gamepadDriver.isButtonDown(
-          button,
-        )
+        button !==
+          null &&
+        this.gamepadDriver
+          .isButtonDown(
+            button,
+          )
       );
     }
 
-    return this.kmDriver.isKeyDown(
-      binding,
-    );
+    return this.kmDriver
+      .isKeyDown(
+        binding,
+      );
   }
 
   private isBindingReleased(
@@ -437,93 +907,294 @@ export class InputManager
         );
 
       return (
-        button !== null &&
-        this.kmDriver.isMouseButtonReleased(
-          button,
-        )
+        button !==
+          null &&
+        this.kmDriver
+          .isMouseButtonReleased(
+            button,
+          )
       );
     }
 
-    /*
-     * Gamepad ainda não possui snapshot
-     * released neste estágio.
-     */
     if (
       binding.startsWith(
         "GamepadButton",
       )
     ) {
-      return false;
+      const button =
+        this.parseBindingIndex(
+          binding,
+          "GamepadButton",
+        );
+
+      return (
+        button !==
+          null &&
+        this.gamepadDriver
+          .isButtonReleased(
+            button,
+          )
+      );
     }
 
-    return this.kmDriver.isKeyReleased(
-      binding,
-    );
+    return this.kmDriver
+      .isKeyReleased(
+        binding,
+      );
   }
 
   private parseBindingIndex(
-    binding: string,
-    prefix: string,
-  ): number | null {
-    const value =
-      Number.parseInt(
-        binding.slice(
-          prefix.length,
-        ),
-        10,
-      );
-
+    binding:
+      string,
+    prefix:
+      string,
+  ): number |
+    null {
     if (
-      !Number.isInteger(value) ||
-      value < 0
+      binding.length <=
+      prefix.length
     ) {
       return null;
+    }
+
+    let value =
+      0;
+
+    for (
+      let index =
+        prefix.length;
+      index <
+      binding.length;
+      index +=
+        1
+    ) {
+      const code =
+        binding.charCodeAt(
+          index,
+        );
+
+      if (
+        code <
+          48 ||
+        code >
+          57
+      ) {
+        return null;
+      }
+
+      value =
+        value *
+          10 +
+        (
+          code -
+          48
+        );
     }
 
     return value;
   }
 
-  /* ==========================================================================
-   * GAMEPAD ACTIVITY
-   * ======================================================================== */
+  private installBindingMap(
+    map:
+      InputBindingMap,
+  ): void {
+    const actions:
+      Record<
+        string,
+        string[]
+      > = {};
 
-  private hasGamepadActivity(): boolean {
-    if (
-      !this.gamepadDriver.isConnected
-    ) {
-      return false;
-    }
+    const axes:
+      InputBindingMap["axes"] =
+        {};
+
+    const entries:
+      ActionRuntimeEntry[] =
+        [];
+
+    const actionNames =
+      Object.keys(
+        map.actions,
+      );
 
     for (
-      let axis = 0;
-      axis < 4;
-      axis += 1
+      let actionIndex =
+        0;
+      actionIndex <
+      actionNames.length;
+      actionIndex +=
+        1
     ) {
+      const action =
+        actionNames[
+          actionIndex
+        ];
+
       if (
-        Math.abs(
-          this.gamepadDriver.getAxisValue(
-            axis,
+        action ===
+        undefined
+      ) {
+        continue;
+      }
+
+      assertNonEmpty(
+        action,
+        "action",
+      );
+
+      const sourceBindings =
+        map.actions[
+          action
+        ];
+
+      const bindings:
+        string[] =
+        [];
+
+      for (
+        let bindingIndex =
+          0;
+        bindingIndex <
+        sourceBindings.length;
+        bindingIndex +=
+          1
+      ) {
+        const binding =
+          sourceBindings[
+            bindingIndex
+          ];
+
+        if (
+          binding ===
+          undefined
+        ) {
+          continue;
+        }
+
+        assertNonEmpty(
+          binding,
+          `binding ${action}`,
+        );
+
+        bindings.push(
+          binding,
+        );
+      }
+
+      actions[
+        action
+      ] =
+        bindings;
+
+      entries.push({
+        action,
+        bindings,
+        keyboardPressed:
+          createActionPayload(
+            action,
+            "pressed",
+            1,
+            "keyboard_mouse",
           ),
-        ) > 0.1
-      ) {
-        return true;
-      }
+        keyboardHeld:
+          createActionPayload(
+            action,
+            "held",
+            1,
+            "keyboard_mouse",
+          ),
+        keyboardReleased:
+          createActionPayload(
+            action,
+            "released",
+            0,
+            "keyboard_mouse",
+          ),
+        gamepadPressed:
+          createActionPayload(
+            action,
+            "pressed",
+            1,
+            "gamepad",
+          ),
+        gamepadHeld:
+          createActionPayload(
+            action,
+            "held",
+            1,
+            "gamepad",
+          ),
+        gamepadReleased:
+          createActionPayload(
+            action,
+            "released",
+            0,
+            "gamepad",
+          ),
+      });
     }
+
+    const axisNames =
+      Object.keys(
+        map.axes,
+      );
 
     for (
-      let button = 0;
-      button < 16;
-      button += 1
+      let axisIndex =
+        0;
+      axisIndex <
+      axisNames.length;
+      axisIndex +=
+        1
     ) {
+      const axisName =
+        axisNames[
+          axisIndex
+        ];
+
       if (
-        this.gamepadDriver.isButtonDown(
-          button,
-        )
+        axisName ===
+        undefined
       ) {
-        return true;
+        continue;
       }
+
+      assertNonEmpty(
+        axisName,
+        "axis",
+      );
+
+      const axis =
+        map.axes[
+          axisName
+        ];
+
+      assertNonEmpty(
+        axis.positive,
+        `${axisName}.positive`,
+      );
+
+      assertNonEmpty(
+        axis.negative,
+        `${axisName}.negative`,
+      );
+
+      axes[
+        axisName
+      ] = {
+        positive:
+          axis.positive,
+        negative:
+          axis.negative,
+      };
     }
 
-    return false;
+    this.bindingMap = {
+      actions,
+      axes,
+    };
+
+    this.actionEntries =
+      entries;
   }
 }

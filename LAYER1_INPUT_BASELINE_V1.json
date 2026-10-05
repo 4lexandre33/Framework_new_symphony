@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "baselineId": "layer1-input-v1-stage78",
+  "requiresStages": [
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77
+  ],
+  "publicApiBaseline": "layer1-public-api-v1-stage72",
+  "capturedCounts": {
+    "semanticFiles": 6,
+    "explicitAnyKeywords": 0,
+    "keyboardMouseUpdateExplicitAllocations": 0,
+    "gamepadUpdateExplicitAllocations": 0,
+    "inputManagerUpdateExplicitAllocations": 0,
+    "inputFramePumpProcessExplicitAllocations": 0
+  },
+  "policy": {
+    "publicApiUnchanged": true,
+    "capability": "game.input@1.0.0",
+    "standaloneFromGameLoop": true,
+    "frameOwner": "InputFramePump",
+    "framePumpStartsOn": "kernel.booted",
+    "framePumpCancelsOnDispose": true,
+    "keyboardBlurRecovery": true,
+    "keyboardHeldRetainsDevicePriority": true,
+    "visibilityHiddenRecovery": true,
+    "pointerLockLifecycle": true,
+    "gamepadPressedHeldReleasedSnapshots": true,
+    "gamepadSingleSnapshotPerFrame": true,
+    "gamepadDisconnectReleaseSourcePreserved": true,
+    "actionEventsPublished": true,
+    "deviceChangedEventsPublished": true,
+    "inputDiagnosticsReadOnly": true,
+    "externalBindingMutationIsolated": true,
+    "explicitAnyForbidden": true,
+    "hotPathsNoExplicitAllocations": true,
+    "pointerLockMissingApiDefaultsUnlocked": true
+  },
+  "files": [
+    {
+      "path": "src/engine/input/internal/KeyboardMouseDriver.ts",
+      "fingerprint": "9c45251951803ed4128a080adc8464ea5050ee43a0dfef2852479a40a0f33eca"
+    },
+    {
+      "path": "src/engine/input/internal/GamepadDriver.ts",
+      "fingerprint": "9f7ae2207c5c57509a9ae39970dd53ef9ae883bb117082b662b730773c566bb3"
+    },
+    {
+      "path": "src/engine/input/internal/InputManager.ts",
+      "fingerprint": "243499b45dd9bf23f9ed96dfc0ec863b90270ae1ab1453370d4ee20fab5168a1"
+    },
+    {
+      "path": "src/engine/input/internal/InputFramePump.ts",
+      "fingerprint": "92d6af702e5e27511b9e39236c6a769a1bfacd805d0d4b09b4c081ab9b512da0"
+    },
+    {
+      "path": "src/plugins/input/plugin.ts",
+      "fingerprint": "64a004a86f01affc997ff65570521e7ab2491fe1e1017593193b706763bc55fc"
+    },
+    {
+      "path": "src/debug/hud/InputDiagnostics.ts",
+      "fingerprint": "a1cff54564a13da81ecea4318d6c7cc9a1c50e847635f86b9039c93406b8f224"
+    }
+  ]
+}
