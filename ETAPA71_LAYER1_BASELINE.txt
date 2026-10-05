@@ -1,0 +1,210 @@
+PROJETO1 — ETAPA 71 / LAYER 1 BASELINE & INVENTORY
+
+OBJETIVO
+Criar a primeira baseline formal de certificação da Camada 1 sem modificar
+gameplay, implementação de engine, plugins, contracts, tokens ou Rust/Tauri.
+
+A Etapa 71 é read-only sobre a arquitetura existente.
+
+BASELINE
+ID:
+layer1-v1-stage71
+
+Architecture migration:
+v20
+
+Module-map schema:
+1
+
+SOURCE OF TRUTH
+scripts/architecture/module-map.mjs
+
+A baseline registra o estado atual, mas NÃO transforma a contagem atual em
+limite permanente.
+
+CAPTURE ATUAL
+20 functional modules
+3 runtime modules
+23 canonical first-party modules
+
+Functional:
+1  steam         game.steam
+2  input         game.input
+3  assets        game.assets
+4  physics       game.physics
+5  storage       game.storage
+6  world         game.world
+7  ui            game.ui
+8  anim          game.anim
+9  sprites       game.sprites
+10 audio         game.audio
+11 camera        game.camera
+12 ai            game.ai
+13 vfx           game.vfx
+14 terrain       game.terrain
+15 scripting     game.scripting
+16 streaming     game.streaming
+17 overlay       game.overlay
+18 security      game.security
+19 modding       game.modding
+20 monetization  game.monetization
+
+Runtime:
+game-loop  game.loop
+render     game.render
+net        game.net
+
+SECONDARY OWNED CAPABILITY
+game.steam.net
+
+TOOLING
+game.debug
+- bootstrapped
+- não é módulo canônico de engine
+
+EXPERIMENTAL
+game.player
+- não bootstrapped
+- não é módulo canônico
+- permanece fora de createEnginePlugins
+
+O QUE O AUDITOR VALIDA
+
+1. BASELINE COMPATIBILITY
+Os 23 módulos certificados na v1 precisam continuar presentes.
+
+Identidade estrutural protegida:
+- key;
+- layer/category;
+- firstParty/bootstrapped;
+- primary capabilityId;
+- engine ownership path;
+- plugin ownership.
+
+Arquivos declarados na baseline não podem desaparecer:
+- contracts;
+- tokens;
+- native files;
+- tests;
+- extra files.
+
+É permitido adicionar novos contracts/tests/arquivos a um módulo existente.
+
+2. EXTENSIBILIDADE
+Novos módulos canônicos são permitidos.
+
+Exemplo futuro válido:
+
+game.weather
+
+Após registro oficial no module-map, contracts/tokens/plugin/public/internal e
+demais requisitos precisam existir.
+
+A baseline v1 continua certificando que os 23 módulos originais não sumiram,
+mas NÃO exige que a contagem atual continue sendo 23.
+
+Portanto:
+
+23 = quantidade capturada na Layer 1 Baseline v1
+
+NÃO:
+
+23 = limite permanente da engine
+
+3. REGISTRY INTEGRITY
+Para todos os módulos canônicos atuais, incluindo capacidades futuras:
+
+- unique module key;
+- unique primary capability;
+- unique owned capability/token;
+- functional layer inteira positiva e não duplicada;
+- runtime layer null;
+- firstParty = true;
+- bootstrapped = true;
+- engine root = src/engine/<key>;
+- public = src/engine/<key>/public;
+- internal = src/engine/<key>/internal;
+- public/index.ts existe;
+- contract declarado existe;
+- token declarado existe;
+- plugin declarado existe;
+- native/tests/extra files declarados existem.
+
+4. ORPHAN SURFACE AUDIT
+Os diretórios reais precisam estar cobertos pelo registry:
+
+src/engine/*
+src/plugins/*
+src/contracts/*
+src/tokens/*.ts
+
+Isso impede criar uma capability fora do processo arquitetural.
+
+5. COMPOSITION ROOT
+src/app/createEnginePlugins.ts
+
+Todo módulo bootstrapped precisa aparecer na composição.
+
+Tooling bootstrapped também precisa aparecer.
+
+Experimental não-bootstrapped não pode aparecer.
+
+O checker Stage 19 continua sendo responsável pela análise profunda de:
+- capability requirements;
+- optional requirements;
+- conflicts;
+- provider ambiguity;
+- semver;
+- plugin dependency graph;
+- cycles.
+
+6. WORKERS
+A baseline v1 registra:
+
+src/engine/streaming/internal/StreamingWorkerPool.ts
+src/engine/streaming/internal/streaming.worker.ts
+src/engine/terrain/internal/ProceduralWorkerPool.ts
+src/engine/terrain/internal/terrain.worker.ts
+
+A Etapa 79 fará a certificação comportamental profunda desses workers.
+
+7. TAURI/RUST HOST BASELINE
+A baseline registra presença de:
+
+src-tauri/Cargo.toml
+src-tauri/Cargo.lock
+src-tauri/build.rs
+src-tauri/tauri.conf.json
+src-tauri/capabilities/default.json
+src-tauri/src/lib.rs
+src-tauri/src/main.rs
+src-tauri/steam_appid.txt
+
+E também os native files pertencentes aos módulos:
+
+steam
+overlay
+security
+modding
+monetization
+
+A Etapa 85 fará a auditoria profunda de IPC/permissões/bridges.
+A Etapa 88 fará production readiness desktop/Steam.
+
+8. ZERO ALTERAÇÃO FUNCIONAL
+Esta etapa não altera:
+
+src/engine/**
+src/plugins/**
+src/contracts/**
+src/tokens/**
+src-tauri/**
+src/core/**
+src/domain/**
+src/services/**
+src/app/**
+
+Ela somente adiciona governança Stage 71.
+
+PRÓXIMA ETAPA
+72 — Public APIs / Contracts / Tokens.

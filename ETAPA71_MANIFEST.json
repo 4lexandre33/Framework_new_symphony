@@ -1,0 +1,59 @@
+{
+  "stage": "71",
+  "name": "Layer 1 Baseline & Inventory",
+  "layer": 1,
+  "baselineId": "layer1-v1-stage71",
+  "baselineSchemaVersion": 1,
+  "architectureMigrationVersion": "v20",
+  "moduleMapSchemaVersion": 1,
+  "readOnlyOverExistingImplementation": true,
+  "capture": {
+    "functionalModules": 20,
+    "runtimeModules": 3,
+    "canonicalModules": 23,
+    "ownedCapabilities": 24,
+    "contracts": 24,
+    "tokens": 24,
+    "declaredModuleTests": 43,
+    "nativeModuleFiles": 5,
+    "workerInfrastructureFiles": 4,
+    "nativeHostFiles": 8,
+    "toolingPlugins": 1,
+    "experimentalPlugins": 1
+  },
+  "extensibilityPolicy": {
+    "23IsCaptureCountNotPermanentLimit": true,
+    "additionalCanonicalModulesAllowed": true,
+    "newCapabilitiesMustBeRegisteredInModuleMap": true,
+    "newCapabilitiesMustOwnEnginePublicInternalContractsTokensPlugin": true,
+    "baselineModulesMayNotDisappearSilently": true,
+    "baselineDeclaredFilesMayNotDisappearSilently": true
+  },
+  "localValidation": {
+    "nodeSyntax": "PASS",
+    "baselineAudit": "PASS",
+    "baselineModulesPreserved": "23/23",
+    "currentCanonicalModules": 23,
+    "violations": 0,
+    "extensibilitySmoke": "PASS"
+  },
+  "explicitlyDeferred": [
+    "Stage 72 Public APIs / Contracts / Tokens",
+    "public API leakage audit",
+    "contract compatibility policy",
+    "token semantic/version audit",
+    "plugin capability graph deep audit Stage 73",
+    "runtime lifecycle behavior Stage 74+"
+  ],
+  "files": [
+    "ETAPA71_LAYER1_BASELINE.txt",
+    "ETAPA71_MANIFEST.json",
+    "ETAPA71_SHA256SUMS.txt",
+    "LAYER1_BASELINE_V1.json",
+    "scripts/architecture/lib/layer1-baseline-v1.mjs",
+    "scripts/architecture/stage71-audit-layer1-baseline.mjs",
+    "scripts/architecture/stage71-validate-layer1-baseline.mjs",
+    "tests/layer1-baseline-extensibility.test.ts",
+    "tests/layer1-baseline.test.ts"
+  ]
+}
