@@ -1,11 +1,45 @@
 import * as THREE from "three";
+
 import type {
   CameraMode,
+  OrthographicCameraOptions,
+  PerspectiveCameraOptions,
   Vector3D,
   ViewportDimensions,
-  PerspectiveCameraOptions,
-  OrthographicCameraOptions,
 } from "../../../contracts/render/types";
+
+const DEFAULT_FOLLOW_LERP = 0.1;
+const DEFAULT_ORTHOGRAPHIC_HALF_SIZE = 10;
+
+function assertFiniteVector(
+  value: Vector3D,
+  label: string,
+): void {
+  if (
+    !Number.isFinite(value.x) ||
+    !Number.isFinite(value.y) ||
+    !Number.isFinite(value.z)
+  ) {
+    throw new RangeError(`${label} precisa conter componentes finitos.`);
+  }
+}
+
+function normalizePositiveFinite(
+  value: number,
+  fallback: number,
+): number {
+  return Number.isFinite(value) && value > 0
+    ? value
+    : fallback;
+}
+
+function normalizeLerpFactor(value: number): number {
+  if (!Number.isFinite(value)) {
+    return DEFAULT_FOLLOW_LERP;
+  }
+
+  return Math.min(1, Math.max(0, value));
+}
 
 export class CameraManager {
   private currentMode: CameraMode = "perspective";
@@ -14,31 +48,34 @@ export class CameraManager {
   private readonly orthographicCamera: THREE.OrthographicCamera;
   private activeCamera: THREE.Camera;
 
-  // Scratch vectors pré-alocados para evitar instanciação no loop (Zero GC)
+  private orthographicHalfSize = DEFAULT_ORTHOGRAPHIC_HALF_SIZE;
+
+  // Scratch state pré-alocado. Nenhum Vector3 é criado em updateFollowCamera().
   private readonly targetPositionScratch = new THREE.Vector3(0, 0, 0);
   private readonly desiredCameraPositionScratch = new THREE.Vector3(0, 5, 10);
   private readonly currentCameraPositionScratch = new THREE.Vector3(0, 5, 10);
-  private readonly defaultOffsetScratch = new THREE.Vector3(0, 8, 12);
+  private readonly defaultFollowOffsetScratch = new THREE.Vector3(0, 8, 12);
+  private readonly appliedFollowOffsetScratch = new THREE.Vector3(0, 8, 12);
 
   public constructor(viewport: ViewportDimensions) {
+    const aspect = normalizePositiveFinite(viewport.aspectRatio, 1);
+
     this.perspectiveCamera = new THREE.PerspectiveCamera(
       60,
-      viewport.aspectRatio,
+      aspect,
       0.1,
-      1000
+      1000,
     );
     this.perspectiveCamera.position.set(0, 8, 12);
     this.perspectiveCamera.lookAt(0, 0, 0);
 
-    const size = 10;
-    const aspect = viewport.aspectRatio;
     this.orthographicCamera = new THREE.OrthographicCamera(
-      -size * aspect,
-      size * aspect,
-      size,
-      -size,
+      -this.orthographicHalfSize * aspect,
+      this.orthographicHalfSize * aspect,
+      this.orthographicHalfSize,
+      -this.orthographicHalfSize,
       0.1,
-      1000
+      1000,
     );
     this.orthographicCamera.position.set(0, 15, 15);
     this.orthographicCamera.lookAt(0, 0, 0);
@@ -55,101 +92,230 @@ export class CameraManager {
   }
 
   public setMode(mode: CameraMode, target?: Vector3D): void {
-    this.currentMode = mode;
-
-    if (mode === "orthographic") {
-      this.activeCamera = this.orthographicCamera;
-    } else {
-      this.activeCamera = this.perspectiveCamera;
+    if (
+      mode !== "perspective" &&
+      mode !== "orthographic" &&
+      mode !== "follow"
+    ) {
+      throw new RangeError(`CameraMode inválido: ${String(mode)}.`);
     }
 
-    if (target) {
+    this.currentMode = mode;
+
+    this.activeCamera =
+      mode === "orthographic"
+        ? this.orthographicCamera
+        : this.perspectiveCamera;
+
+    if (target !== undefined) {
       this.setTarget(target);
     }
   }
 
   public setTarget(target: Vector3D): void {
-    this.targetPositionScratch.set(target.x, target.y, target.z);
+    assertFiniteVector(target, "target");
+
+    this.targetPositionScratch.set(
+      target.x,
+      target.y,
+      target.z,
+    );
+
     this.activeCamera.lookAt(this.targetPositionScratch);
   }
 
   public updateFollowCamera(
     target: Vector3D,
-    offset: Vector3D = { x: 0, y: 8, z: 12 },
-    lerpFactor: number = 0.1
+    offset?: Vector3D,
+    lerpFactor = DEFAULT_FOLLOW_LERP,
   ): void {
-    if (this.currentMode !== "follow") return;
+    if (this.currentMode !== "follow") {
+      return;
+    }
 
-    this.targetPositionScratch.set(target.x, target.y, target.z);
+    assertFiniteVector(target, "target");
+
+    this.targetPositionScratch.set(
+      target.x,
+      target.y,
+      target.z,
+    );
+
+    if (offset === undefined) {
+      this.appliedFollowOffsetScratch.copy(
+        this.defaultFollowOffsetScratch,
+      );
+    } else {
+      assertFiniteVector(offset, "offset");
+
+      this.appliedFollowOffsetScratch.set(
+        offset.x,
+        offset.y,
+        offset.z,
+      );
+    }
 
     this.desiredCameraPositionScratch
       .copy(this.targetPositionScratch)
-      .add(this.defaultOffsetScratch.set(offset.x, offset.y, offset.z));
+      .add(this.appliedFollowOffsetScratch);
 
-    this.currentCameraPositionScratch.copy(this.activeCamera.position);
-    this.currentCameraPositionScratch.lerp(this.desiredCameraPositionScratch, lerpFactor);
+    this.currentCameraPositionScratch.copy(
+      this.activeCamera.position,
+    );
 
-    this.activeCamera.position.copy(this.currentCameraPositionScratch);
-    this.activeCamera.lookAt(this.targetPositionScratch);
+    this.currentCameraPositionScratch.lerp(
+      this.desiredCameraPositionScratch,
+      normalizeLerpFactor(lerpFactor),
+    );
+
+    this.activeCamera.position.copy(
+      this.currentCameraPositionScratch,
+    );
+
+    this.activeCamera.lookAt(
+      this.targetPositionScratch,
+    );
   }
 
   public updateAspect(viewport: ViewportDimensions): void {
-    this.perspectiveCamera.aspect = viewport.aspectRatio;
+    const aspect = normalizePositiveFinite(viewport.aspectRatio, 1);
+
+    this.perspectiveCamera.aspect = aspect;
     this.perspectiveCamera.updateProjectionMatrix();
 
-    const size = 10;
-    const aspect = viewport.aspectRatio;
-    this.orthographicCamera.left = -size * aspect;
-    this.orthographicCamera.right = size * aspect;
-    this.orthographicCamera.top = size;
-    this.orthographicCamera.bottom = -size;
+    this.orthographicCamera.left =
+      -this.orthographicHalfSize * aspect;
+    this.orthographicCamera.right =
+      this.orthographicHalfSize * aspect;
+    this.orthographicCamera.top =
+      this.orthographicHalfSize;
+    this.orthographicCamera.bottom =
+      -this.orthographicHalfSize;
+
     this.orthographicCamera.updateProjectionMatrix();
   }
 
-  public configurePerspective(options: Partial<PerspectiveCameraOptions>): void {
-    if (options.fov !== undefined) this.perspectiveCamera.fov = options.fov;
-    if (options.near !== undefined) this.perspectiveCamera.near = options.near;
-    if (options.far !== undefined) this.perspectiveCamera.far = options.far;
+  public configurePerspective(
+    options: Partial<PerspectiveCameraOptions>,
+  ): void {
+    const nextNear =
+      options.near === undefined
+        ? this.perspectiveCamera.near
+        : normalizePositiveFinite(
+            options.near,
+            this.perspectiveCamera.near,
+          );
 
-    if (options.position) {
+    const nextFar =
+      options.far === undefined
+        ? this.perspectiveCamera.far
+        : normalizePositiveFinite(
+            options.far,
+            this.perspectiveCamera.far,
+          );
+
+    if (nextFar <= nextNear) {
+      throw new RangeError("Perspective far precisa ser maior que near.");
+    }
+
+    if (options.fov !== undefined) {
+      if (
+        !Number.isFinite(options.fov) ||
+        options.fov <= 0 ||
+        options.fov >= 180
+      ) {
+        throw new RangeError("Perspective fov precisa estar entre 0 e 180.");
+      }
+
+      this.perspectiveCamera.fov = options.fov;
+    }
+
+    this.perspectiveCamera.near = nextNear;
+    this.perspectiveCamera.far = nextFar;
+
+    if (options.position !== undefined) {
+      assertFiniteVector(options.position, "position");
+
       this.perspectiveCamera.position.set(
         options.position.x,
         options.position.y,
-        options.position.z
+        options.position.z,
       );
     }
 
-    if (options.target) {
+    if (options.target !== undefined) {
+      assertFiniteVector(options.target, "target");
+
       this.perspectiveCamera.lookAt(
         options.target.x,
         options.target.y,
-        options.target.z
+        options.target.z,
       );
     }
 
     this.perspectiveCamera.updateProjectionMatrix();
   }
 
-  public configureOrthographic(options: Partial<OrthographicCameraOptions>): void {
-    if (options.near !== undefined) this.orthographicCamera.near = options.near;
-    if (options.far !== undefined) this.orthographicCamera.far = options.far;
+  public configureOrthographic(
+    options: Partial<OrthographicCameraOptions>,
+  ): void {
+    const nextNear =
+      options.near === undefined
+        ? this.orthographicCamera.near
+        : normalizePositiveFinite(
+            options.near,
+            this.orthographicCamera.near,
+          );
 
-    if (options.position) {
+    const nextFar =
+      options.far === undefined
+        ? this.orthographicCamera.far
+        : normalizePositiveFinite(
+            options.far,
+            this.orthographicCamera.far,
+          );
+
+    if (nextFar <= nextNear) {
+      throw new RangeError("Orthographic far precisa ser maior que near.");
+    }
+
+    if (options.size !== undefined) {
+      this.orthographicHalfSize =
+        normalizePositiveFinite(
+          options.size,
+          this.orthographicHalfSize,
+        );
+    }
+
+    this.orthographicCamera.near = nextNear;
+    this.orthographicCamera.far = nextFar;
+
+    if (options.position !== undefined) {
+      assertFiniteVector(options.position, "position");
+
       this.orthographicCamera.position.set(
         options.position.x,
         options.position.y,
-        options.position.z
+        options.position.z,
       );
     }
 
-    if (options.target) {
+    if (options.target !== undefined) {
+      assertFiniteVector(options.target, "target");
+
       this.orthographicCamera.lookAt(
         options.target.x,
         options.target.y,
-        options.target.z
+        options.target.z,
       );
     }
 
-    this.orthographicCamera.updateProjectionMatrix();
+    this.updateAspect({
+      width: 1,
+      height: 1,
+      aspectRatio:
+        this.perspectiveCamera.aspect,
+      pixelRatio: 1,
+    });
   }
 }

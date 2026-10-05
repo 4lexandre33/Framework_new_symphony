@@ -1,50 +1,120 @@
 import type { ViewportDimensions } from "../../../contracts/render/types";
 
 export interface ViewportResizeCallback {
-  (dimensions: ViewportDimensions): void;
+  (dimensions: Readonly<ViewportDimensions>): void;
+}
+
+const MAX_PIXEL_RATIO = 2;
+const NOOP_DISPOSER = (): void => {};
+
+function normalizeDimension(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) {
+    return 1;
+  }
+
+  return Math.max(1, Math.floor(value));
+}
+
+function normalizePixelRatio(value: number | undefined): number {
+  if (value === undefined || !Number.isFinite(value) || value <= 0) {
+    return 1;
+  }
+
+  return Math.min(MAX_PIXEL_RATIO, value);
 }
 
 export class ViewportManager {
-  private readonly dimensions: ViewportDimensions = {
-    width: window.innerWidth,
-    height: window.innerHeight,
-    aspectRatio: window.innerWidth / Math.max(1, window.innerHeight),
-    pixelRatio: Math.min(window.devicePixelRatio || 1, 2.0),
-  };
+  private readonly dimensions: ViewportDimensions;
 
   private resizeListener: (() => void) | null = null;
   private readonly callbacks = new Set<ViewportResizeCallback>();
 
-  public constructor(private readonly canvas: HTMLCanvasElement) {
-    this.updateDimensions(window.innerWidth, window.innerHeight);
+  private disposed = false;
+
+  public constructor(
+    private readonly canvas: HTMLCanvasElement,
+    private readonly hostWindow: Window = window,
+  ) {
+    this.dimensions = {
+      width: 1,
+      height: 1,
+      aspectRatio: 1,
+      pixelRatio: 1,
+    };
+
+    this.updateDimensions(
+      hostWindow.innerWidth,
+      hostWindow.innerHeight,
+      hostWindow.devicePixelRatio,
+    );
   }
 
   public attachResizeListener(): void {
-    if (this.resizeListener) return;
+    if (this.disposed || this.resizeListener !== null) {
+      return;
+    }
 
-    this.resizeListener = () => {
-      this.updateDimensions(window.innerWidth, window.innerHeight);
+    this.resizeListener = (): void => {
+      if (this.disposed) {
+        return;
+      }
+
+      this.updateDimensions(
+        this.hostWindow.innerWidth,
+        this.hostWindow.innerHeight,
+        this.hostWindow.devicePixelRatio,
+      );
+
       this.notifyCallbacks();
     };
 
-    window.addEventListener("resize", this.resizeListener, { passive: true });
+    this.hostWindow.addEventListener(
+      "resize",
+      this.resizeListener,
+      { passive: true },
+    );
   }
 
   public detachResizeListener(): void {
-    if (!this.resizeListener) return;
-    window.removeEventListener("resize", this.resizeListener);
+    if (this.resizeListener === null) {
+      return;
+    }
+
+    this.hostWindow.removeEventListener(
+      "resize",
+      this.resizeListener,
+    );
+
     this.resizeListener = null;
   }
 
   public onResize(callback: ViewportResizeCallback): () => void {
+    if (this.disposed) {
+      return NOOP_DISPOSER;
+    }
+
     this.callbacks.add(callback);
-    return () => {
+
+    return (): void => {
       this.callbacks.delete(callback);
     };
   }
 
-  public setManualSize(width: number, height: number, pixelRatio?: number): void {
-    this.updateDimensions(width, height, pixelRatio);
+  public setManualSize(
+    width: number,
+    height: number,
+    pixelRatio?: number,
+  ): void {
+    if (this.disposed) {
+      return;
+    }
+
+    this.updateDimensions(
+      width,
+      height,
+      pixelRatio ?? this.hostWindow.devicePixelRatio,
+    );
+
     this.notifyCallbacks();
   }
 
@@ -52,18 +122,32 @@ export class ViewportManager {
     return this.dimensions;
   }
 
-  private updateDimensions(width: number, height: number, customPixelRatio?: number): void {
-    const validWidth = Math.max(1, width);
-    const validHeight = Math.max(1, height);
-    const pr = customPixelRatio ?? Math.min(window.devicePixelRatio || 1, 2.0);
+  public dispose(): void {
+    if (this.disposed) {
+      return;
+    }
+
+    this.detachResizeListener();
+    this.callbacks.clear();
+    this.disposed = true;
+  }
+
+  private updateDimensions(
+    width: number,
+    height: number,
+    pixelRatio?: number,
+  ): void {
+    const validWidth = normalizeDimension(width);
+    const validHeight = normalizeDimension(height);
+    const validPixelRatio = normalizePixelRatio(pixelRatio);
 
     this.dimensions.width = validWidth;
     this.dimensions.height = validHeight;
     this.dimensions.aspectRatio = validWidth / validHeight;
-    this.dimensions.pixelRatio = pr;
+    this.dimensions.pixelRatio = validPixelRatio;
 
-    this.canvas.width = Math.floor(validWidth * pr);
-    this.canvas.height = Math.floor(validHeight * pr);
+    // O WebGLRenderer é o owner do drawing buffer (canvas.width/height).
+    // ViewportManager governa apenas CSS + dimensões lógicas.
     this.canvas.style.width = `${validWidth}px`;
     this.canvas.style.height = `${validHeight}px`;
   }
@@ -72,10 +156,5 @@ export class ViewportManager {
     for (const callback of this.callbacks) {
       callback(this.dimensions);
     }
-  }
-
-  public dispose(): void {
-    this.detachResizeListener();
-    this.callbacks.clear();
   }
 }

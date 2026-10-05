@@ -1,0 +1,172 @@
+PROJETO1 — ETAPA 76 / RENDERING RUNTIME
+
+OBJETIVO
+Certificar e endurecer game.render sem alterar sua Public API v1.
+
+PRECONDIÇÕES
+71 — Layer 1 Baseline & Inventory
+72 — Public APIs / Contracts / Tokens
+73 — Plugin Manifests & Capability Graph
+74 — Lifecycle / Boot / Shutdown
+75 — Deterministic Game Loop
+
+ESCOPO
+src/engine/render/internal/ViewportManager.ts
+src/engine/render/internal/CameraManager.ts
+src/engine/render/internal/SceneGraphManager.ts
+src/engine/render/internal/ThreeRenderEngine.ts
+src/plugins/render/plugin.ts
+
+PUBLIC API
+NÃO ALTERADA:
+
+src/contracts/render/types.ts
+src/tokens/render.ts
+src/engine/render/public/index.ts
+
+A Stage 72 continua sendo o contrato público autoritativo.
+
+RENDER FRAME PIPELINE
+game.loop.render
+  -> render plugin
+  -> ThreeRenderEngine.render(alphaInterpolation, deltaSeconds)
+  -> WebGLRenderer.render(scene, activeCamera)
+  -> await game.render.frame
+
+O dispatch de game.loop.render já é serial pela Stage 75.
+
+A Stage 76 mantém essa serialização:
+
+um frame não publica game.render.frame antes do WebGL render daquele frame.
+
+VIEWPORT
+ViewportManager governa dimensões lógicas/CSS.
+
+WebGLRenderer governa canvas.width/canvas.height e drawing buffer.
+
+Regras:
+- width/height sempre inteiros >= 1;
+- NaN/Infinity/<=0 normalizam para 1;
+- pixel ratio inválido normaliza para 1;
+- pixel ratio máximo = 2;
+- resize listener é único;
+- dispose remove listener e callbacks;
+- resize posterior a dispose é no-op.
+
+CANVAS OWNERSHIP
+Canvas recebido pelo construtor:
+- ownership externo;
+- engine nunca remove do DOM.
+
+Canvas #three-canvas já existente:
+- ownership externo;
+- engine nunca remove do DOM.
+
+Canvas criado pelo ThreeRenderEngine:
+- ownership do engine;
+- removido do DOM no dispose.
+
+WEBGL CONTEXT
+webglcontextlost:
+- preventDefault();
+- render é suspenso.
+
+webglcontextrestored:
+- renderer.resetState();
+- viewport/camera são reaplicados;
+- render volta a ser permitido.
+
+dispose:
+- remove ambos os listeners;
+- context events posteriores não reativam renderer disposed.
+
+Recuperação hostil completa/context reconstruction continua reservada para
+Stage 87 — Failure Recovery & Resilience.
+
+GPU RESOURCE LIFECYCLE
+SceneGraphManager administra:
+- BufferGeometry;
+- Material;
+- Texture;
+- ShaderMaterial uniform textures.
+
+Remove de um objeto:
+- resources ainda referenciados por outro objeto registrado NÃO são disposed;
+- resources sem owner restante são disposed.
+
+clear/dispose:
+- cada resource é disposed uma única vez;
+- manager dispose é idempotente.
+
+O mesmo Object3D não pode possuir duas keys simultaneamente.
+
+CAMERA
+Perspective / Orthographic / Follow continuam existentes.
+
+Follow hot path:
+- zero new;
+- zero object literal;
+- zero array literal;
+- scratch Vector3 pré-alocados.
+
+O antigo default parameter:
+
+offset = { x: 0, y: 8, z: 12 }
+
+foi removido porque alocava um objeto por chamada quando offset era omitido.
+
+Lerp:
+- NaN usa default 0.1;
+- valores finitos são clampados entre 0 e 1.
+
+Targets/offsets com componentes não-finitos são rejeitados.
+
+OrthographicCameraOptions.size agora é respeitado internamente.
+
+PLUGIN
+game.render continua:
+- provider game.render v1.0.0;
+- preloaded;
+- sem mudança de manifest identity/version.
+
+Agora:
+- game.loop.render é renderizado e então publica game.render.frame por emitAsync;
+- resize publica game.render.resize;
+- camera command é tipado com SetCameraModeRequest;
+- zero any explícito.
+
+HOT PATHS
+ThreeRenderEngine.render:
+- 0 object literal
+- 0 array literal
+- 0 new expression
+
+CameraManager.updateFollowCamera:
+- 0 object literal
+- 0 array literal
+- 0 new expression
+
+PERFORMANCE
+Esta Stage governa apenas invariantes locais de render.
+
+Budgets globais de:
+- draw calls;
+- triangles;
+- textures;
+- shader programs;
+- GPU memory;
+- object pools;
+- global resource lifetime
+
+continuam reservados à Stage 86.
+
+NÃO ANTECIPADO
+77 — Physics Runtime
+78 — Input Runtime
+79 — Assets / Streaming / Terrain / Workers
+80 — Presentation Systems
+86 — Performance & Resource Lifecycle
+87 — Failure Recovery & Resilience
+
+PRÓXIMA ETAPA
+77 — Physics Runtime.

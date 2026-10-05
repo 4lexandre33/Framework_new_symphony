@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "baselineId": "layer1-rendering-v1-stage76",
+  "requiresStages": [
+    71,
+    72,
+    73,
+    74,
+    75
+  ],
+  "publicApiBaseline": "layer1-public-api-v1-stage72",
+  "capturedCounts": {
+    "semanticFiles": 5,
+    "explicitAnyKeywords": 0,
+    "renderHotPathExplicitAllocations": 0,
+    "followCameraHotPathExplicitAllocations": 0
+  },
+  "policy": {
+    "publicApiUnchanged": true,
+    "contextLossSkipsRender": true,
+    "contextRestoredResetsRendererState": true,
+    "contextListenersRemovedOnDispose": true,
+    "rendererDisposeIdempotent": true,
+    "externallyOwnedCanvasNeverRemoved": true,
+    "engineOwnedCanvasRemovedOnDispose": true,
+    "viewportDimensionsNormalized": true,
+    "pixelRatioCap": 2,
+    "sharedGpuResourcesProtectedFromEarlyDispose": true,
+    "explicitAnyForbiddenInRenderingRuntime": true,
+    "renderHotPathNoExplicitAllocations": true,
+    "followCameraHotPathNoExplicitAllocations": true,
+    "renderFrameEventAfterRender": true,
+    "resizeEventPublished": true
+  },
+  "files": [
+    {
+      "path": "src/engine/render/internal/ViewportManager.ts",
+      "fingerprint": "f42ebb200a86410fd6fb97c6de69003e77328754c2c00c56f27366367947494f"
+    },
+    {
+      "path": "src/engine/render/internal/CameraManager.ts",
+      "fingerprint": "a476e6d4ba15253e91e308a3d447130159ff1025a7f37d9d5c3068fbe11706bd"
+    },
+    {
+      "path": "src/engine/render/internal/SceneGraphManager.ts",
+      "fingerprint": "d3b95404e0513ff27c2c821bfafea309be7790721b4922af554c4bb5e07260ff"
+    },
+    {
+      "path": "src/engine/render/internal/ThreeRenderEngine.ts",
+      "fingerprint": "da004906557f759fda855b0732410081c93f2fb84f49748c95f79f77264da681"
+    },
+    {
+      "path": "src/plugins/render/plugin.ts",
+      "fingerprint": "01b108bdc005999a5b6b7e37122e9960483786e5e795f0bbc4e7a67fc28c5371"
+    }
+  ]
+}

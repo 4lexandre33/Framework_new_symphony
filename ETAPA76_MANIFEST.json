@@ -1,0 +1,97 @@
+{
+  "stage": "76",
+  "name": "Rendering Runtime",
+  "layer": 1,
+  "requiresStages": [
+    71,
+    72,
+    73,
+    74,
+    75
+  ],
+  "renderingBaselineId": "layer1-rendering-v1-stage76",
+  "publicApiChanged": false,
+  "runtimeChanges": {
+    "safeViewportNormalization": true,
+    "pixelRatioCap": 2,
+    "contextLossPauseAndRestore": true,
+    "contextListenerTeardown": true,
+    "canvasOwnership": true,
+    "idempotentRendererDispose": true,
+    "sharedGpuResourceProtection": true,
+    "followCameraNoDefaultObjectAllocation": true,
+    "typedRenderPluginPayloads": true,
+    "renderFrameEventAfterRender": true,
+    "resizeEventPublished": true
+  },
+  "capture": {
+    "semanticFiles": 5,
+    "explicitAnyKeywords": 0,
+    "renderHotPathExplicitAllocations": 0,
+    "followCameraHotPathExplicitAllocations": 0
+  },
+  "policy": {
+    "publicApiUnchanged": true,
+    "contextLossSkipsRender": true,
+    "contextRestoredResetsRendererState": true,
+    "contextListenersRemovedOnDispose": true,
+    "rendererDisposeIdempotent": true,
+    "externallyOwnedCanvasNeverRemoved": true,
+    "engineOwnedCanvasRemovedOnDispose": true,
+    "viewportDimensionsNormalized": true,
+    "pixelRatioCap": 2,
+    "sharedGpuResourcesProtectedFromEarlyDispose": true,
+    "explicitAnyForbiddenInRenderingRuntime": true,
+    "renderHotPathNoExplicitAllocations": true,
+    "followCameraHotPathNoExplicitAllocations": true,
+    "renderFrameEventAfterRender": true,
+    "resizeEventPublished": true
+  },
+  "localValidation": {
+    "stage72RegressionAudit": "PASS",
+    "stage74RegressionAudit": "PASS",
+    "stage75RegressionAudit": "PASS",
+    "stage76RenderingAudit": "PASS",
+    "focusedSourceTypeScript": "PASS",
+    "focusedTestsTypeScript": "PASS",
+    "runtimeCameraSceneSmoke": "PASS",
+    "explicitAnyKeywords": 0,
+    "renderHotPathExplicitAllocations": 0,
+    "followCameraHotPathExplicitAllocations": 0,
+    "violations": 0,
+    "correctedIntegrationFixtureTypeScript": "PASS",
+    "pluginKindPolicySmoke": "PASS",
+    "stage76AuditAfterCorrection": "PASS"
+  },
+  "explicitlyDeferred": [
+    "Stage 77 Physics Runtime",
+    "Stage 86 global draw-call/GPU-memory/performance budgets",
+    "Stage 87 hostile WebGL context reconstruction/recovery",
+    "Stage 88 desktop/Tauri production readiness"
+  ],
+  "files": [
+    "src/engine/render/internal/ViewportManager.ts",
+    "src/engine/render/internal/CameraManager.ts",
+    "src/engine/render/internal/SceneGraphManager.ts",
+    "src/engine/render/internal/ThreeRenderEngine.ts",
+    "src/plugins/render/plugin.ts",
+    "LAYER1_RENDERING_BASELINE_V1.json",
+    "ETAPA76_RENDERING_RUNTIME.txt",
+    "scripts/architecture/lib/layer1-rendering-v1.mjs",
+    "scripts/architecture/stage76-audit-rendering.mjs",
+    "scripts/architecture/stage76-validate-rendering.mjs",
+    "tests/layer1-render-viewport-camera.test.ts",
+    "tests/layer1-render-scene.test.ts",
+    "tests/layer1-render-engine.test.ts",
+    "tests/layer1-render-plugin.test.ts",
+    "tests/layer1-rendering-selftest.test.ts",
+    "ETAPA76_MANIFEST.json",
+    "ETAPA76_SHA256SUMS.txt"
+  ],
+  "correction": {
+    "revision": 1,
+    "reason": "tests/layer1-render-plugin.test.ts originally declared test.render.driver as internal while depending on game.render/preloaded",
+    "fix": "test.render.driver kind changed from internal to preloaded; no runtime, public API, PluginKind rule, or architecture guardrail was weakened",
+    "authoritativeFailureAddressed": "PLUGIN_KIND_MISMATCH"
+  }
+}
