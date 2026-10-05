@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "baselineId": "layer1-physics-v1-stage77",
+  "requiresStages": [
+    71,
+    72,
+    73,
+    74,
+    75,
+    76
+  ],
+  "publicApiBaseline": "layer1-public-api-v1-stage72",
+  "capturedCounts": {
+    "semanticFiles": 6,
+    "explicitAnyKeywords": 0,
+    "physicsWorldStepExplicitAllocations": 0,
+    "physicsServiceLoopStepExplicitAllocations": 0,
+    "syncMeshTransformExplicitAllocations": 0
+  },
+  "policy": {
+    "publicApiUnchanged": true,
+    "gameLoopTickField": "deltaSeconds",
+    "physicsStepMinSeconds": 0.004166666666666667,
+    "physicsStepMaxSeconds": 1,
+    "silentTimestepClampForbidden": true,
+    "gameLoopCollisionDispatchSerial": true,
+    "sensorTriggerEventsEnabled": true,
+    "eventQueueFreedOnDispose": true,
+    "worldFreedOnDispose": true,
+    "perEntityTransformCache": true,
+    "descriptorPrevalidationBeforeReplacement": true,
+    "colliderCreationRollback": true,
+    "explicitAnyForbidden": true,
+    "physicsWorldStepNoExplicitAllocations": true,
+    "physicsServiceLoopStepNoExplicitAllocations": true,
+    "syncMeshTransformNoExplicitAllocations": true
+  },
+  "files": [
+    {
+      "path": "src/engine/physics/internal/PhysicsWorld.ts",
+      "fingerprint": "472816447058cf5ac8573740aee0bc8f997a05f85d6e2c3ef846bc037589ada5"
+    },
+    {
+      "path": "src/engine/physics/internal/PhysicsService.ts",
+      "fingerprint": "9642c79a46f4c5f6531070d4e67b56d2c6625387c10af62ed4a968d363067ca2"
+    },
+    {
+      "path": "src/engine/physics/internal/RigidBodyFactory.ts",
+      "fingerprint": "8aefc23472da334475346b7e4711b83b911d2ab0526a20891736f26c3763cdaf"
+    },
+    {
+      "path": "src/engine/physics/internal/RaycasterQueries.ts",
+      "fingerprint": "4b3293ca21b56312a92950e329b327d696b3212e34c3501ee5c7e359491ec66c"
+    },
+    {
+      "path": "src/engine/physics/internal/CollisionEventManager.ts",
+      "fingerprint": "8d9cbe76fb8cf6871ee24e9239cba8c4369f9147ce3b1febed5e0a3219be4480"
+    },
+    {
+      "path": "src/plugins/physics/plugin.ts",
+      "fingerprint": "e941d61a4f544185596cfe3ef7dad4af403aff9bb5da6882568482383531d55c"
+    }
+  ]
+}

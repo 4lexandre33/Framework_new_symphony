@@ -1,0 +1,214 @@
+PROJETO1 — ETAPA 77 / PHYSICS RUNTIME
+
+OBJETIVO
+Certificar e endurecer game.physics sobre Rapier WASM sem alterar sua
+Public API v1.
+
+PRECONDIÇÕES
+71 — Layer 1 Baseline & Inventory
+72 — Public APIs / Contracts / Tokens
+73 — Plugin Manifests & Capability Graph
+74 — Lifecycle / Boot / Shutdown
+75 — Deterministic Game Loop
+76 — Rendering Runtime
+
+PUBLIC API
+NÃO ALTERADA:
+
+src/contracts/physics/types.ts
+src/tokens/physics.ts
+src/engine/physics/public/index.ts
+
+A Etapa 72 continua sendo a baseline pública autoritativa.
+
+CORREÇÃO DE INTEGRAÇÃO COM GAME LOOP
+O contrato oficial da Stage 75 é:
+
+GameTickPayload.deltaSeconds
+
+O plugin antigo lia:
+
+deltaTimeSeconds
+
+e portanto caía silenciosamente no fallback 1/60.
+
+Stage 77 remove o cast/fallback e consome GameTickPayload de forma tipada:
+
+game.loop.tick
+  -> payload.deltaSeconds
+  -> PhysicsService.stepForGameLoop(deltaSeconds)
+  -> PhysicsWorld.world.timestep = deltaSeconds
+
+Nenhum segundo accumulator existe na física.
+
+O timestep enviado pelo fixed loop é o timestep usado pelo Rapier.
+
+STEP RANGE
+O game.loop certificado permite 1–240 ticks/s.
+
+PhysicsWorld aceita exatamente:
+
+1/240 <= deltaSeconds <= 1
+
+NaN, Infinity, zero, negativos ou valores acima de 1 segundo são rejeitados.
+
+O runtime NÃO usa Math.min(delta, 0.033).
+
+Isso evita dessincronização silenciosa quando o tick rate é alterado.
+
+COLLISION / TRIGGER EVENTS
+A implementação anterior sempre publicava:
+
+isTrigger = false
+
+mesmo para sensor colliders.
+
+Stage 77 mantém:
+
+handle -> entityId
+handle -> isSensor
+
+e classifica:
+
+sensor envolvido + started
+  -> game.physics.trigger-enter
+
+sensor envolvido + !started
+  -> game.physics.trigger-exit
+
+sem sensor + started
+  -> game.physics.collision-enter
+
+sem sensor + !started
+  -> game.physics.collision-exit
+
+O payload público não mudou.
+
+SERIALIDADE
+O game.loop Stage 75 usa emitAsync para cada fixed tick.
+
+No caminho oficial do loop:
+
+PhysicsService.stepForGameLoop()
+  -> Rapier world.step()
+  -> drainCollisionEvents()
+  -> await collision/trigger emitAsync()
+  -> retorna ao handler game.loop.tick
+  -> somente então o próximo fixed tick pode iniciar
+
+Assim, um collision-enter do tick N não é atrasado para depois do tick N+1.
+
+A API pública PhysicsApi.step() continua síncrona e usa a EmitQueue normal do
+Kernel, preservando o contrato v1.
+
+HOT PATH
+PhysicsWorld.step:
+
+- zero object literal;
+- zero array literal;
+- zero new expression;
+- nenhum segundo accumulator;
+- nenhum Vector3 temporário explícito.
+
+CollisionEventManager usa callbacks pré-alocados em vez de criar closures
+dentro de cada tick.
+
+Alocação de payload ocorre somente quando existe um evento real de
+collision/trigger, porque o payload precisa manter identidade própria até a
+entrega assíncrona.
+
+BODY / COLLIDER LIFECYCLE
+createBody:
+- entityId vazio é rejeitado;
+- duplicate entityId remove o corpo anterior antes de criar o novo;
+- body/collider handles são registrados;
+- sensor ownership é registrado;
+- transform cache é criado uma única vez por body.
+
+removeBody:
+- remove handle -> entity;
+- remove handle -> sensor;
+- remove body;
+- remove transform cache;
+- atualiza stats.
+
+dispose:
+- idempotente;
+- limpa maps;
+- libera EventQueue WASM;
+- libera World WASM;
+- zera stats;
+- bloqueia reuso da instância.
+
+TRANSFORM CACHE
+A implementação anterior possuía um único scratch transform global.
+
+Isso fazia:
+
+const a = getBodyTransform("a");
+const b = getBodyTransform("b");
+
+potencialmente fazer a e b apontarem para o mesmo objeto mutável.
+
+Stage 77 usa um transform snapshot pré-alocado POR entityId.
+
+Resultado:
+- entidades diferentes não aliasam o mesmo snapshot;
+- leituras repetidas da mesma entidade não criam lixo;
+- syncMeshTransform copia diretamente do RigidBody para o alvo sem objeto
+  intermediário.
+
+RIGID BODY / COLLIDER VALIDATION
+Stage 77 rejeita valores não-finitos e geometrias inválidas antes de enviá-los
+ao WASM:
+
+- position;
+- quaternion de norma zero;
+- damping negativo;
+- halfExtents <= 0;
+- radius <= 0;
+- halfHeight negativo;
+- friction negativa;
+- restitution fora de 0..1;
+- density <= 0;
+- trimesh sem dados;
+- vertices não múltiplos de 3;
+- indices não múltiplos de 3;
+- indices fora do vertex range.
+
+RAYCAST
+Raycast:
+- rejeita origin/direction não finitos;
+- rejeita direction zero;
+- rejeita maxDistance negativo/não finito;
+- normaliza direction antes de consultar o Rapier;
+- calcula point sem ray.pointAt(), evitando uma alocação intermediária;
+- não usa any.
+
+STATS
+PhysicsStats usa storage interno pré-alocado.
+
+getStats() atualiza e retorna o mesmo snapshot readonly da instância.
+
+PERFORMANCE
+A Stage 77 certifica invariantes locais da física.
+
+A auditoria global de:
+- CPU budget;
+- broadphase/narrowphase budget;
+- body/collider pool;
+- memory pressure;
+- worker offload;
+- cross-system resource budgets
+
+permanece na Stage 86 — Performance & Resource Lifecycle.
+
+NÃO ANTECIPADO
+78 — Input Runtime
+79 — Assets / Streaming / Terrain / Workers
+80 — Presentation Systems
+86 — Performance & Resource Lifecycle
+87 — Failure Recovery & Resilience
+
+PRÓXIMA ETAPA
+78 — Input Runtime.

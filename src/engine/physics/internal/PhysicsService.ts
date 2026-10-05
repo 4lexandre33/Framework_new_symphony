@@ -1,21 +1,45 @@
-import type { PluginContext } from "@core";
-import { type PhysicsApi } from "../../../tokens/physics";
-import { type ColliderDescriptor, type PhysicsStats, type QuaternionDTO, type RaycastHit, type RaycastRequest, type RigidBodyDescriptor, type Vector3DTO } from "../../../contracts/physics/types";
-import { PhysicsWorld } from "./PhysicsWorld";
+import type {
+  PluginContext,
+} from "@core";
+
+import type {
+  ColliderDescriptor,
+  PhysicsStats,
+  QuaternionDTO,
+  RaycastHit,
+  RaycastRequest,
+  RigidBodyDescriptor,
+  Vector3DTO,
+} from "../../../contracts/physics/types";
+
+import type {
+  PhysicsApi,
+} from "../../../tokens/physics";
+
 import { CollisionEventManager } from "./CollisionEventManager";
+import { PhysicsWorld } from "./PhysicsWorld";
 
 export class PhysicsService
   implements PhysicsApi {
-  private readonly world =
-    new PhysicsWorld();
+  private readonly world:
+    PhysicsWorld;
 
   private readonly eventManager:
     CollisionEventManager;
 
+  private disposed =
+    false;
+
   public constructor(
     ctx:
       PluginContext,
+    world:
+      PhysicsWorld =
+        new PhysicsWorld(),
   ) {
+    this.world =
+      world;
+
     this.eventManager =
       new CollisionEventManager(
         ctx,
@@ -24,17 +48,57 @@ export class PhysicsService
 
   public async initialize():
     Promise<boolean> {
-    return await this.world
+    if (
+      this.disposed
+    ) {
+      return false;
+    }
+
+    return this.world
       .initialize();
   }
 
   public step(
-    deltaTimeSeconds: number,
+    deltaTimeSeconds:
+      number,
   ): void {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
     this.world.step(
       deltaTimeSeconds,
       this.eventManager,
     );
+
+    // A API pública v1 permanece síncrona. Eventos são enviados pela
+    // EmitQueue do Kernel. O caminho do game.loop abaixo é serial/awaited.
+    this.eventManager
+      .flushQueued();
+  }
+
+  public async stepForGameLoop(
+    deltaTimeSeconds:
+      number,
+  ): Promise<void> {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
+    this.world.step(
+      deltaTimeSeconds,
+      this.eventManager,
+    );
+
+    // Stage 75 garante que game.loop.tick espera seus handlers.
+    // A física, por sua vez, espera os eventos de colisão/trigger daquele
+    // step antes de permitir que o próximo fixed tick prossiga.
+    await this.eventManager
+      .flushSerial();
   }
 
   public createBody(
@@ -44,18 +108,24 @@ export class PhysicsService
     colliderDesc?:
       ColliderDescriptor,
   ): boolean {
-    return this.world.createBody(
-      entityId,
-      bodyDesc,
-      colliderDesc,
+    return (
+      !this.disposed &&
+      this.world.createBody(
+        entityId,
+        bodyDesc,
+        colliderDesc,
+      )
     );
   }
 
   public removeBody(
     entityId: string,
   ): boolean {
-    return this.world.removeBody(
-      entityId,
+    return (
+      !this.disposed &&
+      this.world.removeBody(
+        entityId,
+      )
     );
   }
 
@@ -64,11 +134,13 @@ export class PhysicsService
     impulse:
       Vector3DTO,
   ): boolean {
-    return this.world
-      .applyImpulse(
+    return (
+      !this.disposed &&
+      this.world.applyImpulse(
         entityId,
         impulse,
-      );
+      )
+    );
   }
 
   public applyForce(
@@ -76,21 +148,22 @@ export class PhysicsService
     force:
       Vector3DTO,
   ): boolean {
-    return this.world
-      .applyForce(
+    return (
+      !this.disposed &&
+      this.world.applyForce(
         entityId,
         force,
-      );
+      )
+    );
   }
 
   public castRay(
     request:
       RaycastRequest,
   ): RaycastHit {
-    return this.world
-      .castRay(
-        request,
-      );
+    return this.world.castRay(
+      request,
+    );
   }
 
   public getBodyTransform(
@@ -101,6 +174,12 @@ export class PhysicsService
     rotation:
       QuaternionDTO;
   } | null {
+    if (
+      this.disposed
+    ) {
+      return null;
+    }
+
     return this.world
       .getBodyTransform(
         entityId,
@@ -116,17 +195,26 @@ export class PhysicsService
         QuaternionDTO;
     },
   ): boolean {
-    return this.world
-      .syncMeshTransform(
-        entityId,
-        targetMesh,
-      );
+    return (
+      !this.disposed &&
+      this.world
+        .syncMeshTransform(
+          entityId,
+          targetMesh,
+        )
+    );
   }
 
   public setGravity(
     gravity:
       Vector3DTO,
   ): void {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
     this.world.setGravity(
       gravity,
     );
@@ -139,6 +227,16 @@ export class PhysicsService
   }
 
   public dispose(): void {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
+    this.disposed =
+      true;
+
+    this.eventManager.clear();
     this.world.dispose();
   }
 }

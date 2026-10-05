@@ -1,51 +1,196 @@
 import RAPIER from "@dimforge/rapier3d-compat";
-import type { RaycastRequest, RaycastHit } from "../../../contracts/physics/types";
+
+import type {
+  RaycastHit,
+  RaycastRequest,
+} from "../../../contracts/physics/types";
+
+function assertFinite(
+  value: number,
+  label: string,
+): void {
+  if (!Number.isFinite(value)) {
+    throw new RangeError(
+      `${label} precisa ser finito.`,
+    );
+  }
+}
 
 export class RaycasterQueries {
-  private static readonly scratchPoint = { x: 0, y: 0, z: 0 };
-  private static readonly scratchNormal = { x: 0, y: 0, z: 0 };
-
   public static castRay(
     world: RAPIER.World,
-    handleToEntityMap: Map<number, string>,
-    request: RaycastRequest
+    handleToEntityMap:
+      ReadonlyMap<number, string>,
+    request: RaycastRequest,
   ): RaycastHit {
-    const rayOrigin = new RAPIER.Vector3(request.origin.x, request.origin.y, request.origin.z);
-    const rayDir = new RAPIER.Vector3(request.direction.x, request.direction.y, request.direction.z);
+    assertFinite(
+      request.origin.x,
+      "ray.origin.x",
+    );
 
-    const ray = new RAPIER.Ray(rayOrigin, rayDir);
-    const solid = request.solid !== undefined ? request.solid : true;
+    assertFinite(
+      request.origin.y,
+      "ray.origin.y",
+    );
 
-    const hit = world.castRayAndGetNormal(ray, request.maxDistance, solid);
+    assertFinite(
+      request.origin.z,
+      "ray.origin.z",
+    );
 
-    if (!hit) {
+    assertFinite(
+      request.direction.x,
+      "ray.direction.x",
+    );
+
+    assertFinite(
+      request.direction.y,
+      "ray.direction.y",
+    );
+
+    assertFinite(
+      request.direction.z,
+      "ray.direction.z",
+    );
+
+    assertFinite(
+      request.maxDistance,
+      "ray.maxDistance",
+    );
+
+    if (
+      request.maxDistance <
+      0
+    ) {
+      throw new RangeError(
+        "ray.maxDistance precisa ser >= 0.",
+      );
+    }
+
+    const lengthSquared =
+      request.direction.x *
+        request.direction.x +
+      request.direction.y *
+        request.direction.y +
+      request.direction.z *
+        request.direction.z;
+
+    if (
+      lengthSquared <=
+      Number.EPSILON
+    ) {
+      throw new RangeError(
+        "ray.direction não pode ser o vetor zero.",
+      );
+    }
+
+    const inverseLength =
+      1 /
+      Math.sqrt(
+        lengthSquared,
+      );
+
+    const direction =
+      new RAPIER.Vector3(
+        request.direction.x *
+          inverseLength,
+        request.direction.y *
+          inverseLength,
+        request.direction.z *
+          inverseLength,
+      );
+
+    const origin =
+      new RAPIER.Vector3(
+        request.origin.x,
+        request.origin.y,
+        request.origin.z,
+      );
+
+    const ray =
+      new RAPIER.Ray(
+        origin,
+        direction,
+      );
+
+    const hit =
+      world.castRayAndGetNormal(
+        ray,
+        request.maxDistance,
+        request.solid ??
+          true,
+      );
+
+    if (
+      hit ===
+        null ||
+      hit ===
+        undefined
+    ) {
       return {
-        hit: false,
-        distance: 0,
-        point: { x: 0, y: 0, z: 0 },
-        normal: { x: 0, y: 0, z: 0 },
+        hit:
+          false,
+        distance:
+          0,
+        point: {
+          x:
+            0,
+          y:
+            0,
+          z:
+            0,
+        },
+        normal: {
+          x:
+            0,
+          y:
+            0,
+          z:
+            0,
+        },
       };
     }
 
-    // No Rapier WASM, o tempo de impacto / distância do raio é retornado na propriedade .toi
-    const hitPoint = ray.pointAt(hit.toi);
+    const distance =
+      hit.toi;
 
-    (this.scratchPoint as any).x = hitPoint.x;
-    (this.scratchPoint as any).y = hitPoint.y;
-    (this.scratchPoint as any).z = hitPoint.z;
-
-    (this.scratchNormal as any).x = hit.normal.x;
-    (this.scratchNormal as any).y = hit.normal.y;
-    (this.scratchNormal as any).z = hit.normal.z;
-
-    const entityId = handleToEntityMap.get(hit.collider.handle);
+    const entityId =
+      handleToEntityMap.get(
+        hit.collider.handle,
+      );
 
     return {
-      hit: true,
-      distance: hit.toi,
-      point: this.scratchPoint,
-      normal: this.scratchNormal,
-      entityId,
+      hit:
+        true,
+      distance,
+      point: {
+        x:
+          request.origin.x +
+          direction.x *
+            distance,
+        y:
+          request.origin.y +
+          direction.y *
+            distance,
+        z:
+          request.origin.z +
+          direction.z *
+            distance,
+      },
+      normal: {
+        x:
+          hit.normal.x,
+        y:
+          hit.normal.y,
+        z:
+          hit.normal.z,
+      },
+      ...(entityId ===
+      undefined
+        ? {}
+        : {
+            entityId,
+          }),
     };
   }
 }

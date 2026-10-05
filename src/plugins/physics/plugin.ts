@@ -1,7 +1,61 @@
-import type { Plugin, PluginContext } from "@core";
-import { PhysicsToken } from "../../tokens/physics";
-import { ApplyImpulseCommand, CastRayCommand, CollisionEnterEvent, CollisionExitEvent, CreateBodyCommand, RemoveBodyCommand, TriggerEnterEvent, TriggerExitEvent, type ApplyImpulseRequest, type CastRayRequest, type CreateBodyRequest, type RemoveBodyRequest } from "../../contracts/physics/types";
-import { PhysicsService } from "../../engine/physics/internal/PhysicsService";
+import type {
+  Plugin,
+  PluginContext,
+} from "@core";
+
+import type {
+  ApplyImpulseRequest,
+  CastRayRequest,
+  CreateBodyRequest,
+  RemoveBodyRequest,
+} from "../../contracts/physics/types";
+
+import {
+  ApplyImpulseCommand,
+  CastRayCommand,
+  CollisionEnterEvent,
+  CollisionExitEvent,
+  CreateBodyCommand,
+  RemoveBodyCommand,
+  TriggerEnterEvent,
+  TriggerExitEvent,
+} from "../../contracts/physics/types";
+
+import type {
+  GameTickPayload,
+} from "../../contracts/game-loop/types";
+
+import type {
+  PhysicsApi,
+} from "../../tokens/physics";
+
+import {
+  PhysicsToken,
+} from "../../tokens/physics";
+
+import {
+  PhysicsService,
+} from "../../engine/physics/internal/PhysicsService";
+
+export interface PhysicsPluginService
+  extends PhysicsApi {
+  initialize():
+    Promise<boolean>;
+
+  stepForGameLoop(
+    deltaTimeSeconds:
+      number,
+  ): Promise<void>;
+
+  dispose(): void;
+}
+
+export type PhysicsServiceFactory =
+  (
+    ctx:
+      PluginContext,
+  ) =>
+    PhysicsPluginService;
 
 export const physicsManifest:
   Plugin["manifest"] = {
@@ -44,21 +98,32 @@ export const physicsManifest:
             "1.0.0",
         },
       ],
-      conflicts: [],
+
+      conflicts:
+        [],
     },
   };
 
-export function createPhysicsPlugin():
-  Plugin {
+export function createPhysicsPlugin(
+  serviceFactory:
+    PhysicsServiceFactory =
+      (
+        ctx,
+      ): PhysicsPluginService =>
+        new PhysicsService(
+          ctx,
+        ),
+): Plugin {
   return {
     manifest:
       physicsManifest,
 
     async setup(
-      ctx: PluginContext,
+      ctx:
+        PluginContext,
     ): Promise<void> {
       const service =
-        new PhysicsService(
+        serviceFactory(
           ctx,
         );
 
@@ -66,7 +131,9 @@ export function createPhysicsPlugin():
         await service
           .initialize();
 
-      if (!initialized) {
+      if (
+        !initialized
+      ) {
         service.dispose();
 
         throw new Error(
@@ -112,97 +179,94 @@ export function createPhysicsPlugin():
       );
 
       const unbindTick =
-        ctx.events.on(
+        ctx.events.on<
           "game.loop.tick",
-          (
+          GameTickPayload
+        >(
+          "game.loop.tick",
+          async (
             envelope,
-          ): void => {
-            const payload =
-              envelope.payload as {
-                deltaTimeSeconds?:
-                  number;
-              };
-
-            const deltaTimeSeconds =
-              payload
-                .deltaTimeSeconds ??
-              1 / 60;
-
-            service.step(
-              deltaTimeSeconds,
-            );
+          ): Promise<void> => {
+            await service
+              .stepForGameLoop(
+                envelope
+                  .payload
+                  .deltaSeconds,
+              );
           },
         );
 
       const unbindCreate =
-        ctx.commands.handle(
+        ctx.commands.handle<
           "game.physics.create-body",
+          CreateBodyRequest
+        >(
+          CreateBodyCommand.type,
           (
             envelope,
-          ) => {
-            const payload =
-              envelope.payload as
-                CreateBodyRequest;
-
-            return service
-              .createBody(
-                payload.entityId,
-                payload.bodyDesc,
-                payload.colliderDesc,
-              );
-          },
+          ): boolean =>
+            service.createBody(
+              envelope
+                .payload
+                .entityId,
+              envelope
+                .payload
+                .bodyDesc,
+              envelope
+                .payload
+                .colliderDesc,
+            ),
         );
 
       const unbindRemove =
-        ctx.commands.handle(
+        ctx.commands.handle<
           "game.physics.remove-body",
+          RemoveBodyRequest
+        >(
+          RemoveBodyCommand.type,
           (
             envelope,
-          ) => {
-            const payload =
-              envelope.payload as
-                RemoveBodyRequest;
-
-            return service
-              .removeBody(
-                payload.entityId,
-              );
-          },
+          ): boolean =>
+            service.removeBody(
+              envelope
+                .payload
+                .entityId,
+            ),
         );
 
       const unbindImpulse =
-        ctx.commands.handle(
+        ctx.commands.handle<
           "game.physics.apply-impulse",
+          ApplyImpulseRequest
+        >(
+          ApplyImpulseCommand.type,
           (
             envelope,
-          ) => {
-            const payload =
-              envelope.payload as
-                ApplyImpulseRequest;
-
-            return service
-              .applyImpulse(
-                payload.entityId,
-                payload.impulse,
-              );
-          },
+          ): boolean =>
+            service.applyImpulse(
+              envelope
+                .payload
+                .entityId,
+              envelope
+                .payload
+                .impulse,
+            ),
         );
 
       const unbindRay =
-        ctx.commands.handle(
+        ctx.commands.handle<
           "game.physics.cast-ray",
+          CastRayRequest
+        >(
+          CastRayCommand.type,
           (
             envelope,
-          ) => {
-            const payload =
-              envelope.payload as
-                CastRayRequest;
-
-            return service
-              .castRay(
-                payload.ray,
-              );
-          },
+          ) =>
+            service.castRay(
+              envelope
+                .payload
+                .ray,
+            ),
         );
 
       ctx.lifecycle.onDispose(

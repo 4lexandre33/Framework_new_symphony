@@ -1,65 +1,207 @@
 import RAPIER from "@dimforge/rapier3d-compat";
 
 import type {
-  RigidBodyDescriptor,
   ColliderDescriptor,
-  Vector3DTO,
-  QuaternionDTO,
-  RaycastRequest,
-  RaycastHit,
   PhysicsStats,
+  QuaternionDTO,
+  RaycastHit,
+  RaycastRequest,
+  RigidBodyDescriptor,
+  Vector3DTO,
 } from "../../../contracts/physics/types";
 
-import { RigidBodyFactory } from "./RigidBodyFactory";
+import type { CollisionEventManager } from "./CollisionEventManager";
 import { RaycasterQueries } from "./RaycasterQueries";
-import { CollisionEventManager } from "./CollisionEventManager";
+import { RigidBodyFactory } from "./RigidBodyFactory";
+
+export const PHYSICS_MIN_STEP_SECONDS =
+  1 /
+  240;
+
+export const PHYSICS_MAX_STEP_SECONDS =
+  1;
+
+interface MutableVector3DTO {
+  x: number;
+  y: number;
+  z: number;
+}
+
+interface MutableQuaternionDTO {
+  x: number;
+  y: number;
+  z: number;
+  w: number;
+}
+
+interface MutableTransformSnapshot {
+  readonly position:
+    MutableVector3DTO;
+  readonly rotation:
+    MutableQuaternionDTO;
+}
+
+interface MutablePhysicsStats {
+  rigidBodyCount: number;
+  colliderCount: number;
+  stepTimeMs: number;
+  isWasmLoaded: boolean;
+}
+
+function defaultNowMs(): number {
+  const clock =
+    globalThis.performance;
+
+  return clock !==
+    undefined
+    ? clock.now()
+    : Date.now();
+}
+
+function assertFiniteVector(
+  value: Vector3DTO,
+  label: string,
+): void {
+  if (
+    !Number.isFinite(
+      value.x,
+    ) ||
+    !Number.isFinite(
+      value.y,
+    ) ||
+    !Number.isFinite(
+      value.z,
+    )
+  ) {
+    throw new RangeError(
+      `${label} precisa conter componentes finitos.`,
+    );
+  }
+}
+
+function assertStepDelta(
+  deltaTimeSeconds: number,
+): void {
+  if (
+    !Number.isFinite(
+      deltaTimeSeconds,
+    ) ||
+    deltaTimeSeconds <
+      PHYSICS_MIN_STEP_SECONDS ||
+    deltaTimeSeconds >
+      PHYSICS_MAX_STEP_SECONDS
+  ) {
+    throw new RangeError(
+      `physics step precisa estar entre ${String(PHYSICS_MIN_STEP_SECONDS)} e ${String(PHYSICS_MAX_STEP_SECONDS)} segundos.`,
+    );
+  }
+}
+
+function createTransformSnapshot():
+  MutableTransformSnapshot {
+  return {
+    position: {
+      x:
+        0,
+      y:
+        0,
+      z:
+        0,
+    },
+    rotation: {
+      x:
+        0,
+      y:
+        0,
+      z:
+        0,
+      w:
+        1,
+    },
+  };
+}
 
 export class PhysicsWorld {
-  private world: RAPIER.World | null = null;
+  private world:
+    RAPIER.World |
+    null = null;
 
-  private eventQueue: RAPIER.EventQueue | null = null;
+  private eventQueue:
+    RAPIER.EventQueue |
+    null = null;
 
   private readonly entityToBodyMap =
-    new Map<string, RAPIER.RigidBody>();
+    new Map<
+      string,
+      RAPIER.RigidBody
+    >();
 
   private readonly handleToEntityMap =
-    new Map<number, string>();
+    new Map<
+      number,
+      string
+    >();
 
-  private lastStepTimeMs = 0;
+  private readonly handleToSensorMap =
+    new Map<
+      number,
+      boolean
+    >();
 
-  private isInitialized = false;
+  private readonly transformCache =
+    new Map<
+      string,
+      MutableTransformSnapshot
+    >();
 
-  private readonly scratchPosition: Vector3DTO = {
-    x: 0,
-    y: 0,
-    z: 0,
-  };
+  private readonly stats:
+    MutablePhysicsStats = {
+      rigidBodyCount:
+        0,
+      colliderCount:
+        0,
+      stepTimeMs:
+        0,
+      isWasmLoaded:
+        false,
+    };
 
-  private readonly scratchRotation: QuaternionDTO = {
-    x: 0,
-    y: 0,
-    z: 0,
-    w: 1,
-  };
+  private isInitialized =
+    false;
 
-  public async initialize(): Promise<boolean> {
-    if (this.isInitialized) {
+  private disposed =
+    false;
+
+  public constructor(
+    private readonly nowMs:
+      () => number =
+        defaultNowMs,
+  ) {}
+
+  public async initialize():
+    Promise<boolean> {
+    if (
+      this.disposed
+    ) {
+      return false;
+    }
+
+    if (
+      this.isInitialized
+    ) {
       return true;
     }
 
     try {
       await RAPIER.init();
 
-      const gravity =
-        new RAPIER.Vector3(
-          0.0,
-          -9.81,
-          0.0,
-        );
-
       this.world =
         new RAPIER.World(
-          gravity,
+          new RAPIER.Vector3(
+            0,
+            -9.81,
+            0,
+          ),
         );
 
       this.eventQueue =
@@ -70,16 +212,30 @@ export class PhysicsWorld {
       this.isInitialized =
         true;
 
-      console.log(
-        "[PhysicsWorld] ✅ Motor físico Rapier WASM inicializado com sucesso.",
-      );
+      this.stats.isWasmLoaded =
+        true;
 
       return true;
-    } catch (error: unknown) {
+    } catch (
+      error:
+        unknown
+    ) {
       console.error(
-        "[PhysicsWorld] ❌ Falha ao inicializar o Rapier WASM:",
+        "[PhysicsWorld] Falha ao inicializar Rapier WASM:",
         error,
       );
+
+      this.world =
+        null;
+
+      this.eventQueue =
+        null;
+
+      this.isInitialized =
+        false;
+
+      this.stats.isWasmLoaded =
+        false;
 
       return false;
     }
@@ -87,27 +243,35 @@ export class PhysicsWorld {
 
   public step(
     deltaTimeSeconds: number,
-    eventManager?: CollisionEventManager,
+    eventManager?:
+      CollisionEventManager,
   ): void {
     if (
-      !this.world ||
-      !this.isInitialized
+      this.world ===
+        null ||
+      !this.isInitialized ||
+      this.disposed
     ) {
       return;
     }
 
-    const startTime =
-      performance.now();
+    assertStepDelta(
+      deltaTimeSeconds,
+    );
 
+    const startTimeMs =
+      this.nowMs();
+
+    // O game.loop da Stage 75 já entrega um tick fixo.
+    // Não clampa nem re-acumula aqui: Rapier recebe exatamente o mesmo dt.
     this.world.timestep =
-      Math.min(
-        deltaTimeSeconds,
-        0.033,
-      );
+      deltaTimeSeconds;
 
     if (
-      this.eventQueue &&
-      eventManager
+      this.eventQueue !==
+        null &&
+      eventManager !==
+        undefined
     ) {
       this.world.step(
         this.eventQueue,
@@ -116,6 +280,7 @@ export class PhysicsWorld {
       eventManager.processEvents(
         this.eventQueue,
         this.handleToEntityMap,
+        this.handleToSensorMap,
       );
 
       this.eventQueue.clear();
@@ -123,19 +288,61 @@ export class PhysicsWorld {
       this.world.step();
     }
 
-    this.lastStepTimeMs =
-      performance.now() -
-      startTime;
+    const elapsed =
+      this.nowMs() -
+      startTimeMs;
+
+    this.stats.stepTimeMs =
+      Number.isFinite(
+        elapsed,
+      ) &&
+      elapsed >=
+        0
+        ? elapsed
+        : 0;
   }
 
   public createBody(
     entityId: string,
-    bodyDesc: RigidBodyDescriptor,
-    colliderDesc?: ColliderDescriptor,
+    bodyDesc:
+      RigidBodyDescriptor,
+    colliderDesc?:
+      ColliderDescriptor,
   ): boolean {
-    if (!this.world) {
+    if (
+      this.world ===
+        null ||
+      this.disposed
+    ) {
       return false;
     }
+
+    if (
+      entityId.trim()
+        .length ===
+      0
+    ) {
+      throw new RangeError(
+        "entityId não pode ser vazio.",
+      );
+    }
+
+    // Valide todos os descriptors antes de tocar o world. Uma tentativa de
+    // replacement inválida não pode destruir o body antigo.
+    const rapierBodyDesc =
+      RigidBodyFactory
+        .createRigidBodyDesc(
+          bodyDesc,
+        );
+
+    const rapierColliderDesc =
+      colliderDesc ===
+        undefined
+        ? null
+        : RigidBodyFactory
+            .createColliderDesc(
+              colliderDesc,
+            );
 
     if (
       this.entityToBodyMap.has(
@@ -147,36 +354,41 @@ export class PhysicsWorld {
       );
     }
 
-    const rapierBodyDesc =
-      RigidBodyFactory
-        .createRigidBodyDesc(
-          bodyDesc,
-        );
-
     const body =
-      this.world
-        .createRigidBody(
-          rapierBodyDesc,
-        );
+      this.world.createRigidBody(
+        rapierBodyDesc,
+      );
 
-    if (colliderDesc) {
-      const rapierColliderDesc =
-        RigidBodyFactory
-          .createColliderDesc(
-            colliderDesc,
-          );
-
-      const collider =
-        this.world
-          .createCollider(
+    try {
+      if (
+        rapierColliderDesc !==
+          null &&
+        colliderDesc !==
+          undefined
+      ) {
+        const collider =
+          this.world.createCollider(
             rapierColliderDesc,
             body,
           );
 
-      this.handleToEntityMap.set(
-        collider.handle,
-        entityId,
+        this.handleToEntityMap.set(
+          collider.handle,
+          entityId,
+        );
+
+        this.handleToSensorMap.set(
+          collider.handle,
+          colliderDesc.isSensor ===
+            true,
+        );
+      }
+    } catch (error) {
+      this.world.removeRigidBody(
+        body,
       );
+
+      throw error;
     }
 
     this.entityToBodyMap.set(
@@ -184,13 +396,24 @@ export class PhysicsWorld {
       body,
     );
 
+    this.transformCache.set(
+      entityId,
+      createTransformSnapshot(),
+    );
+
+    this.refreshStats();
+
     return true;
   }
 
   public removeBody(
     entityId: string,
   ): boolean {
-    if (!this.world) {
+    if (
+      this.world ===
+        null ||
+      this.disposed
+    ) {
       return false;
     }
 
@@ -199,7 +422,10 @@ export class PhysicsWorld {
         entityId,
       );
 
-    if (!body) {
+    if (
+      body ===
+      undefined
+    ) {
       return false;
     }
 
@@ -207,9 +433,12 @@ export class PhysicsWorld {
       body.numColliders();
 
     for (
-      let index = 0;
-      index < colliderCount;
-      index += 1
+      let index =
+        0;
+      index <
+      colliderCount;
+      index +=
+        1
     ) {
       const collider =
         body.collider(
@@ -217,6 +446,10 @@ export class PhysicsWorld {
         );
 
       this.handleToEntityMap.delete(
+        collider.handle,
+      );
+
+      this.handleToSensorMap.delete(
         collider.handle,
       );
     }
@@ -229,12 +462,19 @@ export class PhysicsWorld {
       entityId,
     );
 
+    this.transformCache.delete(
+      entityId,
+    );
+
+    this.refreshStats();
+
     return true;
   }
 
   public applyImpulse(
     entityId: string,
-    impulse: Vector3DTO,
+    impulse:
+      Vector3DTO,
   ): boolean {
     const body =
       this.entityToBodyMap.get(
@@ -242,19 +482,22 @@ export class PhysicsWorld {
       );
 
     if (
-      !body ||
+      body ===
+        undefined ||
       body.bodyType() !==
-        RAPIER.RigidBodyType.Dynamic
+        RAPIER.RigidBodyType
+          .Dynamic
     ) {
       return false;
     }
 
+    assertFiniteVector(
+      impulse,
+      "impulse",
+    );
+
     body.applyImpulse(
-      new RAPIER.Vector3(
-        impulse.x,
-        impulse.y,
-        impulse.z,
-      ),
+      impulse,
       true,
     );
 
@@ -263,7 +506,8 @@ export class PhysicsWorld {
 
   public applyForce(
     entityId: string,
-    force: Vector3DTO,
+    force:
+      Vector3DTO,
   ): boolean {
     const body =
       this.entityToBodyMap.get(
@@ -271,19 +515,22 @@ export class PhysicsWorld {
       );
 
     if (
-      !body ||
+      body ===
+        undefined ||
       body.bodyType() !==
-        RAPIER.RigidBodyType.Dynamic
+        RAPIER.RigidBodyType
+          .Dynamic
     ) {
       return false;
     }
 
+    assertFiniteVector(
+      force,
+      "force",
+    );
+
     body.addForce(
-      new RAPIER.Vector3(
-        force.x,
-        force.y,
-        force.z,
-      ),
+      force,
       true,
     );
 
@@ -291,23 +538,34 @@ export class PhysicsWorld {
   }
 
   public castRay(
-    request: RaycastRequest,
+    request:
+      RaycastRequest,
   ): RaycastHit {
-    if (!this.world) {
+    if (
+      this.world ===
+        null ||
+      this.disposed
+    ) {
       return {
-        hit: false,
-        distance: 0,
-
+        hit:
+          false,
+        distance:
+          0,
         point: {
-          x: 0,
-          y: 0,
-          z: 0,
+          x:
+            0,
+          y:
+            0,
+          z:
+            0,
         },
-
         normal: {
-          x: 0,
-          y: 0,
-          z: 0,
+          x:
+            0,
+          y:
+            0,
+          z:
+            0,
         },
       };
     }
@@ -323,15 +581,27 @@ export class PhysicsWorld {
   public getBodyTransform(
     entityId: string,
   ): {
-    position: Vector3DTO;
-    rotation: QuaternionDTO;
+    position:
+      Vector3DTO;
+    rotation:
+      QuaternionDTO;
   } | null {
     const body =
       this.entityToBodyMap.get(
         entityId,
       );
 
-    if (!body) {
+    const snapshot =
+      this.transformCache.get(
+        entityId,
+      );
+
+    if (
+      body ===
+        undefined ||
+      snapshot ===
+        undefined
+    ) {
       return null;
     }
 
@@ -341,143 +611,105 @@ export class PhysicsWorld {
     const rotation =
       body.rotation();
 
-    (
-      this.scratchPosition as {
-        x: number;
-        y: number;
-        z: number;
-      }
-    ).x =
+    snapshot.position.x =
       translation.x;
 
-    (
-      this.scratchPosition as {
-        x: number;
-        y: number;
-        z: number;
-      }
-    ).y =
+    snapshot.position.y =
       translation.y;
 
-    (
-      this.scratchPosition as {
-        x: number;
-        y: number;
-        z: number;
-      }
-    ).z =
+    snapshot.position.z =
       translation.z;
 
-    (
-      this.scratchRotation as {
-        x: number;
-        y: number;
-        z: number;
-        w: number;
-      }
-    ).x =
+    snapshot.rotation.x =
       rotation.x;
 
-    (
-      this.scratchRotation as {
-        x: number;
-        y: number;
-        z: number;
-        w: number;
-      }
-    ).y =
+    snapshot.rotation.y =
       rotation.y;
 
-    (
-      this.scratchRotation as {
-        x: number;
-        y: number;
-        z: number;
-        w: number;
-      }
-    ).z =
+    snapshot.rotation.z =
       rotation.z;
 
-    (
-      this.scratchRotation as {
-        x: number;
-        y: number;
-        z: number;
-        w: number;
-      }
-    ).w =
+    snapshot.rotation.w =
       rotation.w;
 
-    return {
-      position:
-        this.scratchPosition,
-
-      rotation:
-        this.scratchRotation,
-    };
+    return snapshot;
   }
 
   public syncMeshTransform(
     entityId: string,
     targetMesh: {
-      position: Vector3DTO;
-      quaternion: QuaternionDTO;
+      position:
+        Vector3DTO;
+      quaternion:
+        QuaternionDTO;
     },
   ): boolean {
-    const transform =
-      this.getBodyTransform(
+    const body =
+      this.entityToBodyMap.get(
         entityId,
       );
 
-    if (!transform) {
+    if (
+      body ===
+      undefined
+    ) {
       return false;
     }
 
+    const translation =
+      body.translation();
+
+    const rotation =
+      body.rotation();
+
     const mutablePosition =
-      targetMesh.position as {
-        x: number;
-        y: number;
-        z: number;
-      };
+      targetMesh.position as
+        MutableVector3DTO;
 
     const mutableQuaternion =
-      targetMesh.quaternion as {
-        x: number;
-        y: number;
-        z: number;
-        w: number;
-      };
+      targetMesh.quaternion as
+        MutableQuaternionDTO;
 
     mutablePosition.x =
-      transform.position.x;
+      translation.x;
 
     mutablePosition.y =
-      transform.position.y;
+      translation.y;
 
     mutablePosition.z =
-      transform.position.z;
+      translation.z;
 
     mutableQuaternion.x =
-      transform.rotation.x;
+      rotation.x;
 
     mutableQuaternion.y =
-      transform.rotation.y;
+      rotation.y;
 
     mutableQuaternion.z =
-      transform.rotation.z;
+      rotation.z;
 
     mutableQuaternion.w =
-      transform.rotation.w;
+      rotation.w;
 
     return true;
   }
 
   public setGravity(
-    gravity: Vector3DTO,
+    gravity:
+      Vector3DTO,
   ): void {
-    if (!this.world) {
+    if (
+      this.world ===
+        null ||
+      this.disposed
+    ) {
       return;
     }
+
+    assertFiniteVector(
+      gravity,
+      "gravity",
+    );
 
     this.world.gravity =
       new RAPIER.Vector3(
@@ -487,43 +719,78 @@ export class PhysicsWorld {
       );
   }
 
-  public getStats(): PhysicsStats {
-    return {
-      rigidBodyCount:
-        this.entityToBodyMap.size,
+  public getStats():
+    PhysicsStats {
+    this.refreshStats();
 
-      colliderCount:
-        this.world
-          ? this.world.colliders.len()
-          : 0,
-
-      stepTimeMs:
-        this.lastStepTimeMs,
-
-      isWasmLoaded:
-        this.isInitialized,
-    };
+    return this.stats;
   }
 
   public dispose(): void {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
+    this.disposed =
+      true;
+
     this.entityToBodyMap.clear();
-
     this.handleToEntityMap.clear();
+    this.handleToSensorMap.clear();
+    this.transformCache.clear();
 
-    if (this.world) {
+    if (
+      this.eventQueue !==
+      null
+    ) {
+      this.eventQueue.free();
+      this.eventQueue =
+        null;
+    }
+
+    if (
+      this.world !==
+      null
+    ) {
       this.world.free();
-
       this.world =
         null;
     }
 
-    this.eventQueue =
-      null;
+    this.lastResetStats();
+    this.isInitialized =
+      false;
+  }
 
-    this.lastStepTimeMs =
+  private refreshStats(): void {
+    this.stats.rigidBodyCount =
+      this.entityToBodyMap.size;
+
+    this.stats.colliderCount =
+      this.world ===
+        null
+        ? 0
+        : this.world.colliders
+            .len();
+
+    this.stats.isWasmLoaded =
+      this.isInitialized &&
+      !this.disposed;
+  }
+
+  private lastResetStats(): void {
+    this.stats.rigidBodyCount =
       0;
 
-    this.isInitialized =
+    this.stats.colliderCount =
+      0;
+
+    this.stats.stepTimeMs =
+      0;
+
+    this.stats.isWasmLoaded =
       false;
   }
 }
