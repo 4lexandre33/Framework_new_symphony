@@ -1,0 +1,686 @@
+{
+  "schemaVersion": 1,
+  "baselineId": "layer1-public-api-v1-stage72",
+  "architectureMigrationVersion": "v20",
+  "moduleMapSchemaVersion": 1,
+  "fingerprintAlgorithm": "typescript-token-stream-sha256-v1",
+  "fingerprintPolicy": {
+    "ignoresWhitespace": true,
+    "ignoresComments": true,
+    "lineEndingIndependent": true,
+    "detectsTypeScriptTokenChanges": true
+  },
+  "policy": {
+    "additionalCanonicalModulesAllowed": true,
+    "existingBaselineApiChangesRequireRecertification": true,
+    "publicFacadeOnlyContractsAndTokens": true,
+    "contractsOnlyCoreOrSameContractArea": true,
+    "tokenRelativeImportsOnlyOwnDeclaredContracts": true
+  },
+  "capturedCounts": {
+    "canonicalModules": 23,
+    "publicFacades": 23,
+    "contracts": 24,
+    "tokens": 24,
+    "secondaryCapabilities": 1
+  },
+  "modules": [
+    {
+      "key": "steam",
+      "capabilityId": "game.steam",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/steam/public/index.ts",
+        "fingerprint": "c119f41d6fba2b2d863dfc5b42a1d895cc9bc8bc91e6de9eb60b6a31102fbef8",
+        "exportSpecifiers": [
+          "../../../contracts/steam/types",
+          "../../../contracts/steam/net-types",
+          "../../../tokens/steam",
+          "../../../tokens/steam-net"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/steam/types.ts",
+          "fingerprint": "612fe2a891025c1c5db5157ad08634aabe89f941ea015ffe423e86276f32aeb2"
+        },
+        {
+          "path": "src/contracts/steam/net-types.ts",
+          "fingerprint": "8bc709781c772d82bc80cc8fe0ba24f1d2359a917906cbcab343d8b750417f7e"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/steam.ts",
+          "capabilityId": "game.steam",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "6185dfa4d851a49f9ff7a581e36d27e15e942ef44c849870e683e73ec35b407b"
+        },
+        {
+          "path": "src/tokens/steam-net.ts",
+          "capabilityId": "game.steam.net",
+          "version": "1.0.0",
+          "primary": false,
+          "fingerprint": "af227eeadeb4e8ad26351ef041d36aecc292974a760e3ca579eb73d693066dcf"
+        }
+      ]
+    },
+    {
+      "key": "input",
+      "capabilityId": "game.input",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/input/public/index.ts",
+        "fingerprint": "1e51d9879c7878e9b609eb4b67d8d0db072ea66c5f7fe9217d1a1e016dbbb9be",
+        "exportSpecifiers": [
+          "../../../contracts/input/types",
+          "../../../tokens/input"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/input/types.ts",
+          "fingerprint": "f1c358dee5ab729151be2a4a884858114016330c41fcb26635a7922319414a70"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/input.ts",
+          "capabilityId": "game.input",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "08790b1aa8a74d9a530b015d0cd7fd6f6d19b92e1d353f4b2e9366d6cca85dd9"
+        }
+      ]
+    },
+    {
+      "key": "assets",
+      "capabilityId": "game.assets",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/assets/public/index.ts",
+        "fingerprint": "9c7e1b9912cfff5b3842c09b520efe57f12d75c5865b8bd3cf533fbecd6a8298",
+        "exportSpecifiers": [
+          "../../../contracts/assets/types",
+          "../../../tokens/assets"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/assets/types.ts",
+          "fingerprint": "4eb04b951d305954f1567f03e47c265edefb85925ecd421b8ab7da7c720df540"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/assets.ts",
+          "capabilityId": "game.assets",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "94d432ebe20fbf24f6e353e127efccae4914a416054f21e99498218f93ba3f15"
+        }
+      ]
+    },
+    {
+      "key": "physics",
+      "capabilityId": "game.physics",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/physics/public/index.ts",
+        "fingerprint": "a25d16ae4405d30fbd21e348501fc721389af659106bdfa1ef28317258320d96",
+        "exportSpecifiers": [
+          "../../../contracts/physics/types",
+          "../../../tokens/physics"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/physics/types.ts",
+          "fingerprint": "43098a09ad0a09c19f9c584c38787412a3f5c8bff5ce529b7173108349668a7a"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/physics.ts",
+          "capabilityId": "game.physics",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "bb3fc9f84959387619085ea74d6264bbaadf75bcf003f95a03c5de842ee1e8e1"
+        }
+      ]
+    },
+    {
+      "key": "storage",
+      "capabilityId": "game.storage",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/storage/public/index.ts",
+        "fingerprint": "45a6000c3c42445c67a431ece0cfe416127e6de5ca3eef2a0fcf0cd5fce40542",
+        "exportSpecifiers": [
+          "../../../contracts/storage/types",
+          "../../../tokens/storage"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/storage/types.ts",
+          "fingerprint": "45a3ad07e28f089a76dbd0c096200f1aabc393592e17f523c6b5934a4096ca58"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/storage.ts",
+          "capabilityId": "game.storage",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "12c2012b3086681d3e089a19406d10adf8f78ae8e9e42b4725436580e189691d"
+        }
+      ]
+    },
+    {
+      "key": "world",
+      "capabilityId": "game.world",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/world/public/index.ts",
+        "fingerprint": "39eee7b1994609f795298b40751b6720df5886d71a327636205d657e424f6fd5",
+        "exportSpecifiers": [
+          "../../../contracts/world/types",
+          "../../../tokens/world"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/world/types.ts",
+          "fingerprint": "aee633e340ff5d03d55722bd26833705b613722b6b5bf98bb63e4fc9c09bf436"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/world.ts",
+          "capabilityId": "game.world",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "0cca90c5fe6c86029a5252fc330fd78eb3f14fd461a291ddbaddd1a8b0a6e864"
+        }
+      ]
+    },
+    {
+      "key": "ui",
+      "capabilityId": "game.ui",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/ui/public/index.ts",
+        "fingerprint": "00234edb8fc5f6edab0013770a49379872110a8755a5be8620bcfc1814a2a927",
+        "exportSpecifiers": [
+          "../../../contracts/ui/types",
+          "../../../tokens/ui"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/ui/types.ts",
+          "fingerprint": "030dd9cb0026d389a5d05a3c03a3591392581e8b2edbb273062bb2395294047a"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/ui.ts",
+          "capabilityId": "game.ui",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "663a22fe0717798ca705baabb98d302b138e1a781cee5a7e6818504185c41e04"
+        }
+      ]
+    },
+    {
+      "key": "anim",
+      "capabilityId": "game.anim",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/anim/public/index.ts",
+        "fingerprint": "8acf1a7517c68ccb65808f144937596151b64cac26b5210bdd6f138ca7d91e76",
+        "exportSpecifiers": [
+          "../../../contracts/anim/types",
+          "../../../tokens/anim"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/anim/types.ts",
+          "fingerprint": "119b92866789b43515984a3b45f29070abbec8221ae166ad2ac14b5e8853463b"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/anim.ts",
+          "capabilityId": "game.anim",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "ad28031e63567a78065629142e5e9c5dc5a7b8b83fbe0769c3cac305920d05ff"
+        }
+      ]
+    },
+    {
+      "key": "sprites",
+      "capabilityId": "game.sprites",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/sprites/public/index.ts",
+        "fingerprint": "42b7515f6708e3c9834c91b5a791f59fd1db8c77f2cb24cf6526ab4272fe4fef",
+        "exportSpecifiers": [
+          "../../../contracts/sprites/types",
+          "../../../tokens/sprites"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/sprites/types.ts",
+          "fingerprint": "aae29af44ef5b5bf097bf03512847050b9bebed1be78feb85dcc530ae9cdcbe9"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/sprites.ts",
+          "capabilityId": "game.sprites",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "c40134c1dc3f01803ee3b712505d43b79e05cf9363edabac660df8db69e534bf"
+        }
+      ]
+    },
+    {
+      "key": "audio",
+      "capabilityId": "game.audio",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/audio/public/index.ts",
+        "fingerprint": "08ca51004ec47bb75895ba7c8afc9e0c2ae2bfc3e81b87bd2a9dcd0cdd5ec668",
+        "exportSpecifiers": [
+          "../../../contracts/audio/types",
+          "../../../tokens/audio"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/audio/types.ts",
+          "fingerprint": "5993bc8f17527c5a3282b4c5303e988386e89309fff7cc1f91080d4bad369295"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/audio.ts",
+          "capabilityId": "game.audio",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "051de2f42dcc539c0800e6c97db4218156583f6e99737bafe983b70dc4281873"
+        }
+      ]
+    },
+    {
+      "key": "camera",
+      "capabilityId": "game.camera",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/camera/public/index.ts",
+        "fingerprint": "655e2c48aef614c0ec5bc2cdefcd51faceceb2ebde882be356dd763e08b7d874",
+        "exportSpecifiers": [
+          "../../../contracts/camera/types",
+          "../../../tokens/camera"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/camera/types.ts",
+          "fingerprint": "6fe34356a194657ce1cf4b3079bcd110fb390577eab9657893edb06c35b58651"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/camera.ts",
+          "capabilityId": "game.camera",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "706a57ab076744ce36ddb1621630c3019b02b3fe2d56d121acaf05713e8e9658"
+        }
+      ]
+    },
+    {
+      "key": "ai",
+      "capabilityId": "game.ai",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/ai/public/index.ts",
+        "fingerprint": "94c2576ee1bcda9c8e8a1d15f21c2ae0cb51e3244519086ee1ff8c1e721d3f3b",
+        "exportSpecifiers": [
+          "../../../contracts/ai/types",
+          "../../../tokens/ai"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/ai/types.ts",
+          "fingerprint": "1e0eb3d31d455dc9cf4706842cc7cf6a82bb404c8f45833b4714d34b22dcce76"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/ai.ts",
+          "capabilityId": "game.ai",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "ffb79eadc953b0962e26a7942dfe4524686d50992c716eed7887acb34d362f94"
+        }
+      ]
+    },
+    {
+      "key": "vfx",
+      "capabilityId": "game.vfx",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/vfx/public/index.ts",
+        "fingerprint": "7cb83de337e761d56cd732bcb9499c31a5d5736de1e1d9f557f3771219e7416c",
+        "exportSpecifiers": [
+          "../../../contracts/vfx/types",
+          "../../../tokens/vfx"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/vfx/types.ts",
+          "fingerprint": "af8fb61bb3319bbd022adeb85e77fea2e990697550295be2da503cfa7003bca3"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/vfx.ts",
+          "capabilityId": "game.vfx",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "5303376775314f3844d137385043247841c8c7c549073cbcca58085da8081864"
+        }
+      ]
+    },
+    {
+      "key": "terrain",
+      "capabilityId": "game.terrain",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/terrain/public/index.ts",
+        "fingerprint": "53cb8063637edb639b5cfc0a075e4fcba2cea966b981b23d051c771ecc54a224",
+        "exportSpecifiers": [
+          "../../../contracts/terrain/types",
+          "../../../tokens/terrain"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/terrain/types.ts",
+          "fingerprint": "8542a79c029824c0ccb10ddcbea1e5d5981854937ccf2e64aa015a222c670da0"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/terrain.ts",
+          "capabilityId": "game.terrain",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "3710e88c8dad68c288e532378f00068fcd89016ee61efde720ed9eeb9a4d12c4"
+        }
+      ]
+    },
+    {
+      "key": "scripting",
+      "capabilityId": "game.scripting",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/scripting/public/index.ts",
+        "fingerprint": "77bad751716ce55d5c9b5e804209d56c224d4c38a60cc15f9528ff33cc29c8ff",
+        "exportSpecifiers": [
+          "../../../contracts/scripting/types",
+          "../../../tokens/scripting"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/scripting/types.ts",
+          "fingerprint": "f58f04b079a4fe1f238d94d88f31ee2bc340852028431b48f51a01de97d74530"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/scripting.ts",
+          "capabilityId": "game.scripting",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "6f5cf0100d7bcfd733fd59441544012982e1e08ce1f05eaac81ecc78b572b0e1"
+        }
+      ]
+    },
+    {
+      "key": "streaming",
+      "capabilityId": "game.streaming",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/streaming/public/index.ts",
+        "fingerprint": "d0d333085eda58f041279b1337e2d760505fbfe6cccfabe9fc15a1a74ad10c2d",
+        "exportSpecifiers": [
+          "../../../contracts/streaming/types",
+          "../../../tokens/streaming"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/streaming/types.ts",
+          "fingerprint": "8eb9b3a6c739083dfc164b086b03321065dca8a617390f74ca12cea704e00a86"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/streaming.ts",
+          "capabilityId": "game.streaming",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "9934ed5991e1c90788c52d89e37ec1a57405c78d5d9782ac52ef6ef386e0f620"
+        }
+      ]
+    },
+    {
+      "key": "overlay",
+      "capabilityId": "game.overlay",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/overlay/public/index.ts",
+        "fingerprint": "e0552876f91b94e036fb1532dbdea4764976b6237f69df379b15892e22c054a0",
+        "exportSpecifiers": [
+          "../../../contracts/overlay/types",
+          "../../../tokens/overlay"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/overlay/types.ts",
+          "fingerprint": "df8fef5e26884be2af27b0ebcb8aaf8a0eae9e2afa92e385cc9e6de3525b98be"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/overlay.ts",
+          "capabilityId": "game.overlay",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "c61d049ae78999b8be79c989a8ba832329f8e96e7ee01ffc143ba483d83ef05c"
+        }
+      ]
+    },
+    {
+      "key": "security",
+      "capabilityId": "game.security",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/security/public/index.ts",
+        "fingerprint": "a480c83115cfa631027aabe958b23ce1422fc59a75c46298593d9dad09dd4879",
+        "exportSpecifiers": [
+          "../../../contracts/security/types",
+          "../../../tokens/security"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/security/types.ts",
+          "fingerprint": "d493f52d3bb732d4efc16e5994832f529051388fa48d39cf9e4db971af489e42"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/security.ts",
+          "capabilityId": "game.security",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "088e33c91d8955703be95feb543a17cb77b834c8accde72cbbc8711b438ad018"
+        }
+      ]
+    },
+    {
+      "key": "modding",
+      "capabilityId": "game.modding",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/modding/public/index.ts",
+        "fingerprint": "fe15599d4aa7ca420ba7e205b661851b66dea4af36244be6beef96a08fc6c516",
+        "exportSpecifiers": [
+          "../../../contracts/modding/types",
+          "../../../tokens/modding"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/modding/types.ts",
+          "fingerprint": "454b3ef2e359a9de71196687ceb320916bc29a162c24d843f77d42d7b043f4d2"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/modding.ts",
+          "capabilityId": "game.modding",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "df212a9db4684a93f7f8148eb94d78934ebf13d4a4c4f40c25c5aa468f5cba60"
+        }
+      ]
+    },
+    {
+      "key": "monetization",
+      "capabilityId": "game.monetization",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/monetization/public/index.ts",
+        "fingerprint": "75749e724e2c1669ba5bae8e65e982dfb557023018d8f6c251dba4d60c696b51",
+        "exportSpecifiers": [
+          "../../../contracts/monetization/types",
+          "../../../tokens/monetization"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/monetization/types.ts",
+          "fingerprint": "39e5ec3d40a2c1fab1ad715b3f3441d8620be0c229cb4b784df3f94d29b4e2e6"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/monetization.ts",
+          "capabilityId": "game.monetization",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "977dc6e604b79f0d6efc96a7928a79c7744f6f94c21478048148cd17b1dd0f57"
+        }
+      ]
+    },
+    {
+      "key": "game-loop",
+      "capabilityId": "game.loop",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/game-loop/public/index.ts",
+        "fingerprint": "6e15fa8bd8d0af098e234e8c204a18a55a06c849429c10a25b5c601b3447d567",
+        "exportSpecifiers": [
+          "../../../contracts/game-loop/types",
+          "../../../tokens/game-loop"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/game-loop/types.ts",
+          "fingerprint": "4542c0aa9d90ebd8018e13ce33d757abfe8d25825503a715aae7a1bef659b8c4"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/game-loop.ts",
+          "capabilityId": "game.loop",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "e1d07effa5fe7495a8b9ef4705df058daf21eab24bdb251a19ce6b15733e4dd7"
+        }
+      ]
+    },
+    {
+      "key": "render",
+      "capabilityId": "game.render",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/render/public/index.ts",
+        "fingerprint": "cd0667d61a51bb26ffc0f5afbddbf7875fb8065079e99656aaaa6a73b9a944b6",
+        "exportSpecifiers": [
+          "../../../contracts/render/types",
+          "../../../tokens/render"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/render/types.ts",
+          "fingerprint": "485b472ed4eb79e155b7b95fed394916b821f820f431dc3c4ff042b417eb356e"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/render.ts",
+          "capabilityId": "game.render",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "be1111f3e6177454b788dc76a37928ac2264ddd426fea4b2dfc229ea927c4a2d"
+        }
+      ]
+    },
+    {
+      "key": "net",
+      "capabilityId": "game.net",
+      "capabilityVersion": "1.0.0",
+      "facade": {
+        "path": "src/engine/net/public/index.ts",
+        "fingerprint": "5d58786b99fb74fbfdf18d93db418fa8c803aa526ebeaf64bf97668bef5093c7",
+        "exportSpecifiers": [
+          "../../../contracts/net/types",
+          "../../../tokens/net"
+        ]
+      },
+      "contracts": [
+        {
+          "path": "src/contracts/net/types.ts",
+          "fingerprint": "72fb4f17701fa644316cdf71254dc68aa2436f154e9b8d55f761da0476a7a934"
+        }
+      ],
+      "tokens": [
+        {
+          "path": "src/tokens/net.ts",
+          "capabilityId": "game.net",
+          "version": "1.0.0",
+          "primary": true,
+          "fingerprint": "65196e003c9739ff635f489ae89e827d57b404361f733fee2613a89390caca7a"
+        }
+      ]
+    }
+  ]
+}

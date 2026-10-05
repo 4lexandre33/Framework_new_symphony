@@ -1,0 +1,169 @@
+PROJETO1 — ETAPA 72 / PUBLIC APIs / CONTRACTS / TOKENS
+
+OBJETIVO
+Certificar a superfície pública da Camada 1 sobre a baseline criada na Etapa 71.
+
+A Etapa 72 não muda implementação interna.
+Ela transforma os contratos públicos atuais em uma baseline semântica auditável.
+
+PRECONDIÇÃO
+Etapa 71 instalada:
+
+LAYER1_BASELINE_V1.json
+scripts/architecture/lib/layer1-baseline-v1.mjs
+
+SOURCE OF TRUTH
+scripts/architecture/module-map.mjs
+
+BASELINE DE API
+LAYER1_PUBLIC_API_BASELINE_V1.json
+
+ID:
+layer1-public-api-v1-stage72
+
+CAPTURE ATUAL
+23 módulos canônicos
+23 public facades
+24 contract files
+24 token files
+
+A diferença 23 -> 24 ocorre porque Steam possui uma secondary capability:
+
+game.steam
+game.steam.net
+
+PUBLIC FACADE CONTRACT
+Para cada módulo:
+
+src/engine/<module>/public/index.ts
+
+deve conter somente:
+
+export * from contracts declarados pelo module-map
+export * from tokens declarados pelo module-map
+
+Não pode:
+
+- exportar internal;
+- exportar plugin;
+- exportar concrete implementation;
+- conter classes/funções/estado próprio;
+- possuir arquivos públicos paralelos fora de index.ts.
+
+A facade é gerada conceitualmente pela mesma regra da migração v20:
+
+contracts primeiro
+tokens depois
+
+CONTRACT POLICY
+Arquivos em:
+
+src/contracts/**
+
+podem depender apenas de:
+
+- @core;
+- imports relativos dentro da mesma área de contract.
+
+Não podem depender de:
+
+- src/engine;
+- src/plugins;
+- src/app;
+- src/services;
+- src/domain;
+- packages técnicos externos.
+
+Contracts não usam default export.
+
+O objetivo é manter contratos como fronteira tipada compartilhável e não como
+atalho para implementação.
+
+TOKEN POLICY
+Arquivos em:
+
+src/tokens/*.ts
+
+devem:
+
+- usar defineCapability;
+- declarar exatamente um defineCapability por token file;
+- usar capabilityId literal igual ao module-map;
+- usar version literal igual ao module-map;
+- exportar o capability token;
+- manter primary token igual ao capabilityId do módulo;
+- manter primary token version igual à capabilityVersion do módulo;
+- não usar default export.
+
+Imports relativos de token só podem apontar para contracts declarados pelo
+próprio módulo.
+
+Tokens pertencem à infraestrutura técnica e podem expor tipos de libraries
+técnicas quando isso fizer parte deliberada da API Layer 1.
+
+Exemplo existente:
+
+render / anim / sprites podem expor tipos Three.js em seus tokens.
+
+Isso NÃO autoriza imports de implementation/internal.
+
+SEMANTIC FINGERPRINT
+Contracts, tokens e facades da baseline v1 recebem fingerprint SHA-256 baseado
+no token stream do TypeScript Compiler API.
+
+O fingerprint:
+
+IGNORA
+- whitespace;
+- CRLF vs LF;
+- comentários.
+
+DETECTA
+- nomes;
+- propriedades;
+- tipos;
+- literais;
+- imports;
+- exports;
+- comandos/eventos;
+- capability IDs;
+- versões;
+- alterações reais de API.
+
+Portanto, git autocrlf não invalida a baseline.
+
+COMPATIBILITY RULE
+Os 23 módulos da API baseline v1 não podem sofrer mudança pública silenciosa.
+
+Mudança deliberada é possível, mas requer revisão e recertificação da baseline.
+
+Isso é diferente de impedir evolução.
+
+EXTENSIBILIDADE
+Novos módulos canônicos continuam permitidos.
+
+Exemplo:
+
+game.weather
+
+Após registro no module-map, o auditor Stage 72 exige automaticamente:
+
+src/engine/weather/public/index.ts
+src/contracts/weather/...
+src/tokens/weather.ts
+
+e verifica as mesmas políticas.
+
+O novo módulo NÃO invalida automaticamente a baseline v1 existente.
+
+Uma recertificação futura poderá promover a API baseline para v2 e incluir a
+nova capability no conjunto congelado.
+
+STAGE 72 NÃO FAZ
+- plugin dependency graph deep audit: Stage 73;
+- lifecycle boot/shutdown audit: Stage 74;
+- game-loop behavior: Stage 75;
+- runtime/render/physics/input hardening: Stages 76+.
+
+PRÓXIMA ETAPA
+73 — Plugin Manifests & Capability Graph.

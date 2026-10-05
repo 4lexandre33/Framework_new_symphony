@@ -1,0 +1,65 @@
+{
+  "stage": "72",
+  "name": "Public APIs / Contracts / Tokens",
+  "layer": 1,
+  "requiresStage": 71,
+  "publicApiBaselineId": "layer1-public-api-v1-stage72",
+  "architectureMigrationVersion": "v20",
+  "moduleMapSchemaVersion": 1,
+  "readOnlyOverExistingImplementation": true,
+  "capture": {
+    "canonicalModules": 23,
+    "publicFacades": 23,
+    "contracts": 24,
+    "tokens": 24,
+    "secondaryCapabilities": 1
+  },
+  "fingerprint": {
+    "ignoresWhitespace": true,
+    "ignoresComments": true,
+    "lineEndingIndependent": true,
+    "detectsTypeScriptTokenChanges": true
+  },
+  "policy": {
+    "additionalCanonicalModulesAllowed": true,
+    "existingBaselineApiChangesRequireRecertification": true,
+    "publicFacadeOnlyContractsAndTokens": true,
+    "contractsOnlyCoreOrSameContractArea": true,
+    "tokenRelativeImportsOnlyOwnDeclaredContracts": true
+  },
+  "rules": {
+    "L1API010-L1API014": "contract existence/parse/default-export/import boundary",
+    "L1API020-L1API029": "token existence/parse/import/defineCapability identity/version",
+    "L1API030-L1API036": "public facade exclusivity/export surface",
+    "L1API040-L1API046": "semantic public API baseline compatibility",
+    "L1API050-L1API051": "architecture/module-map version compatibility"
+  },
+  "localValidation": {
+    "nodeSyntax": "PASS",
+    "stage71RegressionAudit": "PASS",
+    "stage72Audit": "PASS",
+    "publicFacades": 23,
+    "contracts": 24,
+    "tokens": 24,
+    "secondaryCapabilities": 1,
+    "violations": 0,
+    "typescriptStage72Tests": "PASS"
+  },
+  "explicitlyDeferred": [
+    "Stage 73 Plugin Manifests & Capability Graph",
+    "deep provides/consumes/dependsOn/conflicts/provider-priority audit",
+    "Stage 74 lifecycle boot/shutdown",
+    "runtime behavior/performance audits"
+  ],
+  "files": [
+    "LAYER1_PUBLIC_API_BASELINE_V1.json",
+    "ETAPA72_PUBLIC_APIS_CONTRACTS_TOKENS.txt",
+    "scripts/architecture/lib/layer1-public-api-v1.mjs",
+    "scripts/architecture/stage72-audit-public-apis.mjs",
+    "scripts/architecture/stage72-validate-public-apis.mjs",
+    "tests/layer1-public-api.test.ts",
+    "tests/layer1-public-api-selftest.test.ts",
+    "ETAPA72_MANIFEST.json",
+    "ETAPA72_SHA256SUMS.txt"
+  ]
+}
