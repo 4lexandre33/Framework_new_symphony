@@ -377,6 +377,54 @@ export class VoxelChunkManager {
     return chunkData;
   }
 
+  public installChunkData(
+    chunkData:
+      ChunkDataMatrix,
+  ): void {
+    if (
+      !Number.isInteger(
+        chunkData.sizeX,
+      ) ||
+      !Number.isInteger(
+        chunkData.sizeY,
+      ) ||
+      !Number.isInteger(
+        chunkData.sizeZ,
+      ) ||
+      chunkData.sizeX !==
+        this.sizeX ||
+      chunkData.sizeY !==
+        this.sizeY ||
+      chunkData.sizeZ !==
+        this.sizeZ
+    ) {
+      throw new RangeError(
+        "ChunkDataMatrix possui dimensões incompatíveis com VoxelChunkManager.",
+      );
+    }
+
+    const expectedLength =
+      this.sizeX *
+      this.sizeY *
+      this.sizeZ;
+
+    if (
+      chunkData.blocks.length !==
+      expectedLength
+    ) {
+      throw new RangeError(
+        "ChunkDataMatrix possui quantidade de blocos inválida.",
+      );
+    }
+
+    this.loadedChunks.set(
+      this.getChunkKey(
+        chunkData.coord,
+      ),
+      chunkData,
+    );
+  }
+
   public buildChunkMesh(
     chunkData:
       ChunkDataMatrix,

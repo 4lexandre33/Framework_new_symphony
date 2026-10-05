@@ -1,0 +1,362 @@
+PROJETO1 — ETAPA 79 / ASSETS / STREAMING / TERRAIN / WORKERS
+
+OBJETIVO
+Certificar e endurecer os runtimes de Assets, Streaming, Terrain e seus Worker
+pools sem alterar as Public APIs v1 congeladas na Etapa 72 e sem alterar o
+capability graph certificado na Etapa 73.
+
+PRECONDIÇÕES
+71 — Layer 1 Baseline & Inventory
+72 — Public APIs / Contracts / Tokens
+73 — Plugin Manifests & Capability Graph
+74 — Lifecycle / Boot / Shutdown
+75 — Deterministic Game Loop
+76 — Rendering Runtime
+77 — Physics Runtime
+78 — Input Runtime
+
+PUBLIC APIS
+NÃO ALTERADAS:
+
+game.assets@1.0.0
+game.streaming@1.0.0
+game.terrain@1.0.0
+
+Arquivos públicos permanecem sob a baseline da Etapa 72:
+- src/contracts/assets/types.ts
+- src/tokens/assets.ts
+- src/engine/assets/public/index.ts
+- src/contracts/streaming/types.ts
+- src/tokens/streaming.ts
+- src/engine/streaming/public/index.ts
+- src/contracts/terrain/types.ts
+- src/tokens/terrain.ts
+- src/engine/terrain/public/index.ts
+
+Os manifests/capabilities também permanecem compatíveis com a baseline da
+Etapa 73.
+
+======================================================================
+ASSETS
+======================================================================
+
+CONCURRENT LOAD DEDUP
+AssetsManagerService passa a possuir um registry in-flight por URL.
+
+Duas chamadas concorrentes:
+loadTexture("a.png")
+loadTexture("a.png")
+
+executam apenas UM loader real.
+
+Após a carga:
+- ambos os consumidores recebem a mesma instância;
+- refCount = 2;
+- AssetLoadedEvent é publicado uma única vez;
+- cada releaseAsset() decrementa exatamente uma referência.
+
+CACHE
+AssetCache deixa de usar explicit any no runtime interno.
+
+A API pública continua compatível com AssetsApi v1.
+
+O cache:
+- retém por URL;
+- incrementa refCount por consumidor;
+- só libera o recurso quando refCount chega a zero;
+- clear() libera todo o conteúdo;
+- recursos GLTF compartilhados dentro da mesma cena são descartados apenas uma
+  vez por identidade.
+
+GLTF DISPOSAL
+No teardown de GLTF:
+- geometry.dispose();
+- material.dispose();
+- texturas/disposables referenciados por material;
+- Set interno impede double-dispose do mesmo objeto.
+
+Esse Set existe somente no caminho de teardown, não no hot path de frame.
+
+ASSET EVENTS
+Os eventos públicos que já existiam passam a ser efetivamente publicados:
+
+game.assets.progress
+game.assets.loaded
+
+AssetProgressEvent:
+- loadedBytes normalizado;
+- totalBytes normalizado;
+- progressPercentage limitado a 0..100;
+- total desconhecido => percentage 0.
+
+AssetLoadedEvent:
+- id = URL normalizada;
+- url = URL normalizada;
+- type = tipo real do loader.
+
+Nenhum contrato público foi adicionado.
+
+AUDIO
+AudioLoaderService:
+- evita explicit any para webkitAudioContext;
+- resume AudioContext quando necessário;
+- reporta progresso após download;
+- close() do AudioContext ocorre no teardown;
+- teardown é best-effort e não bloqueia shutdown do Kernel.
+
+DISPOSE DURANTE LOAD
+Se o AssetsManagerService for descartado enquanto uma carga está em voo:
+- o resultado não entra no cache;
+- recursos carregados são descartados;
+- a Promise rejeita;
+- registry in-flight é limpo.
+
+======================================================================
+STREAMING
+======================================================================
+
+STREAMING WORKER POOL
+StreamingWorkerPool mantém:
+- limite normalizado de Workers;
+- slots explícitos;
+- IDs de job;
+- fallback síncrono determinístico;
+- workerCount / busyWorkerCount.
+
+Stage 79 acrescenta:
+- factory injetável para testes;
+- snapshot de cameraPosition e sectorCoords por job;
+- tratamento de error;
+- tratamento de messageerror;
+- postMessage failure -> fallback;
+- response inválida -> fallback;
+- job ID evita colisão ao fazer wrap;
+- pendingJobCount;
+- clear() conclui jobs pendentes por fallback antes de terminar Workers;
+- clear() é idempotente.
+
+PROMISE SETTLEMENT INVARIANT
+Toda Promise criada por StreamingWorkerPool termina por uma destas rotas:
+1. Worker response válida;
+2. Worker error;
+3. messageerror;
+4. postMessage throw;
+5. pool.clear();
+6. fallback por pool ocupado/indisponível.
+
+Não há job intencionalmente deixado pending.
+
+WORKER VISIBILITY
+streaming.worker.ts usa distância ao quadrado:
+
+dx*dx + dy*dy + dz*dz <= maxDistance*maxDistance
+
+Não executa Math.sqrt por setor.
+
+STREAMING SERVICE CLEAR VS DISPOSE
+StreamingApi.clear() continua público e passa a significar reset reutilizável:
+- limpa LOD;
+- limpa sectors;
+- limpa HLOD;
+- solta camera binding;
+- zera accumulator/center.
+
+clear() NÃO destrói WorkerPool.
+
+O teardown terminal é interno:
+StreamingService.dispose()
+  -> clear()
+  -> workerPool.clear()
+
+O plugin usa dispose() no lifecycle.onDispose.
+
+Isso evita que uma chamada pública clear() degrade permanentemente o serviço para
+fallback sem Workers.
+
+======================================================================
+TERRAIN
+======================================================================
+
+PROCEDURAL WORKER POOL
+ProceduralWorkerPool passa a implementar um port interno:
+TerrainChunkWorkerPool
+
+O port existe apenas em internal e não altera TerrainApi.
+
+Benefícios:
+- fake/control pool em testes;
+- TerrainService desacoplado da implementação concreta;
+- nenhum vazamento para Camada 2/3/4.
+
+O pool:
+- clona coord e normaliza seed;
+- usa Worker quando disponível;
+- usa geração local quando Worker não pode ser criado;
+- Worker error/messageerror => fallback local;
+- postMessage throw => fallback local;
+- possui queuedJobCount/pendingJobCount/activeWorkerCount/workerCount;
+- clear() rejeita jobs ainda ativos/queued;
+- terminate() todos os Workers;
+- clear() é idempotente;
+- após clear(), a instância é terminal.
+
+TERRAIN OFFLOAD
+Antes da Etapa 79, TerrainService.requestChunk() chamava geração procedural
+pesada diretamente no thread principal.
+
+Agora:
+
+TerrainService.requestChunk()
+  -> ProceduralWorkerPool.requestChunkGenerationAsync()
+  -> terrain.worker.ts
+  -> Uint8Array transferível
+  -> VoxelChunkManager.installChunkData()
+  -> GreedyMesher/build mesh no thread principal
+  -> Render3DApi.addMeshToScene()
+  -> ChunkGeneratedEvent
+
+A Public API continua:
+requestChunk(chunkCoord): void
+
+Logo consumidores existentes não mudam.
+
+FALLBACK
+Se Worker não existir no ambiente, ProceduralWorkerPool usa geração local para
+preservar funcionalidade.
+
+No desktop/Tauri normal, Worker válido evita executar a geração voxel procedural
+principal no thread da WebView.
+
+STALE RESPONSE PROTECTION
+Geração async introduz risco de resposta velha.
+
+Stage 79 adiciona duas proteções:
+
+1. generationEpoch
+   clear() e setSeed() invalidam toda geração anterior.
+
+2. pendingChunkTokens
+   cada chunk possui token de request.
+   unloadChunk() invalida o token daquele chunk.
+
+Consequência:
+- request chunk;
+- unload/clear/setSeed;
+- Worker responde depois;
+- resposta é ignorada;
+- mesh não reaparece;
+- ChunkGeneratedEvent não é publicado.
+
+DUPLICATE REQUEST
+Se o mesmo chunk já possui request pending, requestChunk() não enfileira outro
+job.
+
+Se o chunk já está instalado no VoxelChunkManager, a chamada apenas reconstrói/
+reinsere a malha correspondente.
+
+VOXEL CHUNK INSTALLATION
+VoxelChunkManager.installChunkData():
+- valida sizeX;
+- valida sizeY;
+- valida sizeZ;
+- valida blocks.length;
+- só então registra o chunk.
+
+Isso impede resposta Worker malformada de entrar no storage de chunks.
+
+TERRAIN DISPOSE
+TerrainService.clear():
+- invalida geração antiga;
+- remove meshes renderizados;
+- limpa chunk storage;
+- permanece reutilizável.
+
+TerrainService.dispose():
+- clear();
+- marca terminal;
+- workerPool.clear();
+- remove binding de renderer.
+
+Plugin game.terrain usa dispose() no lifecycle.
+
+======================================================================
+PERFORMANCE / HOT PATHS
+======================================================================
+
+Baseline Stage 79 certifica 21 arquivos semânticos.
+
+Explicit any em runtime certificado:
+0
+
+Hot paths:
+StreamingService.update:
+- object literal: 0
+- array literal: 0
+- new expression: 0
+
+WorldStreamingSectorManager.updateStreamingSectors:
+- object literal: 0
+- array literal: 0
+- new expression: 0
+
+TerrainService.update:
+- object literal: 0
+- array literal: 0
+- new expression: 0
+
+Alocações em load/job/worker/teardown são permitidas porque não pertencem ao
+steady-state por fixed tick/render frame certificado nesta etapa.
+
+======================================================================
+VALIDAÇÃO
+======================================================================
+
+Stage 79 deve executar:
+- Stage 78 regression audit;
+- Stage 79 semantic audit;
+- npm run arch:check;
+- npx tsc --noEmit;
+- targeted Stage 79 tests;
+- assets-pipeline regression;
+- streaming-system regression;
+- terrain-system regression;
+- assets smoke;
+- streaming smoke;
+- terrain smoke;
+- full Vitest;
+- cargo check;
+- npm run build.
+
+NÃO ANTECIPADO
+80 — Presentation Systems
+81+ — próximas certificações da Camada 1 conforme roadmap
+86 — Performance & Resource Lifecycle global
+87 — Failure Recovery & Resilience global
+
+PRÓXIMA ETAPA
+80 — Presentation Systems.
+
+CORREÇÃO DE EMPACOTAMENTO — BASELINE SEMÂNTICA COMPLETA
+A baseline da Etapa 79 certifica 21 arquivos de runtime, porém o primeiro ZIP
+incluía apenas os arquivos diretamente modificados pela etapa.
+
+Isso permitia que arquivos certificados, porém não empacotados, permanecessem
+em uma versão diferente no repositório do usuário e disparassem L1AST002.
+
+Correção:
+- todos os 21 arquivos semanticamente fingerprintados pela baseline passam a
+  fazer parte do ZIP;
+- nenhum fingerprint foi removido;
+- nenhuma regra do auditor foi enfraquecida;
+- L1AST002 continua obrigatório;
+- o ZIP agora reproduz exatamente o estado que a baseline certifica.
+
+Arquivos anteriormente certificados mas não empacotados:
+- src/engine/streaming/internal/DistanceLODManager.ts
+- src/engine/streaming/internal/HLODBuilder.ts
+- src/engine/streaming/internal/WorldStreamingSectorManager.ts
+- src/engine/terrain/internal/BiomeEvaluator.ts
+- src/engine/terrain/internal/GreedyMesher.ts
+- src/engine/terrain/internal/PerlinNoiseService.ts
+- src/engine/terrain/internal/terrain.worker.ts
+

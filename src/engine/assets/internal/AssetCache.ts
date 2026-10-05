@@ -1,82 +1,430 @@
-import type { AssetType } from "../../../contracts/assets/types";
-import type { CachedAssetRecord } from "../../../tokens/assets";
+import type {
+  AssetType,
+} from "../../../contracts/assets/types";
+
+import type {
+  CachedAssetRecord,
+} from "../../../tokens/assets";
+
+interface DisposableLike {
+  dispose(): void;
+}
+
+interface TraversableLike {
+  traverse(
+    callback:
+      (
+        value:
+          unknown,
+      ) => void,
+  ): void;
+}
+
+interface SceneLike {
+  readonly scene?:
+    TraversableLike;
+}
+
+function hasDispose(
+  value:
+    unknown,
+): value is
+  DisposableLike {
+  if (
+    value ===
+      null ||
+    typeof value !==
+      "object"
+  ) {
+    return false;
+  }
+
+  return (
+    "dispose" in
+      value &&
+    typeof (
+      value as {
+        dispose?:
+          unknown;
+      }
+    ).dispose ===
+      "function"
+  );
+}
+
+function getObjectProperty(
+  value:
+    unknown,
+  key:
+    string,
+): unknown {
+  if (
+    value ===
+      null ||
+    typeof value !==
+      "object"
+  ) {
+    return undefined;
+  }
+
+  return (
+    value as
+      Record<
+        string,
+        unknown
+      >
+  )[
+    key
+  ];
+}
+
+function hasTraverse(
+  value:
+    unknown,
+): value is
+  TraversableLike {
+  return (
+    value !==
+      null &&
+    typeof value ===
+      "object" &&
+    "traverse" in
+      value &&
+    typeof (
+      value as {
+        traverse?:
+          unknown;
+      }
+    ).traverse ===
+      "function"
+  );
+}
 
 export class AssetCache {
-  private readonly cache = new Map<string, CachedAssetRecord>();
+  private readonly cache =
+    new Map<
+      string,
+      CachedAssetRecord<unknown>
+    >();
 
-  public has(key: string): boolean {
-    return this.cache.has(key);
+  public has(
+    key:
+      string,
+  ): boolean {
+    return this.cache.has(
+      key,
+    );
   }
 
-  public get<T = any>(key: string): T | null {
-    const record = this.cache.get(key);
-    return record ? (record.data as T) : null;
-  }
+  public get<T = unknown>(
+    key:
+      string,
+  ): T |
+    null {
+    const record =
+      this.cache.get(
+        key,
+      );
 
-  public set<T = any>(key: string, data: T, type: AssetType): void {
-    const existing = this.cache.get(key);
-    if (existing) {
-      existing.refCount++;
-    } else {
-      this.cache.set(key, { data, type, refCount: 1 });
-    }
-  }
-
-  public retain(key: string): boolean {
-    const record = this.cache.get(key);
-    if (record) {
-      record.refCount++;
-      return true;
-    }
-    return false;
-  }
-
-  public release(key: string): boolean {
-    const record = this.cache.get(key);
-    if (!record) return false;
-
-    record.refCount--;
-
-    if (record.refCount <= 0) {
-      this.disposeResource(record.data, record.type);
-      this.cache.delete(key);
-      console.log(`[AssetCache] 🗑️ Asset liberado da VRAM/RAM: ${key}`);
-      return true;
+    if (
+      record ===
+      undefined
+    ) {
+      return null;
     }
 
-    return false;
+    return record.data as
+      T;
+  }
+
+  public set<T>(
+    key:
+      string,
+    data:
+      T,
+    type:
+      AssetType,
+  ): void {
+    const existing =
+      this.cache.get(
+        key,
+      );
+
+    if (
+      existing !==
+      undefined
+    ) {
+      existing.refCount +=
+        1;
+
+      return;
+    }
+
+    this.cache.set(
+      key,
+      {
+        data,
+        type,
+        refCount:
+          1,
+      },
+    );
+  }
+
+  public retain(
+    key:
+      string,
+  ): boolean {
+    const record =
+      this.cache.get(
+        key,
+      );
+
+    if (
+      record ===
+      undefined
+    ) {
+      return false;
+    }
+
+    record.refCount +=
+      1;
+
+    return true;
+  }
+
+  public release(
+    key:
+      string,
+  ): boolean {
+    const record =
+      this.cache.get(
+        key,
+      );
+
+    if (
+      record ===
+      undefined
+    ) {
+      return false;
+    }
+
+    record.refCount -=
+      1;
+
+    if (
+      record.refCount >
+      0
+    ) {
+      return false;
+    }
+
+    this.disposeResource(
+      record.data,
+      record.type,
+    );
+
+    this.cache.delete(
+      key,
+    );
+
+    return true;
+  }
+
+  public getRefCount(
+    key:
+      string,
+  ): number {
+    return (
+      this.cache.get(
+        key,
+      )?.refCount ??
+      0
+    );
+  }
+
+  public get size():
+    number {
+    return this.cache.size;
   }
 
   public clear(): void {
-    for (const [_, record] of this.cache.entries()) {
-      this.disposeResource(record.data, record.type);
+    for (
+      const record of
+      this.cache.values()
+    ) {
+      this.disposeResource(
+        record.data,
+        record.type,
+      );
     }
+
     this.cache.clear();
-    console.log("[AssetCache] 🧹 Cache de VRAM e memória limpo completamente.");
   }
 
-  private disposeResource(data: any, type: AssetType): void {
-    if (!data) return;
+  private disposeResource(
+    data:
+      unknown,
+    type:
+      AssetType,
+  ): void {
+    if (
+      data ===
+        null ||
+      data ===
+        undefined
+    ) {
+      return;
+    }
 
-    if (type === "texture") {
-      if (typeof data.dispose === "function") {
+    if (
+      type ===
+      "texture"
+    ) {
+      if (
+        hasDispose(
+          data,
+        )
+      ) {
         data.dispose();
       }
-    } else if (type === "gltf") {
-      if (data.scene && typeof data.scene.traverse === "function") {
-        data.scene.traverse((object: any) => {
-          if (object.geometry && typeof object.geometry.dispose === "function") {
-            object.geometry.dispose();
+
+      return;
+    }
+
+    if (
+      type !==
+      "gltf"
+    ) {
+      return;
+    }
+
+    const scene =
+      (
+        data as
+          SceneLike
+      ).scene;
+
+    if (
+      !hasTraverse(
+        scene,
+      )
+    ) {
+      return;
+    }
+
+    const disposedResources =
+      new Set<
+        unknown
+      >();
+
+    const disposeOnce =
+      (
+        value:
+          unknown,
+      ): void => {
+        if (
+          !hasDispose(
+            value,
+          ) ||
+        disposedResources.has(
+          value,
+        )
+        ) {
+          return;
+        }
+
+        disposedResources.add(
+          value,
+        );
+
+        value.dispose();
+      };
+
+    scene.traverse(
+      (
+        object:
+          unknown,
+      ): void => {
+        disposeOnce(
+          getObjectProperty(
+            object,
+            "geometry",
+          ),
+        );
+
+        const material =
+          getObjectProperty(
+            object,
+            "material",
+          );
+
+        if (
+          Array.isArray(
+            material,
+          )
+        ) {
+          for (
+            const entry of
+            material
+          ) {
+            this.disposeMaterialResources(
+              entry,
+              disposeOnce,
+            );
           }
-          if (object.material) {
-            if (Array.isArray(object.material)) {
-              object.material.forEach((mat: any) => mat.dispose && mat.dispose());
-            } else if (typeof object.material.dispose === "function") {
-              object.material.dispose();
-            }
-          }
-        });
+
+          return;
+        }
+
+        this.disposeMaterialResources(
+          material,
+          disposeOnce,
+        );
+      },
+    );
+  }
+
+  private disposeMaterialResources(
+    material:
+      unknown,
+    disposeOnce:
+      (
+        value:
+          unknown,
+      ) => void,
+  ): void {
+    if (
+      material ===
+        null ||
+      typeof material !==
+        "object"
+    ) {
+      return;
+    }
+
+    for (
+      const value of
+      Object.values(
+        material as
+          Record<
+            string,
+            unknown
+          >,
+      )
+    ) {
+      if (
+        value !==
+          material
+      ) {
+        disposeOnce(
+          value,
+        );
       }
     }
+
+    disposeOnce(
+      material,
+    );
   }
 }

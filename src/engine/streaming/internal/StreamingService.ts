@@ -190,13 +190,17 @@ export class StreamingService implements StreamingApi {
     this.lodManager.clear();
     this.sectorManager.clear();
     this.hlodBuilder.clear();
-    this.workerPool.clear();
     this.camera = null;
     this.sectorUpdateAccumulatorSeconds = 0;
     this.hasPerformedInitialSectorUpdate = false;
     this.centerPosition.x = 0;
     this.centerPosition.y = 0;
     this.centerPosition.z = 0;
+  }
+
+  public dispose(): void {
+    this.clear();
+    this.workerPool.clear();
   }
 
   private sanitizeDeltaSeconds(deltaSeconds: number): number {

@@ -214,7 +214,7 @@ export function createTerrainPlugin():
           unbindRequestChunk();
           unbindModifyBlock();
 
-          service.clear();
+          service.dispose();
 
           if (
             terrainService ===

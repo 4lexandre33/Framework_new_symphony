@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "baselineId": "layer1-assets-streaming-terrain-v1-stage79",
+  "requiresStages": [
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77,
+    78
+  ],
+  "publicApiBaseline": "layer1-public-api-v1-stage72",
+  "capabilityGraphBaseline": "layer1-capability-graph-v1-stage73",
+  "capturedCounts": {
+    "semanticFiles": 21,
+    "explicitAnyKeywords": 0,
+    "streamingUpdateExplicitAllocations": 0,
+    "sectorUpdateExplicitAllocations": 0,
+    "terrainUpdateExplicitAllocations": 0
+  },
+  "policy": {
+    "publicApisUnchanged": true,
+    "capabilityGraphUnchanged": true,
+    "assetConcurrentDedup": true,
+    "assetReferenceCounting": true,
+    "assetEventsPublished": true,
+    "audioContextTeardown": true,
+    "streamingJobsAlwaysSettle": true,
+    "streamingClearReusable": true,
+    "streamingDisposeTerminatesWorkers": true,
+    "terrainGenerationUsesWorkerPool": true,
+    "staleTerrainResponsesRejected": true,
+    "terrainDisposeTerminatesWorkers": true,
+    "explicitAnyForbidden": true,
+    "hotPathsNoExplicitAllocations": true
+  },
+  "files": [
+    {
+      "path": "src/engine/assets/internal/AssetCache.ts",
+      "fingerprint": "897919f33b6beb28ef57ba1e6e20e6ab789fd7e83f21be8a3f68ad5ed73bf9b0"
+    },
+    {
+      "path": "src/engine/assets/internal/AssetsManagerService.ts",
+      "fingerprint": "2686ac808facdf627a3073a754871b9aaa4a23a03d88a13c93bf94fb984ca834"
+    },
+    {
+      "path": "src/engine/assets/internal/AudioLoaderService.ts",
+      "fingerprint": "b4d423ec2ca3064dd1b9223f566d7d3b464b1a6ebad4e326ea9c3b24e54cb0c2"
+    },
+    {
+      "path": "src/engine/assets/internal/GLTFLoaderService.ts",
+      "fingerprint": "73bdb41ff277881913164c2a27916280f978b38c40380c0d210049db0d43eb31"
+    },
+    {
+      "path": "src/engine/assets/internal/TextureLoaderService.ts",
+      "fingerprint": "4a1ff8d0492a13db632a3fc62608ec497208ff9a6aedeed61f6fed3824684058"
+    },
+    {
+      "path": "src/plugins/assets/plugin.ts",
+      "fingerprint": "7c8bd051615a51b61a000e44b9d1d9ef2d43ab7679c54312ad461929d3e289a0"
+    },
+    {
+      "path": "src/engine/streaming/internal/DistanceLODManager.ts",
+      "fingerprint": "849a3d544004381fdb625ce73d7d7ffb08acebece66ee5c6a40f694daa5556f9"
+    },
+    {
+      "path": "src/engine/streaming/internal/HLODBuilder.ts",
+      "fingerprint": "b89cb95016f783e9fa7a5fe46911621006528ee2778f2493caf9cabddd5048ae"
+    },
+    {
+      "path": "src/engine/streaming/internal/StreamingService.ts",
+      "fingerprint": "2177ef21d6abd5175c1f806245ea31f04a738f4001835b79b36bc2ece041af24"
+    },
+    {
+      "path": "src/engine/streaming/internal/StreamingWorkerPool.ts",
+      "fingerprint": "e34dd7612a4445d7ef1106e0d7ebf4051960e633a39db001c8fa3c6fcdae2e3b"
+    },
+    {
+      "path": "src/engine/streaming/internal/WorldStreamingSectorManager.ts",
+      "fingerprint": "cb7482585c92567fffd13c0e322118ca3c4da46082dc8b1035e474553d890a6f"
+    },
+    {
+      "path": "src/engine/streaming/internal/streaming.worker.ts",
+      "fingerprint": "0c1fe3eff71c06b20655df41463451d7547cdcce8c502e8f55b908f991f2396b"
+    },
+    {
+      "path": "src/plugins/streaming/plugin.ts",
+      "fingerprint": "ef97dc1794433424b7cfe97f4996f4cb7f0e3fd017d7ef5bc41a5d7c148b563d"
+    },
+    {
+      "path": "src/engine/terrain/internal/BiomeEvaluator.ts",
+      "fingerprint": "cf988045462185abd228988901c82d479da0b021425b1a674ef08559562834df"
+    },
+    {
+      "path": "src/engine/terrain/internal/GreedyMesher.ts",
+      "fingerprint": "59229fabd10393ea5e26758b512760e01f24e9d73c687bb0f24f6278dda2ab23"
+    },
+    {
+      "path": "src/engine/terrain/internal/PerlinNoiseService.ts",
+      "fingerprint": "f9f4d52e1ca5d6f14bc2cbce26ea422ca33586b77d0b4eacdae2d6eae7dcfae7"
+    },
+    {
+      "path": "src/engine/terrain/internal/ProceduralWorkerPool.ts",
+      "fingerprint": "b0702b390a65cfa4deefe26fbb311cc6cd374711c3c16574033e3bc4135c3b47"
+    },
+    {
+      "path": "src/engine/terrain/internal/TerrainService.ts",
+      "fingerprint": "c62d27dc8ff58f158067cf4b9b489daf6848e713a7938d93e335e447cf21db23"
+    },
+    {
+      "path": "src/engine/terrain/internal/VoxelChunkManager.ts",
+      "fingerprint": "f0636dc697331e34faa2fff99bad8326c874048ac2696634076a320776eed01c"
+    },
+    {
+      "path": "src/engine/terrain/internal/terrain.worker.ts",
+      "fingerprint": "5009ea76d228b64f806c5cd3206ca58a6fabd67deb75cba20d445556e556c76f"
+    },
+    {
+      "path": "src/plugins/terrain/plugin.ts",
+      "fingerprint": "bfe7dbc25e07dba878fc5431e701f731df8c337632a9c80fd7343ab1f1fc125f"
+    }
+  ]
+}

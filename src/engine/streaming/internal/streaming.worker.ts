@@ -1,26 +1,102 @@
-import type { StreamingJobRequest, StreamingJobResponse } from "./StreamingWorkerPool";
+import type {
+  StreamingJobRequest,
+  StreamingJobResponse,
+} from "./StreamingWorkerPool";
 
-self.onmessage = (event: MessageEvent<StreamingJobRequest>) => {
-  const { jobId, cameraPosition, sectorCoords, maxDistance } = event.data;
+const SECTOR_SIZE_WORLD_UNITS =
+  50;
 
-  const visibleSectors = sectorCoords.filter((sec) => {
-    // Coordenadas aproximadas de centro do setor no espaço 3D
-    const sectorCenterX = sec.x * 50.0;
-    const sectorCenterY = sec.y * 50.0;
-    const sectorCenterZ = sec.z * 50.0;
+self.onmessage =
+  (
+    event:
+      MessageEvent<
+        StreamingJobRequest
+      >,
+  ): void => {
+    const {
+      jobId,
+      cameraPosition,
+      sectorCoords,
+      maxDistance,
+    } =
+      event.data;
 
-    const dx = cameraPosition.x - sectorCenterX;
-    const dy = cameraPosition.y - sectorCenterY;
-    const dz = cameraPosition.z - sectorCenterZ;
-    const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    const maxDistanceSquared =
+      maxDistance *
+      maxDistance;
 
-    return distance <= maxDistance;
-  });
+    const visibleSectors =
+      [];
 
-  const response: StreamingJobResponse = {
-    jobId,
-    visibleSectors,
+    for (
+      let index =
+        0;
+      index <
+      sectorCoords.length;
+      index +=
+        1
+    ) {
+      const sector =
+        sectorCoords[
+          index
+        ];
+
+      if (
+        sector ===
+        undefined
+      ) {
+        continue;
+      }
+
+      const centerX =
+        sector.x *
+        SECTOR_SIZE_WORLD_UNITS;
+
+      const centerY =
+        sector.y *
+        SECTOR_SIZE_WORLD_UNITS;
+
+      const centerZ =
+        sector.z *
+        SECTOR_SIZE_WORLD_UNITS;
+
+      const dx =
+        cameraPosition.x -
+        centerX;
+
+      const dy =
+        cameraPosition.y -
+        centerY;
+
+      const dz =
+        cameraPosition.z -
+        centerZ;
+
+      const distanceSquared =
+        dx *
+          dx +
+        dy *
+          dy +
+        dz *
+          dz;
+
+      if (
+        distanceSquared <=
+        maxDistanceSquared
+      ) {
+        visibleSectors.push(
+          sector,
+        );
+      }
+    }
+
+    const response:
+      StreamingJobResponse = {
+        jobId,
+        visibleSectors,
+      };
+
+    self.postMessage(
+      response,
+    );
   };
-
-  self.postMessage(response);
-};

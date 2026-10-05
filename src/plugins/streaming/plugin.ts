@@ -127,7 +127,7 @@ export function createStreamingPlugin(): Plugin {
         unbindLoadSector();
         unbindUnloadSector();
         unbindSetRadius();
-        service.clear();
+        service.dispose();
 
         if (streamingService === service) {
           streamingService = null;

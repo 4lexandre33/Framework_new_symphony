@@ -1,37 +1,144 @@
-import type { PluginContext } from "@core";
-import { type TerrainApi } from "../../../tokens/terrain";
-import { type Render3DApi } from "../../../tokens/render";
-import { BlockModifiedEvent, ChunkGeneratedEvent, type BiomeDescriptor, type Vector3Chunk, type VoxelBlockData, type VoxelModificationRequest } from "../../../contracts/terrain/types";
-import { VoxelChunkManager } from "./VoxelChunkManager";
+import type {
+  PluginContext,
+} from "@core";
+
+import type {
+  BiomeDescriptor,
+  ChunkDataMatrix,
+  Vector3Chunk,
+  VoxelBlockData,
+  VoxelModificationRequest,
+} from "../../../contracts/terrain/types";
+
+import {
+  BlockModifiedEvent,
+  ChunkGeneratedEvent,
+} from "../../../contracts/terrain/types";
+
+import type {
+  Render3DApi,
+} from "../../../tokens/render";
+
+import type {
+  TerrainApi,
+} from "../../../tokens/terrain";
+
+import {
+  ProceduralWorkerPool,
+} from "./ProceduralWorkerPool";
+
+import type {
+  TerrainChunkWorkerPool,
+} from "./ProceduralWorkerPool";
+
+import {
+  VoxelChunkManager,
+} from "./VoxelChunkManager";
+
+function nowMilliseconds():
+  number {
+  return typeof performance !==
+    "undefined"
+    ? performance.now()
+    : Date.now();
+}
+
+function normalizeChunkCoord(
+  coord:
+    Vector3Chunk,
+): Vector3Chunk {
+  return {
+    x:
+      Number.isFinite(
+        coord.x,
+      )
+        ? Math.trunc(
+            coord.x,
+          )
+        : 0,
+
+    y:
+      Number.isFinite(
+        coord.y,
+      )
+        ? Math.trunc(
+            coord.y,
+          )
+        : 0,
+
+    z:
+      Number.isFinite(
+        coord.z,
+      )
+        ? Math.trunc(
+            coord.z,
+          )
+        : 0,
+  };
+}
 
 export class TerrainService
   implements TerrainApi {
-  private readonly chunkManager =
-    new VoxelChunkManager();
-
   private readonly renderedChunkKeys =
-    new Set<string>();
+    new Set<
+      string
+    >();
+
+  private readonly pendingChunkTokens =
+    new Map<
+      string,
+      number
+    >();
 
   private render:
-    Render3DApi | null =
+    Render3DApi |
+    null =
       null;
+
+  private generationEpoch =
+    1;
+
+  private nextRequestToken =
+    1;
+
+  private disposed =
+    false;
 
   public constructor(
     private readonly ctx:
       PluginContext,
+    private readonly chunkManager:
+      VoxelChunkManager =
+        new VoxelChunkManager(),
+    private readonly workerPool:
+      TerrainChunkWorkerPool =
+        new ProceduralWorkerPool(),
   ) {}
 
   public bindDependencies(
     render:
       Render3DApi,
   ): void {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
     this.render =
       render;
   }
 
   public setSeed(
-    seed: number,
+    seed:
+      number,
   ): void {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
     const normalizedSeed =
       Number.isFinite(
         seed,
@@ -49,15 +156,12 @@ export class TerrainService
       return;
     }
 
-    /*
-     * Não permitimos chunks visuais produzidos
-     * por seeds diferentes coexistirem.
-     */
     this.clear();
 
-    this.chunkManager.setSeed(
-      normalizedSeed,
-    );
+    this.chunkManager
+      .setSeed(
+        normalizedSeed,
+      );
   }
 
   public getSeed():
@@ -70,92 +174,153 @@ export class TerrainService
     chunkCoord:
       Vector3Chunk,
   ): void {
-    const render =
-      this.render;
-
-    if (!render) {
+    if (
+      this.disposed ||
+      this.render ===
+        null
+    ) {
       return;
     }
 
-    const startedAt =
-      performance.now();
-
-    const chunkData =
-      this.chunkManager
-        .generateChunkData(
-          chunkCoord,
-        );
-
-    const mesh =
-      this.chunkManager
-        .buildChunkMesh(
-          chunkData,
-        );
-
-    const renderKey =
-      this.getRenderKey(
+    const coord =
+      normalizeChunkCoord(
         chunkCoord,
       );
 
-    /*
-     * SceneGraphManager remove e libera
-     * automaticamente uma malha antiga caso
-     * a chave já exista.
-     */
-    render.addMeshToScene(
-      renderKey,
-      mesh,
-    );
+    const renderKey =
+      this.getRenderKey(
+        coord,
+      );
 
-    this.renderedChunkKeys.add(
-      renderKey,
-    );
-
-    const positionAttribute =
-      mesh.geometry
-        .getAttribute(
-          "position",
+    const existing =
+      this.chunkManager
+        .getChunkData(
+          coord,
         );
 
-    const generationTimeMs =
-      performance.now() -
-      startedAt;
+    if (
+      existing !==
+      null
+    ) {
+      this.renderChunk(
+        existing,
+        renderKey,
+        0,
+      );
 
-    this.ctx.events.emit(
-      ChunkGeneratedEvent.type,
-      {
-        chunkCoord: {
-          x:
-            chunkCoord.x,
+      return;
+    }
 
-          y:
-            chunkCoord.y,
+    if (
+      this.pendingChunkTokens.has(
+        renderKey,
+      )
+    ) {
+      return;
+    }
 
-          z:
-            chunkCoord.z,
-        },
+    const requestToken =
+      this.allocateRequestToken();
 
-        totalVertices:
-          positionAttribute.count,
+    const requestEpoch =
+      this.generationEpoch;
 
-        generationTimeMs,
-      },
+    const seed =
+      this.getSeed();
+
+    const startedAt =
+      nowMilliseconds();
+
+    this.pendingChunkTokens.set(
+      renderKey,
+      requestToken,
     );
+
+    void this.workerPool
+      .requestChunkGenerationAsync(
+        coord,
+        seed,
+      )
+      .then(
+        (
+          chunkData,
+        ): void => {
+          if (
+            !this.isRequestCurrent(
+              renderKey,
+              requestToken,
+              requestEpoch,
+            ) ||
+            this.disposed
+          ) {
+            return;
+          }
+
+          this.chunkManager
+            .installChunkData(
+              chunkData,
+            );
+
+          const generationTimeMs =
+            Math.max(
+              0,
+              nowMilliseconds() -
+                startedAt,
+            );
+
+          this.renderChunk(
+            chunkData,
+            renderKey,
+            generationTimeMs,
+          );
+        },
+      )
+      .catch(
+        (): void => {
+          // Pool encerrado durante teardown/clear: request é descartada.
+        },
+      )
+      .finally(
+        (): void => {
+          if (
+            this.pendingChunkTokens.get(
+              renderKey,
+            ) ===
+            requestToken
+          ) {
+            this.pendingChunkTokens.delete(
+              renderKey,
+            );
+          }
+        },
+      );
   }
 
   public unloadChunk(
     chunkCoord:
       Vector3Chunk,
   ): boolean {
-    const renderKey =
-      this.getRenderKey(
+    const coord =
+      normalizeChunkCoord(
         chunkCoord,
       );
+
+    const renderKey =
+      this.getRenderKey(
+        coord,
+      );
+
+    this.invalidatePendingRequest(
+      renderKey,
+    );
 
     const render =
       this.render;
 
-    if (render) {
+    if (
+      render !==
+      null
+    ) {
       render.removeMeshFromScene(
         renderKey,
       );
@@ -167,7 +332,7 @@ export class TerrainService
 
     return this.chunkManager
       .unloadChunk(
-        chunkCoord,
+        coord,
       );
   }
 
@@ -185,6 +350,12 @@ export class TerrainService
     request:
       VoxelModificationRequest,
   ): boolean {
+    if (
+      this.disposed
+    ) {
+      return false;
+    }
+
     const previousBlock =
       this.getVoxelBlock(
         request.worldPosition,
@@ -196,7 +367,9 @@ export class TerrainService
           request,
         );
 
-    if (!success) {
+    if (
+      !success
+    ) {
       return false;
     }
 
@@ -216,21 +389,17 @@ export class TerrainService
               request
                 .worldPosition
                 .x,
-
             y:
               request
                 .worldPosition
                 .y,
-
             z:
               request
                 .worldPosition
                 .z,
           },
-
           oldBlockId:
             previousBlock.id,
-
           newBlockId:
             request.newBlockId,
         },
@@ -262,34 +431,111 @@ export class TerrainService
     _playerPosition?:
       Vector3Chunk,
   ): void {
-    /*
-     * Ponto de integração para streaming de chunks.
-     *
-     * O tick já possui owner único no game.loop.
-     * O streaming por posição pode ser ligado aqui
-     * quando o PlayerToken expuser a posição global.
-     */
+    // O streaming espacial de chunks será composto em uma etapa superior.
   }
 
   public clear(): void {
+    this.generationEpoch +=
+      1;
+
+    this.pendingChunkTokens.clear();
+
     const render =
       this.render;
 
-    if (render) {
+    if (
+      render !==
+      null
+    ) {
       for (
         const renderKey of
         this.renderedChunkKeys
       ) {
-        render
-          .removeMeshFromScene(
-            renderKey,
-          );
+        render.removeMeshFromScene(
+          renderKey,
+        );
       }
     }
 
     this.renderedChunkKeys.clear();
 
     this.chunkManager.clear();
+  }
+
+  public dispose(): void {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
+    this.clear();
+
+    this.disposed =
+      true;
+
+    this.workerPool.clear();
+
+    this.render =
+      null;
+  }
+
+  private renderChunk(
+    chunkData:
+      ChunkDataMatrix,
+    renderKey:
+      string,
+    generationTimeMs:
+      number,
+  ): void {
+    const render =
+      this.render;
+
+    if (
+      render ===
+        null ||
+      this.disposed
+    ) {
+      return;
+    }
+
+    const mesh =
+      this.chunkManager
+        .buildChunkMesh(
+          chunkData,
+        );
+
+    render.addMeshToScene(
+      renderKey,
+      mesh,
+    );
+
+    this.renderedChunkKeys.add(
+      renderKey,
+    );
+
+    const positionAttribute =
+      mesh.geometry
+        .getAttribute(
+          "position",
+        );
+
+    this.ctx.events.emit(
+      ChunkGeneratedEvent.type,
+      {
+        chunkCoord: {
+          x:
+            chunkData.coord.x,
+          y:
+            chunkData.coord.y,
+          z:
+            chunkData.coord.z,
+        },
+        totalVertices:
+          positionAttribute.count,
+        generationTimeMs,
+      },
+    );
   }
 
   private rebuildChunkForWorldPosition(
@@ -299,7 +545,11 @@ export class TerrainService
     const render =
       this.render;
 
-    if (!render) {
+    if (
+      render ===
+        null ||
+      this.disposed
+    ) {
       return;
     }
 
@@ -309,7 +559,10 @@ export class TerrainService
           worldPosition,
         );
 
-    if (!chunkData) {
+    if (
+      chunkData ===
+      null
+    ) {
       return;
     }
 
@@ -344,6 +597,52 @@ export class TerrainService
         .getChunkKey(
           chunkCoord,
         )
+    );
+  }
+
+  private allocateRequestToken():
+    number {
+    const token =
+      this.nextRequestToken;
+
+    this.nextRequestToken +=
+      1;
+
+    if (
+      this.nextRequestToken >=
+      Number.MAX_SAFE_INTEGER
+    ) {
+      this.nextRequestToken =
+        1;
+    }
+
+    return token;
+  }
+
+  private isRequestCurrent(
+    renderKey:
+      string,
+    requestToken:
+      number,
+    requestEpoch:
+      number,
+  ): boolean {
+    return (
+      requestEpoch ===
+        this.generationEpoch &&
+      this.pendingChunkTokens.get(
+        renderKey,
+      ) ===
+        requestToken
+    );
+  }
+
+  private invalidatePendingRequest(
+    renderKey:
+      string,
+  ): void {
+    this.pendingChunkTokens.delete(
+      renderKey,
     );
   }
 }

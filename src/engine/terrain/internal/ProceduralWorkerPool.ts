@@ -65,18 +65,105 @@ interface WorkerSlot {
     boolean;
 
   jobId:
-    number | null;
+    number |
+    null;
 }
 
-export class ProceduralWorkerPool {
+export interface TerrainChunkWorkerPool {
+  requestChunkGenerationAsync(
+    coord:
+      Vector3Chunk,
+    seed:
+      number,
+  ): Promise<
+    ChunkDataMatrix
+  >;
+
+  clear(): void;
+}
+
+export type ProceduralWorkerFactory =
+  () => Worker;
+
+const DEFAULT_MAX_WORKERS =
+  2;
+
+function defaultWorkerFactory():
+  Worker {
+  return new Worker(
+    new URL(
+      "./terrain.worker.ts",
+      import.meta.url,
+    ),
+    {
+      type:
+        "module",
+    },
+  );
+}
+
+function cloneCoord(
+  coord:
+    Vector3Chunk,
+): Vector3Chunk {
+  return {
+    x:
+      Number.isFinite(
+        coord.x,
+      )
+        ? Math.trunc(
+            coord.x,
+          )
+        : 0,
+
+    y:
+      Number.isFinite(
+        coord.y,
+      )
+        ? Math.trunc(
+            coord.y,
+          )
+        : 0,
+
+    z:
+      Number.isFinite(
+        coord.z,
+      )
+        ? Math.trunc(
+            coord.z,
+          )
+        : 0,
+  };
+}
+
+function normalizeSeed(
+  seed:
+    number,
+): number {
+  return Number.isFinite(
+    seed,
+  )
+    ? Math.trunc(
+        seed,
+      )
+    : 1337;
+}
+
+export class ProceduralWorkerPool
+  implements TerrainChunkWorkerPool {
   private readonly maxWorkers:
     number;
 
+  private readonly workerFactory:
+    ProceduralWorkerFactory;
+
   private readonly workerSlots:
-    WorkerSlot[] = [];
+    WorkerSlot[] =
+      [];
 
   private readonly queuedJobs:
-    PendingTerrainJob[] = [];
+    PendingTerrainJob[] =
+      [];
 
   private readonly pendingJobs =
     new Map<
@@ -87,8 +174,15 @@ export class ProceduralWorkerPool {
   private nextJobId =
     1;
 
+  private disposed =
+    false;
+
   public constructor(
-    maxWorkers = 2,
+    maxWorkers =
+      DEFAULT_MAX_WORKERS,
+    workerFactory:
+      ProceduralWorkerFactory =
+        defaultWorkerFactory,
   ) {
     this.maxWorkers =
       Math.max(
@@ -98,9 +192,12 @@ export class ProceduralWorkerPool {
             maxWorkers,
           )
             ? maxWorkers
-            : 2,
+            : DEFAULT_MAX_WORKERS,
         ),
       );
+
+    this.workerFactory =
+      workerFactory;
 
     this.initializeWorkers();
   }
@@ -110,7 +207,29 @@ export class ProceduralWorkerPool {
       Vector3Chunk,
     seed:
       number,
-  ): Promise<ChunkDataMatrix> {
+  ): Promise<
+    ChunkDataMatrix
+  > {
+    if (
+      this.disposed
+    ) {
+      return Promise.reject(
+        new Error(
+          "ProceduralWorkerPool já foi encerrado.",
+        ),
+      );
+    }
+
+    const coordSnapshot =
+      cloneCoord(
+        coord,
+      );
+
+    const safeSeed =
+      normalizeSeed(
+        seed,
+      );
+
     if (
       this.workerSlots
         .length ===
@@ -118,17 +237,14 @@ export class ProceduralWorkerPool {
     ) {
       return Promise.resolve(
         this.generateChunkFallback(
-          coord,
-          seed,
+          coordSnapshot,
+          safeSeed,
         ),
       );
     }
 
     const jobId =
-      this.nextJobId;
-
-    this.nextJobId +=
-      1;
+      this.allocateJobId();
 
     return new Promise<
       ChunkDataMatrix
@@ -139,20 +255,10 @@ export class ProceduralWorkerPool {
       ): void => {
         this.queuedJobs.push({
           jobId,
-
-          coord: {
-            x:
-              coord.x,
-
-            y:
-              coord.y,
-
-            z:
-              coord.z,
-          },
-
-          seed,
-
+          coord:
+            coordSnapshot,
+          seed:
+            safeSeed,
           resolve,
           reject,
         });
@@ -168,10 +274,12 @@ export class ProceduralWorkerPool {
       0;
 
     for (
-      let index = 0;
+      let index =
+        0;
       index <
       this.workerSlots.length;
-      index += 1
+      index +=
+        1
     ) {
       if (
         this.workerSlots[
@@ -186,7 +294,34 @@ export class ProceduralWorkerPool {
     return active;
   }
 
+  public get queuedJobCount():
+    number {
+    return this.queuedJobs
+      .length;
+  }
+
+  public get pendingJobCount():
+    number {
+    return this.pendingJobs
+      .size;
+  }
+
+  public get workerCount():
+    number {
+    return this.workerSlots
+      .length;
+  }
+
   public clear(): void {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
+    this.disposed =
+      true;
+
     while (
       this.queuedJobs.length >
       0
@@ -215,82 +350,105 @@ export class ProceduralWorkerPool {
     this.pendingJobs.clear();
 
     for (
-      let index = 0;
+      let index =
+        0;
       index <
       this.workerSlots.length;
-      index += 1
+      index +=
+        1
     ) {
-      this.workerSlots[
-        index
-      ]?.worker.terminate();
+      const slot =
+        this.workerSlots[
+          index
+        ];
+
+      if (
+        slot ===
+        undefined
+      ) {
+        continue;
+      }
+
+      slot.worker
+        .terminate();
+
+      slot.busy =
+        false;
+
+      slot.jobId =
+        null;
     }
 
     this.workerSlots.length =
       0;
   }
 
-  private initializeWorkers():
-    void {
+  private initializeWorkers(): void {
     if (
       this.maxWorkers ===
-        0 ||
-      typeof Worker ===
-        "undefined"
+        0
     ) {
       return;
     }
 
     for (
-      let index = 0;
+      let index =
+        0;
       index <
       this.maxWorkers;
-      index += 1
+      index +=
+        1
     ) {
       try {
         const worker =
-          new Worker(
-            new URL(
-              "./terrain.worker.ts",
-              import.meta.url,
-            ),
-            {
-              type:
-                "module",
-            },
-          );
+          this.workerFactory();
 
         const slot:
           WorkerSlot = {
             worker,
-
             busy:
               false,
-
             jobId:
               null,
           };
 
-        worker.onmessage =
+        worker.addEventListener(
+          "message",
           (
             event:
-              MessageEvent<TerrainWorkerResponse>,
+              MessageEvent<
+                TerrainWorkerResponse
+              >,
           ): void => {
             this.handleWorkerMessage(
               slot,
               event.data,
             );
-          };
+          },
+        );
 
-        worker.onerror =
+        worker.addEventListener(
+          "error",
           (
             event:
               ErrorEvent,
           ): void => {
             this.handleWorkerError(
               slot,
-              event,
+              event.message,
             );
-          };
+          },
+        );
+
+        worker.addEventListener(
+          "messageerror",
+          (): void => {
+            this.handleWorkerError(
+              slot,
+              "Falha ao desserializar resposta do Worker de terreno.",
+            );
+          },
+        );
 
         this.workerSlots.push(
           slot,
@@ -301,13 +459,20 @@ export class ProceduralWorkerPool {
     }
   }
 
-  private pumpQueue():
-    void {
+  private pumpQueue(): void {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
     for (
-      let index = 0;
+      let index =
+        0;
       index <
       this.workerSlots.length;
-      index += 1
+      index +=
+        1
     ) {
       const slot =
         this.workerSlots[
@@ -315,7 +480,8 @@ export class ProceduralWorkerPool {
         ];
 
       if (
-        !slot ||
+        slot ===
+          undefined ||
         slot.busy
       ) {
         continue;
@@ -324,7 +490,10 @@ export class ProceduralWorkerPool {
       const job =
         this.queuedJobs.shift();
 
-      if (!job) {
+      if (
+        job ===
+        undefined
+      ) {
         return;
       }
 
@@ -343,17 +512,23 @@ export class ProceduralWorkerPool {
         TerrainWorkerRequest = {
           jobId:
             job.jobId,
-
           coord:
             job.coord,
-
           seed:
             job.seed,
         };
 
-      slot.worker.postMessage(
-        request,
-      );
+      try {
+        slot.worker
+          .postMessage(
+            request,
+          );
+      } catch {
+        this.finishJobWithFallback(
+          slot,
+          job.jobId,
+        );
+      }
     }
   }
 
@@ -363,6 +538,14 @@ export class ProceduralWorkerPool {
     response:
       TerrainWorkerResponse,
   ): void {
+    if (
+      this.disposed ||
+      slot.jobId !==
+        response.jobId
+    ) {
+      return;
+    }
+
     const job =
       this.pendingJobs.get(
         response.jobId,
@@ -378,25 +561,24 @@ export class ProceduralWorkerPool {
     slot.jobId =
       null;
 
-    if (job) {
+    if (
+      job !==
+      undefined
+    ) {
       if (
-        response.error
-      ) {
-        job.reject(
-          new Error(
-            response.error,
-          ),
-        );
-      } else if (
-        response.chunk
+        response.chunk !==
+          undefined &&
+        response.error ===
+          undefined
       ) {
         job.resolve(
           response.chunk,
         );
       } else {
-        job.reject(
-          new Error(
-            "Worker de terreno respondeu sem ChunkDataMatrix.",
+        job.resolve(
+          this.generateChunkFallback(
+            job.coord,
+            job.seed,
           ),
         );
       }
@@ -408,32 +590,39 @@ export class ProceduralWorkerPool {
   private handleWorkerError(
     slot:
       WorkerSlot,
-    event:
-      ErrorEvent,
+    _message:
+      string,
   ): void {
     const jobId =
       slot.jobId;
 
     if (
-      jobId !==
+      jobId ===
       null
     ) {
-      const job =
-        this.pendingJobs.get(
-          jobId,
-        );
+      return;
+    }
 
-      this.pendingJobs.delete(
+    this.finishJobWithFallback(
+      slot,
+      jobId,
+    );
+  }
+
+  private finishJobWithFallback(
+    slot:
+      WorkerSlot,
+    jobId:
+      number,
+  ): void {
+    const job =
+      this.pendingJobs.get(
         jobId,
       );
 
-      job?.reject(
-        new Error(
-          event.message ||
-            "Falha desconhecida no Worker de terreno.",
-        ),
-      );
-    }
+    this.pendingJobs.delete(
+      jobId,
+    );
 
     slot.busy =
       false;
@@ -441,7 +630,57 @@ export class ProceduralWorkerPool {
     slot.jobId =
       null;
 
+    if (
+      job !==
+      undefined
+    ) {
+      job.resolve(
+        this.generateChunkFallback(
+          job.coord,
+          job.seed,
+        ),
+      );
+    }
+
     this.pumpQueue();
+  }
+
+  private allocateJobId():
+    number {
+    for (
+      let attempts =
+        0;
+      attempts <
+      Number.MAX_SAFE_INTEGER;
+      attempts +=
+        1
+    ) {
+      const jobId =
+        this.nextJobId;
+
+      this.nextJobId +=
+        1;
+
+      if (
+        this.nextJobId >=
+        Number.MAX_SAFE_INTEGER
+      ) {
+        this.nextJobId =
+          1;
+      }
+
+      if (
+        !this.pendingJobs.has(
+          jobId,
+        )
+      ) {
+        return jobId;
+      }
+    }
+
+    throw new Error(
+      "ProceduralWorkerPool esgotou IDs de job disponíveis.",
+    );
   }
 
   private generateChunkFallback(
@@ -489,16 +728,20 @@ export class ProceduralWorkerPool {
       sizeZ;
 
     for (
-      let localX = 0;
+      let localX =
+        0;
       localX <
       sizeX;
-      localX += 1
+      localX +=
+        1
     ) {
       for (
-        let localZ = 0;
+        let localZ =
+          0;
         localZ <
         sizeZ;
-        localZ += 1
+        localZ +=
+          1
       ) {
         const worldX =
           worldOffsetX +
@@ -514,10 +757,8 @@ export class ProceduralWorkerPool {
               .evaluateBiome({
                 x:
                   worldX,
-
                 y:
                   0,
-
                 z:
                   worldZ,
               });
@@ -532,10 +773,8 @@ export class ProceduralWorkerPool {
                   .fractalNoise2D(
                     worldX *
                       0.01,
-
                     worldZ *
                       0.01,
-
                     4,
                     0.5,
                     2,
@@ -557,10 +796,12 @@ export class ProceduralWorkerPool {
           );
 
         for (
-          let localY = 0;
+          let localY =
+            0;
           localY <
           sizeY;
-          localY += 1
+          localY +=
+            1
         ) {
           const worldY =
             worldOffsetY +
@@ -612,14 +853,11 @@ export class ProceduralWorkerPool {
       coord: {
         x:
           coord.x,
-
         y:
           coord.y,
-
         z:
           coord.z,
       },
-
       sizeX,
       sizeY,
       sizeZ,
