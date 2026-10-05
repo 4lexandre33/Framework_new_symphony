@@ -1,0 +1,190 @@
+PROJETO1 — ETAPA 74 / LIFECYCLE / BOOT / SHUTDOWN
+
+OBJETIVO
+Certificar e endurecer o lifecycle do Kernel que hospeda a Camada 1.
+
+PRECONDIÇÕES
+71 — Layer 1 Baseline & Inventory
+72 — Public APIs / Contracts / Tokens
+73 — Plugin Manifests & Capability Graph
+
+ESCOPO
+Kernel lifecycle:
+
+idle
+  -> booting
+  -> running
+  -> stopping
+  -> stopped
+
+Falha de boot:
+
+idle
+  -> booting
+  -> rollback automático
+  -> status failed
+  -> phase stopped
+
+O status "failed" preserva o fato de que boot falhou.
+A phase "stopped" certifica que os recursos de runtime já foram desmontados.
+
+BOOT FAILURE ROLLBACK
+Antes da Etapa 74, boot() marcava status failed e devolvia o erro, mas dependia
+de stop() posterior para desmontar recursos parciais.
+
+A Etapa 74 muda essa regra.
+
+Qualquer falha estrita em:
+
+- architectural preflight;
+- config;
+- setup;
+- capability resolution;
+- readiness;
+- lifecycleHooks.onBoot;
+- boot timeout;
+
+aciona rollback automático antes de boot() rejeitar.
+
+O erro original continua sendo relançado.
+
+O cleanup nunca substitui o erro original de boot.
+
+ROLLBACK ORDER
+O rollback segue ordem inversa do boot order.
+
+Se nenhum boot order chegou a ser calculado, usa reverse insertion order.
+
+Plugins que chegaram a started recebem lifecycleHooks.onStop antes de dispose.
+
+Plugins que falharam antes de started não recebem onStop.
+
+DISPOSE ORDER
+Por plugin:
+
+abort controller
+-> registered disposers em reverse order
+-> ResourceScope
+-> scheduler/clock timers
+-> event/command/query/slot/watchers/waiters/service tokens
+-> capability provider detach
+-> registry state disposed
+
+A ordem interna continua pertencendo a runtime/dispose.ts.
+
+TOLERANT MODE
+tolerant=true significa:
+
+a plataforma pode continuar quando possível.
+
+Não significa:
+
+deixar plugin falho parcialmente vivo.
+
+Falhas em setup/resolve/readiness/onBoot são quarentenadas.
+
+O plugin falho é disposed e não é promovido a started.
+
+Falha de provider pode propagar failure para consumidores durante rebind; a
+Etapa 74 repete a quarentena até não restar entry failed pendente de dispose.
+
+ONSTOP
+lifecycleHooks.onStop agora é executado somente para state === "started".
+
+Isso evita chamar shutdown hook de plugin que:
+
+- nunca concluiu boot;
+- falhou em setup;
+- falhou em resolve;
+- ficou pendente em readiness;
+- já foi disposed.
+
+STOP
+stop() continua:
+
+- inverse boot order;
+- best-effort;
+- não lança por falha de onStop/disposer;
+- idempotente.
+
+Além disso:
+
+state.phase = "stopping" durante shutdown.
+state.phase = "stopped" no encerramento.
+
+IDEMPOTÊNCIA
+stop() repetido depois de stopped não executa novamente hooks/disposers.
+
+disposePlugin() repetido para plugin disposed é no-op.
+
+CONTROLLED RESTART
+A instância Kernel é SINGLE-USE.
+
+Depois de stopped:
+
+kernel.boot()
+
+é rejeitado.
+
+Restart controlado significa:
+
+1. criar nova instância de Kernel;
+2. registrar plugins novamente;
+3. executar novo boot.
+
+Motivo:
+não reutilizar:
+
+- EmitQueue encerrada;
+- AbortControllers abortados;
+- ResourceScopes disposed;
+- schedulers stopped;
+- clocks cancelados;
+- capability registry já desmontado.
+
+Isso elimina uma classe de ressurreição parcial de recursos.
+
+PLUGIN READINESS POLICY
+Todos os plugins ativos da composição atual precisam possuir exatamente uma
+chamada explícita:
+
+ctx.lifecycle.ready()
+
+A baseline Stage 74 registra a assinatura lifecycle dos plugins ativos:
+
+- ready call count;
+- onDispose call count;
+- lifecycleHooks.onBoot presence;
+- lifecycleHooks.onStop presence.
+
+Novos plugins oficialmente registrados continuam permitidos, mas também devem
+obedecer a política de readiness.
+
+CORE RUNTIME BASELINE
+A Stage 74 fingerprinta semanticamente:
+
+src/core/runtime/boot.ts
+src/core/runtime/stop.ts
+src/core/runtime/dispose.ts
+src/core/runtime/install.ts
+src/core/runtime/replace.ts
+src/core/runtime/register.ts
+
+Whitespace, comentários e CRLF não alteram fingerprint.
+
+Mudança semântica futura é permitida, mas exige recertificação explícita da
+Lifecycle Baseline.
+
+NÃO ANTECIPADO
+Stage 74 não certifica:
+
+- fixed timestep/game loop: Stage 75;
+- renderer/WebGL: Stage 76;
+- physics: Stage 77;
+- input: Stage 78;
+- workers/streaming/terrain: Stage 79;
+- resource-performance global: Stage 86;
+- hostile async recovery/context loss: Stage 87.
+
+PRÓXIMA ETAPA
+75 — Deterministic Game Loop.

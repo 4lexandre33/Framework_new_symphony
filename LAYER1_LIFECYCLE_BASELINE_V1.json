@@ -1,0 +1,252 @@
+{
+  "schemaVersion": 1,
+  "baselineId": "layer1-lifecycle-v1-stage74",
+  "requiresStages": [
+    71,
+    72,
+    73
+  ],
+  "controlledRestartPolicy": "fresh-kernel-instance",
+  "capturedCounts": {
+    "activePlugins": 24,
+    "readyCalls": 24,
+    "pluginsWithDispose": 23,
+    "pluginsWithOnBoot": 7,
+    "pluginsWithOnStop": 0,
+    "coreRuntimeFiles": 6
+  },
+  "policy": {
+    "bootFailureRollbackAutomatic": true,
+    "inverseShutdown": true,
+    "onStopOnlyForStarted": true,
+    "stopIdempotent": true,
+    "disposeIdempotent": true,
+    "tolerantFailureQuarantine": true,
+    "exactlyOneReadySignalPerActivePlugin": true,
+    "kernelInstanceSingleUse": true,
+    "controlledRestartUsesFreshKernel": true,
+    "additionalRegisteredPluginsAllowed": true,
+    "coreLifecycleSemanticChangesRequireRecertification": true,
+    "pluginLifecycleSignatureChangesRequireRecertification": true
+  },
+  "plugins": [
+    {
+      "id": "game.steam",
+      "path": "src/plugins/steam/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 0,
+      "hasOnBootHook": false,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.input",
+      "path": "src/plugins/input/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": false,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.assets",
+      "path": "src/plugins/assets/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": false,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.loop",
+      "path": "src/plugins/game-loop/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": false,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.render",
+      "path": "src/plugins/render/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": false,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.net",
+      "path": "src/plugins/net/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": true,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.physics",
+      "path": "src/plugins/physics/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": false,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.storage",
+      "path": "src/plugins/storage/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": false,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.world",
+      "path": "src/plugins/world/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": false,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.ui",
+      "path": "src/plugins/ui/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": false,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.anim",
+      "path": "src/plugins/anim/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": false,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.sprites",
+      "path": "src/plugins/sprites/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": false,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.audio",
+      "path": "src/plugins/audio/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": false,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.camera",
+      "path": "src/plugins/camera/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": true,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.ai",
+      "path": "src/plugins/ai/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": true,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.vfx",
+      "path": "src/plugins/vfx/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": false,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.terrain",
+      "path": "src/plugins/terrain/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": true,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.scripting",
+      "path": "src/plugins/scripting/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": false,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.streaming",
+      "path": "src/plugins/streaming/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": true,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.overlay",
+      "path": "src/plugins/overlay/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": false,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.security",
+      "path": "src/plugins/security/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": false,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.modding",
+      "path": "src/plugins/modding/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": true,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.monetization",
+      "path": "src/plugins/monetization/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": false,
+      "hasOnStopHook": false
+    },
+    {
+      "id": "game.debug",
+      "path": "src/plugins/debug/plugin.ts",
+      "readyCalls": 1,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": true,
+      "hasOnStopHook": false
+    }
+  ],
+  "coreRuntimeFiles": [
+    {
+      "path": "src/core/runtime/boot.ts",
+      "fingerprint": "9f3fc7db151c25828e9f16be12cb3b94f22ce95437c4baaab39d918fd89916b2"
+    },
+    {
+      "path": "src/core/runtime/stop.ts",
+      "fingerprint": "1337edfeb7b3d73dc6fc21a7b1955de019e5632c850c2c2c534de388826c2d21"
+    },
+    {
+      "path": "src/core/runtime/dispose.ts",
+      "fingerprint": "a2ecedb36587d937b77751205b1545dfd1a24df0d3f1e41e853c82acd6de14b6"
+    },
+    {
+      "path": "src/core/runtime/install.ts",
+      "fingerprint": "44fc26719f8cb814543d9932fac5c50ef57c72361e18ba6535e901e8abdf88ea"
+    },
+    {
+      "path": "src/core/runtime/replace.ts",
+      "fingerprint": "8d1568f0cde7e28c3cf3fb8e8a38e4c4f4d3777f5c38b9c3dc283db29580cc17"
+    },
+    {
+      "path": "src/core/runtime/register.ts",
+      "fingerprint": "00461dc7b34a9d91761f9441b4c0ae2463e6de94aacdfeb5cec585f5d6009778"
+    }
+  ]
+}

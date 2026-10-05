@@ -1,0 +1,72 @@
+{
+  "stage": "74",
+  "name": "Lifecycle / Boot / Shutdown",
+  "layer": 1,
+  "requiresStages": [
+    71,
+    72,
+    73
+  ],
+  "lifecycleBaselineId": "layer1-lifecycle-v1-stage74",
+  "runtimeChanges": {
+    "automaticRollbackOnStrictBootFailure": true,
+    "rollbackPreservesOriginalError": true,
+    "onStopOnlyForStartedPlugins": true,
+    "tolerantFailuresAreQuarantined": true,
+    "phaseTracksStoppingAndStopped": true,
+    "sameKernelRebootRemainsRejected": true,
+    "controlledRestartUsesFreshKernel": true
+  },
+  "capture": {
+    "activePlugins": 24,
+    "readyCalls": 24,
+    "pluginsWithDispose": 23,
+    "pluginsWithOnBoot": 7,
+    "pluginsWithOnStop": 0,
+    "coreRuntimeFiles": 6
+  },
+  "policy": {
+    "bootFailureRollbackAutomatic": true,
+    "inverseShutdown": true,
+    "onStopOnlyForStarted": true,
+    "stopIdempotent": true,
+    "disposeIdempotent": true,
+    "tolerantFailureQuarantine": true,
+    "exactlyOneReadySignalPerActivePlugin": true,
+    "kernelInstanceSingleUse": true,
+    "controlledRestartUsesFreshKernel": true,
+    "additionalRegisteredPluginsAllowed": true,
+    "coreLifecycleSemanticChangesRequireRecertification": true,
+    "pluginLifecycleSignatureChangesRequireRecertification": true
+  },
+  "localValidation": {
+    "stage71Audit": "PASS",
+    "stage72Audit": "PASS",
+    "stage73Audit": "PASS",
+    "stage74Audit": "PASS",
+    "focusedCoreTypeScript": "PASS",
+    "stage74TestsTypeScript": "PASS",
+    "runtimeBehaviorSmoke": "PASS",
+    "lifecycleBaselinePolicySmoke": "PASS",
+    "violations": 0
+  },
+  "explicitlyDeferred": [
+    "Stage 75 Deterministic Game Loop",
+    "hostile never-settling plugin promises after timeout beyond resource rollback",
+    "Stage 86 global resource/performance audit",
+    "Stage 87 hostile async recovery and failure resilience"
+  ],
+  "files": [
+    "src/core/runtime/boot.ts",
+    "src/core/runtime/stop.ts",
+    "LAYER1_LIFECYCLE_BASELINE_V1.json",
+    "ETAPA74_LAYER1_LIFECYCLE.txt",
+    "scripts/architecture/lib/layer1-lifecycle-v1.mjs",
+    "scripts/architecture/stage74-audit-lifecycle.mjs",
+    "scripts/architecture/stage74-validate-lifecycle.mjs",
+    "tests/layer1-lifecycle.test.ts",
+    "tests/layer1-lifecycle-selftest.test.ts",
+    "ETAPA74_MANIFEST.json",
+    "ETAPA74_SHA256SUMS.txt"
+  ]
+}
