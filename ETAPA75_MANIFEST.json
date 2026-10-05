@@ -1,0 +1,57 @@
+{
+  "stage": "75",
+  "name": "Deterministic Game Loop",
+  "layer": 1,
+  "requiresStages": [
+    71,
+    72,
+    73,
+    74
+  ],
+  "gameLoopBaselineId": "layer1-game-loop-v1-stage75",
+  "runtimeChanges": {
+    "fixedTimestep": true,
+    "frameDeltaClampSeconds": 0.25,
+    "maxFixedStepsPerFrame": 60,
+    "tickRateRange": [
+      1,
+      240
+    ],
+    "serializedEmitAsync": true,
+    "nextRafAfterFrameCompletion": true,
+    "pauseResumeNoCatchup": true,
+    "numericSanitization": true,
+    "reusedPayloadObjects": true,
+    "zeroExplicitHotPathObjectArrayNewAllocation": true
+  },
+  "publicApiChanged": false,
+  "localValidation": {
+    "stage71Regression": "PASS",
+    "stage72Regression": "PASS",
+    "stage73Regression": "PASS",
+    "stage74Regression": "PASS",
+    "stage75Audit": "PASS",
+    "typescriptFocused": "PASS",
+    "runtimeSmoke": "PASS",
+    "policySmoke": "PASS",
+    "violations": 0
+  },
+  "explicitlyDeferred": [
+    "Stage 76 Rendering Runtime",
+    "Stage 77 Physics Runtime consumer delta contract",
+    "Stage 78 Input Runtime"
+  ],
+  "files": [
+    "src/engine/game-loop/internal/DeterministicGameLoop.ts",
+    "LAYER1_GAME_LOOP_BASELINE_V1.json",
+    "ETAPA75_DETERMINISTIC_GAME_LOOP.txt",
+    "scripts/architecture/lib/layer1-game-loop-v1.mjs",
+    "scripts/architecture/stage75-audit-game-loop.mjs",
+    "scripts/architecture/stage75-validate-game-loop.mjs",
+    "tests/layer1-game-loop.test.ts",
+    "tests/layer1-game-loop-selftest.test.ts",
+    "tests/layer1-game-loop-plugin.test.ts",
+    "ETAPA75_MANIFEST.json",
+    "ETAPA75_SHA256SUMS.txt"
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "baselineId": "layer1-game-loop-v1-stage75",
+  "requiresStages": [
+    71,
+    72,
+    73,
+    74
+  ],
+  "policy": {
+    "fixedTimestep": true,
+    "defaultTickRate": 60,
+    "minimumTickRate": 1,
+    "maximumTickRate": 240,
+    "maximumFrameDeltaSeconds": 0.25,
+    "maximumFixedStepsPerFrame": 60,
+    "serializedTickDispatch": true,
+    "serializedRenderDispatch": true,
+    "nextRafOnlyAfterCurrentFrame": true,
+    "pauseDoesNotCatchUpWallClock": true,
+    "invalidNumbersCannotPoisonAccumulator": true,
+    "reusedTickAndRenderPayloads": true,
+    "zeroExplicitObjectArrayNewAllocationInProcessFrame": true,
+    "publicApiUnchangedFromStage72": true,
+    "semanticChangesRequireRecertification": true
+  },
+  "constants": {
+    "GAME_LOOP_DEFAULT_TICK_RATE": 60,
+    "GAME_LOOP_MIN_TICK_RATE": 1,
+    "GAME_LOOP_MAX_TICK_RATE": 240,
+    "GAME_LOOP_MAX_FRAME_DELTA_SECONDS": 0.25,
+    "GAME_LOOP_MAX_FIXED_STEPS_PER_FRAME": 60
+  },
+  "files": [
+    {
+      "path": "src/engine/game-loop/internal/DeterministicGameLoop.ts",
+      "fingerprint": "496eaca517b3dd72fe185028a2cf2f11d8eb515c76b66cc9b45977c701a598fe"
+    },
+    {
+      "path": "src/plugins/game-loop/plugin.ts",
+      "fingerprint": "37a8956da4cf8b490cdd11f758e9b1560a28c2cb3d713e019be49d4480647004"
+    },
+    {
+      "path": "src/contracts/game-loop/types.ts",
+      "fingerprint": "4542c0aa9d90ebd8018e13ce33d757abfe8d25825503a715aae7a1bef659b8c4"
+    },
+    {
+      "path": "src/tokens/game-loop.ts",
+      "fingerprint": "e1d07effa5fe7495a8b9ef4705df058daf21eab24bdb251a19ce6b15733e4dd7"
+    }
+  ],
+  "capturedHotPathAllocations": {
+    "objectLiterals": 0,
+    "arrayLiterals": 0,
+    "newExpressions": 0,
+    "total": 0
+  },
+  "capturedDispatch": {
+    "emitAsyncCalls": 2,
+    "fireAndForgetEmitCalls": 0
+  }
+}

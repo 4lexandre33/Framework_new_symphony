@@ -1,0 +1,216 @@
+PROJETO1 — ETAPA 75 / DETERMINISTIC GAME LOOP
+
+OBJETIVO
+Certificar e endurecer o runtime game.loop sem antecipar Render, Physics ou
+Input.
+
+PRECONDIÇÕES
+71 — Layer 1 Baseline & Inventory
+72 — Public APIs / Contracts / Tokens
+73 — Plugin Manifests & Capability Graph
+74 — Lifecycle / Boot / Shutdown
+
+ARQUIVO PRINCIPAL
+src/engine/game-loop/internal/DeterministicGameLoop.ts
+
+PUBLIC API
+A Etapa 75 NÃO altera:
+
+src/contracts/game-loop/types.ts
+src/tokens/game-loop.ts
+src/engine/game-loop/public/index.ts
+
+Portanto a Public API Baseline da Etapa 72 permanece válida.
+
+FIXED TIMESTEP
+Default:
+60 ticks/s
+
+Range permitido:
+1..240 ticks/s
+
+setTickRate() ignora:
+- NaN;
+- Infinity;
+- <= 0;
+- < 1;
+- > 240.
+
+Isso impede fixedDeltaTime = NaN/0/∞ e evita death spiral arbitrário via uma
+taxa sem limite.
+
+ACCUMULATOR
+Wall-clock frame delta entra no accumulator em segundos.
+
+Enquanto:
+accumulator >= fixedDelta
+
+é emitido exatamente um game.loop.tick por passo.
+
+Cada tick usa o delta capturado no início daquele passo. Se algum handler
+mudar tickRate durante o tick, o passo atual não muda retroativamente.
+
+FRAME DELTA CLAMP
+Máximo:
+0.25s
+
+Um frame de 1 segundo produz no máximo 0.25s de simulação naquele frame.
+O excedente é deliberadamente descartado da simulação e registrado apenas
+como diagnóstico interno droppedWallTimeSeconds.
+
+Isso evita spiral-of-death após:
+- debugger pause;
+- janela suspensa;
+- hitch severo;
+- retorno de background.
+
+MAX FIXED STEPS
+Máximo:
+60 fixed steps por frame.
+
+Com tick rate máximo 240 e frame clamp 0.25s:
+240 * 0.25 = 60.
+
+O limite é redundante por projeto, mas permanece como segunda barreira contra
+mudanças futuras ou edge cases de floating point.
+
+SERIAL EVENT DISPATCH
+Stage 75 troca o hot path de:
+
+ctx.events.emit(...)
+
+para:
+
+await ctx.events.emitAsync(...)
+
+para tick e render.
+
+Motivo:
+ctx.events.emit usa EmitQueue fire-and-forget. Um frame pode produzir vários
+ticks antes da fila anterior terminar. Como o GameLoop reutiliza payloads para
+evitar garbage, isso poderia fazer envelopes pendentes observarem payload já
+atualizado por um tick posterior.
+
+Com emitAsync:
+
+Tick N
+ -> todos handlers terminam
+ -> Tick N+1
+ -> todos handlers terminam
+ -> Render
+
+O próximo requestAnimationFrame só é agendado depois que processFrame terminou.
+
+Resultado:
+- zero overlap entre fixed ticks;
+- zero overlap entre frames do próprio GameLoop;
+- payload reutilizado permanece estável durante cada dispatch;
+- consumidores async podem await sem ver o tick seguinte durante seu handler.
+
+HOT PATH / GC
+processFrame não contém:
+- new expression;
+- object literal;
+- array literal.
+
+Payloads são criados uma única vez:
+- tickPayload;
+- renderPayload.
+
+Eles são mutados e reutilizados somente após o dispatch anterior completar.
+
+O Core ainda cria envelopes/Promises para o EventBus; Stage 75 não altera o
+contrato global do Core. A garantia aqui é zero allocation explícita de payload
+ou coleção no hot path do GameLoop.
+
+INTERPOLAÇÃO
+Render recebe:
+
+alphaInterpolation = accumulator / fixedDelta
+
+limitado para:
+0 <= alpha < 1
+
+Render continua separado dos fixed ticks.
+
+A implementação visual do alpha será auditada na Etapa 76 — Rendering Runtime.
+
+PAUSE / RESUME
+pause():
+- interrompe tick;
+- interrompe game.loop.render;
+- RAF continua vivo para manter o runtime responsivo.
+
+resume():
+- rebasa lastTime no relógio atual;
+- tempo passado em pause NÃO entra no accumulator;
+- não existe catch-up de vários segundos após resume.
+
+TIMESTAMP SAFETY
+Timestamp NaN/Infinity produz delta 0.
+
+Clock regressivo:
+- frame atual recebe delta 0;
+- lastTime é rebasado;
+- próximo timestamp válido continua da nova base.
+
+Nunca deve surgir:
+- accumulator NaN;
+- alpha NaN;
+- alpha negativo;
+- delta negativo.
+
+FPS
+FPS usa frames / elapsed window, e não apenas frameCounter bruto quando a
+janela excede exatamente 1000ms.
+
+START / STOP
+start() é idempotente enquanto running.
+
+stop():
+- running=false;
+- cancela RAF pendente;
+- é idempotente.
+
+Se stop/pause ocorrer durante handler de tick, o loop não inicia ticks/render
+adicionais naquele frame.
+
+PLUGIN LIFECYCLE
+src/plugins/game-loop/plugin.ts continua:
+- criando DeterministicGameLoop no setup;
+- definindo tick/render events;
+- registrando pause/resume commands;
+- iniciando somente em kernel.booted;
+- parando e removendo handlers no onDispose;
+- lifecycle.ready() exatamente uma vez.
+
+BASELINE
+LAYER1_GAME_LOOP_BASELINE_V1.json
+
+ID:
+layer1-game-loop-v1-stage75
+
+A baseline fingerprinta semanticamente:
+- DeterministicGameLoop.ts;
+- game-loop/plugin.ts;
+- contracts/game-loop/types.ts;
+- tokens/game-loop.ts.
+
+Mudanças futuras são permitidas, mas exigem recertificação explícita.
+
+NÃO ANTECIPADO
+Stage 75 não certifica:
+- Three.js/render targets/context loss: Stage 76;
+- Rapier/fixed physics step consumer correctness: Stage 77;
+- keyboard/pointer lock/gamepad: Stage 78;
+- workers/streaming/terrain: Stage 79.
+
+NOTA PARA STAGE 77
+O contrato canônico do tick usa:
+
+deltaSeconds
+
+A integração Physics será auditada na Etapa 77; Stage 75 não modifica Physics.
+
+PRÓXIMA ETAPA
+76 — Rendering Runtime.
