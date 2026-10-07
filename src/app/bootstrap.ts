@@ -24,6 +24,7 @@ import { ModdingToken } from "../tokens/modding";
 import { MonetizationToken } from "../tokens/monetization";
 import { createEngineServices, type EngineServices } from "./EngineServices";
 import { createEnginePlugins } from "./createEnginePlugins";
+import { createProjectPlugins } from "../project";
 import { getErrorMessage } from "./errors";
 import { DebugHud } from "../debug/hud/DebugHud";
 import { HudRenderer } from "../debug/hud/HudRenderer";
@@ -91,6 +92,10 @@ export async function bootstrap(): Promise<void> {
     }
 
     hud.appendLog("✅ Plugins registrados.");
+
+    for (const plugin of createProjectPlugins()) {
+      kernel.register(plugin);
+    }
     hud.appendLog("⏳ Executando Kernel.boot()...");
 
     await kernel.boot();

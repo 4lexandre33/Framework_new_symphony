@@ -1,7 +1,14 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use tauri::Manager;
+
+const MAX_MOD_MANIFEST_BYTES: u64 = 1024 * 1024;
+const MAX_IDENTIFIER_LEN: usize = 128;
+const MAX_TEXT_LEN: usize = 8 * 1024;
+const MAX_LOCAL_PATH_LEN: usize = 4096;
+const MAX_WORKSHOP_ID_LEN: usize = 20;
+const MAX_TITLE_LEN: usize = 128;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -72,12 +79,33 @@ pub async fn modding_scan_local_mods(
             }
         };
 
+        // Não segue symlink de diretório no discovery de mods.
         if !file_type.is_dir() {
             continue;
         }
 
         let manifest_path = entry.path().join("mod.json");
         if !manifest_path.is_file() {
+            continue;
+        }
+
+        let metadata = match fs::metadata(&manifest_path) {
+            Ok(metadata) => metadata,
+            Err(error) => {
+                eprintln!(
+                    "[Rust Modding] Falha ao ler metadata de {:?}: {error}",
+                    manifest_path
+                );
+                continue;
+            }
+        };
+
+        if metadata.len() > MAX_MOD_MANIFEST_BYTES {
+            eprintln!(
+                "[Rust Modding] Manifesto ignorado por exceder {} bytes: {:?}",
+                MAX_MOD_MANIFEST_BYTES,
+                manifest_path
+            );
             continue;
         }
 
@@ -93,7 +121,17 @@ pub async fn modding_scan_local_mods(
         };
 
         match serde_json::from_str::<ModManifestDto>(&content) {
-            Ok(manifest) => manifests.push(manifest),
+            Ok(manifest) => {
+                if let Err(error) = validate_manifest(&manifest) {
+                    eprintln!(
+                        "[Rust Modding] Manifesto rejeitado {:?}: {error}",
+                        manifest_path
+                    );
+                    continue;
+                }
+
+                manifests.push(manifest);
+            }
             Err(error) => {
                 eprintln!(
                     "[Rust Modding] Manifesto inválido {:?}: {error}",
@@ -111,22 +149,12 @@ pub async fn modding_scan_local_mods(
 pub async fn modding_download_workshop_item(
     item_id: String,
 ) -> Result<bool, String> {
-    let normalized = item_id.trim();
+    validate_workshop_item_id(&item_id)?;
 
-    if normalized.is_empty() {
-        return Err("Workshop item_id vazio.".to_string());
-    }
-
-    normalized
-        .parse::<u64>()
-        .map_err(|_| format!("Workshop item_id inválido: {normalized}"))?;
-
-    println!(
-        "[Rust Modding] Solicitação de download de item da Oficina da Steam: {}",
-        normalized
-    );
-
-    Ok(true)
+    Err(
+        "Bridge legado modding_download_workshop_item desabilitado: use o adapter Steamworks real."
+            .to_string(),
+    )
 }
 
 #[tauri::command]
@@ -135,57 +163,257 @@ pub async fn modding_publish_workshop_item(
     title: String,
     description: String,
 ) -> Result<String, String> {
-    let normalized_title = title.trim();
-    if normalized_title.is_empty() {
-        return Err("Título do mod é obrigatório.".to_string());
-    }
+    validate_publish_request(
+        &local_folder_path,
+        &title,
+        &description,
+    )?;
 
     let folder = PathBuf::from(local_folder_path.trim());
-    validate_mod_directory(&folder)?;
+    let canonical_folder = validate_mod_directory(&folder)?;
 
-    let canonical_folder = folder
-        .canonicalize()
-        .map_err(|error| format!("Falha ao normalizar pasta do mod {:?}: {error}", folder))?;
-
-    println!(
-        "[Rust Modding] Solicitação de publicação na Oficina da Steam: {} | Pasta: {:?} | Descrição: {} bytes",
-        normalized_title,
-        canonical_folder,
-        description.len()
-    );
-
-    let identity = format!(
-        "{}|{}",
-        normalized_title,
-        canonical_folder.to_string_lossy()
-    );
-
-    Ok(format!("ugc_published_{}", item_id_hash(&identity)))
+    Err(format!(
+        "Publicação Workshop nativa ainda não configurada para a pasta segura {:?}.",
+        canonical_folder
+    ))
 }
 
-fn validate_mod_directory(path: &Path) -> Result<(), String> {
-    if !path.exists() {
-        return Err(format!("Pasta do mod não existe: {:?}", path));
+fn validate_manifest(
+    manifest: &ModManifestDto,
+) -> Result<(), String> {
+    validate_identifier(&manifest.mod_id, "mod_id")?;
+    validate_text(&manifest.name, "name", MAX_TEXT_LEN)?;
+    validate_text(&manifest.version, "version", MAX_IDENTIFIER_LEN)?;
+    validate_text(&manifest.author, "author", MAX_TEXT_LEN)?;
+    validate_text(&manifest.description, "description", MAX_TEXT_LEN)?;
+    validate_text(
+        &manifest.min_engine_version,
+        "min_engine_version",
+        MAX_IDENTIFIER_LEN,
+    )?;
+
+    if let Some(entry_script) = manifest.entry_script.as_deref() {
+        validate_relative_mod_path(entry_script, "entry_script")?;
     }
 
-    if !path.is_dir() {
-        return Err(format!("Caminho do mod não é diretório: {:?}", path));
+    for override_entry in manifest.overrides.as_deref().unwrap_or(&[]) {
+        validate_text(
+            &override_entry.virtual_path,
+            "override.virtual_path",
+            MAX_TEXT_LEN,
+        )?;
+        validate_relative_mod_path(
+            &override_entry.real_path,
+            "override.real_path",
+        )?;
+        validate_identifier(
+            &override_entry.mod_id,
+            "override.mod_id",
+        )?;
+
+        if override_entry.mod_id != manifest.mod_id {
+            return Err(
+                "override.mod_id precisa corresponder ao mod_id do manifesto."
+                    .to_string(),
+            );
+        }
+
+        if !override_entry.priority.is_finite() {
+            return Err(
+                "override.priority precisa ser finito."
+                    .to_string(),
+            );
+        }
     }
 
-    let manifest_path = path.join("mod.json");
-    if !manifest_path.is_file() {
-        return Err(format!("mod.json não encontrado em {:?}", path));
+    for dependency in manifest.dependencies.as_deref().unwrap_or(&[]) {
+        validate_identifier(
+            &dependency.mod_id,
+            "dependency.mod_id",
+        )?;
+        validate_text(
+            &dependency.min_version,
+            "dependency.min_version",
+            MAX_IDENTIFIER_LEN,
+        )?;
     }
 
     Ok(())
 }
 
-fn item_id_hash(value: &str) -> u64 {
-    let mut hash = 5381u64;
-
-    for byte in value.bytes() {
-        hash = ((hash << 5).wrapping_add(hash)).wrapping_add(byte as u64);
+fn validate_publish_request(
+    local_folder_path: &str,
+    title: &str,
+    description: &str,
+) -> Result<(), String> {
+    let normalized_path = local_folder_path.trim();
+    if normalized_path.is_empty()
+        || normalized_path.len() > MAX_LOCAL_PATH_LEN
+        || normalized_path.contains('\0')
+    {
+        return Err(
+            "local_folder_path inválido."
+                .to_string(),
+        );
     }
 
-    hash
+    validate_text(
+        title.trim(),
+        "title",
+        MAX_TITLE_LEN,
+    )?;
+
+    if description.len() > MAX_TEXT_LEN
+        || description.contains('\0')
+    {
+        return Err(
+            "description inválida."
+                .to_string(),
+        );
+    }
+
+    Ok(())
+}
+
+fn validate_workshop_item_id(
+    item_id: &str,
+) -> Result<u64, String> {
+    let normalized = item_id.trim();
+
+    if normalized.is_empty()
+        || normalized.len() > MAX_WORKSHOP_ID_LEN
+        || !normalized.bytes().all(|byte| byte.is_ascii_digit())
+    {
+        return Err(
+            "Workshop item_id inválido."
+                .to_string(),
+        );
+    }
+
+    normalized
+        .parse::<u64>()
+        .map_err(|_| "Workshop item_id fora do intervalo suportado.".to_string())
+}
+
+fn validate_identifier(
+    value: &str,
+    label: &str,
+) -> Result<(), String> {
+    if value.is_empty()
+        || value.len() > MAX_IDENTIFIER_LEN
+        || value.contains('\0')
+    {
+        return Err(
+            format!("{label} inválido."),
+        );
+    }
+
+    Ok(())
+}
+
+fn validate_text(
+    value: &str,
+    label: &str,
+    max_len: usize,
+) -> Result<(), String> {
+    if value.is_empty()
+        || value.len() > max_len
+        || value.contains('\0')
+    {
+        return Err(
+            format!("{label} inválido."),
+        );
+    }
+
+    Ok(())
+}
+
+fn validate_relative_mod_path(
+    value: &str,
+    label: &str,
+) -> Result<(), String> {
+    if value.is_empty()
+        || value.len() > MAX_LOCAL_PATH_LEN
+        || value.contains('\0')
+    {
+        return Err(
+            format!("{label} inválido."),
+        );
+    }
+
+    let path = Path::new(value);
+
+    if path.is_absolute() {
+        return Err(
+            format!("{label} precisa ser relativo ao diretório do mod."),
+        );
+    }
+
+    if path
+        .components()
+        .any(|component| matches!(
+            component,
+            Component::ParentDir
+                | Component::RootDir
+                | Component::Prefix(_)
+        ))
+    {
+        return Err(
+            format!("{label} contém traversal de diretório."),
+        );
+    }
+
+    Ok(())
+}
+
+fn validate_mod_directory(
+    path: &Path,
+) -> Result<PathBuf, String> {
+    if !path.exists() {
+        return Err(
+            format!("Pasta do mod não existe: {:?}", path),
+        );
+    }
+
+    if !path.is_dir() {
+        return Err(
+            format!("Caminho do mod não é diretório: {:?}", path),
+        );
+    }
+
+    let canonical = path
+        .canonicalize()
+        .map_err(|error| {
+            format!(
+                "Falha ao normalizar pasta do mod {:?}: {error}",
+                path
+            )
+        })?;
+
+    let manifest_path = canonical.join("mod.json");
+
+    if !manifest_path.is_file() {
+        return Err(
+            format!("mod.json não encontrado em {:?}", canonical),
+        );
+    }
+
+    let metadata = fs::metadata(&manifest_path)
+        .map_err(|error| {
+            format!(
+                "Falha ao ler metadata de {:?}: {error}",
+                manifest_path
+            )
+        })?;
+
+    if metadata.len() > MAX_MOD_MANIFEST_BYTES {
+        return Err(
+            format!(
+                "mod.json excede o limite de {} bytes.",
+                MAX_MOD_MANIFEST_BYTES
+            ),
+        );
+    }
+
+    Ok(canonical)
 }

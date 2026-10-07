@@ -1,0 +1,38 @@
+ETAPA 85 — NATIVE / TAURI INFRASTRUCTURE
+========================================
+
+Objetivo normativo (SPEC.md):
+- bridges nativas;
+- IPC schema;
+- input validation;
+- permission model;
+- error mapping;
+- security;
+- shutdown.
+
+Implementação deste pacote:
+1. Auditoria executável de paridade entre #[tauri::command], generate_handler! e invoke() TypeScript.
+2. Proibição executável de invoke<any> e invoke dinâmico.
+3. Hardening de input no boundary Modding (limites, traversal, canonicalização, manifesto).
+4. Hardening de Monetization IPC em modo fail-closed; remove sucesso/SteamID/segredo sintético nativo.
+5. Tauri global API desabilitada; ESM imports permanecem o boundary.
+6. CSP explícita somente para produção; devCsp permanece null para não quebrar Vite/Tauri dev.
+7. Capability Tauri default permanece limitada à janela main e sem wildcard/shell/fs.
+8. Shutdown Steam nativo certificado por stop + join + Drop + RunEvent::Exit.
+9. Regressões Stage72/73/74/84 são reexecutadas pelo audit.
+10. PASS final exige native smoke real e shutdown observado em tests/debug-execution.log.
+
+Fluxo de validação:
+  npm run stage85:validate
+  npm run stage85:smoke
+  # aguarde a janela abrir e feche-a normalmente
+  npm run stage85:finalize
+
+Saída final permitida somente pelo finalizer após evidência:
+  STAGE 85 PASS
+
+Observações:
+- Steam pode estar online ou em fallback offline controlado; Steam é opcional.
+- Este pacote não antecipa Stage 88 (produção Steam/Tauri) nem Stage 105 (extração platform package).
+- Nenhum segundo Kernel, renderer ou game loop é introduzido.
+- Nenhum código específico de jogo é movido para a infraestrutura nativa.

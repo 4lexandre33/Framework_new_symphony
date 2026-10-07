@@ -204,6 +204,47 @@ Nenhuma stage é concluída porque um `.md` diz PASS.
 
 ---
 
+## 5.1 Contrato normativo de substituição de projetos e vibecoding
+
+A engine é **substrato genérico** para jogos 2D/3D, ferramentas e aplicações.
+Cada jogo/app é um consumidor isolado, removível e substituível. Uma IA
+orientada por vibecoding deve poder construir um novo projeto sem editar
+Kernel, módulos internos, plugins de infraestrutura ou Domain compartilhado.
+
+- **Core/engine:** possui lifecycle, loop, renderer, física e capabilities.
+  Não conhece entidades, mapas, regras ou personagens específicos de jogos.
+- **Contracts/ports:** definem capacidades mínimas, assinaturas estáveis,
+  ownership, ciclo de vida e limites de erro. Dependências fluem para
+  abstrações, nunca de engine para consumidores.
+- **Adapters:** implementam ports e isolam Three.js, Rapier, WebView/DOM,
+  Tauri/Steam e fontes de assets; backends podem evoluir independentemente.
+- **Projeto consumidor:** declara composição, cenas, mecânicas, assets,
+  controllers e seus adapters, usando APIs públicas. Seu plugin de
+  composição é somente cola de integração, não repositório de gameplay.
+- **IA/vibecoding:** trabalha prioritariamente no projeto consumidor;
+  alterações em engine requerem escopo independente e invariantes aprovadas.
+
+Na fase atual, `src/project.ts` e `src/projects/<nome>/**` exercem o papel
+local de composition root e consumers. O bootstrap da engine conhece apenas
+`createProjectPlugins()`. Alternar para outro projeto ou host vazio altera
+somente a composição do consumidor. **Não considerar isto** implementação
+antecipada de `defineProject`, `createApplication`, packages ou presets das
+Stages 91–116.
+
+Aceite verificável: projeto A -> unload/dispose -> projeto B (ou host vazio)
+sem alterações em `src/core/**`, `src/engine/**` e `src/plugins/**`; nenhum
+código de jogo em plugins canônicos ou internals; sem leaks relevantes de
+RAF/listeners/physics/GPU/IPC; sem importar deep internals. Public APIs com
+lacunas devem virar issue de evolução de contrato, não hacks via internals.
+
+A API de câmera v1 ainda não possui operação dedicada para atualizar pose de
+câmera virtual. Um exemplo pode adaptar seus descritores somente sob eventos
+de input, via `CameraApi`, sem acessar internals ou sobrescrever diretamente
+a câmera do Three.js. A evolução do port merece issue própria antes da
+productização; não alterar API congelada de forma implícita.
+
+---
+
 ## 6. Arquitetura lógica preservada
 
 ```text

@@ -14,7 +14,11 @@
     "arch:audit": "node agents.mjs",
     "arch:check": "node scripts/architecture/check-boundaries.mjs && node scripts/architecture/check-dependencies.mjs",
     "arch:dependencies": "node scripts/architecture/check-dependencies.mjs",
-    "arch:migrate": "node scripts/architecture/stage43-migration-status.mjs"
+    "arch:migrate": "node scripts/architecture/stage43-migration-status.mjs",
+    "stage85:audit": "node scripts/architecture/stage85-audit-native-tauri.mjs",
+    "stage85:validate": "node scripts/architecture/stage85-validate-native-tauri.mjs",
+    "stage85:smoke": "node tests/run-tauri-logged.mjs",
+    "stage85:finalize": "node scripts/architecture/stage85-finalize-native-tauri.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.12.0",

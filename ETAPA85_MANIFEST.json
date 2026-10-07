@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "stage": 85,
+  "title": "Native/Tauri Infrastructure",
+  "installedAt": "2026-10-07T22:55:25.613Z",
+  "files": [
+    ".freeze-lock.json",
+    "ETAPA85_NATIVE_TAURI_INFRASTRUCTURE.txt",
+    "LAYER1_NATIVE_TAURI_BASELINE_V1.json",
+    "package.json",
+    "scripts/architecture/lib/layer1-native-tauri-v1.mjs",
+    "scripts/architecture/stage85-audit-native-tauri.mjs",
+    "scripts/architecture/stage85-finalize-native-tauri.mjs",
+    "scripts/architecture/stage85-validate-native-tauri.mjs",
+    "src-tauri/src/modding.rs",
+    "src-tauri/src/monetization.rs",
+    "src-tauri/tauri.conf.json",
+    "src/engine/modding/internal/TauriModdingDriver.ts",
+    "src/engine/monetization/internal/TauriMonetizationDriver.ts",
+    "tests/layer1-native-tauri-contract.test.ts",
+    "tests/layer1-native-tauri-security.test.ts",
+    "tests/layer1-native-tauri-selftest.test.ts"
+  ]
+}

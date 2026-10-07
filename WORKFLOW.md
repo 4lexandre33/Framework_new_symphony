@@ -145,6 +145,17 @@ Se este ticket for o ticket de bootstrap/decomposição do programa:
 7. não replique uma task para cada bullet da SPEC quando puderem ser entregues com segurança juntas;
 8. não implemente código no mesmo ticket de planejamento, salvo exigência explícita.
 
+## Regra adicional — projetos consumidores e vibecoding
+
+Em tickets de cenas, gameplay, câmeras específicas, exemplos ou aplicações,
+concentre novas implementações em `src/projects/<nome>/**` e na seleção
+explícita de `src/project.ts`. A engine (`src/core`, `src/engine`,
+`src/plugins`) permanece reutilizável e ignorante do conteúdo do produto.
+Um plugin de projeto apenas faz o wiring de ports, adapters e lifecycle;
+não recebe lógica de jogo específica. Se a API pública não atender, abra
+issue separada para contrato/adapters e não cruze `/internal` nem mude
+freeze. Verifique substituição do projeto por outro ou pelo host vazio.
+
 ## Política arquitetural
 
 A transformação é incremental.

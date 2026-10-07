@@ -23,6 +23,40 @@ Em caso de conflito:
 
 ## Regras permanentes
 
+### Isolamento obrigatório: engine versus projeto consumidor
+
+**Um novo jogo, exemplo ou aplicativo NÃO deve exigir modificações no Kernel,
+em `src/engine/**/internal`, nos plugins canônicos em `src/plugins/**`,
+nos contracts ou nos tokens já estáveis.** O host técnico continua genérico.
+
+- `src/project.ts` é a configuração de **projeto consumidor** do host
+  atual; `src/projects/<nome>/**` contém exclusivamente cenas, assets,
+  regras, controles e adapters daquele projeto. Para trocar de jogo, troque
+  a composição de projeto; não copie gameplay para a fundação.
+- Plugins podem ser adaptadores de composição, **não depósitos de gameplay**:
+  um plugin do consumidor apenas requisita capabilities, conecta eventos,
+  gerencia inicialização/teardown e delega a sistemas do próprio projeto.
+- Programe contra **ports/interfaces**; implemente dependências concretas em
+  adapters trocáveis. Fluxo permitido: projeto/orquestração -> ports públicos
+  -> adapters -> engine/capabilities. Inverter o fluxo é proibido.
+- Three.js, Rapier, DOM, Tauri e Steam pertencem aos adapters técnicos
+  apropriados. A lógica semântica do projeto não conhece `internal/**`,
+  `THREE.Mesh`, `RAPIER.World`, `window` nem IPC de plataforma.
+- Toda dependência tem ownership e dispose. Prove unload/reload, listeners,
+  corpos de física e GPU sem vazamentos; evite alocação por tick/render.
+- O código de projeto NÃO pode ser ativado por porta fixa do Vite, detecção
+  implícita do host, ou `game.debug`. Só a composição explícita seleciona
+  o consumidor ativo; host sem projeto deve ser possível.
+- Para vibecoding: a IA edita o diretório do projeto consumidor e sua
+  composição. Uma extensão da API de engine é **issue separada**, com
+  contrato, testes, audit e autorização de freeze quando exigida.
+- Não construir agora packages/presets genéricos antes da Stage 91–99;
+  `src/project.ts` é uma composição **local transitória**, não API pública
+  definitiva do framework.
+
+Critério de aceite arquitetural: substituir um projeto por outro (ou nenhum)
+sem alterar `src/core/**`, `src/engine/**` e `src/plugins/**`.
+
 ### Não reescrever a fundação
 
 Não crie um segundo:

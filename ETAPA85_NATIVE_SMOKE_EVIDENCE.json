@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "stage": 85,
+  "status": "PASS",
+  "finalizedAt": "2026-10-07T23:11:48.520Z",
+  "nativeBinaryStarted": true,
+  "nativeShutdownObserved": true,
+  "steamStateObserved": "online",
+  "runtimeFingerprint": "1287f5243d6341819335e961ff098f8308e65fbdc6dcb9ea9e6eb336e6932f3f"
+}
