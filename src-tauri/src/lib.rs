@@ -4,65 +4,41 @@ mod overlay;
 mod security;
 mod steam;
 
-use std::sync::Mutex;
-use std::thread;
-use std::time::Duration;
 use steam::SteamState;
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    std::env::set_var("SteamAppId", "480");
-    std::env::set_var("SteamGameId", "480");
+    let steam_state = SteamState::initialize();
 
-    println!("[Steamworks Rust Backend] Tentando inicializar Steamworks SDK com AppID 480...");
-
-    let (steam_client, single_user) = match steamworks::Client::init_app(steamworks::AppId(480)) {
-        Ok((client, single_user)) => {
-            println!("[Steamworks Rust Backend] ✅ CONECTADO COM SUCESSO À STEAM! (AppID 480)");
-            (Some(client), Some(single_user))
-        }
-        Err(err1) => {
-            match steamworks::Client::init() {
-                Ok((client, single_user)) => {
-                    println!("[Steamworks Rust Backend] ✅ CONECTADO VIA steam_appid.txt!");
-                    (Some(client), Some(single_user))
-                }
-                Err(err2) => {
-                    println!("============================================================");
-                    println!("[Steamworks Rust Backend] ⚠️ FALHA AO CONECTAR À STEAM!");
-                    println!("  Motivo init_app: {:?}", err1);
-                    println!("  Motivo init:     {:?}", err2);
-                    println!("  DICA: Verifique se o CMD e a Steam estão no mesmo nível de privilégio (UAC).");
-                    println!("============================================================");
-                    (None, None)
-                }
-            }
-        }
-    };
-
-    if let Some(single_user) = single_user {
-        thread::spawn(move || {
-            loop {
-                single_user.run_callbacks();
-                thread::sleep(Duration::from_millis(100));
-            }
-        });
-    }
-
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .manage(SteamState {
-            client: Mutex::new(steam_client),
-        })
+        .manage(steam_state)
         .invoke_handler(tauri::generate_handler![
+            steam::steam_runtime_status,
             steam::steam_is_initialized,
             steam::steam_get_user,
             steam::steam_unlock_achievement,
             steam::steam_set_stat,
             steam::steam_store_stats,
             steam::steam_create_lobby,
+            steam::steam_join_lobby,
+            steam::steam_leave_lobby,
+            steam::steam_set_lobby_data,
+            steam::steam_get_lobby_data,
             steam::steam_send_p2p_packet,
             steam::steam_read_p2p_packet,
+            steam::steam_accept_p2p_session,
+            steam::steam_close_p2p_session,
+            steam::steam_get_p2p_session_state,
+            steam::steam_cloud_status,
+            steam::steam_cloud_list_files,
+            steam::steam_cloud_write_file,
+            steam::steam_cloud_read_file,
+            steam::steam_cloud_delete_file,
+            steam::steam_overlay_is_enabled,
+            steam::steam_activate_overlay,
+            steam::steam_workshop_download_item,
             overlay::overlay_set_ignore_cursor_events,
             overlay::overlay_set_always_on_top,
             overlay::overlay_get_taskbar_bounds,
@@ -77,6 +53,12 @@ pub fn run() {
             monetization::monetization_fetch_inventory,
             monetization::monetization_consume_item
         ])
-        .run(tauri::generate_context!())
-        .expect("Erro durante a execução do aplicativo Tauri");
+        .build(tauri::generate_context!())
+        .expect("Erro ao construir o aplicativo Tauri");
+
+    app.run(|app_handle, event| {
+        if matches!(event, tauri::RunEvent::Exit) {
+            app_handle.state::<SteamState>().shutdown();
+        }
+    });
 }

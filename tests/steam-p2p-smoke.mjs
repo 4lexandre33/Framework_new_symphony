@@ -2,71 +2,81 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const ROOT_DIR = process.cwd();
+const root = process.cwd();
 const failures = [];
-const successes = [];
 
-function checkFileExists(relPath) {
-  const fullPath = path.join(ROOT_DIR, relPath);
-  if (!fs.existsSync(fullPath)) {
-    failures.push(`Arquivo essencial ausente: ${relPath}`);
-    return false;
+function read(relativePath) {
+  const target = path.join(root, ...relativePath.split("/"));
+  if (!fs.existsSync(target)) {
+    failures.push(`Arquivo ausente: ${relativePath}`);
+    return "";
   }
-  successes.push(`Arquivo encontrado: ${relPath}`);
-  return true;
+  return fs.readFileSync(target, "utf8");
 }
 
-function checkFileContains(relPath, snippet, label) {
-  const fullPath = path.join(ROOT_DIR, relPath);
-  if (!fs.existsSync(fullPath)) return;
-  const content = fs.readFileSync(fullPath, "utf8");
-  if (!content.includes(snippet)) {
-    failures.push(`O arquivo ${relPath} nao contem: '${label || snippet}'`);
-  } else {
-    successes.push(`Validado em ${relPath}: ${label || snippet}`);
-  }
+const native = read("src-tauri/src/steam.rs");
+const host = read("src-tauri/src/lib.rs");
+const steamPlugin = read("src/plugins/steam/plugin.ts");
+const netPlugin = read("src/plugins/net/plugin.ts");
+const bridge = read("src/engine/steam/internal/SteamBridgeService.ts");
+const graph = JSON.parse(read("LAYER1_CAPABILITY_GRAPH_BASELINE_V1.json") || "{}");
+
+for (const snippet of [
+  "matchmaking.create_lobby",
+  "matchmaking.join_lobby",
+  "set_lobby_data",
+  "lobby_data",
+  "SteamAPI_ISteamNetworking_SendP2PPacket",
+  "SteamAPI_ISteamNetworking_ReadP2PPacket",
+  "SteamAPI_ISteamNetworking_GetP2PSessionState",
+  "steam_accept_p2p_session",
+  "steam_close_p2p_session",
+]) {
+  if (!native.includes(snippet)) failures.push(`Backend Steam sem ${snippet}`);
 }
 
-console.log("============================================================");
-console.log("  Auditoria de Sanidade P2P & Lobbies da Steam (Tauri 2)    ");
-console.log("============================================================\n");
+for (const command of [
+  "steam_create_lobby",
+  "steam_join_lobby",
+  "steam_leave_lobby",
+  "steam_set_lobby_data",
+  "steam_get_lobby_data",
+  "steam_send_p2p_packet",
+  "steam_read_p2p_packet",
+  "steam_accept_p2p_session",
+  "steam_close_p2p_session",
+  "steam_get_p2p_session_state",
+]) {
+  if (!host.includes(`steam::${command}`)) failures.push(`Invoke handler sem ${command}`);
+}
 
-// 1. Arquivos da camada Steam P2P
-checkFileExists("src/contracts/steam/net-types.ts");
-checkFileExists("src/tokens/steam-net.ts");
-checkFileExists("src-tauri/src/steam.rs");
-checkFileExists("src-tauri/src/lib.rs");
-checkFileExists("src/plugins/steam/plugin.ts");
+if (!bridge.includes("implements SteamApi, SteamNetworkApi")) {
+  failures.push("Bridge interno não satisfaz SteamNetworkApi.");
+}
 
-// 2. Validação dos Contratos de Rede TypeScript
-checkFileContains("src/contracts/steam/net-types.ts", "export type P2PSendType", "Tipo P2PSendType");
-checkFileContains("src/contracts/steam/net-types.ts", "CreateLobbyCommand", "Comando CreateLobbyCommand");
-checkFileContains("src/contracts/steam/net-types.ts", "SendP2PPacketCommand", "Comando SendP2PPacketCommand");
+if (!netPlugin.includes("await steamApi") || !netPlugin.includes(".checkAvailability();")) {
+  failures.push("game.net não aguarda checkAvailability antes do bind Steam P2P.");
+}
 
-// 3. Validação das Capabilities
-checkFileContains("src/tokens/steam-net.ts", "SteamNetworkToken", "Capability Token SteamNetworkToken");
-checkFileContains("src/tokens/steam.ts", "createLobby", "Método createLobby em SteamApi");
-checkFileContains("src/tokens/steam.ts", "sendP2PPacket", "Método sendP2PPacket em SteamApi");
+if (steamPlugin.includes("SteamNetworkToken") || steamPlugin.includes("ctx.caps.provide(SteamNetworkToken")) {
+  failures.push("game.steam.net foi ativada indevidamente na Stage84.");
+}
 
-// 4. Validação dos Bindings Rust
-checkFileContains("src-tauri/src/steam.rs", "pub fn steam_create_lobby", "Comando Rust steam_create_lobby");
-checkFileContains("src-tauri/src/steam.rs", "pub fn steam_send_p2p_packet", "Comando Rust steam_send_p2p_packet");
-checkFileContains("src-tauri/src/steam.rs", "pub fn steam_read_p2p_packet", "Comando Rust steam_read_p2p_packet");
-checkFileContains("src-tauri/src/lib.rs", "steam::steam_create_lobby", "Handler de tauri steam_create_lobby");
-checkFileContains("src-tauri/src/lib.rs", "steam::steam_send_p2p_packet", "Handler de tauri steam_send_p2p_packet");
+if (!(graph.dormantOwnedCapabilitiesAtCapture ?? []).includes("game.steam.net")) {
+  failures.push("Baseline Stage73 deixou de manter game.steam.net como dormente.");
+}
 
-console.log("\n--- Resultados ---");
-for (const ok of successes) {
-  console.log(`\x1b[32m[OK]\x1b[0m ${ok}`);
+if ((graph.graph?.providers ?? []).some((entry) => entry.capabilityId === "game.steam.net")) {
+  failures.push("Capability graph contém provider indevido para game.steam.net.");
+}
+
+if (native.includes("mock_lobby") || native.includes("SystemTime::now()")) {
+  failures.push("Lobby mock ainda está presente.");
 }
 
 if (failures.length > 0) {
-  console.log("\n--- Erros Encontrados ---");
-  for (const err of failures) {
-    console.log(`\x1b[31m[ERRO]\x1b[0m ${err}`);
-  }
-  console.log("\n\x1b[31mA integracao P2P da Steam precisa de ajustes antes do congelamento.\x1b[0m");
+  failures.forEach((failure) => console.error(`[FAIL] ${failure}`));
   process.exit(1);
-} else {
-  console.log("\n\x1b[32mTodos os requisitos da API P2P & Lobbies da Steam foram validados com sucesso!\x1b[0m\n");
 }
+
+console.log("[OK] Steam Matchmaking + P2P channel-aware + Stage83 compatibility smoke PASS.");

@@ -1,7 +1,20 @@
-import type { TransportType, NetworkStats } from "../../../contracts/net/types";
+import type {
+  NetworkStats,
+  TransportType,
+} from "../../../contracts/net/types";
+
+import {
+  isValidNetworkChannel,
+  isValidNetworkPayload,
+  isValidNetworkPeerId,
+} from "./NetworkPacketValidator";
 
 export interface PacketHandler {
-  (senderId: string, channel: number, data: Uint8Array): void;
+  (
+    senderId: string,
+    channel: number,
+    data: Uint8Array,
+  ): void;
 }
 
 export interface PeerConnectionHandler {
@@ -9,71 +22,201 @@ export interface PeerConnectionHandler {
 }
 
 export interface PeerDisconnectionHandler {
-  (peerId: string, reason: string): void;
+  (
+    peerId: string,
+    reason: string,
+  ): void;
 }
 
 export abstract class NetworkTransport {
-  abstract readonly type: TransportType;
-  abstract readonly isConnected: boolean;
+  public abstract readonly type:
+    TransportType;
 
-  protected readonly packetHandlers = new Set<PacketHandler>();
-  protected readonly peerConnectedHandlers = new Set<PeerConnectionHandler>();
-  protected readonly peerDisconnectedHandlers = new Set<PeerDisconnectionHandler>();
+  public abstract readonly isConnected:
+    boolean;
 
-  abstract initialize(): Promise<boolean>;
-  abstract connect(target: string): Promise<boolean>;
-  abstract disconnect(): Promise<void>;
-  abstract send(
+  protected readonly packetHandlers =
+    new Set<PacketHandler>();
+
+  protected readonly peerConnectedHandlers =
+    new Set<PeerConnectionHandler>();
+
+  protected readonly peerDisconnectedHandlers =
+    new Set<PeerDisconnectionHandler>();
+
+  public abstract initialize():
+    Promise<boolean>;
+
+  public abstract connect(
+    target: string,
+  ): Promise<boolean>;
+
+  public abstract disconnect():
+    Promise<void>;
+
+  public abstract send(
     targetId: string,
     data: Uint8Array,
     channel: number,
-    reliable: boolean
+    reliable: boolean,
   ): Promise<boolean>;
-  abstract broadcast(
+
+  public abstract broadcast(
     data: Uint8Array,
     channel: number,
-    reliable: boolean
+    reliable: boolean,
   ): Promise<boolean>;
-  abstract pollPackets(): Promise<void>;
-  abstract getStats(): NetworkStats;
 
-  public onPacket(handler: PacketHandler): () => void {
-    this.packetHandlers.add(handler);
-    return () => {
-      this.packetHandlers.delete(handler);
+  public abstract pollPackets():
+    Promise<void>;
+
+  public abstract getStats():
+    NetworkStats;
+
+  public onPacket(
+    handler: PacketHandler,
+  ): () => void {
+    this.packetHandlers.add(
+      handler,
+    );
+
+    return (): void => {
+      this.packetHandlers.delete(
+        handler,
+      );
     };
   }
 
-  public onPeerConnected(handler: PeerConnectionHandler): () => void {
-    this.peerConnectedHandlers.add(handler);
-    return () => {
-      this.peerConnectedHandlers.delete(handler);
+  public onPeerConnected(
+    handler: PeerConnectionHandler,
+  ): () => void {
+    this.peerConnectedHandlers.add(
+      handler,
+    );
+
+    return (): void => {
+      this.peerConnectedHandlers.delete(
+        handler,
+      );
     };
   }
 
-  public onPeerDisconnected(handler: PeerDisconnectionHandler): () => void {
-    this.peerDisconnectedHandlers.add(handler);
-    return () => {
-      this.peerDisconnectedHandlers.delete(handler);
+  public onPeerDisconnected(
+    handler:
+      PeerDisconnectionHandler,
+  ): () => void {
+    this.peerDisconnectedHandlers.add(
+      handler,
+    );
+
+    return (): void => {
+      this.peerDisconnectedHandlers.delete(
+        handler,
+      );
     };
   }
 
-  protected notifyPacket(senderId: string, channel: number, data: Uint8Array): void {
-    for (const handler of this.packetHandlers) {
-      handler(senderId, channel, data);
+  protected canSendPacket(
+    targetId: string,
+    channel: number,
+    data: Uint8Array,
+  ): boolean {
+    return (
+      isValidNetworkPeerId(
+        targetId,
+      ) &&
+      isValidNetworkChannel(
+        channel,
+      ) &&
+      isValidNetworkPayload(
+        data,
+      )
+    );
+  }
+
+  protected notifyPacket(
+    senderId: string,
+    channel: number,
+    data: Uint8Array,
+  ): boolean {
+    if (
+      !isValidNetworkPeerId(
+        senderId,
+      ) ||
+      !isValidNetworkChannel(
+        channel,
+      ) ||
+      !isValidNetworkPayload(
+        data,
+      )
+    ) {
+      return false;
     }
+
+    for (
+      const handler of
+      this.packetHandlers
+    ) {
+      handler(
+        senderId,
+        channel,
+        data,
+      );
+    }
+
+    return true;
   }
 
-  protected notifyPeerConnected(peerId: string): void {
-    for (const handler of this.peerConnectedHandlers) {
+  protected notifyPeerConnected(
+    peerId: string,
+  ): boolean {
+    if (
+      !isValidNetworkPeerId(
+        peerId,
+      )
+    ) {
+      return false;
+    }
+
+    for (
+      const handler of
+      this.peerConnectedHandlers
+    ) {
       handler(peerId);
     }
+
+    return true;
   }
 
-  protected notifyPeerDisconnected(peerId: string, reason: string = "desconectado"): void {
-    for (const handler of this.peerDisconnectedHandlers) {
-      handler(peerId, reason);
+  protected notifyPeerDisconnected(
+    peerId: string,
+    reason: string =
+      "desconectado",
+  ): boolean {
+    if (
+      !isValidNetworkPeerId(
+        peerId,
+      )
+    ) {
+      return false;
     }
+
+    const normalizedReason =
+      reason.trim().length > 0
+        ? reason
+        : "desconectado";
+
+    for (
+      const handler of
+      this.peerDisconnectedHandlers
+    ) {
+      handler(
+        peerId,
+        normalizedReason,
+      );
+    }
+
+    return true;
   }
 
   public dispose(): void {

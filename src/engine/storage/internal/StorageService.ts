@@ -1,79 +1,220 @@
-import type { PluginContext } from "@core";
-import { type StorageApi } from "../../../tokens/storage";
-import { type PlayerOnlineProfile, type SaveGameMetadata, type StorageDriverType } from "../../../contracts/storage/types";
-import { SteamCloudDriver } from "./SteamCloudDriver";
-import { LocalDatabaseDriver } from "./LocalDatabaseDriver";
-import { CloudDatabaseDriver } from "./CloudDatabaseDriver";
+import type {
+  PluginContext,
+} from "@core";
+
+import type {
+  PlayerOnlineProfile,
+  SaveGameMetadata,
+  StorageDriverType,
+} from "../../../contracts/storage/types";
+
+import type {
+  StorageApi,
+} from "../../../tokens/storage";
+
+import {
+  CloudDatabaseDriver,
+} from "./CloudDatabaseDriver";
+
+import {
+  LocalDatabaseDriver,
+} from "./LocalDatabaseDriver";
+
+import {
+  SteamCloudDriver,
+} from "./SteamCloudDriver";
+
+import {
+  StorageInfrastructureError,
+} from "./StorageErrors";
+
+type SaveStorageDriverType =
+  Exclude<
+    StorageDriverType,
+    "cloud_database"
+  >;
+
+export interface StorageServiceDependencies {
+  readonly localDriver?:
+    LocalDatabaseDriver;
+
+  readonly steamDriver?:
+    SteamCloudDriver;
+
+  readonly cloudDbDriver?:
+    CloudDatabaseDriver;
+
+  readonly now?:
+    () => number;
+
+  readonly initialDriver?:
+    SaveStorageDriverType;
+}
 
 export class StorageService
   implements StorageApi {
   private currentDriver:
-    StorageDriverType =
-      "sqlite_local";
+    SaveStorageDriverType;
 
-  private readonly steamDriver =
-    new SteamCloudDriver();
+  private readonly steamDriver:
+    SteamCloudDriver;
 
-  private readonly localDriver =
-    new LocalDatabaseDriver();
+  private readonly localDriver:
+    LocalDatabaseDriver;
 
-  private readonly cloudDbDriver =
-    new CloudDatabaseDriver();
+  private readonly cloudDbDriver:
+    CloudDatabaseDriver;
+
+  private readonly now:
+    () => number;
+
+  private disposed =
+    false;
 
   public constructor(
     private readonly ctx:
       PluginContext,
-  ) {}
+
+    dependencies:
+      StorageServiceDependencies =
+        {},
+  ) {
+    this.localDriver =
+      dependencies.localDriver ??
+      new LocalDatabaseDriver();
+
+    this.steamDriver =
+      dependencies.steamDriver ??
+      new SteamCloudDriver();
+
+    this.cloudDbDriver =
+      dependencies.cloudDbDriver ??
+      new CloudDatabaseDriver();
+
+    this.now =
+      dependencies.now ??
+      Date.now;
+
+    this.currentDriver =
+      dependencies.initialDriver ??
+      "sqlite_local";
+  }
 
   public get activeDriver():
     StorageDriverType {
     return this.currentDriver;
   }
 
+  private assertActive(
+    operation:
+      "save"
+      | "load"
+      | "list"
+      | "delete"
+      | "profile-sync"
+      | "profile-fetch",
+  ): void {
+    if (
+      this.disposed
+    ) {
+      throw new StorageInfrastructureError(
+        "unavailable",
+        operation,
+        "StorageService já foi descartado.",
+        false,
+      );
+    }
+  }
+
+  private resolveSaveDriver(
+    driver:
+      StorageDriverType,
+    operation:
+      "save"
+      | "load"
+      | "list"
+      | "delete",
+  ):
+    | LocalDatabaseDriver
+    | SteamCloudDriver {
+    if (
+      driver ===
+        "sqlite_local"
+    ) {
+      return this.localDriver;
+    }
+
+    if (
+      driver ===
+        "steam_cloud"
+    ) {
+      return this.steamDriver;
+    }
+
+    throw new StorageInfrastructureError(
+      "operation-failed",
+      operation,
+      "cloud_database é exclusivo de perfis online e não pode ser usado como driver de save slots.",
+      false,
+    );
+  }
+
   public setDriver(
     driverType:
       StorageDriverType,
   ): void {
+    this.assertActive(
+      "save",
+    );
+
+    if (
+      driverType ===
+        "cloud_database"
+    ) {
+      throw new StorageInfrastructureError(
+        "operation-failed",
+        "save",
+        "cloud_database não é um driver de save slots.",
+        false,
+      );
+    }
+
     this.currentDriver =
       driverType;
-
-    console.log(
-      `[StorageService] 🔄 Driver de armazenamento alterado para: ${driverType}`,
-    );
   }
 
   public async saveGame(
     slotName: string,
     data:
-      Record<string, unknown>,
+      Record<
+        string,
+        unknown
+      >,
     driverPreference?:
       StorageDriverType,
-  ): Promise<SaveGameMetadata> {
-    const driver =
+  ): Promise<
+    SaveGameMetadata
+  > {
+    this.assertActive(
+      "save",
+    );
+
+    const driverType =
       driverPreference ??
       this.currentDriver;
 
-    let metadata:
-      SaveGameMetadata;
+    const driver =
+      this.resolveSaveDriver(
+        driverType,
+        "save",
+      );
 
-    if (
-      driver ===
-      "steam_cloud"
-    ) {
-      metadata =
-        await this.steamDriver
-          .saveGame(
-            slotName,
-            data,
-          );
-    } else {
-      metadata =
-        await this.localDriver
-          .saveGame(
-            slotName,
-            data,
-          );
-    }
+    const metadata =
+      await driver
+        .saveGame(
+          slotName,
+          data,
+        );
 
     this.ctx.events.emit(
       "game.storage.save-completed",
@@ -84,7 +225,8 @@ export class StorageService
         slotName:
           metadata.slotName,
 
-        driver,
+        driver:
+          driverType,
 
         timestamp:
           metadata.timestamp,
@@ -108,21 +250,21 @@ export class StorageService
     driverPreference?:
       StorageDriverType,
   ): Promise<T | null> {
-    const driver =
+    this.assertActive(
+      "load",
+    );
+
+    const driverType =
       driverPreference ??
       this.currentDriver;
 
-    if (
-      driver ===
-      "steam_cloud"
-    ) {
-      return await this.steamDriver
-        .loadGame<T>(
-          slotName,
-        );
-    }
+    const driver =
+      this.resolveSaveDriver(
+        driverType,
+        "load",
+      );
 
-    return await this.localDriver
+    return await driver
       .loadGame<T>(
         slotName,
       );
@@ -134,19 +276,21 @@ export class StorageService
   ): Promise<
     SaveGameMetadata[]
   > {
-    const driver =
+    this.assertActive(
+      "list",
+    );
+
+    const driverType =
       driverPreference ??
       this.currentDriver;
 
-    if (
-      driver ===
-      "steam_cloud"
-    ) {
-      return await this.steamDriver
-        .listSaves();
-    }
+    const driver =
+      this.resolveSaveDriver(
+        driverType,
+        "list",
+      );
 
-    return await this.localDriver
+    return await driver
       .listSaves();
   }
 
@@ -155,21 +299,21 @@ export class StorageService
     driverPreference?:
       StorageDriverType,
   ): Promise<boolean> {
-    const driver =
+    this.assertActive(
+      "delete",
+    );
+
+    const driverType =
       driverPreference ??
       this.currentDriver;
 
-    if (
-      driver ===
-      "steam_cloud"
-    ) {
-      return await this.steamDriver
-        .deleteSave(
-          slotName,
-        );
-    }
+    const driver =
+      this.resolveSaveDriver(
+        driverType,
+        "delete",
+      );
 
-    return await this.localDriver
+    return await driver
       .deleteSave(
         slotName,
       );
@@ -179,6 +323,10 @@ export class StorageService
     profile:
       PlayerOnlineProfile,
   ): Promise<boolean> {
+    this.assertActive(
+      "profile-sync",
+    );
+
     const success =
       await this.cloudDbDriver
         .syncProfile(
@@ -195,7 +343,7 @@ export class StorageService
           "cloud_database",
 
         syncedAt:
-          Date.now(),
+          this.now(),
 
         success,
       },
@@ -209,9 +357,28 @@ export class StorageService
   ): Promise<
     PlayerOnlineProfile | null
   > {
+    this.assertActive(
+      "profile-fetch",
+    );
+
     return await this.cloudDbDriver
       .fetchProfile(
         playerId,
       );
+  }
+
+  public dispose():
+    void {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
+    this.disposed =
+      true;
+
+    this.cloudDbDriver
+      .dispose();
   }
 }

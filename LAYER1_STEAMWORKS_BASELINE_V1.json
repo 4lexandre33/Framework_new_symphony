@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 2,
+  "version": "1.0.2",
+  "baselineId": "layer1-steamworks-v1-stage84",
+  "stage": 84,
+  "layer": 1,
+  "auditVersion": "1.0.2",
+  "referenceSnapshot": "Projeto1_106",
+  "capabilities": [
+    "game.steam"
+  ],
+  "dormantSecondaryCapability": "game.steam.net",
+  "nativeCommands": [
+    "steam_runtime_status",
+    "steam_is_initialized",
+    "steam_get_user",
+    "steam_unlock_achievement",
+    "steam_set_stat",
+    "steam_store_stats",
+    "steam_create_lobby",
+    "steam_join_lobby",
+    "steam_leave_lobby",
+    "steam_set_lobby_data",
+    "steam_get_lobby_data",
+    "steam_send_p2p_packet",
+    "steam_read_p2p_packet",
+    "steam_accept_p2p_session",
+    "steam_close_p2p_session",
+    "steam_get_p2p_session_state",
+    "steam_cloud_status",
+    "steam_cloud_list_files",
+    "steam_cloud_write_file",
+    "steam_cloud_read_file",
+    "steam_cloud_delete_file",
+    "steam_overlay_is_enabled",
+    "steam_activate_overlay",
+    "steam_workshop_download_item"
+  ],
+  "ownedFileSha256": {
+    "src-tauri/Cargo.toml": "fbfe89089b1eccd8d5901a2143486a61ac3b6ded0c4e5dfc645d278d43648902",
+    "src-tauri/src/steam.rs": "71b51cc5818e1fb2111f2d1c3873a1fd19730591d157c881d3692a6a51b27601",
+    "src-tauri/src/lib.rs": "8158e37ef624c7e5b4b8b5345941fa0e362171461e05aa4bf51c7c2927ff51b5",
+    "src/engine/steam/internal/SteamBridgeService.ts": "44b781ffb75792988ff6088ade4ba4f4578482cd55318d51bb65147543a7a711",
+    "src/plugins/net/plugin.ts": "8713a2d2dc99e4c5ba0cdc4212fbc7b079a66313807d50808ecd6605abdb129c"
+  },
+  "baselinePolicy": {
+    "stage84OwnedRuntimeSha": true,
+    "publicApi": "delegated-to-stage72-canonical-audit",
+    "capabilityGraph": "delegated-to-stage73-canonical-audit",
+    "pluginLifecycle": "delegated-to-stage74-canonical-audit",
+    "networkingRuntime": "delegated-to-stage83-canonical-audit",
+    "rawPublicSurfaceShaGate": false,
+    "steamNetworkCapabilityActivation": "deferred-preserve-stage73"
+  }
+}

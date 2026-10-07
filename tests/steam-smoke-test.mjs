@@ -2,67 +2,63 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const ROOT_DIR = process.cwd();
+const root = process.cwd();
 const failures = [];
-const successes = [];
 
-function checkFileExists(relPath) {
-  const fullPath = path.join(ROOT_DIR, relPath);
-  if (!fs.existsSync(fullPath)) {
-    failures.push(`Arquivo ausente: ${relPath}`);
-    return false;
+function source(relativePath) {
+  const target = path.join(root, ...relativePath.split("/"));
+  if (!fs.existsSync(target)) {
+    failures.push(`Arquivo ausente: ${relativePath}`);
+    return "";
   }
-  successes.push(`Arquivo encontrado: ${relPath}`);
-  return true;
+  return fs.readFileSync(target, "utf8");
 }
 
-function checkFileContains(relPath, snippet) {
-  const fullPath = path.join(ROOT_DIR, relPath);
-  if (!fs.existsSync(fullPath)) return;
-  const content = fs.readFileSync(fullPath, "utf8");
-  if (!content.includes(snippet)) {
-    failures.push(`O arquivo ${relPath} nao contem o trecho esperado: "${snippet}"`);
-  } else {
-    successes.push(`Validado em ${relPath}: contem "${snippet}"`);
+function contains(relativePath, snippets) {
+  const text = source(relativePath);
+  for (const snippet of snippets) {
+    if (!text.includes(snippet)) failures.push(`${relativePath}: trecho ausente: ${snippet}`);
   }
 }
 
-console.log("============================================================");
-console.log("  Auditoria de Sanidade da Integracao Steamworks (Tauri 2)  ");
-console.log("============================================================\n");
+contains("src-tauri/Cargo.toml", ["steamworks", "raw-bindings"]);
+contains("src-tauri/src/steam.rs", [
+  "pub fn steam_runtime_status",
+  "steamworks::Client::init()",
+  "AtomicBool",
+  "JoinHandle",
+  "impl Drop for SteamState",
+  "pub fn steam_get_user",
+  "pub fn steam_unlock_achievement",
+  "pub fn steam_set_stat",
+  "pub fn steam_store_stats",
+  "pub fn steam_cloud_write_file",
+  "pub fn steam_activate_overlay",
+  "pub fn steam_workshop_download_item",
+]);
+contains("src-tauri/src/lib.rs", ["SteamState::initialize()", "state::<SteamState>().shutdown()"]);
+contains("src/plugins/steam/plugin.ts", ["ctx.caps.provide(SteamToken, steamService)"]);
+contains("src/plugins/net/plugin.ts", ["await steamApi", ".checkAvailability();", "bindSteamCapability"]);
+contains("src/engine/steam/internal/SteamBridgeService.ts", ["implements SteamApi, SteamNetworkApi"]);
 
-checkFileExists("steam_appid.txt");
-checkFileContains("steam_appid.txt", "480");
+const native = source("src-tauri/src/steam.rs");
+if (native.includes("mock_lobby") || native.includes("SystemTime::now()")) {
+  failures.push("Lobby sintético ainda encontrado no backend Steam.");
+}
 
-checkFileExists("src-tauri/Cargo.toml");
-checkFileContains("src-tauri/Cargo.toml", "steamworks");
-checkFileContains("src-tauri/Cargo.toml", "tauri-plugin-opener");
+const host = source("src-tauri/src/lib.rs");
+if (host.includes('std::env::set_var("SteamAppId"') || host.includes('std::env::set_var("SteamGameId"')) {
+  failures.push("SteamAppId/SteamGameId hardcoded ainda encontrado no bootstrap.");
+}
 
-checkFileExists("src-tauri/src/steam.rs");
-checkFileContains("src-tauri/src/steam.rs", "pub fn steam_is_initialized");
-checkFileContains("src-tauri/src/steam.rs", "pub fn steam_get_user");
-checkFileContains("src-tauri/src/steam.rs", "friends.name()");
-checkFileContains("src-tauri/src/steam.rs", "client.user_stats()");
-
-checkFileExists("src-tauri/src/lib.rs");
-checkFileContains("src-tauri/src/lib.rs", "steamworks::Client::init_app");
-checkFileContains("src-tauri/src/lib.rs", "tauri_plugin_opener::init()");
-
-checkFileExists("src/tokens/steam.ts");
-checkFileExists("src/plugins/steam/plugin.ts");
-
-console.log("\n--- Resultados ---");
-for (const ok of successes) {
-  console.log(`\x1b[32m[OK]\x1b[0m ${ok}`);
+const steamPlugin = source("src/plugins/steam/plugin.ts");
+if (steamPlugin.includes("SteamNetworkToken")) {
+  failures.push("Manifest Steam da Stage73 foi alterado para ativar game.steam.net.");
 }
 
 if (failures.length > 0) {
-  console.log("\n--- Erros Encontrados ---");
-  for (const err of failures) {
-    console.log(`\x1b[31m[ERRO]\x1b[0m ${err}`);
-  }
-  console.log("\n\x1b[31mA integracao com a Steam precisa de ajustes antes de compilar.\x1b[0m");
+  failures.forEach((failure) => console.error(`[FAIL] ${failure}`));
   process.exit(1);
-} else {
-  console.log("\n\x1b[32mTodos os requisitos da Steamworks API estao prontos para teste!\x1b[0m\n");
 }
+
+console.log("[OK] Steamworks init/offline/shutdown + canonical graph preservation smoke PASS.");

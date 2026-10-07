@@ -1,159 +1,675 @@
-import type { AABBBounds3D, SpatialQueryResult } from "../../../contracts/world/types";
+import type {
+  AABBBounds3D,
+  SpatialQueryResult,
+  WorldPosition3D,
+} from "../../../contracts/world/types";
+
+interface MutableWorldPosition3D {
+  x: number;
+  y: number;
+  z: number;
+}
+
+interface OctreeEntry {
+  readonly entityId: string;
+  readonly position:
+    MutableWorldPosition3D;
+}
 
 export interface OctreeNode {
   bounds: AABBBounds3D;
-  entities: Array<{ entityId: string; position: { x: number; y: number; z: number } }>;
+  entities: OctreeEntry[];
   children: OctreeNode[] | null;
 }
 
-export class OctreeManager {
-  private root: OctreeNode;
-  private readonly maxEntitiesPerNode = 8;
-  private readonly maxDepth = 5;
+const DEFAULT_BOUNDS:
+  AABBBounds3D = {
+    min: {
+      x: -500,
+      y: -500,
+      z: -500,
+    },
 
-  public constructor(bounds?: AABBBounds3D) {
+    max: {
+      x: 500,
+      y: 500,
+      z: 500,
+    },
+  };
+
+export class OctreeManager {
+  private readonly entries =
+    new Map<
+      string,
+      OctreeEntry
+    >();
+
+  private readonly root:
+    OctreeNode;
+
+  private readonly maxEntitiesPerNode =
+    8;
+
+  private readonly maxDepth =
+    5;
+
+  private indexDirty =
+    false;
+
+  public constructor(
+    bounds:
+      AABBBounds3D =
+        DEFAULT_BOUNDS,
+  ) {
     this.root = {
-      bounds: bounds || {
-        min: { x: -500, y: -500, z: -500 },
-        max: { x: 500, y: 500, z: 500 },
-      },
+      bounds:
+        this.cloneBounds(
+          bounds,
+        ),
+
       entities: [],
       children: null,
     };
   }
 
-  public resetBounds(bounds: AABBBounds3D): void {
-    this.clear();
-    this.root.bounds = { ...bounds };
+  public get entityCount():
+    number {
+    return this.entries.size;
   }
 
-  public insert(entityId: string, position: { x: number; y: number; z: number }): void {
-    this.insertIntoNode(this.root, entityId, position, 0);
+  public resetBounds(
+    bounds: AABBBounds3D,
+  ): void {
+    this.root.bounds =
+      this.cloneBounds(
+        bounds,
+      );
+
+    this.root.entities.length =
+      0;
+
+    this.root.children =
+      null;
+
+    /*
+     * Entries pertencem ao mundo, não à árvore materializada.
+     * Isso preserva entidades quando uma SceneLoad usa
+     * clearPreviousScene=false; a árvore será reconstruída lazily.
+     */
+    this.indexDirty =
+      this.entries.size >
+      0;
   }
 
-  public queryBounds(bounds: AABBBounds3D): SpatialQueryResult[] {
-    const results: SpatialQueryResult[] = [];
-    this.queryNodeBounds(this.root, bounds, results);
+  public insert(
+    entityId: string,
+    position: WorldPosition3D,
+  ): void {
+    const existing =
+      this.entries.get(
+        entityId,
+      );
+
+    if (existing) {
+      this.writePosition(
+        existing.position,
+        position,
+      );
+
+      this.indexDirty =
+        true;
+
+      return;
+    }
+
+    this.entries.set(
+      entityId,
+      {
+        entityId,
+
+        position: {
+          x:
+            position.x,
+
+          y:
+            position.y,
+
+          z:
+            position.z,
+        },
+      },
+    );
+
+    this.indexDirty =
+      true;
+  }
+
+  public update(
+    entityId: string,
+    position: WorldPosition3D,
+  ): boolean {
+    const entry =
+      this.entries.get(
+        entityId,
+      );
+
+    if (!entry) {
+      return false;
+    }
+
+    if (
+      entry.position.x ===
+        position.x &&
+      entry.position.y ===
+        position.y &&
+      entry.position.z ===
+        position.z
+    ) {
+      return true;
+    }
+
+    this.writePosition(
+      entry.position,
+      position,
+    );
+
+    this.indexDirty =
+      true;
+
+    return true;
+  }
+
+  public remove(
+    entityId: string,
+  ): boolean {
+    const removed =
+      this.entries.delete(
+        entityId,
+      );
+
+    if (removed) {
+      this.indexDirty =
+        true;
+    }
+
+    return removed;
+  }
+
+  public queryBounds(
+    bounds: AABBBounds3D,
+  ): SpatialQueryResult[] {
+    this.ensureIndex();
+
+    const results:
+      SpatialQueryResult[] = [];
+
+    this.queryNodeBounds(
+      this.root,
+      bounds,
+      results,
+    );
+
     return results;
   }
 
   public clear(): void {
-    this.root.entities = [];
+    this.entries.clear();
+    this.root.entities.length = 0;
     this.root.children = null;
+    this.indexDirty = false;
   }
 
-  public getNodeCount(): number {
-    return this.countNodes(this.root);
+  public getNodeCount():
+    number {
+    this.ensureIndex();
+
+    return this.countNodes(
+      this.root,
+    );
   }
 
-  private countNodes(node: OctreeNode): number {
-    let count = 1;
-    if (node.children) {
-      for (const child of node.children) {
-        count += this.countNodes(child);
-      }
+  private ensureIndex(): void {
+    if (!this.indexDirty) {
+      return;
     }
+
+    this.root.entities.length =
+      0;
+
+    this.root.children =
+      null;
+
+    for (
+      const entry of
+      this.entries.values()
+    ) {
+      this.insertIntoNode(
+        this.root,
+        entry,
+        0,
+      );
+    }
+
+    this.indexDirty =
+      false;
+  }
+
+  private countNodes(
+    node: OctreeNode,
+  ): number {
+    let count =
+      1;
+
+    const children =
+      node.children;
+
+    if (!children) {
+      return count;
+    }
+
+    for (
+      const child of
+      children
+    ) {
+      count +=
+        this.countNodes(
+          child,
+        );
+    }
+
     return count;
   }
 
   private insertIntoNode(
     node: OctreeNode,
-    entityId: string,
-    position: { x: number; y: number; z: number },
-    depth: number
+    entry: OctreeEntry,
+    depth: number,
   ): boolean {
-    if (!this.containsPoint(node.bounds, position)) {
+    if (
+      !this.containsPoint(
+        node.bounds,
+        entry.position,
+      )
+    ) {
       return false;
     }
 
-    if (node.children) {
-      for (const child of node.children) {
-        if (this.insertIntoNode(child, entityId, position, depth + 1)) {
+    const children =
+      node.children;
+
+    if (children) {
+      for (
+        const child of
+        children
+      ) {
+        if (
+          this.insertIntoNode(
+            child,
+            entry,
+            depth + 1,
+          )
+        ) {
           return true;
         }
       }
     }
 
-    node.entities.push({ entityId, position: { ...position } });
+    node.entities.push(
+      entry,
+    );
 
-    if (node.entities.length > this.maxEntitiesPerNode && depth < this.maxDepth && !node.children) {
-      this.subdivide(node);
-      const tempEntities = [...node.entities];
-      node.entities = [];
+    if (
+      node.entities.length >
+        this.maxEntitiesPerNode &&
+      depth <
+        this.maxDepth &&
+      node.children ===
+        null
+    ) {
+      this.subdivide(
+        node,
+      );
 
-      for (const item of tempEntities) {
-        let inserted = false;
-        for (const child of node.children!) {
-          if (this.insertIntoNode(child, item.entityId, item.position, depth + 1)) {
-            inserted = true;
-            break;
-          }
-        }
-        if (!inserted) {
-          node.entities.push(item);
-        }
-      }
+      this.redistributeNodeEntities(
+        node,
+        depth,
+      );
     }
 
     return true;
   }
 
-  private subdivide(node: OctreeNode): void {
-    const min = node.bounds.min;
-    const max = node.bounds.max;
-    const mid = {
-      x: (min.x + max.x) * 0.5,
-      y: (min.y + max.y) * 0.5,
-      z: (min.z + max.z) * 0.5,
-    };
+  private redistributeNodeEntities(
+    node: OctreeNode,
+    depth: number,
+  ): void {
+    const children =
+      node.children;
 
-    node.children = [
-      { bounds: { min: { x: min.x, y: min.y, z: min.z }, max: { x: mid.x, y: mid.y, z: mid.z } }, entities: [], children: null },
-      { bounds: { min: { x: mid.x, y: min.y, z: min.z }, max: { x: max.x, y: mid.y, z: mid.z } }, entities: [], children: null },
-      { bounds: { min: { x: min.x, y: mid.y, z: min.z }, max: { x: mid.x, y: max.y, z: mid.z } }, entities: [], children: null },
-      { bounds: { min: { x: mid.x, y: mid.y, z: min.z }, max: { x: max.x, y: max.y, z: mid.z } }, entities: [], children: null },
-      { bounds: { min: { x: min.x, y: min.y, z: mid.z }, max: { x: mid.x, y: mid.y, z: max.z } }, entities: [], children: null },
-      { bounds: { min: { x: mid.x, y: min.y, z: mid.z }, max: { x: max.x, y: mid.y, z: max.z } }, entities: [], children: null },
-      { bounds: { min: { x: min.x, y: mid.y, z: mid.z }, max: { x: mid.x, y: max.y, z: max.z } }, entities: [], children: null },
-      { bounds: { min: { x: mid.x, y: mid.y, z: mid.z }, max: { x: max.x, y: max.y, z: max.z } }, entities: [], children: null },
-    ];
-  }
-
-  private queryNodeBounds(node: OctreeNode, queryBounds: AABBBounds3D, results: SpatialQueryResult[]): void {
-    if (!this.intersectsBounds(node.bounds, queryBounds)) {
+    if (!children) {
       return;
     }
 
-    for (const item of node.entities) {
-      if (this.containsPoint(queryBounds, item.position)) {
-        results.push({
-          entityId: item.entityId,
-          distance: 0,
-          position: item.position,
-        });
-      }
-    }
+    const pending =
+      node.entities;
 
-    if (node.children) {
-      for (const child of node.children) {
-        this.queryNodeBounds(child, queryBounds, results);
+    node.entities =
+      [];
+
+    for (
+      const entry of
+      pending
+    ) {
+      let inserted =
+        false;
+
+      for (
+        const child of
+        children
+      ) {
+        if (
+          this.insertIntoNode(
+            child,
+            entry,
+            depth + 1,
+          )
+        ) {
+          inserted =
+            true;
+
+          break;
+        }
+      }
+
+      if (!inserted) {
+        node.entities.push(
+          entry,
+        );
       }
     }
   }
 
-  private containsPoint(bounds: AABBBounds3D, p: { x: number; y: number; z: number }): boolean {
+  private subdivide(
+    node: OctreeNode,
+  ): void {
+    const min =
+      node.bounds.min;
+
+    const max =
+      node.bounds.max;
+
+    const midX =
+      (
+        min.x +
+        max.x
+      ) *
+      0.5;
+
+    const midY =
+      (
+        min.y +
+        max.y
+      ) *
+      0.5;
+
+    const midZ =
+      (
+        min.z +
+        max.z
+      ) *
+      0.5;
+
+    node.children = [
+      this.createNode(
+        min.x,
+        min.y,
+        min.z,
+        midX,
+        midY,
+        midZ,
+      ),
+      this.createNode(
+        midX,
+        min.y,
+        min.z,
+        max.x,
+        midY,
+        midZ,
+      ),
+      this.createNode(
+        min.x,
+        midY,
+        min.z,
+        midX,
+        max.y,
+        midZ,
+      ),
+      this.createNode(
+        midX,
+        midY,
+        min.z,
+        max.x,
+        max.y,
+        midZ,
+      ),
+      this.createNode(
+        min.x,
+        min.y,
+        midZ,
+        midX,
+        midY,
+        max.z,
+      ),
+      this.createNode(
+        midX,
+        min.y,
+        midZ,
+        max.x,
+        midY,
+        max.z,
+      ),
+      this.createNode(
+        min.x,
+        midY,
+        midZ,
+        midX,
+        max.y,
+        max.z,
+      ),
+      this.createNode(
+        midX,
+        midY,
+        midZ,
+        max.x,
+        max.y,
+        max.z,
+      ),
+    ];
+  }
+
+  private createNode(
+    minX: number,
+    minY: number,
+    minZ: number,
+    maxX: number,
+    maxY: number,
+    maxZ: number,
+  ): OctreeNode {
+    return {
+      bounds: {
+        min: {
+          x:
+            minX,
+
+          y:
+            minY,
+
+          z:
+            minZ,
+        },
+
+        max: {
+          x:
+            maxX,
+
+          y:
+            maxY,
+
+          z:
+            maxZ,
+        },
+      },
+
+      entities: [],
+      children: null,
+    };
+  }
+
+  private queryNodeBounds(
+    node: OctreeNode,
+    queryBounds: AABBBounds3D,
+    results: SpatialQueryResult[],
+  ): void {
+    if (
+      !this.intersectsBounds(
+        node.bounds,
+        queryBounds,
+      )
+    ) {
+      return;
+    }
+
+    for (
+      const item of
+      node.entities
+    ) {
+      if (
+        !this.containsPoint(
+          queryBounds,
+          item.position,
+        )
+      ) {
+        continue;
+      }
+
+      results.push({
+        entityId:
+          item.entityId,
+
+        distance:
+          0,
+
+        position: {
+          x:
+            item.position.x,
+
+          y:
+            item.position.y,
+
+          z:
+            item.position.z,
+        },
+      });
+    }
+
+    const children =
+      node.children;
+
+    if (!children) {
+      return;
+    }
+
+    for (
+      const child of
+      children
+    ) {
+      this.queryNodeBounds(
+        child,
+        queryBounds,
+        results,
+      );
+    }
+  }
+
+  private writePosition(
+    target: MutableWorldPosition3D,
+    source: WorldPosition3D,
+  ): void {
+    target.x =
+      source.x;
+
+    target.y =
+      source.y;
+
+    target.z =
+      source.z;
+  }
+
+  private cloneBounds(
+    bounds: AABBBounds3D,
+  ): AABBBounds3D {
+    return {
+      min: {
+        x:
+          bounds.min.x,
+
+        y:
+          bounds.min.y,
+
+        z:
+          bounds.min.z,
+      },
+
+      max: {
+        x:
+          bounds.max.x,
+
+        y:
+          bounds.max.y,
+
+        z:
+          bounds.max.z,
+      },
+    };
+  }
+
+  private containsPoint(
+    bounds: AABBBounds3D,
+    point: WorldPosition3D,
+  ): boolean {
     return (
-      p.x >= bounds.min.x && p.x <= bounds.max.x &&
-      p.y >= bounds.min.y && p.y <= bounds.max.y &&
-      p.z >= bounds.min.z && p.z <= bounds.max.z
+      point.x >=
+        bounds.min.x &&
+      point.x <=
+        bounds.max.x &&
+      point.y >=
+        bounds.min.y &&
+      point.y <=
+        bounds.max.y &&
+      point.z >=
+        bounds.min.z &&
+      point.z <=
+        bounds.max.z
     );
   }
 
-  private intersectsBounds(a: AABBBounds3D, b: AABBBounds3D): boolean {
+  private intersectsBounds(
+    first: AABBBounds3D,
+    second: AABBBounds3D,
+  ): boolean {
     return (
-      a.min.x <= b.max.x && a.max.x >= b.min.x &&
-      a.min.y <= b.max.y && a.max.y >= b.min.y &&
-      a.min.z <= b.max.z && a.max.z >= b.min.z
+      first.min.x <=
+        second.max.x &&
+      first.max.x >=
+        second.min.x &&
+      first.min.y <=
+        second.max.y &&
+      first.max.y >=
+        second.min.y &&
+      first.min.z <=
+        second.max.z &&
+      first.max.z >=
+        second.min.z
     );
   }
 }

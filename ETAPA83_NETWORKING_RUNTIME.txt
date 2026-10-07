@@ -1,0 +1,288 @@
+PROJETO1 — ETAPA 83
+LAYER 1 — NETWORKING RUNTIME
+
+ESCOPO
+=====
+A Etapa 83 certifica e endurece o runtime existente game.net:
+
+- NetworkService
+- NetworkTransport
+- WebSocketTransport
+- SteamP2PTransport
+- StateReplicator
+- validação interna de payload/canal/peer
+- connection lifecycle
+- disconnect/reconnect
+- backpressure
+- polling bounded
+
+Não cria nova capability canônica.
+Não altera NetworkToken v1.0.0.
+Não altera contratos/eventos/comandos públicos da rede.
+Não altera a fachada src/engine/net/public/index.ts.
+Não altera o manifest/lifecycle do plugin game.net.
+Não altera capability graph congelado pela Etapa 73.
+Não move regra de gameplay/Domain para a rede.
+Não antecipa a Etapa 84 — Steamworks Integration.
+
+OBJETIVO
+========
+Fazer game.net cumprir o critério da Etapa 83:
+
+- transportes intercambiáveis;
+- lifecycle de conexão explícito;
+- packet validation;
+- disconnect/reconnect seguro;
+- backpressure;
+- teardown sem estado de sessão residual;
+- StateReplicator técnico e sem ownership de regra de Domain.
+
+COMPATIBILIDADE CANÔNICA 72/73/74
+================================
+A Etapa 83 NÃO cria um segundo freeze bruto para arquivos que já possuem ownership de certificação anterior.
+
+API pública de game.net:
+- src/contracts/net/types.ts
+- src/tokens/net.ts
+- src/engine/net/public/index.ts
+
+é validada exclusivamente pelo auditor canônico da Etapa 72 e por LAYER1_PUBLIC_API_BASELINE_V1.json.
+
+O manifest/capability graph de src/plugins/net/plugin.ts é validado pela Etapa 73.
+O lifecycle do mesmo plugin é validado pela Etapa 74.
+
+A baseline própria da Etapa 83 fingerprinta semanticamente SOMENTE os seis runtimes internos certificados nesta etapa.
+Isso evita divergências falsas por SHA bruto/line endings e respeita a cadeia de ownership já usada pela Etapa 82.
+
+Capability preservada:
+
+- game.net @ 1.0.0
+
+Lifecycle específico esperado do plugin:
+
+- readyCalls: 1
+- onDisposeCalls: 1
+- onBootHooks: 1
+- onStopHooks: 0
+
+PACKET VALIDATION
+=================
+Novo arquivo interno:
+
+src/engine/net/internal/NetworkPacketValidator.ts
+
+Política certificada:
+
+- payload máximo: 1 MiB;
+- channels válidos: 0..255;
+- peer/entity IDs: string não vazia, até 128 chars;
+- snapshots: números finitos;
+- quaternion não pode ter comprimento zero;
+- sequence deve ser inteiro seguro >= 0;
+- timestamp deve ser finito >= 0.
+
+Validação ocorre ANTES de emitir packet events ou atravessar bridges.
+Pacote inválido é descartado sem produzir regra de gameplay.
+
+WEBSOCKET TRANSPORT
+===================
+WebSocketTransport agora:
+
+- aceita somente ws:// e wss://;
+- suporta connect -> disconnect -> connect novamente;
+- invalida callbacks de sockets antigos por generation counter;
+- remove handlers no teardown;
+- envia a Uint8Array view diretamente, preservando byteOffset/byteLength;
+- rejeita startHost em WebSocket (browser não abre listener servidor);
+- rejeita send offline;
+- rejeita payload/channel/peer inválidos;
+- aplica backpressure usando socket.bufferedAmount;
+- high-water mark: 2 MiB;
+- descarta frame recebido acima do limite;
+- não inventa RTT fictício: rttMs permanece 0 sem medição real.
+
+STEAM P2P TRANSPORT
+===================
+SteamP2PTransport agora:
+
+- suporta initialize/connect/disconnect/reconnect;
+- activePeers é limpo no disconnect/dispose;
+- valida target/channel/payload antes de chamar SteamApi;
+- contabiliza pendingSendBytes;
+- high-water mark: 2 MiB;
+- limita polling a 2 channels;
+- limita cada channel a 128 pacotes por poll;
+- evita um backlog infinito monopolizar um game-loop tick;
+- valida bytesReceived <= data.byteLength;
+- descarta pacote inválido sem emitir NetPacketReceived;
+- teardown é idempotente.
+
+A Etapa 83 não adiciona closeP2PSession/callbacks Steam nativos ao SteamApi.
+Isso pertence à Etapa 84, que certificará Steamworks em profundidade.
+
+STATE REPLICATION
+=================
+StateReplicator agora:
+
+- clona snapshots ao recebê-los para impedir mutação externa do histórico;
+- mantém history máximo de 20 snapshots por entity;
+- ignora snapshot stale/duplicado (sequence <= latest.sequence);
+- valida snapshots antes de armazenar;
+- mantém interpolation scratch separado por entity;
+- normaliza quaternion interpolado;
+- clampa alpha para 0..1;
+- trata alpha não-finito como 0;
+- gera WorldStateSnapshot com entities ordenadas por entityId;
+- clear remove history e interpolation scratch.
+
+NETWORK SERVICE
+===============
+NetworkService agora:
+
+- permanece owner do transporte ativo e do StateReplicator;
+- só troca WebSocket -> Steam enquanto offline;
+- unbind de handlers ocorre antes de trocar/dispor transporte;
+- reconnect começa a partir de estado offline limpo;
+- send/broadcast são recusados em mode=offline;
+- disconnect limpa StateReplicator;
+- dispose limpa StateReplicator e event bindings;
+- pollPackets possui pollInFlight guard;
+- polls assíncronos não se sobrepõem entre ticks;
+- updateEntityState preserva campos omitidos da entidade anterior;
+- sequence default avança latest.sequence + 1.
+
+BOUNDARY DE DOMAIN
+==================
+Networking é infraestrutura.
+
+src/engine/net/internal/** NÃO pode importar:
+
+- src/domain/**
+- src/services/**
+- src/app/**
+- internal de outro módulo Engine
+
+A única dependência cross-module usada por SteamP2PTransport passa pela fachada pública:
+
+src/engine/steam/public
+
+A rede transporta bytes/snapshots técnicos.
+Ela NÃO decide:
+
+- dano;
+- quest progression;
+- rewards;
+- inventory;
+- combat outcomes;
+- regras de interaction;
+- narrativa.
+
+BACKPRESSURE
+============
+WebSocket:
+
+socket.bufferedAmount + packet.byteLength <= 2 MiB
+
+Steam P2P:
+
+pendingSendBytes + packet.byteLength <= 2 MiB
+
+Quando o high-water mark seria ultrapassado, send retorna false.
+Nenhuma fila JS ilimitada é criada pela Etapa 83.
+
+POLL BUDGET
+===========
+Steam P2P:
+
+2 channels x 128 packets/channel/tick
+
+Esse limite é de fairness do runtime, não limite de protocolo Steam.
+Backlog excedente permanece para ticks seguintes.
+
+TESTES NOVOS
+============
+- tests/layer1-networking-runtime.test.ts
+- tests/layer1-networking-replication.test.ts
+- tests/layer1-networking-service.test.ts
+- tests/layer1-networking-smoke.mjs
+
+Cobertura principal:
+
+- WebSocket connect/disconnect/reconnect;
+- byteOffset correto em send;
+- oversized packet;
+- backpressure WebSocket;
+- Steam peer lifecycle;
+- bounded Steam poll;
+- corrupt packet rejection;
+- StateReplicator monotonic sequence;
+- snapshot clone isolation;
+- per-entity interpolation scratch;
+- deterministic world entity order;
+- NetworkService disconnect cleanup;
+- offline send rejection;
+- updateEntityState merge;
+- idempotent dispose.
+
+AUDITOR
+-------
+node scripts/architecture/stage83-audit-networking.mjs
+
+JSON:
+node scripts/architecture/stage83-audit-networking.mjs --json
+
+VALIDATOR
+=========
+node scripts/architecture/stage83-validate-networking.mjs
+
+O validator executa:
+
+1. presença dos pré-requisitos 71–82;
+2. descoberta e execução do stage82-audit-*.mjs;
+3. presença integral dos arquivos da Etapa 83;
+4. manifest coverage;
+5. SHA-256 real de todos os arquivos empacotados (integridade do ZIP, não freeze da API pública);
+6. ausência de Etapa 84 antecipada;
+7. Stage 83 runtime semantic fingerprint audit + regressão canônica das Etapas 72/73/74;
+8. npm run arch:check;
+9. npx tsc --noEmit;
+10. Vitest focado de Networking;
+11. networking smoke;
+12. Vitest completo;
+13. cargo check --manifest-path src-tauri/Cargo.toml;
+14. npm run build.
+
+PASS ESPERADO
+=============
+============================================================
+  ETAPA 83: PASS
+============================================================
+
+Somente esse PASS no terminal do projeto torna a Etapa 83 oficialmente concluída.
+
+LIMITES INTENCIONAIS
+====================
+A Etapa 83 NÃO tenta:
+
+- implementar WebRTC;
+- criar servidor autoritativo novo;
+- definir protocolo gameplay-specific;
+- mover Domain para networking;
+- implementar matchmaking/lobbies completos;
+- alterar SteamApi público;
+- fechar sessões P2P nativas via API nova;
+- medir RTT real sem protocolo de ping;
+- criar fila ilimitada para "resolver" backpressure.
+
+Esses itens ou são produto específico ou pertencem à Etapa 84/etapas posteriores.
+
+PRÓXIMA ETAPA
+=============
+84 — Steamworks Integration.
+
+
+CORREÇÃO v1.0.1 — REFERÊNCIA PROJETO1_105
+=========================================
+A versão 1.0.0 da governança da Etapa 83 re-fingerprintava public/index.ts e plugin.ts com SHA bruto próprio.
+Isso divergia do padrão já certificado nas Etapas 72–82 e produzia falso negativo no Projeto1_105.
+A v1.0.1 delega corretamente API pública, capability graph e lifecycle aos auditores 72/73/74 e mantém freeze semântico apenas dos internals da Etapa 83.

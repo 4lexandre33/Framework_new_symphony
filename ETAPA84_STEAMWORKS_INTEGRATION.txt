@@ -1,0 +1,220 @@
+PROJETO1 — ETAPA 84 — STEAMWORKS INTEGRATION — REV 1.0.2
+============================================================
+
+REFERÊNCIA CANÔNICA
+-------------------
+Projeto1_106 (snapshot estável gerado em 05/10/2026 19:27:33).
+
+OBJETIVO
+--------
+Certificar a integração Steamworks da Camada 1 sem alterar a API pública
+certificada pela Etapa 72, sem recertificar indevidamente o capability graph da
+Etapa 73 e sem quebrar o Networking Runtime certificado pela Etapa 83.
+
+A Etapa 84 cobre:
+  - inicialização única do Steamworks SDK;
+  - modo offline controlado;
+  - callback pump encerrável com stop/join;
+  - usuário Steam;
+  - achievements/stats;
+  - matchmaking real;
+  - P2P channel-aware;
+  - Steam Cloud nativo;
+  - Steam Overlay nativo;
+  - superfície mínima de Workshop download;
+  - handshake real entre game.net e disponibilidade Steam.
+
+CORREÇÃO DA REV 1.0.2
+---------------------
+O cargo check da revisão 1.0.1 revelou Rust E0382 em SteamState::initialize():
+SingleClient era movido para a closure de thread::spawn e depois referenciado de
+novo no ramo Err por drop(single_client).
+
+A revisão 1.0.2 remove esse uso pós-move. Em falha de spawn, a própria std descarta
+a closure capturada (e portanto SingleClient); o ramo Err descarta apenas Client,
+que ainda pertence ao escopo. Foi adicionado um gate semântico e um teste de
+contrato que proíbem a regressão literal drop(single_client) nesse lifecycle.
+
+CORREÇÃO DA REV 1.0.1
+---------------------
+A revisão inicial da Etapa 84 aplicava SHA-256 bruto sobre
+src/engine/steam/public/index.ts. Isso é incorreto porque a fachada pública é
+ownership da Etapa 72 e já possui gate canônico por fingerprint TypeScript.
+
+No Projeto1_106 a fachada Steam possui 411 bytes e permanece exatamente com os
+quatro exports canônicos:
+  ../../../contracts/steam/types
+  ../../../contracts/steam/net-types
+  ../../../tokens/steam
+  ../../../tokens/steam-net
+
+A política correta passa a ser a mesma usada pela Etapa 83:
+  - runtime próprio da Stage84: SHA/fingerprint próprio;
+  - Public API: delegada ao audit canônico Stage72;
+  - Capability graph: delegado ao audit canônico Stage73;
+  - Lifecycle: delegado ao audit canônico Stage74;
+  - Networking Runtime: delegado ao audit canônico Stage83;
+  - nenhum raw SHA gate sobre public surface.
+
+A revisão 1.0.1 também restaura o manifesto game.steam e o
+LAYER1_CAPABILITY_GRAPH_BASELINE_V1.json exatamente à arquitetura canônica do
+Projeto1_106. game.steam.net continua sendo uma capability secundária/dormente;
+a Stage84 NÃO a ativa e NÃO cria um novo provider no grafo.
+
+DECISÕES ARQUITETURAIS
+----------------------
+1. Inicialização única
+   - SteamState::initialize() chama steamworks::Client::init() uma única vez.
+   - Não há fallback Client::init_app() -> Client::init().
+   - SteamAppId/SteamGameId deixam de ser hardcoded em src-tauri/src/lib.rs.
+   - steam_appid.txt continua sendo o mecanismo de desenvolvimento existente.
+
+2. Offline controlado
+   - Falha de Steam não derruba o host Tauri.
+   - SteamState permanece válido com client=None e diagnóstico de erro.
+   - O bridge TypeScript retorna false/null em indisponibilidade.
+
+3. Callback lifecycle
+   - SingleClient roda na thread steamworks-callback-pump.
+   - AtomicBool sinaliza shutdown.
+   - JoinHandle é aguardado.
+   - SteamState::shutdown() é idempotente.
+   - Drop é a última linha de defesa.
+   - RunEvent::Exit aciona shutdown explícito.
+
+4. Matchmaking real
+   - steam_create_lobby usa ISteamMatchmaking/CreateLobby real.
+   - steam_join_lobby aguarda callback real.
+   - leave/set/get lobby data usam Steamworks real.
+   - nenhum mock lobby/SystemTime é usado.
+
+5. P2P channel-aware
+   - steamworks-rs 0.11 mantém helpers antigos presos ao channel 0.
+   - raw-bindings é habilitado apenas para as operações flat necessárias.
+   - Send/Read/GetSessionState recebem o channel do Projeto1.
+   - canais aceitos: 0..255.
+   - unreliable: até 1200 bytes.
+   - reliable: até 1 MiB.
+   - SteamID64 e payloads são validados antes da FFI.
+
+6. Compatibilidade com Networking Runtime Stage83
+   - game.net continua consumindo SteamToken, como no Projeto1_106.
+   - src/plugins/net/plugin.ts passa a aguardar SteamApi.checkAvailability()
+     durante onBoot antes de bindSteamCapability().
+   - isso remove a corrida em que isAvailable ainda podia estar false durante o
+     bind inicial, sem mudar manifest, capability ownership ou lifecycle count.
+
+7. Capability graph preservado
+   - game.steam continua sendo o provider canônico existente.
+   - game.steam.net continua dormente.
+   - LAYER1_CAPABILITY_GRAPH_BASELINE_V1.json é restaurado ao snapshot 106.
+   - Stage73 precisa continuar PASS sem recertificação de provider adicional.
+
+8. Serviços relacionados
+   - Steam Cloud: status/list/read/write/delete via RemoteStorage.
+   - Steam Overlay: status real + ActivateGameOverlay com whitelist.
+   - Workshop: download de PublishedFileId via UGC.
+   - ownership de scan/publicação de mods continua em game.modding.
+
+ARQUIVOS DE IMPLEMENTAÇÃO ALTERADOS
+-----------------------------------
+src-tauri/Cargo.toml
+src-tauri/src/steam.rs
+src-tauri/src/lib.rs
+src/engine/steam/internal/SteamBridgeService.ts
+src/plugins/net/plugin.ts
+
+ARQUIVOS CANÔNICOS RESTAURADOS/PRESERVADOS
+------------------------------------------
+src/plugins/steam/plugin.ts
+LAYER1_CAPABILITY_GRAPH_BASELINE_V1.json
+src/engine/steam/public/index.ts   (não incluído no ZIP; deve permanecer intacto)
+src/contracts/steam/**             (não alterados)
+src/tokens/steam*.ts               (não alterados)
+
+ARQUIVOS DE GOVERNANÇA NOVOS/ATUALIZADOS
+----------------------------------------
+LAYER1_STEAMWORKS_BASELINE_V1.json
+ETAPA84_STEAMWORKS_INTEGRATION.txt
+ETAPA84_MANIFEST.json
+ETAPA84_SHA256SUMS.txt
+scripts/architecture/lib/layer1-steamworks-v1.mjs
+scripts/architecture/stage84-audit-steamworks.mjs
+scripts/architecture/stage84-validate-steamworks.mjs
+tests/layer1-steamworks-native-contract.test.ts
+tests/layer1-steamworks-selftest.test.ts
+tests/steam-integration.test.ts
+tests/steam-smoke-test.mjs
+tests/steam-p2p-smoke.mjs
+
+APLICAÇÃO
+---------
+Executar na raiz do Projeto1:
+
+  unzip -o etapa84_steamworks_integration_completa_v3.zip -d .
+  node scripts/architecture/stage84-validate-steamworks.mjs
+
+O validator executa, nesta ordem:
+  - Stage84 semantic audit;
+  - Stage72 public API regression;
+  - Stage73 capability graph regression;
+  - Stage74 lifecycle regression;
+  - Stage83 networking regression;
+  - npm run arch:check;
+  - Steam smoke;
+  - Steam P2P smoke;
+  - npx tsc --noEmit;
+  - Vitest focado;
+  - Vitest completo;
+  - cargo check --manifest-path src-tauri/Cargo.toml;
+  - npm run build.
+
+CRITÉRIO DE PASS
+----------------
+ETAPA 84: PASS somente quando todos os gates acima terminarem com exit code 0.
+
+SMOKE MANUAL RECOMENDADO APÓS PASS
+----------------------------------
+  npm run tauri dev
+
+Com Steam aberta, confirmar:
+  - somente uma inicialização Steam;
+  - persona/SteamID retornam corretamente;
+  - CreateLobby retorna SteamID64 real;
+  - P2P respeita channel;
+  - fechar a janela encerra callback pump sem thread residual.
+
+Sem Steam aberta, confirmar:
+  - host Tauri continua iniciando;
+  - SteamBridgeService retorna false/null sem crash global.
+
+COMMIT RECOMENDADO
+------------------
+git add \
+  LAYER1_CAPABILITY_GRAPH_BASELINE_V1.json \
+  LAYER1_STEAMWORKS_BASELINE_V1.json \
+  ETAPA84_STEAMWORKS_INTEGRATION.txt \
+  ETAPA84_MANIFEST.json \
+  ETAPA84_SHA256SUMS.txt \
+  scripts/architecture/lib/layer1-steamworks-v1.mjs \
+  scripts/architecture/stage84-audit-steamworks.mjs \
+  scripts/architecture/stage84-validate-steamworks.mjs \
+  src-tauri/Cargo.toml \
+  src-tauri/src/steam.rs \
+  src-tauri/src/lib.rs \
+  src/engine/steam/internal/SteamBridgeService.ts \
+  src/plugins/net/plugin.ts \
+  src/plugins/steam/plugin.ts \
+  tests/steam-integration.test.ts \
+  tests/steam-smoke-test.mjs \
+  tests/steam-p2p-smoke.mjs \
+  tests/layer1-steamworks-native-contract.test.ts \
+  tests/layer1-steamworks-selftest.test.ts
+
+git diff --cached --check
+git diff --cached --stat
+git commit -m "feat(layer1): certify Steamworks integration stage 84"
+git log -1 --oneline
+git status --short
+
+O ZIP deve permanecer fora do Git.

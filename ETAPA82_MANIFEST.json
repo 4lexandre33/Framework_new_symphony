@@ -1,0 +1,82 @@
+{
+  "stage": 82,
+  "layer": 1,
+  "name": "Storage & Persistence Infrastructure",
+  "baselineId": "layer1-storage-v1-stage82",
+  "requiresStages": [
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77,
+    78,
+    79,
+    80,
+    81
+  ],
+  "module": "game.storage",
+  "publicApiChanged": false,
+  "capabilityGraphChanged": false,
+  "runtimeChanges": {
+    "sharedSaveRecordCodec": true,
+    "checksumValidation": true,
+    "legacySaveCompatibility": true,
+    "typedInfrastructureErrors": true,
+    "localBackendIsolation": true,
+    "steamBackendInjectionPoint": true,
+    "cloudProfileBackendInjectionPoint": true,
+    "cloudDatabaseSaveFallbackRemoved": true,
+    "domainSaveGamePortAdapter": true,
+    "pluginDisposeLifecycle": true
+  },
+  "domainBoundary": {
+    "domainImportsEngine": false,
+    "adapterDomainImportsTypeOnly": true,
+    "worldInternalImportedByStorage": false,
+    "worldStateSerializerOwner": "game.world"
+  },
+  "explicitlyDeferred": [
+    "Stage 83 Networking Runtime",
+    "Stage 84 Steamworks Remote Storage backend",
+    "Stage 85 Tauri filesystem/SQLite backend",
+    "public StorageApi v2 / typed public error union",
+    "cross-module import of game.world/internal"
+  ],
+  "validation": [
+    "Stage 82 architecture audit",
+    "arch:check",
+    "tsc --noEmit",
+    "focused storage Vitest",
+    "legacy storage regression tests",
+    "storage smoke",
+    "full Vitest",
+    "cargo check",
+    "production build"
+  ],
+  "files": [
+    "ETAPA82_STORAGE_PERSISTENCE.txt",
+    "LAYER1_STORAGE_BASELINE_V1.json",
+    "scripts/architecture/lib/layer1-storage-v1.mjs",
+    "scripts/architecture/stage82-audit-storage.mjs",
+    "scripts/architecture/stage82-validate-storage.mjs",
+    "src/engine/storage/internal/CloudDatabaseDriver.ts",
+    "src/engine/storage/internal/DomainSaveGamePortAdapter.ts",
+    "src/engine/storage/internal/KeyValueSaveDriver.ts",
+    "src/engine/storage/internal/KeyValueStorageBackend.ts",
+    "src/engine/storage/internal/LocalDatabaseDriver.ts",
+    "src/engine/storage/internal/SaveRecordCodec.ts",
+    "src/engine/storage/internal/SteamCloudDriver.ts",
+    "src/engine/storage/internal/StorageErrors.ts",
+    "src/engine/storage/internal/StorageService.ts",
+    "src/plugins/storage/plugin.ts",
+    "tests/layer1-storage-domain-port.test.ts",
+    "tests/layer1-storage-runtime.test.ts",
+    "tests/layer1-storage-selftest.test.ts",
+    "tests/layer1-storage-service.test.ts",
+    "tests/storage-smoke-test.mjs",
+    "ETAPA82_MANIFEST.json",
+    "ETAPA82_SHA256SUMS.txt"
+  ]
+}

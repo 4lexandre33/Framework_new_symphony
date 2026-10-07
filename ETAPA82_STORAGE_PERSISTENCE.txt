@@ -1,0 +1,68 @@
+PROJETO1 — ETAPA 82
+LAYER 1 — STORAGE & PERSISTENCE INFRASTRUCTURE
+
+ESCOPO
+=====
+A Etapa 82 certifica e endurece game.storage sem alterar a API pública v1
+congelada na Etapa 72 e sem alterar o capability graph congelado na Etapa 73.
+
+Arquivos centrais:
+- LocalDatabaseDriver
+- SteamCloudDriver
+- CloudDatabaseDriver
+- StorageService
+- DomainSaveGamePortAdapter
+- storage plugin lifecycle
+- codec/checksum/backend key-value internos
+
+WorldStateSerializer continua pertencendo a game.world. Storage não cruza
+engine/world/internal: persiste payloads opacos e snapshots através de contracts.
+
+DECISÕES
+========
+1. StorageApi, contracts e tokens públicos permanecem inalterados.
+2. "sqlite_local" continua sendo o identificador público legado, mas a Etapa 82
+   não afirma que Web Storage seja SQLite.
+3. O backend local foi isolado atrás de KeyValueStorageBackend.
+4. SteamCloudDriver mantém compatibilidade em Web Storage, porém agora aceita
+   backend injetável para Remote Storage real na Etapa 84.
+5. CloudDatabaseDriver não faz fetch concreto nem recebe segredo no frontend.
+   Um backend remoto pode ser injetado posteriormente.
+6. cloud_database é exclusivo de perfis online; não é um driver de save slots.
+7. Saves novos usam envelope v1 com payload JSON textual + FNV-1a 32-bit.
+8. Saves legados continuam legíveis com o checksum histórico.
+9. Corrupção/checksum inválido gera erro técnico tipado.
+10. DomainSaveGamePortAdapter implementa a porta da Camada 2 usando imports
+    type-only; src/domain/** continua sem depender de Engine/Storage.
+11. Dispose do plugin encerra o StorageService explicitamente.
+
+NÃO ANTECIPADO
+==============
+- Etapa 83: NetworkService / transports / replication.
+- Etapa 84: Steamworks Remote Storage real.
+- Etapa 85: filesystem/SQLite/Tauri concreto.
+- Migração de API pública de game.storage.
+- Novo contrato público de erro.
+- Cross-import de game.storage para game.world/internal.
+
+VALIDAÇÃO
+=========
+Executar:
+
+node scripts/architecture/stage82-validate-storage.mjs
+
+O gate executa:
+- audit da Etapa 82;
+- arch:check;
+- tsc --noEmit;
+- testes focados novos + regressões storage existentes;
+- storage smoke;
+- Vitest completo;
+- cargo check;
+- build.
+
+PASS
+====
+A etapa só está concluída quando o validator imprime:
+
+ETAPA 82: PASS

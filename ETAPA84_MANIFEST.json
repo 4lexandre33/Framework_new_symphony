@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 2,
+  "stage": 84,
+  "stageName": "Steamworks Integration",
+  "layer": 1,
+  "packageRevision": "1.0.2",
+  "referenceSnapshot": "Projeto1_106",
+  "baselineId": "layer1-steamworks-v1-stage84",
+  "applyAtProjectRoot": true,
+  "validator": "scripts/architecture/stage84-validate-steamworks.mjs",
+  "commitMessage": "feat(layer1): certify Steamworks integration stage 84",
+  "architecture": {
+    "primaryCapability": "game.steam",
+    "secondaryCapability": "game.steam.net",
+    "secondaryCapabilityState": "preserved-dormant",
+    "publicApiOwnership": "stage72-preserved",
+    "capabilityGraphOwnership": "stage73-preserved",
+    "lifecycleOwnership": "stage74-preserved",
+    "networkingCompatibility": "stage83-preserved-with-availability-handshake",
+    "nativeRuntime": "Tauri 2 + Rust + steamworks-rs 0.11 raw-bindings",
+    "offlineFallback": true,
+    "singleInitialization": true,
+    "callbackPumpStopJoin": true,
+    "realMatchmaking": true,
+    "channelAwareP2P": true,
+    "steamCloudNativeSurface": true,
+    "overlayNativeSurface": true,
+    "workshopDownloadNativeSurface": true,
+    "rawPublicSurfaceShaGate": false
+  },
+  "files": [
+    {
+      "path": "ETAPA84_STEAMWORKS_INTEGRATION.txt",
+      "sha256": "aef5c63c9783998bc40fcb948843458b6bc892e03c92634d2cc3f715c9183186"
+    },
+    {
+      "path": "LAYER1_CAPABILITY_GRAPH_BASELINE_V1.json",
+      "sha256": "79e4b81b913aede33040fe98d28b53896e26d3ff67432cfc6fb43886ed3d7fa5"
+    },
+    {
+      "path": "LAYER1_STEAMWORKS_BASELINE_V1.json",
+      "sha256": "2aae907dcf9c0f42c9d51d7124d3e8cf72b4fbee07895bbfb19d73c20d0fb2ee"
+    },
+    {
+      "path": "scripts/architecture/lib/layer1-steamworks-v1.mjs",
+      "sha256": "bbc27bcbb7557119353372bd1da029aa5cd75eaf5622c1355aaae8b63421ddd6"
+    },
+    {
+      "path": "scripts/architecture/stage84-audit-steamworks.mjs",
+      "sha256": "a1e71ab25716d40151feb4d4269a27683e232c1c01144c2d72a5c594e7da73b6"
+    },
+    {
+      "path": "scripts/architecture/stage84-validate-steamworks.mjs",
+      "sha256": "4cb3eeb6479a44c73cc2471a41aa86ce3216ab07ea47fc1c8ec22a332925f7f5"
+    },
+    {
+      "path": "src/engine/steam/internal/SteamBridgeService.ts",
+      "sha256": "44b781ffb75792988ff6088ade4ba4f4578482cd55318d51bb65147543a7a711"
+    },
+    {
+      "path": "src/plugins/net/plugin.ts",
+      "sha256": "8713a2d2dc99e4c5ba0cdc4212fbc7b079a66313807d50808ecd6605abdb129c"
+    },
+    {
+      "path": "src/plugins/steam/plugin.ts",
+      "sha256": "a646788a9f7ee874b6355f7d75914c28802e7922ffa62e986f081da187d76176"
+    },
+    {
+      "path": "src-tauri/Cargo.toml",
+      "sha256": "fbfe89089b1eccd8d5901a2143486a61ac3b6ded0c4e5dfc645d278d43648902"
+    },
+    {
+      "path": "src-tauri/src/lib.rs",
+      "sha256": "8158e37ef624c7e5b4b8b5345941fa0e362171461e05aa4bf51c7c2927ff51b5"
+    },
+    {
+      "path": "src-tauri/src/steam.rs",
+      "sha256": "71b51cc5818e1fb2111f2d1c3873a1fd19730591d157c881d3692a6a51b27601"
+    },
+    {
+      "path": "tests/layer1-steamworks-native-contract.test.ts",
+      "sha256": "ff4e5972b06562e5ca4c2880efc2a47f57c0958bed29c36acd90f2688b3fd223"
+    },
+    {
+      "path": "tests/layer1-steamworks-selftest.test.ts",
+      "sha256": "01e4aa2b954032c547168148b791edc3a450fe41575dc59f23720a546b2769ea"
+    },
+    {
+      "path": "tests/steam-integration.test.ts",
+      "sha256": "325fb88b4f5830cfae6d6cf0ec026a654dfda9d9363adbb8016d1811db43da25"
+    },
+    {
+      "path": "tests/steam-p2p-smoke.mjs",
+      "sha256": "ffd24930b2bea5ae3942ae434b602fe59996904040a6eaf89db195dee9c499fc"
+    },
+    {
+      "path": "tests/steam-smoke-test.mjs",
+      "sha256": "e07e61d1115f3d2e4b30294a38948c2fe89c3818e9c995ab57858dbd784f9e3c"
+    }
+  ],
+  "validation": [
+    "node scripts/architecture/stage84-audit-steamworks.mjs",
+    "node scripts/architecture/stage72-audit-public-apis.mjs",
+    "node scripts/architecture/stage73-audit-capability-graph.mjs",
+    "node scripts/architecture/stage74-audit-lifecycle.mjs",
+    "node scripts/architecture/stage83-audit-networking.mjs",
+    "npm run arch:check",
+    "node tests/steam-smoke-test.mjs",
+    "node tests/steam-p2p-smoke.mjs",
+    "npx tsc --noEmit",
+    "npx vitest run tests/steam-integration.test.ts tests/layer1-steamworks-native-contract.test.ts tests/layer1-steamworks-selftest.test.ts",
+    "npx vitest run",
+    "cargo check --manifest-path src-tauri/Cargo.toml",
+    "npm run build"
+  ],
+  "notes": [
+    "ZIP não deve ser commitado.",
+    "Revisão 1.0.2 corrige Rust E0382: SingleClient não é usado novamente após ser movido para a closure do callback pump.",
+    "Falha de thread::spawn descarta automaticamente a closure capturada; o ramo Err descarta somente Client.",
+    "Auditoria e teste nativo agora rejeitam a regressão drop(single_client) no lifecycle.",
+    "Revisão 1.0.1 corrigiu o raw SHA gate incorreto sobre src/engine/steam/public/index.ts.",
+    "LAYER1_CAPABILITY_GRAPH_BASELINE_V1.json e src/plugins/steam/plugin.ts permanecem no estado canônico do Projeto1_106.",
+    "game.steam.net permanece dormente nesta etapa; nenhuma recertificação de provider é feita.",
+    "Cargo.lock não deve mudar porque apenas raw-bindings da dependência steamworks 0.11 já travada é habilitado."
+  ]
+}

@@ -34,10 +34,14 @@ export class TriggerZoneManager {
         continue;
       }
 
-      let insideSet = this.entityInsideZones.get(zone.zoneId);
+      const insideSet = this.entityInsideZones.get(zone.zoneId);
       if (!insideSet) {
-        insideSet = new Set<string>();
-        this.entityInsideZones.set(zone.zoneId, insideSet);
+        /*
+         * registerZone() cria o Set junto com a zona. Se esse
+         * invariante interno for quebrado, ignoramos a entrada em
+         * vez de alocar uma estrutura nova durante o hot path.
+         */
+        continue;
       }
 
       const isInside = this.isPositionInsideZone(position, zone);

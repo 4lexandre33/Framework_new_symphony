@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "baselineId": "layer1-world-ai-scripting-v1-stage81",
+  "auditVersion": "1.0.0",
+  "stage": 81,
+  "layer": 1,
+  "modules": [
+    "game.world",
+    "game.ai",
+    "game.scripting"
+  ],
+  "publicApiVersion": "1.0.0",
+  "semanticRuntimeFiles": 20,
+  "semanticFingerprints": {
+    "src/engine/world/internal/EntityManager.ts": "ded5c154e8a6790dc93ebbb0293029a6574f3e34ced3f48ce063c70b00702cbb",
+    "src/engine/world/internal/OctreeManager.ts": "5cacdc0b75af9c03a1ad3e666c2ab0e60efe5f39e5bb250c93b9e875a0406612",
+    "src/engine/world/internal/SceneManager.ts": "6069c552d980f4c3b2d4e573ced9842a289dcac5fcc46b4f28e1fdcae2b5ae0c",
+    "src/engine/world/internal/SpatialGrid.ts": "9331bf0adfa1c599e3a84443d651d5a37b9014c7ca89453222c28daa80968378",
+    "src/engine/world/internal/WorldService.ts": "7ad55040c8255d2c07ff136d04c9d356068b2426b082b176daf2f2a11467fbab",
+    "src/engine/world/internal/WorldStateSerializer.ts": "9837d45e85804d44381bb665367735e39caf1b71d48c6e7fe3777f22db1dc727",
+    "src/plugins/world/plugin.ts": "4fd7d04e77826f24751b6fdea098920f994ea9b45bc6fcb87075221c1c05c3c5",
+    "src/engine/ai/internal/AIAgentManager.ts": "e79144cfcafc810212bd38441396e419be4fe3154d2daf1f5478de7f829c62dd",
+    "src/engine/ai/internal/AIService.ts": "989ddae644b65037a19b9330356cbe3bde884fc7f8f164efd67fadbb0ff142c4",
+    "src/engine/ai/internal/BehaviorTree.ts": "1c99c0047b2f38db1daba9bcfd78c7737828c46f14633c4969f0337990338ac4",
+    "src/engine/ai/internal/NavMeshQuery.ts": "e737c0e0960dfb7b540f2dd25c5f8aafabd067eb5e9a49f7e07b66488613471f",
+    "src/engine/ai/internal/PerceptionSystem.ts": "390c49a21c672d33e08b0aa9b0622497f070ef82d101a288af7167fc409bb6e6",
+    "src/engine/ai/internal/SteeringBehaviors.ts": "fae0d9d15dedc64419aae71ee3047017bdfc4c3fadaadf55eff1f542f8ae0c9c",
+    "src/plugins/ai/plugin.ts": "7c099fbd43a96a8fe0304fe4681e60e24dccfc37e523f83b331f379ff7530408",
+    "src/engine/scripting/internal/CutsceneTimeline.ts": "94f9bf52594f49be4a93e3ebe77e26373485bc0afa51ab70d60df44d98ded296",
+    "src/engine/scripting/internal/DialogueTreeParser.ts": "a664d120ffd404e1b942f16db94bc0e087aaf6cb2ba7757d5614373a30341c05",
+    "src/engine/scripting/internal/QuestManager.ts": "3bc75658868fc2907fe5cf31cd66fba42fa033cf3c6681889296bc26594753db",
+    "src/engine/scripting/internal/ScriptingService.ts": "7b18f537d0e936f358c5abb9a7cb13fa789967d188e7c91164f9562cfb949cd7",
+    "src/engine/scripting/internal/TriggerZoneManager.ts": "043971cbd4c89756099c77d43079c96a8367017d5983e7833e48d2d21a47f83f",
+    "src/plugins/scripting/plugin.ts": "fcf8a94a69f3d66121d94ec8f490706c8da74a761c7b26701407922334000e14"
+  },
+  "certifiedHotPaths": [
+    "WorldService.tick",
+    "SpatialGrid.update",
+    "OctreeManager.update",
+    "AIService.update",
+    "AIAgentManager.update",
+    "BehaviorTree.tick",
+    "PerceptionSystem.checkPerception",
+    "SteeringBehaviors.calculateSteering",
+    "ScriptingService.update",
+    "ScriptingService.checkEntityInZones",
+    "CutsceneTimeline.update",
+    "TriggerZoneManager.checkEntityInZones"
+  ],
+  "deferredToStage82": [
+    "src/engine/world/internal/SaveSystem.ts"
+  ],
+  "policy": {
+    "publicApisRemainV1": true,
+    "capabilityGraphUnchanged": true,
+    "lifecycleHooksRemainStage74Compatible": true,
+    "stage80RegressionRequired": true,
+    "explicitAnyAllowed": false,
+    "directDomainImportsAllowed": false,
+    "certifiedHotPathExplicitAllocationsAllowed": 0,
+    "entitySnapshotReuseAllowed": false,
+    "worldSpatialIndexesTrackMovement": true,
+    "aiReleasesCrossModuleReferencesOnClear": true,
+    "scriptingPerTickCallbackAllocationAllowed": false,
+    "authoritativeDomainRewardsExecutedByEngine": false,
+    "stage82PersistenceAnticipationAllowed": false
+  }
+}

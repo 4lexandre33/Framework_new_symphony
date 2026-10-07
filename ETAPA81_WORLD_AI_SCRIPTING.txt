@@ -1,0 +1,298 @@
+PROJETO1 — ETAPA 81: WORLD / AI / SCRIPTING
+--------------------------------------------
+
+STATUS DO PACOTE
+----------------
+Stage: 81
+Layer: 1
+Baseline: layer1-world-ai-scripting-v1-stage81
+Audit: 1.0.0
+Módulos certificados: game.world, game.ai, game.scripting
+Próxima etapa: 82 — Storage / Persistence
+
+OBJETIVO
+--------
+Certificar a infraestrutura técnica de mundo, inteligência artificial e scripting
+sem mover para a Engine regras autoritativas que pertencem ao Domain.
+
+O gate desta etapa cobre:
+- lifetime e restart de entidades/cenas;
+- coerência de SpatialGrid e Octree ao mover/remover entidades;
+- AI agents, behavior trees, perception, navigation e steering;
+- cutscenes, diálogos, quests técnicas e trigger zones;
+- teardown completo dos três módulos;
+- ausência de explicit any nos runtimes certificados;
+- ausência de imports diretos da Engine World/AI/Scripting para o Domain;
+- ausência de allocation literal/new/function nos hot paths certificados;
+- preservação das APIs públicas v1, capability graph e assinaturas lifecycle.
+
+NÃO FAZ PARTE DA ETAPA 81
+-------------------------
+`src/engine/world/internal/SaveSystem.ts` permanece explicitamente reservado à
+Etapa 82. Persistência local/cloud/Steam, migração de schema, checksums de saves,
+quarentena e políticas de compatibilidade serão certificados no próximo gate.
+
+`WorldStateSerializer.ts` continua sendo usado como serializer técnico já existente
+do WorldService. A Etapa 81 apenas garante que, após deserialize, os índices
+espaciais derivados do ECS sejam reconstruídos. A política de persistência e
+compatibilidade do snapshot pertence à Etapa 82.
+
+Nenhuma API pública, token ou capability nova foi criada.
+Nenhum arquivo de Domain foi alterado.
+Nenhum arquivo Rust/Tauri foi alterado.
+
+WORLD — ENTITY LIFETIME
+-----------------------
+Arquivo principal:
+src/engine/world/internal/EntityManager.ts
+
+Correções e invariantes:
+- removido o pool mutável de EntityComponentState;
+- removidos casts `as any` usados para sobrescrever propriedades readonly;
+- cada spawn passa a possuir seu próprio snapshot técnico;
+- referências a uma entidade despawnada nunca são reutilizadas como outra entidade;
+- `forEachEntity()` permite iteração interna sem materializar Array.from por frame;
+- clear remove todos os registros sem manter objetos órfãos em pool.
+
+A cópia de EntityComponentState acontece somente em spawn, que é operação discreta.
+O hot path do tick não clona snapshots.
+
+WORLD — SPATIAL GRID
+--------------------
+Arquivo:
+src/engine/world/internal/SpatialGrid.ts
+
+A estrutura mantém `insert()` para criação/upsert fora do hot path e adiciona
+`update()` para atualização de uma entidade já registrada.
+
+`update()`:
+- não cria objetos, arrays, closures ou `new`;
+- troca a entidade de célula apenas quando cellX/cellZ mudam;
+- atualiza x/y/z in-place;
+- retorna false quando o entityId não existe.
+
+WORLD — OCTREE
+--------------
+Arquivo:
+src/engine/world/internal/OctreeManager.ts
+
+A implementação passa a separar o registry canônico das entidades da árvore
+materializada:
+- `entries: Map<entityId, OctreeEntry>` é a fonte técnica do índice;
+- `insert()` faz upsert sem duplicar entityId;
+- `update()` altera posição in-place e apenas marca o índice dirty;
+- `remove()` elimina a entidade pelo id;
+- `queryBounds()` e `getNodeCount()` materializam/reconstroem a árvore lazily;
+- movimentos não deixam posições antigas em nós já subdivididos;
+- despawn não exige reconstrução imediata de toda a Octree no WorldService;
+- resultados de query retornam cópia da posição e não expõem o registro interno.
+
+A estratégia lazy desloca as alocações estruturais da árvore para o momento da
+consulta/rebuild, mantendo `OctreeManager.update()` allocation-free no tick.
+
+WORLD — SCENES / WORLD SERVICE
+------------------------------
+Arquivos:
+src/engine/world/internal/SceneManager.ts
+src/engine/world/internal/WorldService.ts
+
+SceneManager:
+- usa `try/finally` para sempre liberar `isLoading`;
+- uma falha de listener durante load não bloqueia uma tentativa futura;
+- `clear()` zera entidades, índices, activeSceneId e loading state;
+- reset de bounds não implica ownership de regras de gameplay.
+
+WorldService:
+- `loadScene()` reconstrói índices imediatamente após sucesso;
+- isso mantém `clearPreviousScene=false` consultável sem esperar outro tick;
+- `despawnEntity()` remove diretamente de SpatialGrid e Octree;
+- `tick()` usa `EntityManager.forEachEntity()` e callbacks pré-alocados;
+- `tick()` atualiza SpatialGrid e Octree para posições já registradas;
+- `clear()` delega ao SceneManager e encerra todo o estado técnico de world;
+- deserialize reconstrói os índices espaciais derivados do ECS.
+
+AI — AGENTS / NAVIGATION / BEHAVIOR
+-----------------------------------
+Arquivos certificados:
+src/engine/ai/internal/AIAgentManager.ts
+src/engine/ai/internal/AIService.ts
+src/engine/ai/internal/BehaviorTree.ts
+src/engine/ai/internal/NavMeshQuery.ts
+src/engine/ai/internal/PerceptionSystem.ts
+src/engine/ai/internal/SteeringBehaviors.ts
+src/plugins/ai/plugin.ts
+
+A arquitetura permanece técnica:
+- NavMesh resolve caminho e waypoints;
+- BehaviorTree resolve estados de execução;
+- Perception consulta visão/hearing e Physics opcionalmente para line of sight;
+- Steering produz vetores de movimento;
+- AIAgentManager coordena esses sistemas;
+- AIService traduz integração com capabilities/events.
+
+Nenhum desses arquivos importa regras autoritativas de Domain.
+
+AI — TEARDOWN / RESTART
+-----------------------
+`AIService.clear()` agora:
+- limpa agentes;
+- limpa NavMesh via AIAgentManager;
+- solta a referência para PhysicsApi;
+- solta a referência para WorldApi.
+
+Assim o serviço não retém capabilities de outra geração do Kernel durante
+shutdown/restart controlado.
+
+A assinatura lifecycle do plugin permanece congelada:
+- readyCalls: 1
+- onDisposeCalls: 1
+- onBoot: sim
+- onStop: não
+
+WORLD permanece ready=1 / dispose=1 / onBoot=0 / onStop=0.
+SCRIPTING permanece ready=1 / dispose=1 / onBoot=0 / onStop=0.
+
+SCRIPTING — CUTSCENE / DIALOGUE / QUEST / TRIGGERS
+--------------------------------------------------
+Arquivos certificados:
+src/engine/scripting/internal/CutsceneTimeline.ts
+src/engine/scripting/internal/DialogueTreeParser.ts
+src/engine/scripting/internal/QuestManager.ts
+src/engine/scripting/internal/ScriptingService.ts
+src/engine/scripting/internal/TriggerZoneManager.ts
+src/plugins/scripting/plugin.ts
+
+ScriptingService passa a possuir callbacks estáveis de instância para:
+- Timeline keyframes;
+- Trigger zone enter/exit.
+
+`update()` não cria closure por frame.
+`checkEntityInZones()` não cria closure por consulta.
+
+O payload terminal de cutscene continua sendo criado apenas no evento de conclusão,
+fora do caminho comum do tick. Ele não é reutilizado entre emits porque o EventBus
+pode enfileirar a referência recebida.
+
+TriggerZoneManager não cria Set de recuperação dentro de checkEntityInZones().
+`registerZone()` é o único responsável por criar o membership set da zona; se esse
+invariante interno for quebrado, o hot path ignora a zona em vez de alocar por frame.
+
+`clear()` de ScriptingService encerra:
+- timeline/cutscene;
+- dialogue tree state;
+- quest descriptors/states;
+- trigger zones e memberships.
+
+QUESTS TÉCNICAS VS DOMAIN
+-------------------------
+QuestManager da Engine é um tracker técnico/transiente para scripting e eventos.
+Ele pode transportar metadados como rewardXp/rewardItems existentes no descriptor,
+mas não aplica XP, não altera inventário, não credita moeda e não executa regras de
+progressão/economia.
+
+Essas decisões continuam pertencendo à Camada 2 / Domain.
+
+HOT PATHS CERTIFICADOS
+----------------------
+12 métodos são auditados por AST e precisam permanecer com zero:
+- object literals;
+- array literals;
+- `new` expressions;
+- arrow/function expressions.
+
+Métodos:
+1. WorldService.tick
+2. SpatialGrid.update
+3. OctreeManager.update
+4. AIService.update
+5. AIAgentManager.update
+6. BehaviorTree.tick
+7. PerceptionSystem.checkPerception
+8. SteeringBehaviors.calculateSteering
+9. ScriptingService.update
+10. ScriptingService.checkEntityInZones
+11. CutsceneTimeline.update
+12. TriggerZoneManager.checkEntityInZones
+
+BASELINE SEMÂNTICA
+------------------
+`LAYER1_WORLD_AI_SCRIPTING_BASELINE_V1.json` congela fingerprints AST dos 20
+arquivos runtime certificados. Comentários/formatação podem mudar sem alterar o
+fingerprint semântico; mudanças de código exigem recertificação da Etapa 81.
+
+O auditor também exige:
+- Stage 72 Public APIs verde;
+- Stage 73 Capability Graph verde;
+- assinaturas lifecycle dos três plugins compatíveis com Stage 74;
+- Stage 80 Presentation audit verde;
+- zero explicit any;
+- zero imports diretos do Domain;
+- zero allocations explícitas nos 12 hot paths;
+- SaveSystem fora da baseline Stage 81.
+
+VALIDATOR
+---------
+Executar na raiz do projeto:
+
+node scripts/architecture/stage81-validate-world-ai-scripting.mjs
+
+Sequência executada:
+1. valida arquivos obrigatórios/manifest;
+2. valida todos os SHA-256 do pacote;
+3. recusa antecipação nominal da Etapa 82;
+4. executa regressão semântica da Etapa 80;
+5. executa auditor Stage 81;
+6. executa `npm run arch:check`;
+7. executa `npx tsc --noEmit`;
+8. executa testes focados Stage 81 + world/ai/scripting legados;
+9. executa smokes world/ai/scripting;
+10. executa Vitest completo;
+11. executa `cargo check --manifest-path src-tauri/Cargo.toml`;
+12. executa `npm run build`.
+
+O gate só imprime `ETAPA 81: PASS` se todos os passos concluírem com código zero.
+
+TESTES NOVOS
+------------
+tests/layer1-world-ai-scripting-world.test.ts
+- snapshot despawnado não é reciclado como outra entidade;
+- Octree move/removal sem stale entries;
+- WorldService.tick sincroniza SpatialGrid + Octree;
+- SceneManager recupera loading flag depois de exceção.
+
+tests/layer1-world-ai-scripting-ai.test.ts
+- AIService libera Physics/World no clear;
+- AIAgentManager limpa agentes e NavMesh;
+- Perception/Steering comprovam scratch reutilizado.
+
+tests/layer1-world-ai-scripting-scripting.test.ts
+- clear + reuse de scripting;
+- quest técnica conclui sem executar reward autoritativo;
+- triggerOnce é reinicializável após clear.
+
+tests/layer1-world-ai-scripting-runtime.test.ts
+- baseline/runtime coverage;
+- zero any/import Domain;
+- defer explícito de SaveSystem;
+- auditor completo verde.
+
+tests/layer1-world-ai-scripting-selftest.test.ts
+- unicidade de runtime/hot paths;
+- stage/defer correto;
+- selftest em diretório temporário.
+
+CRITÉRIO DE PASS
+----------------
+A Etapa 81 está aprovada quando:
+- game.world, game.ai e game.scripting mantêm API pública v1;
+- capability graph não muda;
+- lifecycle dos três plugins continua compatível com Stage 74;
+- Stage 80 continua verde;
+- world não retorna entidades despawnadas via índice espacial;
+- movimento técnico aparece tanto no grid quanto na octree;
+- shutdown/clear zera ownership e referências cross-module;
+- AI e Scripting não passam a executar regras autoritativas de Domain;
+- 12 hot paths possuem zero allocation explícita;
+- 20 runtimes possuem zero explicit any;
+- SaveSystem continua para Stage 82;
+- architecture, TypeScript, testes, smokes, Cargo e build ficam verdes.

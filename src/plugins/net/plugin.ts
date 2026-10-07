@@ -87,21 +87,29 @@ export function createNetworkPlugin():
       lifecycleHooks: {
         ...netManifest.lifecycleHooks,
 
-        onBoot(
+        async onBoot(
           ctx:
             PluginContext,
-        ): void {
+        ): Promise<void> {
           if (!networkService) {
             throw new Error(
               "NetworkService não foi criado durante setup().",
             );
           }
 
+          const steamApi =
+            ctx.caps.get(
+              SteamToken,
+            );
+
+          if (steamApi) {
+            await steamApi
+              .checkAvailability();
+          }
+
           networkService
             .bindSteamCapability(
-              ctx.caps.get(
-                SteamToken,
-              ),
+              steamApi,
             );
         },
       },

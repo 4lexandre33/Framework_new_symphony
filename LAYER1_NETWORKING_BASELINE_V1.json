@@ -1,0 +1,86 @@
+{
+  "version": "1.0.1",
+  "schemaVersion": 2,
+  "stage": 83,
+  "layer": 1,
+  "baselineId": "layer1-networking-v1-stage83",
+  "module": "game.net",
+  "requiresStages": [
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77,
+    78,
+    79,
+    80,
+    81,
+    82
+  ],
+  "capability": {
+    "id": "game.net",
+    "version": "1.0.0"
+  },
+  "semanticFingerprintAlgorithm": "normalized-source-sha256-v1",
+  "semanticFingerprints": {
+    "src/engine/net/internal/NetworkPacketValidator.ts": "a2677cfe6dbbbddd550c2229a0aabebddafdab06248877c6ff4813d4656a39ff",
+    "src/engine/net/internal/NetworkTransport.ts": "099b41d3b7799807c019b4898caf1c733f2c505a9993c0e44003fd7ba1045e9c",
+    "src/engine/net/internal/WebSocketTransport.ts": "7007931b54d13552722d1f504f691ec03b5d407f47f0882ac41e51a702e2d761",
+    "src/engine/net/internal/SteamP2PTransport.ts": "44ef8b498073ad9922507f08dbc7910df5ed1730831164641eb69572c559a72d",
+    "src/engine/net/internal/StateReplicator.ts": "166ec5350ea450cb50b9a38b0eae0a4d748871620df09080f771a46f1c9a2207",
+    "src/engine/net/internal/NetworkService.ts": "17e13a92f42529bc13e65e183656dbf07ce18f43b9b4de460f00365c967e4f9f"
+  },
+  "canonicalCompatibility": {
+    "publicApiBaseline": "layer1-public-api-v1-stage72",
+    "capabilityGraphBaseline": "layer1-capability-graph-v1-stage73",
+    "lifecycleBaseline": "layer1-lifecycle-v1-stage74",
+    "publicSurfaceOwnedByStage72": [
+      "src/contracts/net/types.ts",
+      "src/tokens/net.ts",
+      "src/engine/net/public/index.ts"
+    ],
+    "pluginManifestOwnedByStage73": "src/plugins/net/plugin.ts",
+    "pluginLifecycleOwnedByStage74": "src/plugins/net/plugin.ts"
+  },
+  "pluginLifecycleSignature": {
+    "readyCalls": 1,
+    "onDisposeCalls": 1,
+    "onBootHooks": 1,
+    "onStopHooks": 0
+  },
+  "capturedCounts": {
+    "semanticRuntimeFiles": 6,
+    "publicFilesDelegatedToStage72": 3,
+    "pluginFilesDelegatedToStages73And74": 1
+  },
+  "policy": {
+    "publicApiUnchanged": true,
+    "capabilityGraphUnchanged": true,
+    "lifecycleCompatible": true,
+    "packetMaxBytes": 1048576,
+    "channelRange": [
+      0,
+      255
+    ],
+    "backpressureHighWaterBytes": 2097152,
+    "steamPollChannels": 2,
+    "steamMaxPacketsPerChannelPerPoll": 128,
+    "disconnectClearsReplication": true,
+    "staleReplicationSequenceRejected": true,
+    "worldSnapshotEntityOrder": "entityId-ascending",
+    "concurrentPollsAllowed": false,
+    "domainImportsAllowed": false,
+    "crossModuleInternalImportsAllowed": false,
+    "rawShaOfPublicSurfaceUsedAsStage83Gate": false
+  },
+  "notes": [
+    "Etapa 83 congela semanticamente somente os seis runtimes que ela altera/certifica.",
+    "API pública game.net é validada pelo auditor canônico da Etapa 72, cujo fingerprint é token-stream e tolera whitespace/comments/line endings.",
+    "Manifest/capability graph de game.net é validado pelo auditor canônico da Etapa 73.",
+    "Lifecycle do plugin game.net é validado pelo auditor canônico da Etapa 74 e também por assinatura estrutural específica da Etapa 83.",
+    "Nenhum SHA bruto próprio da Etapa 83 é usado para re-congelar public/index.ts ou plugin.ts.",
+    "Steamworks profundo, callbacks nativos e shutdown do SDK permanecem para a Etapa 84."
+  ]
+}

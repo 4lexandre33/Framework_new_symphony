@@ -1,17 +1,38 @@
-import type { PluginContext } from "@core";
-import { type NetworkApi } from "../../../tokens/net";
-import { type SteamApi } from "../../../tokens/steam";
+import type {
+  PluginContext,
+} from "@core";
+
+import type {
+  NetworkApi,
+} from "../../../tokens/net";
+
+import type {
+  SteamApi,
+} from "../../../tokens/steam";
+
 import type {
   EntitySnapshot,
   NetMode,
   NetworkStats,
-  TransportType,
   StateReplicationApi,
+  TransportType,
 } from "../../../contracts/net/types";
-import { NetworkTransport } from "./NetworkTransport";
-import { SteamP2PTransport } from "./SteamP2PTransport";
-import { WebSocketTransport } from "./WebSocketTransport";
-import { StateReplicator } from "./StateReplicator";
+
+import type {
+  NetworkTransport,
+} from "./NetworkTransport";
+
+import {
+  SteamP2PTransport,
+} from "./SteamP2PTransport";
+
+import {
+  WebSocketTransport,
+} from "./WebSocketTransport";
+
+import {
+  StateReplicator,
+} from "./StateReplicator";
 
 export class NetworkService
   implements NetworkApi {
@@ -24,6 +45,16 @@ export class NetworkService
 
   private readonly stateReplicator =
     new StateReplicator();
+
+  private readonly transportUnbinders:
+    Array<() => void> =
+      [];
+
+  private pollInFlight =
+    false;
+
+  private disposed =
+    false;
 
   public constructor(
     private readonly ctx:
@@ -40,34 +71,27 @@ export class NetworkService
       SteamApi | undefined,
   ): void {
     if (
+      this.disposed ||
       !steamApi ||
-      !steamApi.isAvailable
-    ) {
-      return;
-    }
-
-    if (
-      this.activeTransport
-        .type ===
-      "steam_p2p"
-    ) {
-      return;
-    }
-
-    if (
+      !steamApi.isAvailable ||
+      this.activeTransport.type ===
+        "steam_p2p" ||
       this.currentMode !==
-      "offline"
+        "offline"
     ) {
       return;
     }
 
-    this.activeTransport
-      .dispose();
+    this.unbindTransportEvents();
+
+    this.activeTransport.dispose();
 
     this.activeTransport =
       new SteamP2PTransport(
         steamApi,
       );
+
+    this.stateReplicator.clear();
 
     this.bindTransportEvents();
   }
@@ -79,8 +103,7 @@ export class NetworkService
 
   public get transportType():
     TransportType {
-    return this.activeTransport
-      .type;
+    return this.activeTransport.type;
   }
 
   public async startHost(
@@ -89,6 +112,24 @@ export class NetworkService
       maxClients?: number;
     },
   ): Promise<boolean> {
+    if (this.disposed) {
+      return false;
+    }
+
+    if (
+      this.activeTransport.type ===
+      "websocket"
+    ) {
+      return false;
+    }
+
+    if (
+      this.currentMode !==
+      "offline"
+    ) {
+      await this.disconnect();
+    }
+
     const initialized =
       await this.activeTransport
         .initialize();
@@ -104,6 +145,17 @@ export class NetworkService
   public async connect(
     target: string,
   ): Promise<boolean> {
+    if (this.disposed) {
+      return false;
+    }
+
+    if (
+      this.currentMode !==
+      "offline"
+    ) {
+      await this.disconnect();
+    }
+
     const connected =
       await this.activeTransport
         .connect(
@@ -120,11 +172,17 @@ export class NetworkService
 
   public async disconnect():
     Promise<void> {
+    if (this.disposed) {
+      return;
+    }
+
     await this.activeTransport
       .disconnect();
 
     this.currentMode =
       "offline";
+
+    this.stateReplicator.clear();
   }
 
   public async sendTo(
@@ -133,6 +191,14 @@ export class NetworkService
     data: Uint8Array,
     reliable: boolean = true,
   ): Promise<boolean> {
+    if (
+      this.disposed ||
+      this.currentMode ===
+        "offline"
+    ) {
+      return false;
+    }
+
     return await this.activeTransport
       .send(
         targetId,
@@ -147,6 +213,14 @@ export class NetworkService
     data: Uint8Array,
     reliable: boolean = true,
   ): Promise<boolean> {
+    if (
+      this.disposed ||
+      this.currentMode ===
+        "offline"
+    ) {
+      return false;
+    }
+
     return await this.activeTransport
       .broadcast(
         data,
@@ -171,6 +245,10 @@ export class NetworkService
     initialSnapshot:
       EntitySnapshot,
   ): void {
+    if (this.disposed) {
+      return;
+    }
+
     this.stateReplicator
       .registerEntity(
         entityId,
@@ -192,40 +270,53 @@ export class NetworkService
     state:
       Partial<EntitySnapshot>,
   ): void {
+    if (this.disposed) {
+      return;
+    }
+
+    const previous =
+      this.stateReplicator
+        .getInterpolatedState(
+          entityId,
+          1,
+        );
+
     const snapshot:
       EntitySnapshot = {
         entityId,
-
         type:
           state.type ??
+          previous?.type ??
           "default",
-
         position:
-          state.position ?? {
+          state.position ??
+          previous?.position ?? {
             x: 0,
             y: 0,
             z: 0,
           },
-
         rotation:
-          state.rotation ?? {
+          state.rotation ??
+          previous?.rotation ?? {
             x: 0,
             y: 0,
             z: 0,
             w: 1,
           },
-
         velocity:
-          state.velocity ?? {
+          state.velocity ??
+          previous?.velocity ?? {
             x: 0,
             y: 0,
             z: 0,
           },
-
         sequence:
           state.sequence ??
-          0,
-
+          (
+            previous?.sequence ??
+            -1
+          ) +
+            1,
         timestamp:
           state.timestamp ??
           performance.now(),
@@ -250,70 +341,120 @@ export class NetworkService
 
   public async pollPackets():
     Promise<void> {
-    await this.activeTransport
-      .pollPackets();
+    if (
+      this.disposed ||
+      this.pollInFlight
+    ) {
+      return;
+    }
+
+    this.pollInFlight =
+      true;
+
+    try {
+      await this.activeTransport
+        .pollPackets();
+    } finally {
+      this.pollInFlight =
+        false;
+    }
   }
 
   public dispose(): void {
-    this.activeTransport
-      .dispose();
+    if (this.disposed) {
+      return;
+    }
 
-    this.stateReplicator
-      .clear();
+    this.disposed =
+      true;
+
+    this.currentMode =
+      "offline";
+
+    this.pollInFlight =
+      false;
+
+    this.unbindTransportEvents();
+
+    this.activeTransport.dispose();
+
+    this.stateReplicator.clear();
   }
 
   private bindTransportEvents():
     void {
-    this.activeTransport
-      .onPacket(
-        (
-          senderId,
-          channel,
-          data,
-        ): void => {
-          this.ctx.events.emit(
-            "game.net.packet-received",
-            {
-              senderId,
-              channel,
-              data,
-            },
-          );
-        },
-      );
+    this.transportUnbinders.push(
+      this.activeTransport
+        .onPacket(
+          (
+            senderId,
+            channel,
+            data,
+          ): void => {
+            this.ctx.events.emit(
+              "game.net.packet-received",
+              {
+                senderId,
+                channel,
+                data,
+              },
+            );
+          },
+        ),
+    );
 
-    this.activeTransport
-      .onPeerConnected(
-        (
-          peerId,
-        ): void => {
-          this.ctx.events.emit(
-            "game.net.peer-connected",
-            {
-              peerId,
+    this.transportUnbinders.push(
+      this.activeTransport
+        .onPeerConnected(
+          (
+            peerId,
+          ): void => {
+            this.ctx.events.emit(
+              "game.net.peer-connected",
+              {
+                peerId,
+                transport:
+                  this.activeTransport.type,
+              },
+            );
+          },
+        ),
+    );
 
-              transport:
-                this.activeTransport
-                  .type,
-            },
-          );
-        },
-      );
+    this.transportUnbinders.push(
+      this.activeTransport
+        .onPeerDisconnected(
+          (
+            peerId,
+            reason,
+          ): void => {
+            this.ctx.events.emit(
+              "game.net.peer-disconnected",
+              {
+                peerId,
+                reason,
+              },
+            );
+          },
+        ),
+    );
+  }
 
-    this.activeTransport
-      .onPeerDisconnected(
-        (
-          peerId,
-          reason,
-        ): void => {
-          this.ctx.events.emit(
-            "game.net.peer-disconnected",
-            {
-              peerId,
-              reason,
-            },
-          );
-        },
-      );
+  private unbindTransportEvents():
+    void {
+    for (
+      let index =
+        this.transportUnbinders.length -
+        1;
+      index >= 0;
+      index -= 1
+    ) {
+      this.transportUnbinders[
+        index
+      ]?.();
+    }
+
+    this.transportUnbinders.length =
+      0;
   }
 }

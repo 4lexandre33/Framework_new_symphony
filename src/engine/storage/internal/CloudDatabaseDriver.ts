@@ -1,30 +1,183 @@
-import type { PlayerOnlineProfile } from "../../../contracts/storage/types";
+import type {
+  PlayerOnlineProfile,
+} from "../../../contracts/storage/types";
+
+export interface PlayerProfileBackend {
+  write(
+    profile:
+      PlayerOnlineProfile,
+  ): Promise<void>;
+
+  read(
+    playerId: string,
+  ): Promise<
+    PlayerOnlineProfile | null
+  >;
+
+  dispose?(): void;
+}
+
+function cloneProfile(
+  profile:
+    PlayerOnlineProfile,
+): PlayerOnlineProfile {
+  return {
+    playerId:
+      profile.playerId,
+
+    displayName:
+      profile.displayName,
+
+    rankScore:
+      profile.rankScore,
+
+    inventoryData:
+      {
+        ...profile
+          .inventoryData,
+      },
+
+    lastSyncedTimestamp:
+      profile.lastSyncedTimestamp,
+  };
+}
+
+/**
+ * Backend local determinístico usado como default de compatibilidade.
+ * Um BaaS real entra via PlayerProfileBackend; CloudDatabaseDriver não faz
+ * fetch direto nem carrega credenciais no frontend.
+ */
+export class MemoryPlayerProfileBackend
+  implements PlayerProfileBackend {
+  private readonly profiles =
+    new Map<
+      string,
+      PlayerOnlineProfile
+    >();
+
+  public async write(
+    profile:
+      PlayerOnlineProfile,
+  ): Promise<void> {
+    this.profiles.set(
+      profile.playerId,
+      cloneProfile(
+        profile,
+      ),
+    );
+  }
+
+  public async read(
+    playerId: string,
+  ): Promise<
+    PlayerOnlineProfile | null
+  > {
+    const profile =
+      this.profiles.get(
+        playerId,
+      );
+
+    return profile ===
+      undefined
+      ? null
+      : cloneProfile(
+          profile,
+        );
+  }
+
+  public dispose():
+    void {
+    this.profiles.clear();
+  }
+}
+
+export interface CloudDatabaseDriverOptions {
+  readonly backend?:
+    PlayerProfileBackend;
+}
 
 export class CloudDatabaseDriver {
-  private readonly profilesCache = new Map<string, PlayerOnlineProfile>();
+  private readonly backend:
+    PlayerProfileBackend;
 
-  public async syncProfile(profile: PlayerOnlineProfile): Promise<boolean> {
+  private disposed =
+    false;
+
+  public constructor(
+    options:
+      CloudDatabaseDriverOptions =
+        {},
+  ) {
+    this.backend =
+      options.backend ??
+      new MemoryPlayerProfileBackend();
+  }
+
+  public async syncProfile(
+    profile:
+      PlayerOnlineProfile,
+  ): Promise<boolean> {
+    if (
+      this.disposed
+    ) {
+      return false;
+    }
+
     try {
-      // Simulação de comunicação com API REST do BaaS (Supabase / Firebase / PostgreSQL)
-      this.profilesCache.set(profile.playerId, profile);
-      console.log(`[CloudDatabaseDriver] 🌐 Perfil online do jogador '${profile.displayName}' sincronizado no BaaS.`);
+      await this.backend
+        .write(
+          cloneProfile(
+            profile,
+          ),
+        );
+
       return true;
-    } catch (err) {
-      console.error(`[CloudDatabaseDriver] ❌ Falha ao sincronizar perfil remoto:`, err);
+    } catch {
       return false;
     }
   }
 
-  public async fetchProfile(playerId: string): Promise<PlayerOnlineProfile | null> {
-    try {
-      const profile = this.profilesCache.get(playerId) || null;
-      if (profile) {
-        console.log(`[CloudDatabaseDriver] 🌐 Perfil do jogador '${playerId}' baixado do servidor remoto.`);
-      }
-      return profile;
-    } catch (err) {
-      console.error(`[CloudDatabaseDriver] ❌ Erro ao consultar perfil remoto:`, err);
+  public async fetchProfile(
+    playerId: string,
+  ): Promise<
+    PlayerOnlineProfile | null
+  > {
+    if (
+      this.disposed
+    ) {
       return null;
     }
+
+    try {
+      const profile =
+        await this.backend
+          .read(
+            playerId,
+          );
+
+      return profile ===
+        null
+        ? null
+        : cloneProfile(
+            profile,
+          );
+    } catch {
+      return null;
+    }
+  }
+
+  public dispose():
+    void {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
+    this.disposed =
+      true;
+
+    this.backend
+      .dispose?.();
   }
 }

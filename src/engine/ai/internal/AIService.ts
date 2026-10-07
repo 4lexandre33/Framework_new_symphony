@@ -319,5 +319,16 @@ export class AIService
 
   public clear(): void {
     this.agentManager.clear();
+
+    /*
+     * Physics e World pertencem a outros plugins. O teardown da AI
+     * deve soltar essas referências para que restart/shutdown não
+     * retenha capabilities antigas do Kernel.
+     */
+    this.physics =
+      null;
+
+    this.world =
+      null;
   }
 }

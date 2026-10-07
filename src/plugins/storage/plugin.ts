@@ -1,8 +1,33 @@
-import type { Plugin, PluginContext } from "@core";
-import { StorageToken } from "../../tokens/storage";
-import { SteamToken } from "../../tokens/steam";
-import { LoadGameCommand, ProfileSyncedEvent, SaveCompletedEvent, SaveGameCommand, SyncProfileCommand, type LoadGameRequest, type SaveGameRequest, type SyncProfileRequest } from "../../contracts/storage/types";
-import { StorageService } from "../../engine/storage/internal/StorageService";
+import type {
+  Plugin,
+  PluginContext,
+} from "@core";
+
+import {
+  LoadGameCommand,
+  ProfileSyncedEvent,
+  SaveCompletedEvent,
+  SaveGameCommand,
+  SyncProfileCommand,
+} from "../../contracts/storage/types";
+
+import type {
+  LoadGameRequest,
+  SaveGameRequest,
+  SyncProfileRequest,
+} from "../../contracts/storage/types";
+
+import {
+  StorageService,
+} from "../../engine/storage/internal/StorageService";
+
+import {
+  SteamToken,
+} from "../../tokens/steam";
+
+import {
+  StorageToken,
+} from "../../tokens/storage";
 
 export const storageManifest:
   Plugin["manifest"] = {
@@ -56,7 +81,9 @@ export const storageManifest:
             true,
         },
       ],
-      conflicts: [],
+
+      conflicts:
+        [],
     },
   };
 
@@ -158,6 +185,9 @@ export function createStoragePlugin():
           unbindSave();
           unbindLoad();
           unbindSync();
+
+          storageService
+            .dispose();
         },
       );
 

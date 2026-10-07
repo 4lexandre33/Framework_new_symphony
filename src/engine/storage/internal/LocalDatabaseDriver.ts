@@ -1,83 +1,107 @@
-import type { SaveGameMetadata } from "../../../contracts/storage/types";
+import type {
+  SaveGameMetadata,
+} from "../../../contracts/storage/types";
 
+import {
+  GlobalLocalStorageBackend,
+} from "./KeyValueStorageBackend";
+
+import type {
+  KeyValueStorageBackend,
+} from "./KeyValueStorageBackend";
+
+import {
+  KeyValueSaveDriver,
+} from "./KeyValueSaveDriver";
+
+export interface LocalDatabaseDriverOptions {
+  readonly backend?:
+    KeyValueStorageBackend;
+
+  readonly now?:
+    () => number;
+}
+
+/**
+ * Persistência local.
+ *
+ * O nome histórico "sqlite_local" do contrato público é preservado, mas esta
+ * classe não finge ser SQLite: na Etapa 82 o backend padrão continua sendo
+ * Web Storage por compatibilidade. A Etapa 85 pode injetar um backend Tauri/SQL
+ * sem alterar esta API interna nem StorageApi.
+ */
 export class LocalDatabaseDriver {
-  private readonly storagePrefix = "local_db_save_";
+  private readonly driver:
+    KeyValueSaveDriver;
 
-  public async saveGame(slotName: string, data: Record<string, unknown>): Promise<SaveGameMetadata> {
-    const timestamp = Date.now();
-    const saveId = `local_save_${slotName}_${timestamp}`;
-    const payload = JSON.stringify(data);
-    const checksum = this.calculateChecksum(payload);
+  public constructor(
+    options:
+      LocalDatabaseDriverOptions =
+        {},
+  ) {
+    this.driver =
+      new KeyValueSaveDriver({
+        backend:
+          options.backend ??
+          new GlobalLocalStorageBackend(),
 
-    const metadata: SaveGameMetadata = {
-      saveId,
-      slotName,
-      playTimeSeconds: (data.playTimeSeconds as number) || 0,
-      timestamp,
-      gameVersion: (data.gameVersion as string) || "1.0.0",
-      checksum,
-    };
+        storagePrefix:
+          "local_db_save_",
 
-    const container = {
-      metadata,
-      data,
-    };
+        saveIdPrefix:
+          "local_save",
 
-    localStorage.setItem(`${this.storagePrefix}${slotName}`, JSON.stringify(container));
-    console.log(`[LocalDatabaseDriver] 💾 Save '${slotName}' gravado com sucesso no banco de dados local.`);
-
-    return metadata;
+        now:
+          options.now,
+      });
   }
 
-  public async loadGame<T = Record<string, unknown>>(slotName: string): Promise<T | null> {
-    const raw = localStorage.getItem(`${this.storagePrefix}${slotName}`);
-    if (!raw) return null;
-
-    try {
-      const parsed = JSON.parse(raw);
-      console.log(`[LocalDatabaseDriver] 💾 Save '${slotName}' carregado do banco de dados local.`);
-      return parsed.data as T;
-    } catch {
-      return null;
-    }
+  public saveGame(
+    slotName: string,
+    data:
+      Record<
+        string,
+        unknown
+      >,
+  ): Promise<
+    SaveGameMetadata
+  > {
+    return this.driver
+      .saveGame(
+        slotName,
+        data,
+      );
   }
 
-  public async listSaves(): Promise<SaveGameMetadata[]> {
-    const saves: SaveGameMetadata[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(this.storagePrefix)) {
-        try {
-          const raw = localStorage.getItem(key);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (parsed.metadata) saves.push(parsed.metadata);
-          }
-        } catch {
-          // Ignora registros corrompidos
-        }
-      }
-    }
-    return saves;
+  public loadGame<
+    T =
+      Record<
+        string,
+        unknown
+      >,
+  >(
+    slotName: string,
+  ): Promise<T | null> {
+    return this.driver
+      .loadGame<T>(
+        slotName,
+      );
   }
 
-  public async deleteSave(slotName: string): Promise<boolean> {
-    const key = `${this.storagePrefix}${slotName}`;
-    if (localStorage.getItem(key) !== null) {
-      localStorage.removeItem(key);
-      console.log(`[LocalDatabaseDriver] 🗑️ Save '${slotName}' removido do banco local.`);
-      return true;
-    }
-    return false;
+  public listSaves():
+    Promise<
+      SaveGameMetadata[]
+    > {
+    return this.driver
+      .listSaves();
   }
 
-  private calculateChecksum(content: string): string {
-    let hash = 0;
-    for (let i = 0; i < content.length; i++) {
-      const char = content.charCodeAt(i);
-      hash = (hash << 5) - hash + char;
-      hash |= 0;
-    }
-    return Math.abs(hash).toString(16);
+  public deleteSave(
+    slotName: string,
+  ): Promise<boolean> {
+    return this.driver
+      .deleteSave(
+        slotName,
+      );
   }
 }

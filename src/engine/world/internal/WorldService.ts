@@ -1,11 +1,39 @@
-import type { PluginContext } from "@core";
-import { type WorldApi } from "../../../tokens/world";
-import { type SceneDescriptor, type SceneLoadOptions, type EntityComponentState, type SpatialPoint2D, type SpatialQueryResult, type AABBBounds3D } from "../../../contracts/world/types";
-import { EntityManager } from "./EntityManager";
-import { SpatialGrid } from "./SpatialGrid";
-import { OctreeManager } from "./OctreeManager";
-import { SceneManager } from "./SceneManager";
-import { WorldStateSerializer } from "./WorldStateSerializer";
+import type {
+  PluginContext,
+} from "@core";
+
+import type {
+  WorldApi,
+} from "../../../tokens/world";
+
+import type {
+  AABBBounds3D,
+  EntityComponentState,
+  SceneDescriptor,
+  SceneLoadOptions,
+  SpatialPoint2D,
+  SpatialQueryResult,
+} from "../../../contracts/world/types";
+
+import {
+  EntityManager,
+} from "./EntityManager";
+
+import {
+  SpatialGrid,
+} from "./SpatialGrid";
+
+import {
+  OctreeManager,
+} from "./OctreeManager";
+
+import {
+  SceneManager,
+} from "./SceneManager";
+
+import {
+  WorldStateSerializer,
+} from "./WorldStateSerializer";
 
 export class WorldService
   implements WorldApi {
@@ -22,6 +50,38 @@ export class WorldService
 
   private readonly sceneManager:
     SceneManager;
+
+  private readonly updateEntitySpatialIndexes =
+    (
+      entity:
+        EntityComponentState,
+    ): void => {
+      this.spatialGrid.update(
+        entity.entityId,
+        entity.position,
+      );
+
+      this.octreeManager.update(
+        entity.entityId,
+        entity.position,
+      );
+    };
+
+  private readonly insertEntitySpatialIndexes =
+    (
+      entity:
+        EntityComponentState,
+    ): void => {
+      this.spatialGrid.insert(
+        entity.entityId,
+        entity.position,
+      );
+
+      this.octreeManager.insert(
+        entity.entityId,
+        entity.position,
+      );
+    };
 
   public constructor(
     private readonly ctx:
@@ -52,11 +112,23 @@ export class WorldService
     scene: SceneDescriptor,
     options?: SceneLoadOptions,
   ): Promise<boolean> {
-    return await this.sceneManager
-      .loadScene(
-        scene,
-        options,
-      );
+    const loaded =
+      await this.sceneManager
+        .loadScene(
+          scene,
+          options,
+        );
+
+    if (loaded) {
+      /*
+       * SceneManager reseta os índices derivados. Reconstituímos
+       * imediatamente para suportar clearPreviousScene=false sem
+       * uma janela de consultas vazias até o próximo tick.
+       */
+      this.rebuildSpatialIndexes();
+    }
+
+    return loaded;
   }
 
   public async unloadScene(
@@ -81,27 +153,31 @@ export class WorldService
       return false;
     }
 
-    this.spatialGrid.insert(
-      state.entityId,
-      state.position,
-    );
+    const ownedState =
+      this.entityManager
+        .getEntityState(
+          state.entityId,
+        );
 
-    this.octreeManager.insert(
-      state.entityId,
-      state.position,
+    if (!ownedState) {
+      return false;
+    }
+
+    this.insertEntitySpatialIndexes(
+      ownedState,
     );
 
     this.ctx.events.emit(
       "game.world.entity-spawned",
       {
         entityId:
-          state.entityId,
+          ownedState.entityId,
 
         type:
-          state.type,
+          ownedState.type,
 
         position:
-          state.position,
+          ownedState.position,
       },
     );
 
@@ -125,17 +201,9 @@ export class WorldService
       entityId,
     );
 
-    /*
-     * O OctreeManager atual não possui remove(entityId).
-     *
-     * Recriamos o índice 3D após um despawn para impedir
-     * que consultas futuras retornem uma entidade destruída.
-     *
-     * Despawn é uma operação muito menos frequente que tick,
-     * então este custo é aceitável até o Octree possuir
-     * atualização incremental.
-     */
-    this.rebuildOctree();
+    this.octreeManager.remove(
+      entityId,
+    );
 
     this.ctx.events.emit(
       "game.world.entity-despawned",
@@ -200,10 +268,9 @@ export class WorldService
     }
 
     /*
-     * O serializer restaura o ECS.
-     *
-     * Os índices espaciais são derivados do ECS
-     * e precisam ser reconstruídos depois do load.
+     * Persistência/backend e restauração do sceneId serão auditados
+     * na Etapa 82. Nesta etapa os índices espaciais derivados do ECS
+     * são reconstruídos de forma determinística após o restore.
      */
     this.rebuildSpatialIndexes();
 
@@ -211,34 +278,18 @@ export class WorldService
   }
 
   public tick(): void {
-    const entities =
-      this.entityManager
-        .getAllEntities();
-
-    for (
-      let index = 0;
-      index <
-      entities.length;
-      index += 1
-    ) {
-      const entity =
-        entities[index];
-
-      if (!entity) {
-        continue;
-      }
-
-      this.spatialGrid.insert(
-        entity.entityId,
-        entity.position,
+    /*
+     * Não materializa Array.from() por frame.
+     * O callback é criado uma única vez na instância do serviço.
+     */
+    this.entityManager
+      .forEachEntity(
+        this.updateEntitySpatialIndexes,
       );
-    }
   }
 
   public clear(): void {
-    this.entityManager.clear();
-    this.spatialGrid.clear();
-    this.octreeManager.clear();
+    this.sceneManager.clear();
   }
 
   private rebuildSpatialIndexes():
@@ -246,60 +297,9 @@ export class WorldService
     this.spatialGrid.clear();
     this.octreeManager.clear();
 
-    const entities =
-      this.entityManager
-        .getAllEntities();
-
-    for (
-      let index = 0;
-      index <
-      entities.length;
-      index += 1
-    ) {
-      const entity =
-        entities[index];
-
-      if (!entity) {
-        continue;
-      }
-
-      this.spatialGrid.insert(
-        entity.entityId,
-        entity.position,
+    this.entityManager
+      .forEachEntity(
+        this.insertEntitySpatialIndexes,
       );
-
-      this.octreeManager.insert(
-        entity.entityId,
-        entity.position,
-      );
-    }
-  }
-
-  private rebuildOctree():
-    void {
-    this.octreeManager.clear();
-
-    const entities =
-      this.entityManager
-        .getAllEntities();
-
-    for (
-      let index = 0;
-      index <
-      entities.length;
-      index += 1
-    ) {
-      const entity =
-        entities[index];
-
-      if (!entity) {
-        continue;
-      }
-
-      this.octreeManager.insert(
-        entity.entityId,
-        entity.position,
-      );
-    }
   }
 }

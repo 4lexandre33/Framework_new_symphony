@@ -1,0 +1,110 @@
+{
+  "stage": "83",
+  "name": "Networking Runtime",
+  "layer": 1,
+  "requiresStages": [
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77,
+    78,
+    79,
+    80,
+    81,
+    82
+  ],
+  "baselineId": "layer1-networking-v1-stage83",
+  "capability": {
+    "id": "game.net",
+    "version": "1.0.0",
+    "publicApiChanged": false,
+    "capabilityGraphChanged": false
+  },
+  "runtimeChanges": {
+    "packetValidation": true,
+    "maxPacketBytes": 1048576,
+    "channelRange": [
+      0,
+      255
+    ],
+    "webSocketReconnect": true,
+    "webSocketBackpressure": true,
+    "steamP2PReconnect": true,
+    "steamP2PBackpressure": true,
+    "steamPollBudget": {
+      "channels": 2,
+      "maxPacketsPerChannelPerPoll": 128
+    },
+    "disconnectClearsReplication": true,
+    "staleReplicationRejected": true,
+    "deterministicWorldEntityOrder": true,
+    "concurrentPollGuard": true,
+    "domainRulesInNetworking": false
+  },
+  "lifecycleCompatibility": {
+    "stage74SignaturePreserved": true,
+    "readyCalls": 1,
+    "onDisposeCalls": 1,
+    "onBootHooks": 1,
+    "onStopHooks": 0,
+    "pluginFileChanged": false
+  },
+  "validation": [
+    "Stage 82 storage prerequisite regression audit",
+    "Stage 83 runtime semantic audit",
+    "Stage 72 canonical public API regression inside Stage 83 audit",
+    "Stage 73 canonical capability graph regression inside Stage 83 audit",
+    "Stage 74 canonical lifecycle regression inside Stage 83 audit",
+    "npm run arch:check",
+    "npx tsc --noEmit",
+    "focused Networking Vitest",
+    "Networking smoke",
+    "full Vitest",
+    "cargo check --manifest-path src-tauri/Cargo.toml",
+    "npm run build"
+  ],
+  "authoringValidation": {
+    "isolatedTypeScriptRuntimeFiles": "PASS",
+    "compiledRuntimeSmoke": "PASS",
+    "fullProjectValidation": "REQUIRED_AFTER_UNZIP"
+  },
+  "explicitlyDeferred": [
+    "Stage 84 Steamworks native session/callback certification",
+    "WebRTC transport implementation",
+    "game-specific replication protocol",
+    "authoritative server gameplay rules",
+    "real RTT ping protocol"
+  ],
+  "files": [
+    "LAYER1_NETWORKING_BASELINE_V1.json",
+    "ETAPA83_NETWORKING_RUNTIME.txt",
+    "scripts/architecture/lib/layer1-networking-v1.mjs",
+    "scripts/architecture/stage83-audit-networking.mjs",
+    "scripts/architecture/stage83-validate-networking.mjs",
+    "src/engine/net/internal/NetworkPacketValidator.ts",
+    "src/engine/net/internal/NetworkTransport.ts",
+    "src/engine/net/internal/WebSocketTransport.ts",
+    "src/engine/net/internal/SteamP2PTransport.ts",
+    "src/engine/net/internal/StateReplicator.ts",
+    "src/engine/net/internal/NetworkService.ts",
+    "tests/layer1-networking-runtime.test.ts",
+    "tests/layer1-networking-replication.test.ts",
+    "tests/layer1-networking-service.test.ts",
+    "tests/layer1-networking-smoke.mjs",
+    "ETAPA83_MANIFEST.json",
+    "ETAPA83_SHA256SUMS.txt"
+  ],
+  "fileCount": 17,
+  "packageRevision": "1.0.1",
+  "referenceSnapshot": "Projeto1_105",
+  "baselinePolicy": {
+    "runtimeSemanticFingerprints": "stage83-owned",
+    "publicApi": "delegated-to-stage72-canonical-audit",
+    "capabilityGraph": "delegated-to-stage73-canonical-audit",
+    "pluginLifecycle": "delegated-to-stage74-canonical-audit",
+    "rawPublicSurfaceShaGate": false
+  }
+}

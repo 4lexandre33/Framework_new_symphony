@@ -1,8 +1,13 @@
 import type {
   EntitySnapshot,
-  WorldStateSnapshot,
   StateReplicationApi,
+  WorldStateSnapshot,
 } from "../../../contracts/net/types";
+
+import {
+  isNewerSequence,
+  isValidEntitySnapshot,
+} from "./NetworkPacketValidator";
 
 interface MutableVector3 {
   x: number;
@@ -27,13 +32,40 @@ interface MutableEntitySnapshot {
   timestamp: number;
 }
 
-export class StateReplicator implements StateReplicationApi {
-  private readonly entityHistory =
-    new Map<string, EntitySnapshot[]>();
+function cloneEntitySnapshot(
+  source: EntitySnapshot,
+): EntitySnapshot {
+  return {
+    entityId:
+      source.entityId,
+    type:
+      source.type,
+    position: {
+      x: source.position.x,
+      y: source.position.y,
+      z: source.position.z,
+    },
+    rotation: {
+      x: source.rotation.x,
+      y: source.rotation.y,
+      z: source.rotation.z,
+      w: source.rotation.w,
+    },
+    velocity: {
+      x: source.velocity.x,
+      y: source.velocity.y,
+      z: source.velocity.z,
+    },
+    sequence:
+      source.sequence,
+    timestamp:
+      source.timestamp,
+  };
+}
 
-  private readonly maxHistorySize = 20;
-
-  private readonly interpolatedScratch: MutableEntitySnapshot = {
+function createInterpolationScratch():
+  MutableEntitySnapshot {
+  return {
     entityId: "",
     type: "",
     position: {
@@ -55,18 +87,55 @@ export class StateReplicator implements StateReplicationApi {
     sequence: 0,
     timestamp: 0,
   };
+}
+
+export class StateReplicator
+  implements StateReplicationApi {
+  private readonly entityHistory =
+    new Map<
+      string,
+      EntitySnapshot[]
+    >();
+
+  private readonly interpolationScratch =
+    new Map<
+      string,
+      MutableEntitySnapshot
+    >();
+
+  private readonly maxHistorySize =
+    20;
 
   public registerEntity(
     entityId: string,
-    initialSnapshot: EntitySnapshot,
+    initialSnapshot:
+      EntitySnapshot,
   ): void {
-    if (this.entityHistory.has(entityId)) {
+    if (
+      this.entityHistory.has(
+        entityId,
+      ) ||
+      entityId !==
+        initialSnapshot.entityId ||
+      !isValidEntitySnapshot(
+        initialSnapshot,
+      )
+    ) {
       return;
     }
 
     this.entityHistory.set(
       entityId,
-      [initialSnapshot],
+      [
+        cloneEntitySnapshot(
+          initialSnapshot,
+        ),
+      ],
+    );
+
+    this.interpolationScratch.set(
+      entityId,
+      createInterpolationScratch(),
     );
   }
 
@@ -76,11 +145,23 @@ export class StateReplicator implements StateReplicationApi {
     this.entityHistory.delete(
       entityId,
     );
+
+    this.interpolationScratch.delete(
+      entityId,
+    );
   }
 
   public pushEntitySnapshot(
     snapshot: EntitySnapshot,
   ): void {
+    if (
+      !isValidEntitySnapshot(
+        snapshot,
+      )
+    ) {
+      return;
+    }
+
     let history =
       this.entityHistory.get(
         snapshot.entityId,
@@ -93,10 +174,32 @@ export class StateReplicator implements StateReplicationApi {
         snapshot.entityId,
         history,
       );
+
+      this.interpolationScratch.set(
+        snapshot.entityId,
+        createInterpolationScratch(),
+      );
+    }
+
+    const latest =
+      history[
+        history.length - 1
+      ];
+
+    if (
+      latest &&
+      !isNewerSequence(
+        snapshot.sequence,
+        latest.sequence,
+      )
+    ) {
+      return;
     }
 
     history.push(
-      snapshot,
+      cloneEntitySnapshot(
+        snapshot,
+      ),
     );
 
     if (
@@ -108,14 +211,16 @@ export class StateReplicator implements StateReplicationApi {
   }
 
   public processWorldSnapshot(
-    worldSnapshot: WorldStateSnapshot,
+    worldSnapshot:
+      WorldStateSnapshot,
   ): void {
     const entities =
       worldSnapshot.entities;
 
     for (
       let index = 0;
-      index < entities.length;
+      index <
+      entities.length;
       index += 1
     ) {
       const snapshot =
@@ -176,12 +281,26 @@ export class StateReplicator implements StateReplicationApi {
         0,
         Math.min(
           1,
-          alpha,
+          Number.isFinite(alpha)
+            ? alpha
+            : 0,
         ),
       );
 
-    const scratch =
-      this.interpolatedScratch;
+    let scratch =
+      this.interpolationScratch.get(
+        entityId,
+      );
+
+    if (!scratch) {
+      scratch =
+        createInterpolationScratch();
+
+      this.interpolationScratch.set(
+        entityId,
+        scratch,
+      );
+    }
 
     scratch.entityId =
       entityId;
@@ -321,21 +440,44 @@ export class StateReplicator implements StateReplicationApi {
     tick: number,
     hostSteamId: string,
   ): WorldStateSnapshot {
+    const entityIds =
+      Array.from(
+        this.entityHistory.keys(),
+      );
+
+    entityIds.sort();
+
     const entities:
       EntitySnapshot[] = [];
 
     for (
-      const history of
-      this.entityHistory.values()
+      let index = 0;
+      index <
+      entityIds.length;
+      index += 1
     ) {
+      const entityId =
+        entityIds[index];
+
+      if (!entityId) {
+        continue;
+      }
+
+      const history =
+        this.entityHistory.get(
+          entityId,
+        );
+
       const latest =
-        history[
+        history?.[
           history.length - 1
         ];
 
       if (latest) {
         entities.push(
-          latest,
+          cloneEntitySnapshot(
+            latest,
+          ),
         );
       }
     }
@@ -352,5 +494,6 @@ export class StateReplicator implements StateReplicationApi {
 
   public clear(): void {
     this.entityHistory.clear();
+    this.interpolationScratch.clear();
   }
 }

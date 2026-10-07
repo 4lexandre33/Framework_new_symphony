@@ -3,16 +3,27 @@ import type {
   SteamApi,
 } from "../../steam/public";
 
-
-
 import type {
   NetworkStats,
   TransportType,
 } from "../../../contracts/net/types";
 
 import {
+  NETWORK_BACKPRESSURE_HIGH_WATER_BYTES,
+  STEAM_MAX_PACKETS_PER_CHANNEL_PER_POLL,
+  STEAM_POLL_CHANNEL_COUNT,
+  isValidNetworkChannel,
+  isValidNetworkPayload,
+  isValidNetworkPeerId,
+} from "./NetworkPacketValidator";
+
+import {
   NetworkTransport,
 } from "./NetworkTransport";
+
+function nowMs(): number {
+  return performance.now();
+}
 
 export class SteamP2PTransport
   extends NetworkTransport {
@@ -21,6 +32,9 @@ export class SteamP2PTransport
       "steam_p2p";
 
   private connected =
+    false;
+
+  private disposed =
     false;
 
   private readonly activePeers =
@@ -32,8 +46,17 @@ export class SteamP2PTransport
   private bytesReceivedCount =
     0;
 
+  private pendingSendBytes =
+    0;
+
+  private rejectedSendCount =
+    0;
+
+  private successfulSendCount =
+    0;
+
   private lastStatsReset =
-    performance.now();
+    nowMs();
 
   public constructor(
     private readonly steamApi:
@@ -45,6 +68,7 @@ export class SteamP2PTransport
   public get isConnected():
     boolean {
     return (
+      !this.disposed &&
       this.connected &&
       this.steamApi.isAvailable
     );
@@ -52,6 +76,10 @@ export class SteamP2PTransport
 
   public async initialize():
     Promise<boolean> {
+    if (this.disposed) {
+      return false;
+    }
+
     this.connected =
       await this.steamApi
         .checkAvailability();
@@ -62,6 +90,15 @@ export class SteamP2PTransport
   public async connect(
     targetSteamId: string,
   ): Promise<boolean> {
+    if (
+      this.disposed ||
+      !isValidNetworkPeerId(
+        targetSteamId,
+      )
+    ) {
+      return false;
+    }
+
     if (!this.isConnected) {
       const initialized =
         await this.initialize();
@@ -91,17 +128,12 @@ export class SteamP2PTransport
 
   public async disconnect():
     Promise<void> {
-    for (
-      const peerId of
-      this.activePeers
-    ) {
-      this.notifyPeerDisconnected(
-        peerId,
-        "conexao_encerrada",
-      );
-    }
+    this.disconnectAllPeers(
+      "desconexao_local",
+    );
 
-    this.activePeers.clear();
+    this.pendingSendBytes =
+      0;
 
     this.connected =
       false;
@@ -113,7 +145,28 @@ export class SteamP2PTransport
     channel: number = 0,
     reliable: boolean = true,
   ): Promise<boolean> {
-    if (!this.isConnected) {
+    if (
+      !this.isConnected ||
+      !this.canSendPacket(
+        targetId,
+        channel,
+        data,
+      )
+    ) {
+      this.rejectedSendCount +=
+        1;
+
+      return false;
+    }
+
+    if (
+      this.pendingSendBytes +
+        data.byteLength >
+      NETWORK_BACKPRESSURE_HIGH_WATER_BYTES
+    ) {
+      this.rejectedSendCount +=
+        1;
+
       return false;
     }
 
@@ -123,25 +176,60 @@ export class SteamP2PTransport
           ? "reliable"
           : "unreliableNoDelay";
 
-    const sent =
-      await this.steamApi
-        .sendP2PPacket(
-          targetId,
-          data,
-          sendType,
-          channel,
+    this.pendingSendBytes +=
+      data.byteLength;
+
+    let sent =
+      false;
+
+    try {
+      sent =
+        await this.steamApi
+          .sendP2PPacket(
+            targetId,
+            data,
+            sendType,
+            channel,
+          );
+    } catch {
+      sent =
+        false;
+    } finally {
+      this.pendingSendBytes =
+        Math.max(
+          0,
+          this.pendingSendBytes -
+            data.byteLength,
         );
+    }
 
     if (!sent) {
+      this.rejectedSendCount +=
+        1;
+
       return false;
     }
 
     this.bytesSentCount +=
       data.byteLength;
 
+    this.successfulSendCount +=
+      1;
+
+    const wasKnown =
+      this.activePeers.has(
+        targetId,
+      );
+
     this.activePeers.add(
       targetId,
     );
+
+    if (!wasKnown) {
+      this.notifyPeerConnected(
+        targetId,
+      );
+    }
 
     return true;
   }
@@ -153,7 +241,14 @@ export class SteamP2PTransport
   ): Promise<boolean> {
     if (
       !this.isConnected ||
-      this.activePeers.size === 0
+      this.activePeers.size ===
+        0 ||
+      !isValidNetworkChannel(
+        channel,
+      ) ||
+      !isValidNetworkPayload(
+        data,
+      )
     ) {
       return false;
     }
@@ -190,18 +285,59 @@ export class SteamP2PTransport
 
     for (
       let channel = 0;
-      channel < 2;
+      channel <
+      STEAM_POLL_CHANNEL_COUNT;
       channel += 1
     ) {
-      let packet =
-        await this.steamApi
-          .readP2PPacket(
-            channel,
-          );
-
-      while (
-        packet !== null
+      for (
+        let packetIndex = 0;
+        packetIndex <
+        STEAM_MAX_PACKETS_PER_CHANNEL_PER_POLL;
+        packetIndex += 1
       ) {
+        if (!this.isConnected) {
+          return;
+        }
+
+        let packet:
+          Awaited<
+            ReturnType<
+              SteamApi["readP2PPacket"]
+            >
+          >;
+
+        try {
+          packet =
+            await this.steamApi
+              .readP2PPacket(
+                channel,
+              );
+        } catch {
+          break;
+        }
+
+        if (packet === null) {
+          break;
+        }
+
+        if (
+          !isValidNetworkPeerId(
+            packet.sourceSteamId,
+          ) ||
+          !isValidNetworkChannel(
+            packet.channel,
+          ) ||
+          !isValidNetworkPayload(
+            packet.data,
+          ) ||
+          packet.bytesReceived <
+            0 ||
+          packet.bytesReceived >
+            packet.data.byteLength
+        ) {
+          continue;
+        }
+
         this.bytesReceivedCount +=
           packet.bytesReceived;
 
@@ -224,12 +360,6 @@ export class SteamP2PTransport
           packet.channel,
           packet.data,
         );
-
-        packet =
-          await this.steamApi
-            .readP2PPacket(
-              channel,
-            );
       }
     }
   }
@@ -237,7 +367,7 @@ export class SteamP2PTransport
   public getStats():
     NetworkStats {
     const now =
-      performance.now();
+      nowMs();
 
     const elapsedSeconds =
       Math.max(
@@ -249,10 +379,18 @@ export class SteamP2PTransport
           1000,
       );
 
+    const attempts =
+      this.successfulSendCount +
+      this.rejectedSendCount;
+
     const stats:
       NetworkStats = {
-        rttMs: 15,
-        packetLossRate: 0,
+        rttMs: 0,
+        packetLossRate:
+          attempts > 0
+            ? this.rejectedSendCount /
+              attempts
+            : 0,
         bytesSentPerSec:
           Math.round(
             this.bytesSentCount /
@@ -279,10 +417,54 @@ export class SteamP2PTransport
       this.bytesReceivedCount =
         0;
 
+      this.successfulSendCount =
+        0;
+
+      this.rejectedSendCount =
+        0;
+
       this.lastStatsReset =
         now;
     }
 
     return stats;
+  }
+
+  public override dispose():
+    void {
+    if (this.disposed) {
+      return;
+    }
+
+    this.disposed =
+      true;
+
+    this.disconnectAllPeers(
+      "transport_disposed",
+    );
+
+    this.pendingSendBytes =
+      0;
+
+    this.connected =
+      false;
+
+    super.dispose();
+  }
+
+  private disconnectAllPeers(
+    reason: string,
+  ): void {
+    for (
+      const peerId of
+      this.activePeers
+    ) {
+      this.notifyPeerDisconnected(
+        peerId,
+        reason,
+      );
+    }
+
+    this.activePeers.clear();
   }
 }

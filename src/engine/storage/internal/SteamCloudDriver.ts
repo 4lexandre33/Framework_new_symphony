@@ -1,89 +1,107 @@
-import type { SaveGameMetadata } from "../../../contracts/storage/types";
+import type {
+  SaveGameMetadata,
+} from "../../../contracts/storage/types";
 
+import {
+  GlobalLocalStorageBackend,
+} from "./KeyValueStorageBackend";
+
+import type {
+  KeyValueStorageBackend,
+} from "./KeyValueStorageBackend";
+
+import {
+  KeyValueSaveDriver,
+} from "./KeyValueSaveDriver";
+
+export interface SteamCloudDriverOptions {
+  readonly backend?:
+    KeyValueStorageBackend;
+
+  readonly now?:
+    () => number;
+}
+
+/**
+ * Fachada de persistência para o canal Steam Cloud.
+ *
+ * Na Etapa 82 o backend padrão mantém o comportamento legado em Web Storage
+ * para não antecipar Steamworks. O ponto importante é que o backend agora é
+ * injetável: a Etapa 84 poderá fornecer Remote Storage real sem alterar o
+ * contrato do driver nem a lógica de checksum/migração.
+ */
 export class SteamCloudDriver {
-  private readonly storagePrefix = "steam_cloud_save_";
+  private readonly driver:
+    KeyValueSaveDriver;
 
-  public async saveGame(slotName: string, data: Record<string, unknown>): Promise<SaveGameMetadata> {
-    const timestamp = Date.now();
-    const saveId = `steam_save_${slotName}_${timestamp}`;
-    const payload = JSON.stringify(data);
-    const checksum = this.calculateChecksum(payload);
+  public constructor(
+    options:
+      SteamCloudDriverOptions =
+        {},
+  ) {
+    this.driver =
+      new KeyValueSaveDriver({
+        backend:
+          options.backend ??
+          new GlobalLocalStorageBackend(),
 
-    const metadata: SaveGameMetadata = {
-      saveId,
-      slotName,
-      playTimeSeconds: (data.playTimeSeconds as number) || 0,
-      timestamp,
-      gameVersion: (data.gameVersion as string) || "1.0.0",
-      checksum,
-    };
+        storagePrefix:
+          "steam_cloud_save_",
 
-    const container = {
-      metadata,
-      data,
-    };
+        saveIdPrefix:
+          "steam_save",
 
-    try {
-      localStorage.setItem(`${this.storagePrefix}${slotName}`, JSON.stringify(container));
-      console.log(`[SteamCloudDriver] ☁️ Save '${slotName}' gravado com sucesso na Steam Cloud (Simulada/LocalStorage).`);
-    } catch (err) {
-      console.error(`[SteamCloudDriver] ❌ Erro ao gravar save na Steam Cloud:`, err);
-      throw err;
-    }
-
-    return metadata;
+        now:
+          options.now,
+      });
   }
 
-  public async loadGame<T = Record<string, unknown>>(slotName: string): Promise<T | null> {
-    try {
-      const raw = localStorage.getItem(`${this.storagePrefix}${slotName}`);
-      if (!raw) return null;
-
-      const parsed = JSON.parse(raw);
-      console.log(`[SteamCloudDriver] ☁️ Save '${slotName}' carregado da Steam Cloud.`);
-      return parsed.data as T;
-    } catch (err) {
-      console.error(`[SteamCloudDriver] ❌ Erro ao carregar save da Steam Cloud:`, err);
-      return null;
-    }
+  public saveGame(
+    slotName: string,
+    data:
+      Record<
+        string,
+        unknown
+      >,
+  ): Promise<
+    SaveGameMetadata
+  > {
+    return this.driver
+      .saveGame(
+        slotName,
+        data,
+      );
   }
 
-  public async listSaves(): Promise<SaveGameMetadata[]> {
-    const saves: SaveGameMetadata[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(this.storagePrefix)) {
-        try {
-          const raw = localStorage.getItem(key);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (parsed.metadata) saves.push(parsed.metadata);
-          }
-        } catch {
-          // Ignora registros corrompidos
-        }
-      }
-    }
-    return saves;
+  public loadGame<
+    T =
+      Record<
+        string,
+        unknown
+      >,
+  >(
+    slotName: string,
+  ): Promise<T | null> {
+    return this.driver
+      .loadGame<T>(
+        slotName,
+      );
   }
 
-  public async deleteSave(slotName: string): Promise<boolean> {
-    const key = `${this.storagePrefix}${slotName}`;
-    if (localStorage.getItem(key) !== null) {
-      localStorage.removeItem(key);
-      console.log(`[SteamCloudDriver] 🗑️ Save '${slotName}' removido da Steam Cloud.`);
-      return true;
-    }
-    return false;
+  public listSaves():
+    Promise<
+      SaveGameMetadata[]
+    > {
+    return this.driver
+      .listSaves();
   }
 
-  private calculateChecksum(content: string): string {
-    let hash = 0;
-    for (let i = 0; i < content.length; i++) {
-      const char = content.charCodeAt(i);
-      hash = (hash << 5) - hash + char;
-      hash |= 0;
-    }
-    return Math.abs(hash).toString(16);
+  public deleteSave(
+    slotName: string,
+  ): Promise<boolean> {
+    return this.driver
+      .deleteSave(
+        slotName,
+      );
   }
 }

@@ -1,0 +1,43 @@
+{
+  "version": "1.0.0",
+  "stage": 82,
+  "layer": 1,
+  "baselineId": "layer1-storage-v1-stage82",
+  "module": "game.storage",
+  "semanticFingerprints": {
+    "src/engine/storage/internal/StorageErrors.ts": "36f91d44d344dd92c227d342107e5fb6ba806540b6b9765f4e5420dbf351b422",
+    "src/engine/storage/internal/KeyValueStorageBackend.ts": "cb472cfce5768836125a5062de835f07a4cd6fbba7c766ffa1eae033302a744e",
+    "src/engine/storage/internal/SaveRecordCodec.ts": "f14214d337ba8a74f9063d1ed7fe440ab99ddd74f0671d29cd904a984f0cfc79",
+    "src/engine/storage/internal/KeyValueSaveDriver.ts": "07b46853f22562e79d508f7108989f0834ec98df3ca3d00887de2cccc42fd240",
+    "src/engine/storage/internal/LocalDatabaseDriver.ts": "1773e0a8d420aa94a3114c61e681ea6ee93133e20cd96b7f1a746104a5d23238",
+    "src/engine/storage/internal/SteamCloudDriver.ts": "f176689e896539bdec1709d6dd1f569b56b4a808d55a4567a9ffa4aedc965a0c",
+    "src/engine/storage/internal/CloudDatabaseDriver.ts": "a5e9ec6330fc3632298448e7deb64621db239af50a04f4d6e374da03ce83bd01",
+    "src/engine/storage/internal/StorageService.ts": "a38dc85ebfd82c69d79bad3151ab02986cffff628ea58f4b68332b9aa90fe38e",
+    "src/engine/storage/internal/DomainSaveGamePortAdapter.ts": "44f554e69397d73f2bd673643a9d7587fc91646d804fe35d90890424cb9cf3fd",
+    "src/plugins/storage/plugin.ts": "967ab5929b749ce2b7a5134c4efc73f32e3a123d581ed9ec2b895a7cfa158a5f"
+  },
+  "capturedCounts": {
+    "semanticRuntimeFiles": 10,
+    "publicFiles": 3,
+    "domainPortFiles": 2,
+    "directLocalStorageRuntimeFiles": 1,
+    "directConcreteRemoteBackends": 0,
+    "worldInternalCrossImports": 0
+  },
+  "policy": {
+    "publicApiUnchanged": true,
+    "capabilityGraphUnchanged": true,
+    "saveCodecVersion": 1,
+    "legacySaveReadCompatibility": true,
+    "checksumValidation": true,
+    "localStorageIsolatedBehindBackend": true,
+    "cloudDatabaseNotSaveSlotDriver": true,
+    "steamBackendInjectable": true,
+    "profileBackendInjectable": true,
+    "domainPortImplementedByTypeOnlyDependency": true,
+    "domainDoesNotImportStorage": true,
+    "worldStateSerializerOwnershipRemainsGameWorld": true,
+    "tauriDeferredToStage85": true,
+    "steamworksDeferredToStage84": true
+  }
+}

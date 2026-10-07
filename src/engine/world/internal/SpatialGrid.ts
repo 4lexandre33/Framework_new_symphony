@@ -117,6 +117,39 @@ export class SpatialGrid {
     );
   }
 
+  public update(
+    entityId: string,
+    position: WorldPosition3D,
+  ): boolean {
+    const entry =
+      this.entities.get(
+        entityId,
+      );
+
+    if (!entry) {
+      return false;
+    }
+
+    const newCellX =
+      this.getCellCoordinate(
+        position.x,
+      );
+
+    const newCellZ =
+      this.getCellCoordinate(
+        position.z,
+      );
+
+    this.updateExistingEntry(
+      entry,
+      position,
+      newCellX,
+      newCellZ,
+    );
+
+    return true;
+  }
+
   public remove(
     entityId: string,
   ): boolean {
