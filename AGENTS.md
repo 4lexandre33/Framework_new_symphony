@@ -1,385 +1,264 @@
-# Diretivas Arquiteturais e Invariantes do Projeto (AGENTS.md)
+# AGENTS.md — Projeto_Engine
 
-Este documento define os limites de autoridade para agentes de IA, assistentes de código e scripts de automação que operam neste repositório.
+## Missão
 
-Ele descreve o estado operacional atual da arquitetura após a migração v20 até a Etapa 25.
+O Projeto1 atual é uma **base técnica de engine/framework para jogos**. A prioridade imediata é certificar a engine existente e torná-la **ENGINE GAME-READY** para desenvolvimento do primeiro jogo. O objetivo futuro é transformá-la em framework distribuível para jogos 2D/3D, headless e aplicações desktop/Steam.
 
-## 1. Fonte canônica da arquitetura modular
+O código de um jogo deve ser consumidor da engine, não uma modificação indiscriminada do Kernel, de Domain ou de `/internal`. Uma cena jogável de validação não é prova de framework distribuído. Não bloquear o primeiro jogo esperando a Stage 116.
 
-A árvore de módulos não deve ser duplicada manualmente em documentação, scripts de freeze, smoke tests de governança ou outros guardrails.
+`SPEC.md` define o destino. O ticket do Linear define o escopo atual. `WORKFLOW.md` define o processo do Symphony.
 
-A fonte única dos módulos first-party é:
+## Fontes de verdade
+
+Em caso de conflito:
+
+1. checkout Git atual;
+2. testes e validators executáveis;
+3. `scripts/architecture/module-map.mjs`;
+4. manifests/contracts/tokens reais;
+5. `SPEC.md`;
+6. documentação histórica/snapshots.
+
+`Projeto1_107.md` é referência histórica, não prova do estado atual.
+
+## Regras permanentes
+
+### Não reescrever a fundação
+
+Não crie um segundo:
+
+- Kernel;
+- lifecycle;
+- capability registry;
+- event/command/query backbone;
+- plugin manifest system;
+- game loop concorrente;
+- Domain paralelo.
+
+A productização deve reutilizar a base existente.
+
+### Módulos
+
+A fonte canônica dos módulos first-party é:
 
 ```text
 scripts/architecture/module-map.mjs
 ```
 
-O catálogo canônico descreve:
+Não mantenha lista paralela para governança.
 
-- módulos funcionais;
-- runtimes fundamentais;
-- contracts;
-- tokens;
-- plugins;
-- arquivos nativos;
-- testes;
-- arquivos extras;
-- roots físicos da Engine;
-- roots públicos;
-- roots internos.
+### `/public` e `/internal`
 
-A estrutura vigente de cada módulo da Engine segue:
+Preservar:
 
 ```text
 src/engine/<module>/
 ├── public/
-│   └── index.ts
 └── internal/
-    └── ...
-```
-
-Qualquer automação que precise conhecer ownership, roots ou catálogo de módulos deve importar `module-map.mjs` em vez de manter listas paralelas.
-
-## 2. Fronteira `/public` vs `/internal`
-
-`/public` é a fronteira formal do módulo.
-
-Código consumidor deve preferir:
-
-```text
-src/engine/<module>/public/index.ts
-```
-
-`/internal` contém implementações concretas e não é API pública.
-
-Regras obrigatórias:
-
-1. `engine/X/internal` não importa `engine/Y/internal`.
-2. `engine/X/public` não importa `internal`.
-3. `plugins/X` pode acessar `engine/X/internal` quando necessário para composição.
-4. `plugins/X` não deve acessar `engine/Y/internal`.
-5. testes white-box podem acessar `/internal` de forma deliberada.
-6. não reexportar classes concretas de `/internal` apenas para contornar boundary errors.
-7. não transformar uma implementação concreta em API pública sem decisão arquitetural explícita.
-
-## 3. Core público
-
-A fachada pública do Core é:
-
-```text
-src/core/index.ts
-```
-
-Consumidores externos devem preferir:
-
-```ts
-import { ... } from "@core";
-```
-
-Código externo ao Core não deve importar diretamente:
-
-```text
-src/core/internal/
-src/core/runtime/
-```
-
-Exceções devem ficar restritas a código do próprio Core ou testes white-box deliberados.
-
-Nunca resolva uma violação exportando indiscriminadamente todo o conteúdo de `internal`.
-
-## 4. Plugins e capabilities
-
-Plugins vivem em:
-
-```text
-src/plugins/<module>/plugin.ts
-```
-
-Os manifestos usam a estrutura:
-
-```text
-capabilities.provides
-capabilities.consumes
-capabilities.conflicts
-dependsOn
-```
-
-Semântica vigente:
-
-- `consumes optional:false` = capability obrigatória;
-- `consumes optional:true` = capability opcional;
-- `dependsOn` é separado e participa do lifecycle;
-- `conflicts` declara incompatibilidades;
-- provider ambiguity, semver, ciclos, permissions e conflitos devem ser detectados pelos guardrails/preflight.
-
-Não crie um segundo orquestrador de lifecycle fora do Kernel.
-
-## 5. Lifecycle e preflight
-
-O Kernel é o único coordenador do lifecycle.
-
-Antes do primeiro `setup()`, o preflight arquitetural valida o conjunto de plugins.
-
-Fases relevantes:
-
-```text
-setup -> resolving -> ready -> running
-```
-
-O shutdown deve preservar inverse shutdown:
-
-```text
-BOOT: A -> B -> C
-STOP: C -> B -> A
-```
-
-Dependências devem permanecer disponíveis enquanto consumidores executam `onStop` e disposers.
-
-Não altere essa propriedade sem testes específicos.
-
-## 6. Freeze arquitetural
-
-O freeze é controlado por:
-
-```text
-agents.mjs
-tests/freeze-lock.mjs
-tests/freeze-invariants.mjs
-```
-
-O lock canônico é:
-
-```text
-/.freeze-lock.json
-```
-
-O path histórico:
-
-```text
-tests/.freeze-lock.json
-```
-
-não é mais o path canônico. Compatibilidade temporária pode existir apenas para conversão one-shot pelo script de freeze.
-
-Nunca crie novamente dependência operacional do path legado.
-
-### Verificação
-
-```bash
-node agents.mjs
-```
-
-### Desbloqueio controlado
-
-```bash
-node agents.mjs --unlock
-```
-
-### Congelamento
-
-```bash
-node agents.mjs --lock
-```
-
-Não apagar nem editar `.freeze-lock.json` manualmente.
-
-Mudanças em áreas congeladas exigem desbloqueio explícito e novo lock na etapa apropriada.
-
-## 7. Guardrails arquiteturais
-
-Boundary checker:
-
-```bash
-node scripts/architecture/check-boundaries.mjs
-```
-
-Dependency checker:
-
-```bash
-node scripts/architecture/check-dependencies.mjs
-```
-
-TypeScript:
-
-```bash
-npx tsc --noEmit
-```
-
-Uma checagem não deve ser afrouxada apenas para ficar verde.
-
-Se um guardrail encontra uma violação real, corrija a arquitetura ou o consumidor, não o teste que a detectou.
-
-## 8. Testes e smoke tests
-
-Testes funcionais ficam em:
-
-```text
-tests/*.test.ts
-```
-
-Smoke tests ficam em:
-
-```text
-tests/*.mjs
 ```
 
 Regras:
 
-1. testes white-box podem acessar `/internal`;
-2. smoke tests devem usar os paths físicos atuais;
-3. não restaurar referências pré-migração como `src/engine/<module>/<arquivo>.ts` quando o arquivo real está em `/internal`;
-4. não remover asserts para esconder regressões;
-5. testes continuam responsáveis por comportamento e integração, não apenas existência de arquivos.
+- `engine/X/internal` não importa `engine/Y/internal`;
+- `engine/X/public` não expõe implementação privada;
+- `plugins/X` pode compor `engine/X/internal`;
+- `plugins/X` não acessa `engine/Y/internal`;
+- consumidores externos usam somente APIs públicas;
+- não exporte internals apenas para contornar boundary errors.
 
-## 9. Build e execução
+### Core
 
-No estado atual, o build npm é:
+Consumidores usam a fachada pública do Core.
 
-```bash
-npm run build
-```
+Não importar diretamente `src/core/internal/**` ou `src/core/runtime/**` fora do próprio Core/testes white-box deliberados.
 
-e corresponde ao pipeline configurado em `package.json`:
+### Domain
 
-```text
-tsc && vite build
-```
-
-Não assuma que `arch:check` já está acoplado automaticamente ao build. Essa integração permanente pertence a uma etapa posterior.
-
-Validação Rust:
-
-```bash
-cargo check --manifest-path src-tauri/Cargo.toml
-```
-
-Runtime Tauri:
-
-```bash
-npm run tauri dev
-```
-
-Não altere configuração Rust/Tauri para corrigir problema puramente TypeScript sem evidência concreta.
-
-## 10. Regras para movimentação de arquivos
-
-A grande migração física para `/public` e `/internal` já ocorreu.
-
-A partir do estado atual:
-
-- não mover arquivos de Engine por conveniência;
-- não reescrever imports em massa sem plano explícito;
-- não ressuscitar paths antigos;
-- não criar aliases ad hoc para esconder paths quebrados;
-- mudanças estruturais futuras devem passar novamente por inventário, plano e validação.
-
-Scripts históricos de migração permanecem auditáveis e não devem ser apagados apenas por estarem concluídos.
-
-## 11. Diretórios conceituais
-
-As áreas:
+`src/domain/**` permanece sem dependência de:
 
 ```text
-src/domain/
-src/services/
-src/app/flows/
+Three.js
+Rapier
+WebGL
+DOM
+Tauri
+Steamworks
+src/engine/**
+src/plugins/**
+src/services/**
+src/app/**
 ```
 
-foram criadas como estrutura futura.
+Não usar wall clock ou `Math.random()` para regras determinísticas.
 
-Enquanto não houver implementação real:
+O mesmo modelo semântico deve servir 2D, 2.5D, 3D e headless.
 
-- preservar seus `README.txt`;
-- não criar `.ts` vazios;
-- não criar entidades, use cases ou FSMs fictícios apenas para preencher pastas.
+### Services/App e composição do primeiro jogo
 
-Implementações futuras das Camadas 2 e 3 pertencem a fase posterior.
+`src/services/**` orquestra Domain + ports + APIs públicas, nunca internals concretos.
 
-## 12. Documentação histórica
+`src/app/**` é composition root e fluxo de produto, não lugar para lógica de Domain.
 
-READMEs de patches antigos podem permanecer como histórico.
+O jogo/cena de validação deve compor plugins, tokens, APIs públicas, input, física, world, render e assets sem criar segundo Kernel/loop. Regras de gameplay, dados de cena e assets específicos não pertencem aos internals da engine. Um ciclo create/load/start/pause/resume/unload/dispose deve liberar listeners, workers, GPU, corpos Rapier e handles nativos.
 
-Exemplos de documentação histórica não devem ser reescritos automaticamente apenas porque mencionam paths antigos.
+Pode existir uma composição local à aplicação antes da API pública final do framework; não antecipe packages, presets ou breaking changes definidos somente nas Stages 91–116.
 
-Quando houver conflito entre documentação histórica e estado operacional, prevalecem:
+### Lifecycle
 
-1. código/configuração atual;
-2. `module-map.mjs`;
-3. guardrails executáveis;
-4. este `AGENTS.md`;
-5. `README.md`.
+O Kernel continua sendo o coordenador único.
 
-## 13. Proibições para agentes
+Preservar inverse shutdown e cleanup determinístico.
 
-Agentes e automações não devem:
+Todo recurso adquirido precisa de release/dispose:
 
-- duplicar manualmente o catálogo completo de módulos;
-- mover arquivos sem escopo arquitetural explícito;
-- importar implementação privada de outro módulo;
-- expor classes internas para “resolver” um import;
-- remover validações para deixar CI/testes verdes;
-- alterar journals históricos como se fossem configuração atual;
-- tratar READMEs históricos como fonte canônica;
-- editar o freeze manualmente;
-- criar placeholders TypeScript vazios;
-- introduzir alocações desnecessárias dentro de game loops críticos;
-- criar um segundo lifecycle manager paralelo ao Kernel.
+- listeners;
+- workers;
+- WebSockets;
+- Steam callbacks;
+- WebAudio;
+- GPU resources;
+- physics bodies/colliders;
+- timers;
+- subscriptions;
+- IPC handles;
+- caches;
+- object URLs.
 
-## 14. Performance e runtime de jogo
+### Game loop
 
-Código de runtime deve preservar boas práticas de engine:
+Distinguir:
 
-- evitar alocações por frame quando possível;
-- separar fixed update de render update quando aplicável;
-- manter ownership claro de timers, listeners e resources;
-- usar disposers/scope do lifecycle;
-- não registrar listeners globais sem remoção;
-- não ocultar trabalho caro dentro de getters usados por frame;
-- considerar draw calls, memória e pressão de GC ao alterar sistemas 3D.
+```text
+simulation tick
+render frame
+wall clock
+```
 
-## 15. Tauri e desktop
+Simulação/física usa fixed timestep. Render usa frame variável/interpolação.
 
-A aplicação alvo é desktop via Tauri.
+Em hot paths:
 
-Ao alterar integração nativa:
+- evitar alocação por frame;
+- evitar `map/filter/reduce` quando relevante;
+- evitar criação de Promise/closure/listener por tick;
+- evitar crescimento não limitado de Map/Set/cache.
 
-- manter fronteira TypeScript ↔ Rust explícita;
-- validar comandos Tauri e payloads;
-- evitar expor operações nativas inseguras diretamente a UI;
-- preservar compatibilidade com Steam quando aplicável;
-- validar `cargo check`;
-- validar `npm run tauri dev` quando a mudança tocar runtime nativo.
+### Three.js / GPU
 
-## 16. Sequência mínima de validação arquitetural
+Ownership e dispose devem ser explícitos para geometries, materials, textures, render targets e recursos relacionados.
 
-Antes de considerar uma alteração arquitetural válida:
+### Rapier
+
+Physics avança no fixed tick. Domain não armazena handles concretos de body/collider.
+
+### Input
+
+Tratar Pointer Lock, focus/blur e gamepad connect/disconnect. Remover listeners no teardown.
+
+### Tauri/Rust
+
+WebView → Rust é boundary de segurança.
+
+Todo command novo precisa de:
+
+- input validado;
+- mínimo privilégio;
+- erro serializável/mapeado;
+- TypeScript API tipada.
+
+Não introduzir shell arbitrário, path escape ou permissões globais desnecessárias.
+
+### Steam
+
+Steam é adapter opcional de plataforma, não owner de gameplay.
+
+Preservar init/shutdown corretos, modo offline controlado e ausência de dependência Steam em presets que não a selecionem.
+
+## Prioridade de execução e estratégia de framework
+
+**P0: certificar a engine para jogos** com testes nativos Tauri/Rust e integração input → fixed tick/física → world → render; validar cena 3D de referência, asset, pause/resume e teardown.
+
+**P1: tornar a produção de jogos prática** com uma composição simples e documentada por APIs públicas, diagnóstico, robustez e baseline de performance.
+
+**P2: distribuir o framework** seguindo a SPEC (Stages 85–116): certificar Layer 1 (85–90), Stage 91 read-only, depois extrações, API, presets, CLI e consumidor externo. Nada de migração big-bang.
+
+Protótipos podem começar antes do gate final, com riscos declarados. Somente evidência de integração real permite declarar `ENGINE GAME-READY PASS`. A futura configuração/preset compõe o Kernel existente, não o substitui.
+
+## Skills, RTK e economia segura de tokens
+
+Ative somente a Skill relevante em `.agents/skills/`: `repo-context`, `focused-validation`, `game-runtime`, `tauri-steam`, `engine-integration`, `game-composition` ou `game-readiness`. Não leia toda a SPEC nem todos os módulos em tarefas localizadas.
+
+RTK é um **filtro opcional de saída** de terminal, não um teste. Use a saída sem filtros se o resultado compacto perder detalhes de erro. Não modifique hooks/permissões globais de `~/.codex` nem instale plugins fora do escopo da issue. Mantenha secrets e telemetria fora do repositório e do Workpad Linear.
+
+## Git
+
+Não executar comandos destrutivos sem autorização explícita.
+
+Não apagar `.freeze-lock.json` para contornar freeze.
+
+Respeitar `agents.mjs` e guardrails existentes.
+
+### Freeze arquitetural
+
+O arquivo canônico de congelamento é `/.freeze-lock.json`.
+
+O orquestrador de proteção é `agents.mjs`, que utiliza
+`tests/freeze-invariants.mjs`, `tests/freeze-lock.mjs`,
+`scripts/architecture/module-map.mjs` e os verificadores arquiteturais.
+
+Comandos disponíveis:
+
+- `node agents.mjs`: executa as verificações.
+- `node agents.mjs --lock`: ativa o congelamento.
+- `node agents.mjs --unlock`: realiza o desbloqueio controlado.
+
+Regras obrigatórias para Codex e Symphony:
+
+- Nunca desbloquear automaticamente módulos protegidos.
+- Nunca apagar ou editar manualmente `.freeze-lock.json`.
+- Nunca desativar verificações para conseguir um PASS.
+- Interromper a tarefa quando uma proteção bloquear mudanças.
+- Registrar o bloqueio no ticket correspondente do Linear.
+- Solicitar autorização antes de qualquer desbloqueio.
+- Após alterações autorizadas, executar novamente os validadores.
+- Restaurar o congelamento quando aplicável e autorizado.
+
+
+## Gates mínimos
+
+Após mudanças de código:
 
 ```bash
-node scripts/architecture/check-boundaries.mjs
-node scripts/architecture/check-dependencies.mjs
+npm run arch:check
 npx tsc --noEmit
+npx vitest run
+npm run build
 ```
 
-Depois, conforme o escopo:
+Se Rust/Tauri estiver no escopo:
 
 ```bash
-npx vitest run
 cargo check --manifest-path src-tauri/Cargo.toml
-npm run build
-npm run tauri dev
 ```
 
-Falhas estruturais devem ser corrigidas antes de avançar para validações funcionais que dependem delas.
+Se desktop runtime estiver no escopo, executar o smoke desktop disponível ou `npm run tauri dev` quando o ambiente permitir.
 
-## 17. Princípio de autoridade
+Testes focados devem ser executados antes da suíte completa sempre que existirem.
 
-O objetivo dos guardrails é preservar a arquitetura, não congelar erros.
+## Definition of Done
 
-Quando uma regra, teste ou freeze divergir do estado arquitetural aprovado:
+Uma mudança só está pronta quando:
 
-- identificar a fonte canônica;
-- corrigir o consumidor ou guardrail correto;
-- preservar a intenção arquitetural;
-- registrar mudanças relevantes;
-- não usar bypass silencioso.
+- comportamento exigido foi implementado;
+- não há placeholder substituindo funcionalidade;
+- boundaries permanecem válidos;
+- testes focados passam;
+- gates globais aplicáveis passam;
+- integração Tauri/Rust e smoke real foram comprovados se fazem parte do aceite; mocks não bastam para declarar nativo PASS;
+- lifecycle/cleanup foi validado quando relevante;
+- performance hot-path não regrediu quando relevante;
+- documentação canônica foi atualizada se o contrato mudou;
+- `git diff --check` passa;
+- o diff está restrito ao ticket.
 
+Não confunda arquivo existente, compilação isolada ou texto “PASS” em documentação com validação real.
