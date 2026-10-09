@@ -1,12 +1,6 @@
 name: Stage 88 Production Certification
 
 on:
-  push:
-    branches:
-      - teste/cena-3d-tauri
-    paths:
-      - ".stage-packages/**"
-      - ".github/workflows/stage88-production.yml"
   workflow_dispatch:
 
 permissions:
