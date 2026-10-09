@@ -7,23 +7,23 @@ import {
 
 import type {
   PhysicsApi,
-} from "../src/tokens/physics";
+} from "../../tokens/physics";
 
 import type {
   PhysicsSandboxViewPort,
-} from "../src/projects/physics-sandbox/ports/PhysicsSandboxViewPort";
+} from "./ports/PhysicsSandboxViewPort";
 
 import type {
   PhysicsSandboxAudioPort,
-} from "../src/projects/physics-sandbox/ports/PhysicsSandboxAudioPort";
+} from "./ports/PhysicsSandboxAudioPort";
 
 import {
   PhysicsSandboxGame,
-} from "../src/projects/physics-sandbox/PhysicsSandboxGame";
+} from "./PhysicsSandboxGame";
 
 import {
   createProjectPlugins,
-} from "../src/project";
+} from "../../project";
 
 function createFixtures(): {
   physics:

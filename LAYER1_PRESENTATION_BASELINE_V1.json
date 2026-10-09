@@ -19,7 +19,7 @@
     "src/engine/ui/internal/HUDDataBinder.ts": "bf62e2aae27deee18bd49c6d62d15bea37e889a543978e14a007a8310f2d59bc",
     "src/engine/ui/internal/LocalizationEngine.ts": "567c29c6d2e8b0fd6d0dcf2f47e4fe9fac1fb3cd36445fab081cf49baa80646b",
     "src/engine/ui/internal/UIManager.ts": "7c9e44ea116ccf781864cb72d228c41b6671cd7e48986d2bca6386cf151b4b1b",
-    "src/engine/ui/internal/UIService.ts": "0e9994f34611c7625a743149e52c3e5f947b9d57027f3bfe6cb8c6de964c3865",
+    "src/engine/ui/internal/UIService.ts": "dcc41b6f6ec66c5e63a32af0058099073761530c54657e2fd83448ba7fa96b82",
     "src/engine/ui/internal/UITemplateRegistry.ts": "7707c2c6e1f84b75a2b8cf30ee0ad581c743f776ca331ba2272ec5b7a01e3096",
     "src/plugins/ui/plugin.ts": "9eaf34174a50150ecb188af852795586a26db7d06b693031abb9c5bdbb32a3d6",
     "src/engine/sprites/internal/InstancedTilemapRenderer.ts": "b43deed47c0b1337e2aac153f57eaaed6fee5fb8663bfbc3d8d429d3562fc154",

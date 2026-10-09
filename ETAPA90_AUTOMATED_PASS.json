@@ -5,7 +5,7 @@
   "status": "PASS",
   "layer1Gate": "LAYER 1 PASS",
   "stagesCertified": "71-89",
-  "gitHeadBeforeStage90Commit": "f44073595e15fecccc40bd86a418b9b2ba36d9fb",
+  "gitHeadBeforeStage90Commit": "7ed768b0f135a0737b11c71bb8d1f64f05136433",
   "gates": {
     "evidence.stages-71-89": "PASS",
     "AUDIT STAGE 71": "PASS",
@@ -40,5 +40,5 @@
     "Renderização 3D em GPU real e shutdown gracioso do app"
   ],
   "violations": 0,
-  "generatedAtUtc": "2026-10-09T19:45:05.960Z"
+  "generatedAtUtc": "2026-10-09T20:31:54.807Z"
 }

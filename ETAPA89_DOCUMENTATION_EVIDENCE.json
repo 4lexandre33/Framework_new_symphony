@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "stage": 89,
   "status": "PASS",
-  "gitHeadBeforeStage89Commit": "f44073595e15fecccc40bd86a418b9b2ba36d9fb",
+  "gitHeadBeforeStage89Commit": "7ed768b0f135a0737b11c71bb8d1f64f05136433",
   "prerequisites": {
     "stage88": "PASS"
   },
@@ -21,12 +21,12 @@
       {
         "id": "required.files",
         "ok": true,
-        "detail": "14/14"
+        "detail": "15/15"
       },
       {
         "id": "references.resolve",
         "ok": true,
-        "detail": "100 caminhos conferidos"
+        "detail": "123 caminhos conferidos"
       },
       {
         "id": "stages.listed",
@@ -61,5 +61,5 @@
     ],
     "violations": []
   },
-  "generatedAtUtc": "2026-10-09T19:42:30.667Z"
+  "generatedAtUtc": "2026-10-09T20:29:27.162Z"
 }

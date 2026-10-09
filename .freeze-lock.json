@@ -1,7 +1,7 @@
 {
   "version": "20.0.0",
   "moduleMapSchemaVersion": 1,
-  "lockedAt": "2026-10-09T19:36:50.930Z",
+  "lockedAt": "2026-10-09T20:20:47.396Z",
   "files": {
     "src-tauri/Cargo.toml": "fbfe89089b1eccd8d5901a2143486a61ac3b6ded0c4e5dfc645d278d43648902",
     "src-tauri/src/lib.rs": "8158e37ef624c7e5b4b8b5345941fa0e362171461e05aa4bf51c7c2927ff51b5",
@@ -162,7 +162,7 @@
     "src/engine/ui/internal/HUDDataBinder.ts": "cfa6262648b54f93c40ba5642256d45b0a198f8bf6160123a72d99b8d150209f",
     "src/engine/ui/internal/LocalizationEngine.ts": "d3d7bb648d0c60112a23940af99d41502964079f639cdf67fc931e88fac92c13",
     "src/engine/ui/internal/UIManager.ts": "2c1a572f43a6bc9671732051622a136a29375bc3edc62eb69b9f06969c528bdf",
-    "src/engine/ui/internal/UIService.ts": "3019570ed258cf93acfbe2998932d416c740e12237a6ce758ef3ca7cab7296f6",
+    "src/engine/ui/internal/UIService.ts": "388103a15e01b9578e97bb502e4b20c525573bb65bf1a5de58d50502b09fb23f",
     "src/engine/ui/internal/UITemplateRegistry.ts": "428e6944699093b66219648dcafeceb5160540d147918d7653175f7654111908",
     "src/engine/ui/public/index.ts": "ca3af7f68e4195c0a7c16072f0a92ad47bc455d25ac2bf2aebcd16b6bc25e659",
     "src/engine/vfx/internal/CustomShaderLibrary.ts": "82b0b5a1945187a1a46a6c7628c55584b5b46547c1e38f3f362917484314d07e",

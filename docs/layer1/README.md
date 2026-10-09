@@ -70,6 +70,7 @@ As baselines congeladas de cada área ficam na raiz como
 | `docs/layer1/runtime-lifecycle.md` | Kernel, boot/shutdown, game loop, ownership de recursos e recuperação de falhas |
 | `docs/layer1/native-tauri-steam.md` | Host Tauri/Rust, comandos IPC, segurança, Steam opcional, build e empacotamento |
 | `docs/layer1/consumer-projects.md` | Como um jogo/app consome a engine sem alterá-la |
+| `docs/layer1/creating-a-game.md` | Guia curto para criar um jogo-plugin (humanos e IA) |
 | `docs/layer1/validation-evidence.md` | Gates, validadores por stage, evidências, freeze e CI |
 | `docs/layer2/README.md` | Domain Layer 2 |
 

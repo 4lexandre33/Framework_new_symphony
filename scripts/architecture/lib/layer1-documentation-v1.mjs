@@ -11,6 +11,7 @@ export const DOC_FILES = Object.freeze([
   "docs/layer1/native-tauri-steam.md",
   "docs/layer1/consumer-projects.md",
   "docs/layer1/validation-evidence.md",
+  "docs/layer1/creating-a-game.md",
 ]);
 
 const REQUIRED_FILES = Object.freeze([
@@ -45,6 +46,17 @@ function abs(root, relativePath) {
 
 function readText(root, relativePath) {
   return fs.readFileSync(abs(root, relativePath), "utf8").replace(/\r\n/gu, "\n");
+}
+
+/**
+ * Projetos consumidores são removíveis (apagar src/projects/<nome>/ não pode
+ * quebrar a engine). Referências da documentação a um projeto de exemplo
+ * ausente são toleradas; `_template` e `src/projects` em si são obrigatórios.
+ */
+function isOptionalProjectReference(root, target) {
+  const match = /^src\/projects\/([^/]+)(?:\/|$)/u.exec(target);
+  if (match === null || match[1].startsWith("_")) return false;
+  return !fs.existsSync(abs(root, `src/projects/${match[1]}`));
 }
 
 function violation(code, scope, message) {
@@ -118,6 +130,7 @@ export async function auditLayer1Documentation({ projectRoot = process.cwd() } =
       seen.add(token);
       referenceCount += 1;
       const target = token.replace(/^\//u, "").replace(/\/$/u, "");
+      if (isOptionalProjectReference(root, target)) continue;
       if (!fs.existsSync(abs(root, target))) {
         referenceMisses += 1;
         fail("DOC_REF_MISSING", file, `caminho citado não existe: ${token}`);

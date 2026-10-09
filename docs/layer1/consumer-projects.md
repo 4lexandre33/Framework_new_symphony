@@ -9,17 +9,25 @@ contracts nem os tokens estáveis.
 
 | Caminho | Papel |
 |---|---|
-| `src/project.ts` | Composição **local** dos consumidores. Expõe `createProjectPlugins()` e o tipo `LocalProjectId` (`"none"` ou `"physics-sandbox"`). |
-| `src/projects/<nome>/**` | Cenas, assets, regras, controles e adapters daquele projeto |
+| `src/project-contract.ts` | Contrato `ProjectDefinition` (`id`, `name`, `createPlugins()`) |
+| `src/project.ts` | Descoberta automática: encontra `src/projects/<nome>/index.ts` em build time e expõe `createProjectPlugins()` e `listProjects()` |
+| `src/projects/<nome>/**` | Cenas, assets, HUD, regras, controles e adapters daquele projeto |
+| `src/projects/_template/` | Molde para novos jogos. Pastas que começam com `_` nunca são carregadas |
 | `src/app/bootstrap.ts` | Conhece somente `createProjectPlugins()`; registra no Kernel os plugins retornados |
 
-O padrão atual é `physics-sandbox`. Passar `"none"` devolve uma lista vazia, ou
-seja, o host sobe sem nenhum projeto. Trocar de jogo altera apenas
-`src/project.ts` e a pasta do projeto.
+**Adicionar um jogo:** copiar `src/projects/_template/` para `src/projects/<meu-jogo>/`
+e implementar. **Remover um jogo:** apagar a pasta. Nenhum arquivo da engine muda e
+os gates (`arch:check`, `tsc`, Vitest, build) continuam verdes, inclusive com
+`src/projects/` vazio. Isso é verificado por `npm run project:isolation`
+(`scripts/architecture/check-project-isolation.mjs`).
 
-`src/project.ts` é uma composição local transitória. Ela **não** é a API pública
-definitiva do framework (`defineProject`, `createApplication`, packages e
-presets), que pertence às Stages 91–116.
+Seleção do projeto ativo: se existe exatamente um, ele é usado; com vários, defina
+`VITE_PROJECT=<id>`. Passar `"none"` sobe o host sem projeto. O exemplo atual é
+`physics-sandbox`.
+
+Esta composição local **não** é a API pública definitiva do framework
+(`defineProject`, `createApplication`, packages e presets), que pertence às
+Stages 91–116. Guia passo a passo: `docs/layer1/creating-a-game.md`.
 
 ## 2. Estrutura de um projeto
 
@@ -29,6 +37,7 @@ O exemplo existente é `src/projects/physics-sandbox/`:
 |---|---|
 | `src/projects/physics-sandbox/PhysicsSandboxPlugin.ts` | Plugin de **composição**: requisita capabilities, conecta eventos, gerencia inicialização e teardown e delega ao projeto. Não guarda lógica de jogo. |
 | `src/projects/physics-sandbox/PhysicsSandboxGame.ts` | Lógica do projeto |
+| `src/projects/physics-sandbox/adapters/SandboxHud.ts` | HUD do exemplo (vida, mana, munição). A engine só oferece o contêiner `#hud-overlay` |
 | `ports/` | Interfaces mínimas que o projeto exige (por exemplo, view e áudio) |
 | `adapters/` | Implementações concretas dos ports sobre as APIs públicas da engine |
 
@@ -51,7 +60,7 @@ O sentido inverso é proibido.
 ## 4. Critério de aceite arquitetural
 
 Substituir um projeto por outro (ou por nenhum) sem alterar `src/core/**`,
-`src/engine/**` e `src/plugins/**`.
+`src/engine/**` e `src/plugins/**`, apenas adicionando ou apagando pastas em `src/projects/`.
 
 Limitação conhecida: a API de câmera v1 não tem operação dedicada para atualizar
 a pose de uma câmera virtual. Um projeto pode adaptar seus descritores somente

@@ -355,59 +355,8 @@ export class UIService
         class="ui-screen active"
         aria-hidden="false"
       >
-        <div class="hud-overlay">
-          <div class="hud-top-left">
-            <div class="hud-bar-wrapper">
-              <span
-                class="hud-bar-label"
-                data-i18n="ui.hud.hp"
-              >
-                VIDA
-              </span>
-
-              <div class="hud-bar-container">
-                <div
-                  id="hud-hp-bar"
-                  class="hud-bar-fill-hp"
-                ></div>
-              </div>
-
-              <span data-bind="hp">100</span>
-              /
-              <span data-bind="maxHp">100</span>
-            </div>
-
-            <div class="hud-bar-wrapper">
-              <span
-                class="hud-bar-label"
-                data-i18n="ui.hud.mp"
-              >
-                MANA
-              </span>
-
-              <div class="hud-bar-container">
-                <div
-                  id="hud-mp-bar"
-                  class="hud-bar-fill-mp"
-                ></div>
-              </div>
-
-              <span data-bind="mp">50</span>
-              /
-              <span data-bind="maxMp">50</span>
-            </div>
-          </div>
-
-          <div class="hud-stat-badge">
-            <span data-i18n="ui.hud.ammo">
-              MUNIÇÃO
-            </span>
-            :
-            <span data-bind="ammo">30</span>
-            /
-            <span data-bind="maxAmmo">120</span>
-          </div>
-        </div>
+        <!-- Contêiner genérico: o HUD é montado pelo projeto (ver src/projects). -->
+        <div id="hud-overlay" class="hud-overlay"></div>
       </div>
 
       <div

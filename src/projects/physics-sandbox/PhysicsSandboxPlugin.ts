@@ -44,6 +44,10 @@ import {
 } from "./adapters/OrbitCameraInput";
 
 import {
+  SandboxHud,
+} from "./adapters/SandboxHud";
+
+import {
   EngineSandboxAudio,
 } from "./adapters/EngineSandboxAudio";
 
@@ -77,8 +81,17 @@ export function createPhysicsSandboxPlugin():
     null =
       null;
 
+  let hud:
+    SandboxHud |
+    null =
+      null;
+
   const release =
     (): void => {
+      hud?.dispose();
+      hud =
+        null;
+
       input?.dispose();
       input =
         null;
@@ -307,6 +320,11 @@ export function createPhysicsSandboxPlugin():
               );
 
             input.start();
+
+            hud =
+              new SandboxHud();
+
+            hud.mount();
 
             console.info(
               "[PhysicsSandbox] Exemplo iniciado com física, câmera orbital e áudio.",
