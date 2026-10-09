@@ -1,0 +1,6 @@
+Aplicar na raiz do projeto e executar:
+
+  node scripts/architecture/stage86-validate-performance-lifecycle.mjs
+  node scripts/architecture/stage86-finalize-performance-lifecycle.mjs
+
+A finalização só materializa ETAPA86_AUTOMATED_PASS.json depois do validator verde.
