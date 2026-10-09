@@ -3,7 +3,7 @@
   "stage": 88,
   "stageName": "Desktop / Steam Production Readiness",
   "layer": 1,
-  "packageRevision": "2.0.1-github-direct",
+  "packageRevision": "2.0.2-github-direct",
   "referenceStage": 87,
   "baselineId": "layer1-desktop-production-v1-stage88",
   "certification": {
@@ -12,7 +12,11 @@
     "rustToolchain": "1.97.0",
     "cargoBuildJobs": 1,
     "vitestFileParallelism": false,
-    "preserveCargoManifestBytes": true
+    "preserveCargoManifestBytes": true,
+    "immutableRevision": true,
+    "crossRunnerEvidenceHandoff": "GitHub Actions artifact",
+    "cancelStaleRuns": true,
+    "crossPlatformLineEndingAudit": true
   },
   "nativeTargets": [
     "Linux Tauri release executable without bundle",
@@ -27,7 +31,10 @@
     "Steam default Cargo feature and native shutdown",
     "Cargo.toml is restored byte-for-byte after Tauri CLI normalization",
     "real release executable is produced",
-    "real Windows NSIS installer is produced"
+    "real Windows NSIS installer is produced",
+    "Linux and Windows certify the same immutable github.sha",
+    "Linux release evidence is handed to Windows through GitHub Actions artifact",
+    "Stage88 audit normalizes CRLF/LF across runners"
   ],
   "files": [
     "ETAPA88_MANIFEST.json",
