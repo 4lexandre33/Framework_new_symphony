@@ -117,8 +117,9 @@ if (!steam) {
   checkSnippet(steam.plugin, "BossDefeatedEvent", "Definição do evento de chefe no Kernel");
 }
 
-checkSnippet("src-tauri/src/lib.rs", "steamworks::Client::init_app", "Inicialização via init_app(480)");
-checkSnippet("src-tauri/src/lib.rs", "thread::spawn", "Thread dedicada de callbacks da Steam");
+checkSnippet("src-tauri/src/steam.rs", "steamworks::Client::init()", "Inicialização via Client::init() (AppID 480 em src-tauri/steam_appid.txt)");
+checkFile("src-tauri/steam_appid.txt", "AppID de desenvolvimento");
+checkSnippet("src-tauri/src/steam.rs", ".spawn(move ||", "Thread dedicada de callbacks da Steam");
 
 if (violations.length > 0) {
   console.log("\x1b[31m[FALHA NAS INVARIANTES]\x1b[0m Foram encontradas quebras de contrato no código:");
