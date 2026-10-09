@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "stage": 86,
+  "stageName": "Performance & Resource Lifecycle",
+  "baselineId": "layer1-performance-resource-v1-stage86",
+  "referenceStage": 85,
+  "resourceOwners": [
+    "core/kernel lifecycle",
+    "render/GPU resources",
+    "viewport/listeners",
+    "physics world/event queue",
+    "assets cache/in-flight requests",
+    "terrain workers",
+    "network sockets",
+    "input listeners/state"
+  ],
+  "hotPathPolicy": {
+    "renderNoTransientConstruction": true,
+    "renderNoArrayMaterialization": true,
+    "resourceReleaseExplicit": true,
+    "disposeIdempotentWhereOwned": true
+  },
+  "validationPolicy": {
+    "fullVitestSerial": true,
+    "architecture": true,
+    "typescript": true,
+    "cargoCheck": true,
+    "viteBuild": true
+  }
+}
