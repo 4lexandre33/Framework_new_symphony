@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "stage": 89,
+  "baselineId": "layer1-documentation-v1-stage89",
+  "certifiedStages": { "first": 71, "last": 88 },
+  "moduleCount": 23,
+  "tauriCommandCount": 37,
+  "documents": [
+    "README.md",
+    "docs/layer1/README.md",
+    "docs/layer1/runtime-lifecycle.md",
+    "docs/layer1/native-tauri-steam.md",
+    "docs/layer1/consumer-projects.md",
+    "docs/layer1/validation-evidence.md"
+  ],
+  "layer1FinalGate": "pending-stage-90"
+}

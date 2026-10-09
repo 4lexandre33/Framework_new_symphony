@@ -1,0 +1,59 @@
+ETAPA 89 — LAYER 1 DOCUMENTATION
+================================
+
+OBJETIVO
+--------
+Atualizar a documentação técnica da Layer 1 para refletir o checkout real após
+as Stages 71–88 e validar, por execução, que as referências existem e batem com
+o código. Esta stage não altera runtime, contracts, tokens, plugins, código Rust
+nem configuração Tauri.
+
+PRÉ-REQUISITO REAL
+------------------
+- ETAPA88_AUTOMATED_PASS.json = PASS / 0 violations.
+
+ENTREGAS
+--------
+- README.md atualizado: estado real, build com arch:check, Camadas 2–4 já
+  implementadas, projetos consumidores, scripts de stage e mapa de diretórios.
+- docs/layer1/README.md: visão da Layer 1, módulos, tabela das stages 71–89.
+- docs/layer1/runtime-lifecycle.md: Kernel, boot/shutdown, game loop, ownership
+  de recursos e recuperação de falhas.
+- docs/layer1/native-tauri-steam.md: boundary IPC, comandos, configuração de
+  produção, Steam opcional, build e empacotamento.
+- docs/layer1/consumer-projects.md: composição de projeto consumidor.
+- docs/layer1/validation-evidence.md: gates, validadores, evidências, freeze, CI.
+
+VALIDAÇÃO (AUDIT SEMÂNTICO)
+---------------------------
+O audit (scripts/architecture/lib/layer1-documentation-v1.mjs) falha se:
+1. a Stage 88 não estiver PASS;
+2. faltar qualquer documento ou arquivo obrigatório;
+3. um caminho citado em código inline não existir, ou um link relativo quebrar;
+4. um script npm citado não existir;
+5. alguma stage 71–89 não estiver listada com seu documento técnico real;
+6. a contagem de módulos divergir de scripts/architecture/module-map.mjs;
+7. a contagem de comandos Tauri (total e por área) divergir de src-tauri/src/lib.rs;
+8. identidade Tauri, versão, frontendDist ou AppID de desenvolvimento divergirem;
+9. o README voltar a conter afirmações obsoletas ou descrever mal o script build;
+10. algum documento declarar LAYER 1 PASS (reservado à Stage 90);
+11. a baseline LAYER1_DOCUMENTATION_BASELINE_V1.json divergir do código.
+
+A auditoria normaliza CRLF para LF antes de ler os textos.
+
+FLUXO
+-----
+  npm run stage89:audit
+  npm run stage89:validate
+  npm run stage89:finalize
+
+O validate executa: audit semântico, testes focados, regressão da Stage 88,
+arch:check, tsc, Vitest completo, cargo check e vite build. O finalize reexecuta
+o validate e só então grava as evidências ETAPA89_*.
+
+LIMITES
+-------
+- Não declara LAYER 1 PASS; isso pertence à Stage 90.
+- Não antecipa defineProject, createApplication, packages ou presets (Stages 91–116).
+- Verifica que a documentação bate com o código, não que o app executa; execução
+  nativa do app continua dependendo de verificação na máquina de destino.

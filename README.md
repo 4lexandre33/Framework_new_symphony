@@ -2,7 +2,15 @@
 
 Projeto desktop de jogo 3D baseado em TypeScript, Three.js, Tauri e Rust, estruturado em torno de um microkernel modular com plugins, capabilities, contratos tipados e fronteiras explícitas entre API pública e implementação interna.
 
-Este README descreve o estado operacional atual do repositório após a migração arquitetural v20 até a Etapa 25.
+Este README descreve o estado operacional atual do repositório: arquitetura v20, Domain (Layer 2) documentado até a Stage 69 e Layer 1 certificada por stages até a Stage 88 e documentada na Stage 89. O gate final da Layer 1 (Stage 90) ainda está pendente.
+
+A documentação técnica está em:
+
+- `docs/layer1/README.md` — Layer 1 (engine, runtime, Tauri/Steam, projetos consumidores, validação);
+- `docs/layer2/README.md` — Layer 2 (Domain);
+- `AGENTS.md` — regras permanentes de engenharia;
+- `WORKFLOW.md` — processo do Symphony;
+- `SPEC.md` — destino, roteiro de stages e critérios de aceite.
 
 ## Stack principal
 
@@ -24,6 +32,7 @@ Tenha disponíveis no ambiente:
 - Rust toolchain
 - Cargo
 - dependências exigidas pelo Tauri para Windows
+- em Linux, os pacotes de sistema do Tauri 2 (lista verificada em `docs/layer1/native-tauri-steam.md`)
 - Steam instalado quando estiver validando funcionalidades Steam
 
 Instale as dependências JavaScript:
@@ -70,13 +79,19 @@ Build TypeScript + Vite:
 npm run build
 ```
 
-No estado atual do projeto, o script `build` executa:
+O script `build` executa, nesta ordem:
 
 ```text
-tsc && vite build
+npm run arch:check && tsc && vite build
 ```
 
-A integração permanente de `arch:check` ao build pertence a uma etapa posterior da migração e não deve ser presumida antes de sua implantação.
+Ou seja, o build falha se qualquer fronteira arquitetural ou dependência de plugin estiver inválida.
+
+Release nativo do Tauri (detalhes, evidências e pré-requisitos em `docs/layer1/native-tauri-steam.md`):
+
+```bash
+npx tauri build --no-bundle --config src-tauri/tauri.stage88.conf.json
+```
 
 Build/check do host Rust:
 
@@ -121,6 +136,8 @@ Os smoke tests adicionais estão em:
 ```text
 tests/*-smoke-test.mjs
 ```
+
+Cada stage de certificação da Layer 1 expõe seus validadores como scripts npm (`stage85:validate` até `stage89:validate`, além de `audit`, `smoke` e `finalize` quando existem). A lista completa e o significado de cada um estão em `docs/layer1/validation-evidence.md`.
 
 ## Arquitetura
 
@@ -305,19 +322,19 @@ Não edite manualmente `.freeze-lock.json`.
 
 A regeneração final do freeze da arquitetura v20 deve ocorrer somente quando a sequência de validação correspondente estiver verde.
 
-## Estrutura conceitual futura
+## Camadas 2, 3 e 4
 
-As áreas:
+As camadas acima da engine já possuem implementação real:
 
 ```text
-src/domain/
-src/services/
-src/app/flows/
+src/domain/       Layer 2 — regras e estado semântico (docs/layer2/README.md)
+src/services/     Layer 3 — casos de uso e orquestração
+src/app/          Layer 4 — bootstrap, composição e fluxos (src/app/flows)
 ```
 
-já foram materializadas como estrutura conceitual.
+`src/domain/**` não depende de Three.js, Rapier, DOM, Tauri, Steamworks, `src/engine/**`, `src/plugins/**`, `src/services/**` nem `src/app/**`. As áreas que ainda tiverem apenas um README.txt explicativo não devem receber classes TypeScript vazias apenas para completar a árvore.
 
-Enquanto não houver implementação real correspondente, essas áreas usam `README.txt` explicativos e não devem receber classes TypeScript vazias apenas para completar a árvore.
+Um jogo ou aplicativo é um consumidor da engine e vive em `src/projects/<nome>/`, selecionado por `src/project.ts`. Ver `docs/layer1/consumer-projects.md`.
 
 ## Diretórios principais
 
@@ -328,15 +345,20 @@ src/
 ├── contracts/       contratos tipados dos sistemas
 ├── core/            microkernel
 ├── debug/           tooling/diagnósticos
-├── domain/          camada conceitual de domínio
+├── domain/          Layer 2: regras e estado semântico
 ├── engine/          módulos técnicos
 ├── plugins/         adaptação dos módulos ao Kernel
-├── services/        camada conceitual de serviços
+├── project.ts       composição local do projeto consumidor ativo
+├── projects/        projetos consumidores (jogos/apps), um diretório por projeto
+├── services/        casos de uso e orquestração
 └── tokens/          capability tokens
 
 src-tauri/            host desktop Rust/Tauri
 tests/                testes funcionais e smoke tests
-scripts/architecture/ governança e migração arquitetural
+scripts/architecture/ governança, migração e validadores das stages
+docs/                 documentação técnica (layer1, layer2)
+.github/workflows/    certificação das stages no CI
+.agents/skills/       skills de apoio para agentes
 ```
 
 ## Fluxo recomendado antes de considerar uma mudança válida
@@ -373,7 +395,7 @@ Esses artefatos são parte da trilha auditável da reestruturação.
 
 Não remova scripts permanentes de governança apenas porque a migração principal já ocorreu.
 
-READMEs históricos de correções e patches podem permanecer como registro histórico. Eles não constituem a fonte atual da arquitetura quando divergirem deste README, do `AGENTS.md` ou do `module-map.mjs`.
+READMEs históricos de correções e patches podem permanecer como registro histórico. Eles não constituem a fonte atual da arquitetura quando divergirem deste README, do `AGENTS.md` ou do `scripts/architecture/module-map.mjs`.
 
 ## Fontes operacionais de verdade
 

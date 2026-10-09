@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "stage": 89,
+  "status": "PASS",
+  "gitHeadBeforeStage89Commit": "e4569a2f38b91dc411302c6dc898dee241af285a",
+  "prerequisites": {
+    "stage88": "PASS"
+  },
+  "layer1FinalGate": "pending-stage-90",
+  "audit": {
+    "schemaVersion": 1,
+    "stage": 89,
+    "auditVersion": "1.0.0",
+    "ok": true,
+    "checks": [
+      {
+        "id": "previous.stage88",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "id": "required.files",
+        "ok": true,
+        "detail": "14/14"
+      },
+      {
+        "id": "references.resolve",
+        "ok": true,
+        "detail": "98 caminhos conferidos"
+      },
+      {
+        "id": "stages.listed",
+        "ok": true,
+        "detail": "19 stages"
+      },
+      {
+        "id": "modules.match-module-map",
+        "ok": true,
+        "detail": "23 módulos"
+      },
+      {
+        "id": "tauri.host-facts",
+        "ok": true,
+        "detail": "37 comandos"
+      },
+      {
+        "id": "readme.not-stale",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "id": "no.premature-pass",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "id": "baseline.in-sync",
+        "ok": true,
+        "detail": ""
+      }
+    ],
+    "violations": []
+  },
+  "generatedAtUtc": "2026-10-09T19:30:31.314Z"
+}

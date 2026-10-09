@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 2,
+  "stage": 89,
+  "stageName": "Layer 1 Documentation",
+  "layer": 1,
+  "packageRevision": "1.0.0",
+  "referenceStage": 88,
+  "baselineId": "layer1-documentation-v1-stage89",
+  "scope": [
+    "Atualizar a documentação técnica da Layer 1 para refletir o checkout real",
+    "Validar por execução que as referências da documentação existem e batem com o código",
+    "Não alterar runtime, contracts, tokens, plugins, Rust ou configuração Tauri"
+  ],
+  "documentationContracts": [
+    "README raiz sem afirmações obsoletas e coerente com o script build real",
+    "docs/layer1 cobre runtime, host Tauri/Steam, projetos consumidores e validação",
+    "toda stage 71–89 listada com seu documento técnico existente",
+    "contagem de módulos igual à de scripts/architecture/module-map.mjs",
+    "contagem de comandos Tauri igual à de generate_handler! em src-tauri/src/lib.rs",
+    "identidade Tauri, versão, frontendDist e AppID de desenvolvimento iguais à configuração real",
+    "todo caminho citado em código inline e todo link relativo existem",
+    "todo script npm citado existe no package.json",
+    "nenhuma declaração de LAYER 1 PASS antes da Stage 90"
+  ],
+  "files": [
+    "ETAPA89_MANIFEST.json",
+    "ETAPA89_LAYER1_DOCUMENTATION.txt",
+    "LAYER1_DOCUMENTATION_BASELINE_V1.json",
+    "README.md",
+    "docs/layer1/README.md",
+    "docs/layer1/runtime-lifecycle.md",
+    "docs/layer1/native-tauri-steam.md",
+    "docs/layer1/consumer-projects.md",
+    "docs/layer1/validation-evidence.md",
+    "scripts/architecture/lib/layer1-documentation-v1.mjs",
+    "scripts/architecture/stage89-audit-documentation.mjs",
+    "scripts/architecture/stage89-validate-documentation.mjs",
+    "scripts/architecture/stage89-finalize-documentation.mjs",
+    "tests/layer1-documentation-config.test.ts",
+    "tests/layer1-documentation-selftest.test.ts"
+  ],
+  "generatedAfterPass": [
+    "ETAPA89_RUNTIME_EVIDENCE.json",
+    "ETAPA89_DOCUMENTATION_EVIDENCE.json",
+    "ETAPA89_AUTOMATED_PASS.json",
+    "ETAPA89_SHA256SUMS.txt"
+  ],
+  "explicitlyDeferred": [
+    "Stage 90 Final Layer 1 Gate"
+  ]
+}
