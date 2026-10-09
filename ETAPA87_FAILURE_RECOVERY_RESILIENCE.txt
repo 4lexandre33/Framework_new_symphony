@@ -1,0 +1,45 @@
+ETAPA 87 — FAILURE RECOVERY & RESILIENCE
+========================================
+
+OBJETIVO
+--------
+Certificar que falhas hostis não deixam a Layer 1 em estado parcialmente vivo,
+não ressuscitam conexões/inputs obsoletos e não aceitam dados persistidos
+corrompidos.
+
+INVARIANTES
+-----------
+1. Boot estrito:
+   - rollback automático;
+   - erro original preservado;
+   - phase termina em stopped mesmo com status failed.
+
+2. Boot tolerante:
+   - plugins failed são quarantined/disposed;
+   - providers inválidos não permanecem resolvíveis;
+   - consumidores são rebindados quando aplicável.
+
+3. Dispose / timeout:
+   - AbortController é sinalizado antes do teardown;
+   - disposers/scopes/timers/subsystems são limpos;
+   - timers de timeout são limpos em finally.
+
+4. Render / input:
+   - webglcontextlost suspende render;
+   - restore executa renderer.resetState() e reaplica viewport;
+   - blur/hidden libera estado contínuo de input;
+   - pointer lock ausente/solto não preserva lock fantasma.
+
+5. Assets / workers:
+   - inFlight é removido em finally;
+   - resultado de asset concluído após dispose é liberado e rejeitado;
+   - worker error/messageerror/postMessage failure cai em fallback determinístico;
+   - clear() rejeita jobs pendentes e termina workers.
+
+6. Network / storage:
+   - connectionGeneration invalida callbacks de sockets antigos;
+   - close resolve connect pendente como false e remove handlers;
+   - payload/container/checksum de save inválidos falham como corrupted.
+
+A Stage 87 não cria novo supervisor global. Cada owner continua responsável pela
+sua fronteira de falha; o Kernel coordena apenas lifecycle de plugins.
