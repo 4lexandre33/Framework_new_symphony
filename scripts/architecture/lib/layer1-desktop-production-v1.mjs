@@ -8,7 +8,7 @@ function abs(root, relativePath) {
 }
 
 function read(root, relativePath) {
-  return fs.readFileSync(abs(root, relativePath), "utf8");
+  return fs.readFileSync(abs(root, relativePath), "utf8").replace(/\r\n/g, "\n");
 }
 
 function readJson(root, relativePath) {
