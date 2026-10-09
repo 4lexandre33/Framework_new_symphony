@@ -1,41 +1,64 @@
 ETAPA 88 — DESKTOP / STEAM PRODUCTION READINESS
 =================================================
 
-Objetivo
+OBJETIVO
 --------
-Certificar a Layer 1 como aplicação desktop Tauri pronta para empacotamento Windows/Steam,
-sem alterar o runtime certificado anteriormente.
+Certificar a Layer 1 como aplicação desktop Tauri pronta para release e
+empacotamento Windows/Steam, sem modificar o runtime já certificado nas
+Stages 85–87.
 
-Escopo certificado
--------------------
-- identidade Tauri e frontendDist de produção;
-- CSP e icons de bundle;
-- resize/DPI/focus lifecycle;
-- startup/shutdown nativo;
-- Steam AppID de desenvolvimento e feature Cargo;
-- suíte TypeScript/Vitest completa e determinística;
-- cargo check;
-- Vite production build;
-- release nativo Windows;
-- geração real de instalador NSIS.
-
-Política de toolchain
----------------------
-A certificação GitHub usa Rust 1.97.0 stable e CARGO_BUILD_JOBS=1.
-Rust 1.99.0 foi excluído desta certificação após crashes internos reproduzidos fora do projeto.
-Rust 1.98.1 também foi excluído após ICE separado observado durante a investigação.
-
-A Stage 88 não altera src-tauri/Cargo.toml.
-
-Pré-requisitos 86/87
+PRÉ-REQUISITOS REAIS
 --------------------
-A branch remota estava em Stage 85. As garantias de Performance/Resource Lifecycle e
-Failure Recovery/Resilience são backfilled no GitHub através de regressões focadas sobre
-os owners já presentes no runtime Stage 85, antes do gate Stage 88.
+- ETAPA86_AUTOMATED_PASS.json = PASS / 0 violations.
+- ETAPA87_AUTOMATED_PASS.json = PASS / 0 violations.
 
-Autoridade de certificação
---------------------------
+Não existe mais bootstrap/backfill de ZIPs. A Stage 88 executa diretamente sobre
+a branch remota certificada.
+
+CONTRATOS CERTIFICADOS
+----------------------
+- package/Tauri/Cargo version 0.1.0 coerentes;
+- productName projeto1 / identifier com.projeto1.game;
+- frontendDist ../dist e beforeBuildCommand oficial npm run build;
+- CSP explícita e withGlobalTauri=false;
+- bundle ativo e icons existentes;
+- janela desktop 1280x720, resizable, transparente/borderless/always-on-top
+  tratados como configuração intencional existente;
+- DPR limitado e resize listener removível;
+- blur/visibility/pointer-lock limpam estado de input;
+- windows_subsystem=windows somente em release;
+- SteamState inicializa uma vez no host e encerra em RunEvent::Exit;
+- steam_appid.txt=480 existe somente como contrato de desenvolvimento;
+- o AppID 480 não é adicionado aos resources do bundle;
+- Cargo default feature steam permanece explícita;
+- Cargo.toml não pode ser alterado pela Stage 88.
+
+CERTIFICAÇÃO NATIVA
+-------------------
+Linux:
+1. preflight completo Stage 88;
+2. Tauri release real com --no-bundle;
+3. executável src-tauri/target/release/projeto1 deve existir;
+4. SHA-256/tamanho do executável são gravados;
+5. Cargo.toml deve manter SHA-256 idêntico antes/depois.
+
+Windows:
+1. checkout do HEAD após evidência Linux;
+2. Vite production build;
+3. Tauri release real com --bundles nsis;
+4. projeto1.exe deve existir;
+5. instalador NSIS .exe deve existir;
+6. SHA-256/tamanho de executável e installer são gravados;
+7. Cargo.toml deve permanecer byte-identical.
+
+TOOLCHAIN
+---------
+A certificação oficial usa Rust 1.97.0 e CARGO_BUILD_JOBS=1 no GitHub Actions.
+Isso é política de certificação reproduzível, não alteração do Cargo.toml.
+
+AUTORIDADE
+----------
 .github/workflows/stage88-production.yml
 
-A Stage 88 só é PASS quando o job Windows gera o NSIS real, grava as evidências nativas
-e o finalizer produz ETAPA88_AUTOMATED_PASS.json.
+A Stage 88 só termina PASS após Linux release + Windows NSIS reais e commit das
+evidências ETAPA88_* pelo GitHub Actions.
