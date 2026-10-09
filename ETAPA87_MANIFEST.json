@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 2,
+  "stage": 87,
+  "stageName": "Failure Recovery & Resilience",
+  "layer": 1,
+  "packageRevision": "1.0.0-github",
+  "referenceStage": 86,
+  "baselineId": "layer1-failure-recovery-v1-stage87",
+  "applyAtProjectRoot": true,
+  "validator": "scripts/architecture/stage87-validate-failure-recovery.mjs",
+  "finalizer": "scripts/architecture/stage87-finalize-failure-recovery.mjs",
+  "commitMessage": "certify layer1 failure recovery and resilience",
+  "certifies": [
+    "strict boot rollback preserves original failure and releases resources",
+    "tolerant boot quarantines failed plugins",
+    "dispose aborts pending work and cleans subsystem registrations",
+    "timeouts always clear timers",
+    "WebGL context loss suspends render and restore resets renderer state",
+    "input blur/visibility/pointer-lock transitions release stale state",
+    "asset in-flight failures and late completion cannot leak cache ownership",
+    "terrain worker failures fall back deterministically and shutdown rejects pending work",
+    "WebSocket stale generations cannot resurrect obsolete connections",
+    "storage corruption and checksum mismatch fail closed"
+  ],
+  "focusedTests": {
+    "files": 5,
+    "tests": 10
+  },
+  "files": [
+    "LAYER1_FAILURE_RECOVERY_BASELINE_V1.json",
+    "ETAPA87_FAILURE_RECOVERY_RESILIENCE.txt",
+    "ETAPA87_MANIFEST.json",
+    "scripts/architecture/lib/layer1-failure-recovery-v1.mjs",
+    "scripts/architecture/stage87-audit-failure-recovery.mjs",
+    "scripts/architecture/stage87-validate-failure-recovery.mjs",
+    "scripts/architecture/stage87-finalize-failure-recovery.mjs",
+    "tests/layer1-failure-kernel.test.ts",
+    "tests/layer1-failure-render-input.test.ts",
+    "tests/layer1-failure-assets-workers.test.ts",
+    "tests/layer1-failure-network-storage.test.ts",
+    "tests/layer1-failure-timeout-disposal.test.ts",
+    "tests/run-stage87-resilience-smoke.mjs",
+    "INSTALL_STAGE87.txt"
+  ],
+  "generatedAfterPass": [
+    "ETAPA87_RUNTIME_EVIDENCE.json",
+    "ETAPA87_FAILURE_RECOVERY_EVIDENCE.json",
+    "ETAPA87_AUTOMATED_PASS.json",
+    "ETAPA87_SHA256SUMS.txt"
+  ],
+  "explicitlyDeferred": [
+    "Stage 88 Desktop / Steam Production Readiness",
+    "Stage 89 Layer 1 Documentation",
+    "Stage 90 Final Layer 1 Gate"
+  ]
+}
