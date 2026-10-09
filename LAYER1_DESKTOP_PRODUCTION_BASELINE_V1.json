@@ -46,7 +46,11 @@
     "windowsNsisRealBundle": true,
     "cargoManifestMutationForbidden": true,
     "preserveCargoManifestBytes": true,
-    "tauriCliManifestNormalizationIsRestored": true
+    "tauriCliManifestNormalizationIsRestored": true,
+    "immutableRevision": true,
+    "crossRunnerEvidenceHandoff": "GitHub Actions artifact",
+    "cancelStaleRuns": true,
+    "crossPlatformLineEndingAudit": true
   },
   "knownToolchainExclusions": {
     "1.99.0": "local investigation reproduced internal compiler SIGSEGV/SIGBUS outside the project",
