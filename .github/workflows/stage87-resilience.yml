@@ -1,0 +1,103 @@
+name: Stage 87 Failure Recovery & Resilience
+
+on:
+  push:
+    branches:
+      - teste/cena-3d-tauri
+    paths:
+      - "ETAPA87_MANIFEST.json"
+      - "ETAPA87_FAILURE_RECOVERY_RESILIENCE.txt"
+      - "INSTALL_STAGE87.txt"
+      - "LAYER1_FAILURE_RECOVERY_BASELINE_V1.json"
+      - "package.json"
+      - "scripts/architecture/lib/layer1-failure-recovery-v1.mjs"
+      - "scripts/architecture/stage87-audit-failure-recovery.mjs"
+      - "scripts/architecture/stage87-validate-failure-recovery.mjs"
+      - "scripts/architecture/stage87-finalize-failure-recovery.mjs"
+      - "tests/layer1-failure-kernel.test.ts"
+      - "tests/layer1-failure-render-input.test.ts"
+      - "tests/layer1-failure-assets-workers.test.ts"
+      - "tests/layer1-failure-network-storage.test.ts"
+      - "tests/layer1-failure-timeout-disposal.test.ts"
+      - "tests/run-stage87-resilience-smoke.mjs"
+      - ".github/workflows/stage87-resilience.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: stage87-resilience-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  certify:
+    name: Certify Layer 1 Stage 87
+    runs-on: ubuntu-latest
+    env:
+      CARGO_BUILD_JOBS: "1"
+
+    steps:
+      - name: Checkout Stage 87 branch
+        uses: actions/checkout@v4
+        with:
+          ref: teste/cena-3d-tauri
+          fetch-depth: 0
+
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Rust 1.97 stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.97.0
+
+      - name: Linux Tauri dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Validate and finalize Stage 87
+        run: node scripts/architecture/stage87-finalize-failure-recovery.mjs
+
+      - name: Verify repository integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git diff --exit-code -- src-tauri/Cargo.toml
+
+      - name: Commit Stage 87 certification evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            ETAPA87_RUNTIME_EVIDENCE.json \
+            ETAPA87_FAILURE_RECOVERY_EVIDENCE.json \
+            ETAPA87_AUTOMATED_PASS.json \
+            ETAPA87_SHA256SUMS.txt
+          if git diff --cached --quiet; then
+            echo "No Stage 87 evidence changes to commit."
+          else
+            git commit -m "certify layer1 failure recovery and resilience"
+            git push origin HEAD:teste/cena-3d-tauri
+          fi
