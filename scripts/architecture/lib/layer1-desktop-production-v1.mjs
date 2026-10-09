@@ -54,6 +54,7 @@ export function auditLayer1DesktopProduction({ projectRoot = process.cwd() } = {
   const validator = read(root, "scripts/architecture/stage88-validate-desktop-production.mjs");
   const releaseSmoke = read(root, "tests/run-stage88-release-smoke.mjs");
   const windowsSmoke = read(root, "tests/run-stage88-windows-package-smoke.mjs");
+  const workflow = read(root, ".github/workflows/stage88-production.yml");
   const appId = read(root, "src-tauri/steam_appid.txt").trim();
 
   record("previous.stage86", previousStageIsGreen(root, "ETAPA86_AUTOMATED_PASS.json", 86), "Stage 86 deve estar PASS/0 violations");
@@ -204,6 +205,16 @@ export function auditLayer1DesktopProduction({ projectRoot = process.cwd() } = {
       windowsSmoke.includes("installerSha256") &&
       windowsSmoke.includes("cargoHashBefore"),
     "smoke Windows deve gerar NSIS real e evidência/hash do installer",
+  );
+
+  record(
+    "workflow.immutable-artifact-handoff",
+    workflow.includes("ref: ${{ github.sha }}") &&
+      workflow.includes("actions/download-artifact@v4") &&
+      workflow.includes("projeto1-stage88-linux-evidence") &&
+      workflow.includes("cancel-in-progress: true") &&
+      !workflow.includes("Commit Linux release evidence"),
+    "workflow deve certificar um SHA imutável, transferir evidência Linux por artifact e cancelar revisões obsoletas",
   );
 
   return Object.freeze({
