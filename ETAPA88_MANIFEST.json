@@ -3,7 +3,7 @@
   "stage": 88,
   "stageName": "Desktop / Steam Production Readiness",
   "layer": 1,
-  "packageRevision": "2.0.0-github-direct",
+  "packageRevision": "2.0.1-github-direct",
   "referenceStage": 87,
   "baselineId": "layer1-desktop-production-v1-stage88",
   "certification": {
@@ -11,7 +11,8 @@
     "windowsRunner": "windows-latest",
     "rustToolchain": "1.97.0",
     "cargoBuildJobs": 1,
-    "vitestFileParallelism": false
+    "vitestFileParallelism": false,
+    "preserveCargoManifestBytes": true
   },
   "nativeTargets": [
     "Linux Tauri release executable without bundle",
@@ -24,7 +25,7 @@
     "release Windows subsystem",
     "Steam dev AppID separated from packaged release",
     "Steam default Cargo feature and native shutdown",
-    "Cargo.toml remains unchanged by certification",
+    "Cargo.toml is restored byte-for-byte after Tauri CLI normalization",
     "real release executable is produced",
     "real Windows NSIS installer is produced"
   ],
