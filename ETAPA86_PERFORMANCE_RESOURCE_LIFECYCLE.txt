@@ -1,0 +1,19 @@
+ETAPA 86 — PERFORMANCE & RESOURCE LIFECYCLE
+===========================================
+
+Objetivo
+--------
+Certificar que a Layer 1 já existente possui ownership explícito de recursos e
+que hot paths centrais não introduzem materialização/alocação transitória óbvia.
+
+Escopo
+------
+- Kernel continua único coordenador de lifecycle.
+- Render/GPU libera renderer, render lists, scene resources e listeners.
+- Scene graph evita double-dispose de recursos compartilhados.
+- Viewport/input removem listeners e limpam estado.
+- Physics, assets, workers e network expõem sinais de teardown/cleanup.
+- Render hot path é auditado contra new/map/filter/reduce/array literals.
+
+A Stage 86 não cria um segundo resource manager global e não muda API pública.
+Ela certifica os owners já existentes.
