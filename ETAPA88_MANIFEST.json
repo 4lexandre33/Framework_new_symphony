@@ -1,0 +1,21 @@
+{
+  "stage": 88,
+  "name": "Desktop / Steam Production Readiness",
+  "packageRevision": "1.0.9-github-direct",
+  "baseRemoteCommit": "07c47252a0ab6b7072c66f5e6a79834a42247ea0",
+  "certificationPlatform": "GitHub Actions windows-latest",
+  "certificationRust": "1.97.0",
+  "testPolicy": "full Vitest suite with --no-file-parallelism",
+  "cargoPolicy": "CARGO_BUILD_JOBS=1; prior Cargo.toml preserved",
+  "nativeTargets": [
+    "Tauri Windows release",
+    "NSIS installer",
+    "Steam feature/default AppID contract"
+  ],
+  "prerequisites": {
+    "stage86": "backfilled by lifecycle/performance regression gates on the Stage85 runtime baseline",
+    "stage87": "backfilled by lifecycle/failure/recovery regression gates on the Stage85 runtime baseline"
+  },
+  "mutableRuntimeFiles": [],
+  "cargoManifestMutationForbidden": true
+}
