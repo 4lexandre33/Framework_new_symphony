@@ -18,7 +18,10 @@
     "stage85:audit": "node scripts/architecture/stage85-audit-native-tauri.mjs",
     "stage85:validate": "node scripts/architecture/stage85-validate-native-tauri.mjs",
     "stage85:smoke": "node tests/run-tauri-logged.mjs",
-    "stage85:finalize": "node scripts/architecture/stage85-finalize-native-tauri.mjs"
+    "stage85:finalize": "node scripts/architecture/stage85-finalize-native-tauri.mjs",
+    "stage88:audit": "node scripts/architecture/stage88-audit-desktop-production.mjs",
+    "stage88:validate": "node scripts/architecture/stage88-validate-desktop-production.mjs",
+    "stage88:finalize": "node scripts/architecture/stage88-finalize-desktop-production.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.12.0",
