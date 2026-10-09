@@ -1,0 +1,11 @@
+Stage 87 — aplicação/validação
+
+Na raiz do repositório:
+
+  npm run stage87:audit
+  npm run stage87:smoke
+  npm run stage87:validate
+  npm run stage87:finalize
+
+A finalização só escreve ETAPA87_AUTOMATED_PASS.json após todos os gates verdes.
+O validator preserva a Stage 86 como requisito e não altera Cargo.toml.
