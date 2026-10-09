@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "stage": 87,
+  "stageName": "Failure Recovery & Resilience",
+  "baselineId": "layer1-failure-recovery-v1-stage87",
+  "referenceStage": 86,
+  "failureDomains": [
+    "kernel boot/setup/resolve/readiness/onBoot",
+    "async timeout/dispose",
+    "WebGL context loss/restore",
+    "window focus and input lifecycle",
+    "asset in-flight completion",
+    "terrain workers",
+    "WebSocket connection generations",
+    "save corruption/checksum"
+  ],
+  "policy": {
+    "strictBootRollback": true,
+    "tolerantModeQuarantine": true,
+    "originalFailureRemainsAuthoritative": true,
+    "disposeAbortsPendingWork": true,
+    "timeoutsReleaseTimers": true,
+    "contextLossSuspendsRendering": true,
+    "contextRestoreReinitializesRendererState": true,
+    "inputFocusLossReleasesContinuousState": true,
+    "lateAssetCompletionAfterDisposeIsRejectedAndReleased": true,
+    "workerFailureHasDeterministicFallback": true,
+    "workerShutdownRejectsPendingJobs": true,
+    "staleWebSocketGenerationIgnored": true,
+    "storageCorruptionFailsClosed": true
+  },
+  "validationPolicy": {
+    "focusedFiles": 5,
+    "focusedTests": 10,
+    "fullVitestSerial": true,
+    "architecture": true,
+    "typescript": true,
+    "cargoCheck": true,
+    "viteBuild": true
+  }
+}
