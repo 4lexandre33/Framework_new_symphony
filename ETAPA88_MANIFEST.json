@@ -1,21 +1,61 @@
 {
+  "schemaVersion": 2,
   "stage": 88,
-  "name": "Desktop / Steam Production Readiness",
-  "packageRevision": "1.0.9-github-direct",
-  "baseRemoteCommit": "07c47252a0ab6b7072c66f5e6a79834a42247ea0",
-  "certificationPlatform": "GitHub Actions windows-latest",
-  "certificationRust": "1.97.0",
-  "testPolicy": "full Vitest suite with --no-file-parallelism",
-  "cargoPolicy": "CARGO_BUILD_JOBS=1; prior Cargo.toml preserved",
-  "nativeTargets": [
-    "Tauri Windows release",
-    "NSIS installer",
-    "Steam feature/default AppID contract"
-  ],
-  "prerequisites": {
-    "stage86": "backfilled by lifecycle/performance regression gates on the Stage85 runtime baseline",
-    "stage87": "backfilled by lifecycle/failure/recovery regression gates on the Stage85 runtime baseline"
+  "stageName": "Desktop / Steam Production Readiness",
+  "layer": 1,
+  "packageRevision": "2.0.0-github-direct",
+  "referenceStage": 87,
+  "baselineId": "layer1-desktop-production-v1-stage88",
+  "certification": {
+    "linuxRunner": "ubuntu-latest",
+    "windowsRunner": "windows-latest",
+    "rustToolchain": "1.97.0",
+    "cargoBuildJobs": 1,
+    "vitestFileParallelism": false
   },
-  "mutableRuntimeFiles": [],
-  "cargoManifestMutationForbidden": true
+  "nativeTargets": [
+    "Linux Tauri release executable without bundle",
+    "Windows Tauri release executable",
+    "Windows NSIS installer"
+  ],
+  "productionContracts": [
+    "Tauri identity/version/frontendDist/CSP/bundle assets",
+    "desktop resize/DPI/focus lifecycle",
+    "release Windows subsystem",
+    "Steam dev AppID separated from packaged release",
+    "Steam default Cargo feature and native shutdown",
+    "Cargo.toml remains unchanged by certification",
+    "real release executable is produced",
+    "real Windows NSIS installer is produced"
+  ],
+  "files": [
+    "ETAPA88_MANIFEST.json",
+    "LAYER1_DESKTOP_PRODUCTION_BASELINE_V1.json",
+    "ETAPA88_DESKTOP_STEAM_PRODUCTION_READINESS.txt",
+    "INSTALL_STAGE88.txt",
+    "src-tauri/tauri.stage88.conf.json",
+    "scripts/architecture/lib/layer1-desktop-production-v1.mjs",
+    "scripts/architecture/stage88-audit-desktop-production.mjs",
+    "scripts/architecture/stage88-validate-desktop-production.mjs",
+    "scripts/architecture/stage88-finalize-desktop-production.mjs",
+    "tests/layer1-desktop-production-config.test.ts",
+    "tests/layer1-desktop-production-lifecycle.test.ts",
+    "tests/layer1-desktop-production-selftest.test.ts",
+    "tests/run-stage88-release-smoke.mjs",
+    "tests/run-stage88-windows-package-smoke.mjs",
+    ".github/workflows/stage88-production.yml"
+  ],
+  "generatedAfterPass": [
+    "ETAPA88_RELEASE_SMOKE_EVIDENCE.json",
+    "ETAPA88_WINDOWS_PACKAGE_EVIDENCE.json",
+    "ETAPA88_RUNTIME_EVIDENCE.json",
+    "ETAPA88_PRODUCTION_EVIDENCE.json",
+    "ETAPA88_AUTOMATED_PASS.json",
+    "ETAPA88_SHA256SUMS.txt"
+  ],
+  "cargoManifestMutationForbidden": true,
+  "explicitlyDeferred": [
+    "Stage 89 Layer 1 Documentation",
+    "Stage 90 Final Layer 1 Gate"
+  ]
 }
