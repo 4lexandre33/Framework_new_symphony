@@ -1,6 +1,25 @@
 name: Stage 88 Production Certification
 
 on:
+  push:
+    branches:
+      - teste/cena-3d-tauri
+    paths:
+      - "ETAPA88_MANIFEST.json"
+      - "ETAPA88_DESKTOP_STEAM_PRODUCTION_READINESS.txt"
+      - "INSTALL_STAGE88.txt"
+      - "LAYER1_DESKTOP_PRODUCTION_BASELINE_V1.json"
+      - "src-tauri/tauri.stage88.conf.json"
+      - "scripts/architecture/lib/layer1-desktop-production-v1.mjs"
+      - "scripts/architecture/stage88-audit-desktop-production.mjs"
+      - "scripts/architecture/stage88-validate-desktop-production.mjs"
+      - "scripts/architecture/stage88-finalize-desktop-production.mjs"
+      - "tests/layer1-desktop-production-config.test.ts"
+      - "tests/layer1-desktop-production-lifecycle.test.ts"
+      - "tests/layer1-desktop-production-selftest.test.ts"
+      - "tests/run-stage88-release-smoke.mjs"
+      - "tests/run-stage88-windows-package-smoke.mjs"
+      - ".github/workflows/stage88-production.yml"
   workflow_dispatch:
 
 permissions:
