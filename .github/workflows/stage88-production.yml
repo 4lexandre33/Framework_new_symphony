@@ -35,21 +35,25 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CARGO_BUILD_JOBS: "1"
+
     steps:
-      - name: Checkout Stage 87 certified branch
+      - name: Checkout immutable Stage 88 revision
         uses: actions/checkout@v4
         with:
-          ref: teste/cena-3d-tauri
+          ref: ${{ github.sha }}
           fetch-depth: 0
+
       - name: Node 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+
       - name: Rust 1.97 stable
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.97.0
+
       - name: Linux Tauri dependencies
         shell: bash
         run: |
@@ -65,43 +69,36 @@ jobs:
             libssl-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev
+
       - name: Install Node dependencies
         run: npm ci
+
       - name: Stage 88 full preflight
         run: node scripts/architecture/stage88-validate-desktop-production.mjs
+
       - name: Build real Linux Tauri release
         run: node tests/run-stage88-release-smoke.mjs
+
       - name: Verify Linux repository integrity
         shell: bash
         run: |
           set -euo pipefail
           git diff --check
           git diff --exit-code -- src-tauri/Cargo.toml
+
       - name: Upload Linux release executable
         uses: actions/upload-artifact@v4
         with:
           name: projeto1-stage88-linux-release
           path: src-tauri/target/release/projeto1
           if-no-files-found: error
+
       - name: Upload Linux release evidence
         uses: actions/upload-artifact@v4
         with:
           name: projeto1-stage88-linux-evidence
           path: ETAPA88_RELEASE_SMOKE_EVIDENCE.json
           if-no-files-found: error
-      - name: Commit Linux release evidence
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add ETAPA88_RELEASE_SMOKE_EVIDENCE.json
-          if git diff --cached --quiet; then
-            echo "No Linux release evidence changes to commit."
-          else
-            git commit -m "record stage88 linux release evidence"
-            git push origin HEAD:teste/cena-3d-tauri
-          fi
 
   windows-package:
     name: Windows Tauri release and NSIS
@@ -109,46 +106,63 @@ jobs:
     runs-on: windows-latest
     env:
       CARGO_BUILD_JOBS: "1"
+
     steps:
-      - name: Checkout branch with Linux evidence
+      - name: Checkout same immutable Stage 88 revision
         uses: actions/checkout@v4
         with:
-          ref: teste/cena-3d-tauri
+          ref: ${{ github.sha }}
           fetch-depth: 0
+
       - name: Node 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+
       - name: Rust 1.97 stable
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.97.0
+
       - name: Install Node dependencies
         run: npm ci
+
+      - name: Download Linux release evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: projeto1-stage88-linux-evidence
+          path: .
+
       - name: Build frontend production assets
         run: npm run build
+
       - name: Build real Windows Tauri release and NSIS
         run: node tests/run-stage88-windows-package-smoke.mjs
+
       - name: Finalize Stage 88
         run: node scripts/architecture/stage88-finalize-desktop-production.mjs
+
       - name: Verify Windows repository integrity
         shell: pwsh
         run: |
           git diff --check
           git diff --exit-code -- src-tauri/Cargo.toml
+
       - name: Upload Windows release executable
         uses: actions/upload-artifact@v4
         with:
           name: projeto1-stage88-windows-release
           path: src-tauri/target/release/projeto1.exe
           if-no-files-found: error
+
       - name: Upload NSIS installer
         uses: actions/upload-artifact@v4
         with:
           name: projeto1-stage88-nsis
           path: src-tauri/target/release/bundle/nsis/*.exe
           if-no-files-found: error
+
       - name: Upload Stage 88 certification evidence
         uses: actions/upload-artifact@v4
         with:
@@ -161,12 +175,13 @@ jobs:
             ETAPA88_AUTOMATED_PASS.json
             ETAPA88_SHA256SUMS.txt
           if-no-files-found: error
+
       - name: Commit Stage 88 certification evidence
         shell: pwsh
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add ETAPA88_WINDOWS_PACKAGE_EVIDENCE.json ETAPA88_RUNTIME_EVIDENCE.json ETAPA88_PRODUCTION_EVIDENCE.json ETAPA88_AUTOMATED_PASS.json ETAPA88_SHA256SUMS.txt
+          git add ETAPA88_RELEASE_SMOKE_EVIDENCE.json ETAPA88_WINDOWS_PACKAGE_EVIDENCE.json ETAPA88_RUNTIME_EVIDENCE.json ETAPA88_PRODUCTION_EVIDENCE.json ETAPA88_AUTOMATED_PASS.json ETAPA88_SHA256SUMS.txt
           if (git diff --cached --quiet) {
             Write-Host "No Stage 88 evidence changes to commit."
           } else {
