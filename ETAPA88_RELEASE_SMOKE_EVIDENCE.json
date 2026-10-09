@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "stage": 88,
+  "status": "PASS",
+  "platform": "linux",
+  "arch": "x64",
+  "rustToolchain": "rustc 1.97.0 (2d8144b78 2026-07-07)",
+  "cargoBuildJobs": 1,
+  "cargoHashBefore": "fbfe89089b1eccd8d5901a2143486a61ac3b6ded0c4e5dfc645d278d43648902",
+  "cargoHashAfter": "fbfe89089b1eccd8d5901a2143486a61ac3b6ded0c4e5dfc645d278d43648902",
+  "cargoManifestMutatedByTauri": true,
+  "cargoManifestRestored": true,
+  "executablePath": "src-tauri/target/release/projeto1",
+  "executableBytes": 16807176,
+  "executableSha256": "be88b9103aa62f8c9b3ce78f97e7e47aedbc158f210068c3d36ab9ed863e65b0",
+  "frontendEntry": "dist/index.html",
+  "tauriConfigOverride": "src-tauri/tauri.stage88.conf.json",
+  "generatedAtUtc": "2026-10-09T17:00:38.013Z"
+}
