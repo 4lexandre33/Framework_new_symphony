@@ -27,13 +27,17 @@ function requirePass(relativePath, stage) {
   if (!fs.existsSync(abs(relativePath))) {
     throw new Error(`Evidência obrigatória ausente: ${relativePath}`);
   }
+
   const value = readJson(relativePath);
+
   if (value.stage !== stage || value.status !== "PASS") {
     throw new Error(`Evidência inválida: ${relativePath}`);
   }
+
   if ("violations" in value && value.violations !== 0) {
     throw new Error(`Evidência contém violações: ${relativePath}`);
   }
+
   return value;
 }
 
@@ -42,26 +46,32 @@ const stage87 = requirePass("ETAPA87_AUTOMATED_PASS.json", 87);
 const release = requirePass("ETAPA88_RELEASE_SMOKE_EVIDENCE.json", 88);
 const windows = requirePass("ETAPA88_WINDOWS_PACKAGE_EVIDENCE.json", 88);
 
-if (release.cargoHashBefore !== release.cargoHashAfter) {
-  throw new Error("Cargo.toml mudou durante o release smoke Linux");
+if (release.cargoHashBefore !== release.cargoHashAfter || release.cargoManifestRestored !== true) {
+  throw new Error("Cargo.toml não foi preservado/restaurado no release Linux");
 }
-if (windows.cargoHashBefore !== windows.cargoHashAfter) {
-  throw new Error("Cargo.toml mudou durante o packaging Windows");
+
+if (windows.cargoHashBefore !== windows.cargoHashAfter || windows.cargoManifestRestored !== true) {
+  throw new Error("Cargo.toml não foi preservado/restaurado no packaging Windows");
 }
+
 if (!String(release.rustToolchain).includes("1.97.0")) {
   throw new Error("Release Linux não foi certificado com Rust 1.97.0");
 }
+
 if (!String(windows.rustToolchain).includes("1.97.0")) {
   throw new Error("Package Windows não foi certificado com Rust 1.97.0");
 }
+
 if (!release.executableSha256 || !release.executableBytes) {
   throw new Error("Evidência Linux não possui executável release real");
 }
+
 if (!windows.executableSha256 || !windows.installerSha256 || !windows.installerBytes) {
   throw new Error("Evidência Windows não possui executável/NSIS reais");
 }
 
 const audit = auditLayer1DesktopProduction({ projectRoot: ROOT });
+
 if (!audit.ok) {
   throw new Error(`Audit Stage 88 reprovou durante finalização: ${String(audit.violations.length)} violation(s)`);
 }
@@ -71,6 +81,7 @@ const git = spawnSync("git", ["rev-parse", "HEAD"], {
   encoding: "utf8",
   shell: process.platform === "win32",
 });
+
 const head = git.status === 0 ? String(git.stdout).trim() : null;
 const generatedAtUtc = new Date().toISOString();
 
@@ -82,6 +93,12 @@ writeJson("ETAPA88_RUNTIME_EVIDENCE.json", {
   focusedFiles: 3,
   focusedTests: 9,
   violations: 0,
+  cargoManifestPreservation: {
+    linuxMutatedByTauri: release.cargoManifestMutatedByTauri,
+    linuxRestored: release.cargoManifestRestored,
+    windowsMutatedByTauri: windows.cargoManifestMutatedByTauri,
+    windowsRestored: windows.cargoManifestRestored
+  },
   linuxReleaseExecutable: {
     path: release.executablePath,
     bytes: release.executableBytes,
