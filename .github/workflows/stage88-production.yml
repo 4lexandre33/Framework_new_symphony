@@ -1,25 +1,6 @@
 name: Stage 88 Production Certification
 
 on:
-  push:
-    branches:
-      - teste/cena-3d-tauri
-    paths:
-      - "ETAPA88_MANIFEST.json"
-      - "ETAPA88_DESKTOP_STEAM_PRODUCTION_READINESS.txt"
-      - "INSTALL_STAGE88.txt"
-      - "LAYER1_DESKTOP_PRODUCTION_BASELINE_V1.json"
-      - "src-tauri/tauri.stage88.conf.json"
-      - "scripts/architecture/lib/layer1-desktop-production-v1.mjs"
-      - "scripts/architecture/stage88-audit-desktop-production.mjs"
-      - "scripts/architecture/stage88-validate-desktop-production.mjs"
-      - "scripts/architecture/stage88-finalize-desktop-production.mjs"
-      - "tests/layer1-desktop-production-config.test.ts"
-      - "tests/layer1-desktop-production-lifecycle.test.ts"
-      - "tests/layer1-desktop-production-selftest.test.ts"
-      - "tests/run-stage88-release-smoke.mjs"
-      - "tests/run-stage88-windows-package-smoke.mjs"
-      - ".github/workflows/stage88-production.yml"
   workflow_dispatch:
 
 permissions:
@@ -35,25 +16,21 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CARGO_BUILD_JOBS: "1"
-
     steps:
       - name: Checkout Stage 87 certified branch
         uses: actions/checkout@v4
         with:
           ref: teste/cena-3d-tauri
           fetch-depth: 0
-
       - name: Node 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-
       - name: Rust 1.97 stable
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.97.0
-
       - name: Linux Tauri dependencies
         shell: bash
         run: |
@@ -69,37 +46,30 @@ jobs:
             libssl-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev
-
       - name: Install Node dependencies
         run: npm ci
-
       - name: Stage 88 full preflight
         run: node scripts/architecture/stage88-validate-desktop-production.mjs
-
       - name: Build real Linux Tauri release
         run: node tests/run-stage88-release-smoke.mjs
-
       - name: Verify Linux repository integrity
         shell: bash
         run: |
           set -euo pipefail
           git diff --check
           git diff --exit-code -- src-tauri/Cargo.toml
-
       - name: Upload Linux release executable
         uses: actions/upload-artifact@v4
         with:
           name: projeto1-stage88-linux-release
           path: src-tauri/target/release/projeto1
           if-no-files-found: error
-
       - name: Upload Linux release evidence
         uses: actions/upload-artifact@v4
         with:
           name: projeto1-stage88-linux-evidence
           path: ETAPA88_RELEASE_SMOKE_EVIDENCE.json
           if-no-files-found: error
-
       - name: Commit Linux release evidence
         shell: bash
         run: |
@@ -120,57 +90,46 @@ jobs:
     runs-on: windows-latest
     env:
       CARGO_BUILD_JOBS: "1"
-
     steps:
       - name: Checkout branch with Linux evidence
         uses: actions/checkout@v4
         with:
           ref: teste/cena-3d-tauri
           fetch-depth: 0
-
       - name: Node 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-
       - name: Rust 1.97 stable
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.97.0
-
       - name: Install Node dependencies
         run: npm ci
-
       - name: Build frontend production assets
         run: npm run build
-
       - name: Build real Windows Tauri release and NSIS
         run: node tests/run-stage88-windows-package-smoke.mjs
-
       - name: Finalize Stage 88
         run: node scripts/architecture/stage88-finalize-desktop-production.mjs
-
       - name: Verify Windows repository integrity
         shell: pwsh
         run: |
           git diff --check
           git diff --exit-code -- src-tauri/Cargo.toml
-
       - name: Upload Windows release executable
         uses: actions/upload-artifact@v4
         with:
           name: projeto1-stage88-windows-release
           path: src-tauri/target/release/projeto1.exe
           if-no-files-found: error
-
       - name: Upload NSIS installer
         uses: actions/upload-artifact@v4
         with:
           name: projeto1-stage88-nsis
           path: src-tauri/target/release/bundle/nsis/*.exe
           if-no-files-found: error
-
       - name: Upload Stage 88 certification evidence
         uses: actions/upload-artifact@v4
         with:
@@ -183,7 +142,6 @@ jobs:
             ETAPA88_AUTOMATED_PASS.json
             ETAPA88_SHA256SUMS.txt
           if-no-files-found: error
-
       - name: Commit Stage 88 certification evidence
         shell: pwsh
         run: |
