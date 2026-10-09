@@ -12,7 +12,7 @@ versão 1.0.0 · GERADO por `npm run ai-manual:generate` (não edite à mão; `n
 | preciso de | módulo (chave) | capability / id do plugin (use em dependsOn) | plugin depende de | ~tokens |
 |---|---|---|---|---|
 | Steamworks & P2P | steam | game.steam | - | 1775 |
-| Input Manager | input | game.input | - | 750 |
+| Input Manager | input | game.input | - | 799 |
 | Asset Pipeline & VRAM Cache | assets | game.assets | - | 588 |
 | Motor de Física (Rapier WASM) | physics | game.physics | - | 1426 |
 | Persistência & Banco de Dados | storage | game.storage | - | 894 |
@@ -21,7 +21,7 @@ versão 1.0.0 · GERADO por `npm run ai-manual:generate` (não edite à mão; `n
 | Pipeline de Animações & State Machines | anim | game.anim | game.loop | 1044 |
 | Motor 2D, Tilemaps & Pixel Art | sprites | game.sprites | - | 1175 |
 | Mixer de Áudio Espacial 3D | audio | game.audio | - | 1029 |
-| Câmera Dinâmica & SpringArm | camera | game.camera | game.loop, game.physics, game.render | 1095 |
+| Câmera Dinâmica & SpringArm | camera | game.camera | game.loop, game.physics, game.render | 1230 |
 | Inteligência Artificial & NavMesh | ai | game.ai | game.loop, game.physics, game.world | 1110 |
 | Partículas GPU, Decals & Pós-Processamento | vfx | game.vfx | - | 1241 |
 | Terreno Procedural, Biomas & Voxels | terrain | game.terrain | game.loop, game.render | 828 |
@@ -35,7 +35,7 @@ versão 1.0.0 · GERADO por `npm run ai-manual:generate` (não edite à mão; `n
 | Render Runtime | render | game.render | - | 927 |
 | Multiplayer Network & State Replication | net | game.net | game.loop | 1259 |
 
-Tamanho: RULES ≈ 992, CORE ≈ 2859, RECIPES ≈ 2932, todos os módulos ≈ 23869 tokens (estimativa: caracteres/3,6).
+Tamanho: RULES ≈ 1218, CORE ≈ 2859, RECIPES ≈ 2932, todos os módulos ≈ 24053 tokens (estimativa: caracteres/3,6).
 
 ## Atalhos por tipo de jogo
 - 3D com física: render, camera, physics, input, assets, audio, ui, game-loop.

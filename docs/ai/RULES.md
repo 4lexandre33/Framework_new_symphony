@@ -41,3 +41,9 @@ Testes do jogo ficam DENTRO da pasta do jogo (`src/projects/<jogo>/*.test.ts`), 
 - `docs/ai/CORE.md` — contrato do plugin e do `PluginContext`.
 - `docs/ai/modules/*.md` — API pública de cada módulo (token + tipos + eventos + comandos).
 - `docs/ai/RECIPES.md` — trechos que compilam (fonte: `src/projects/_template/recipes/`).
+
+## Ordem de boot do kernel (verificado em src/core/runtime/boot.ts)
+1. `setup(ctx)` de todos os plugins, em ordem topológica de `dependsOn` (dependências primeiro).
+2. Resolução de capabilities → espera de `lifecycle.ready()` → `kernel.plugin.started` + `onBoot` de cada plugin (se existir) → evento `kernel.booted` (aí o game-loop começa).
+3. Use `setup` para registrar capabilities/handlers/listeners; use `onBoot` para o que precisa de todos os plugins já prontos. Plugin cujo `setup`/`onBoot` falha é colocado em quarentena (modo tolerante) e `onBoot` falho recebe `onStop`.
+4. Desligamento em ordem inversa; registre limpeza com `ctx.lifecycle.onDispose(fn)` (a engine libera só os próprios recursos, ex. física e render nos seus plugins; corpos, listeners e meshes do JOGO são responsabilidade do jogo).
