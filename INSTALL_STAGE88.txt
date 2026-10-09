@@ -1,0 +1,17 @@
+STAGE 88 — EXECUÇÃO LOCAL / CI
+===============================
+
+Auditoria semântica:
+  npm run stage88:audit
+
+Gate de preflight:
+  npm run stage88:validate
+
+Certificação oficial:
+  GitHub Actions -> Stage 88 Production Certification
+  runner: windows-latest
+  Rust: 1.97.0
+  bundle: NSIS
+
+Não modifique src-tauri/Cargo.toml para executar a Stage 88.
+A evidência oficial é produzida pelo workflow no GitHub.
