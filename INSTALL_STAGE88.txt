@@ -1,17 +1,38 @@
-STAGE 88 — EXECUÇÃO LOCAL / CI
-===============================
+STAGE 88 — EXECUÇÃO / CERTIFICAÇÃO
+==================================
 
-Auditoria semântica:
+Preflight reproduzível:
   npm run stage88:audit
-
-Gate de preflight:
   npm run stage88:validate
 
-Certificação oficial:
-  GitHub Actions -> Stage 88 Production Certification
-  runner: windows-latest
-  Rust: 1.97.0
-  bundle: NSIS
+Smoke release Linux:
+  node tests/run-stage88-release-smoke.mjs
 
-Não modifique src-tauri/Cargo.toml para executar a Stage 88.
-A evidência oficial é produzida pelo workflow no GitHub.
+Smoke/package Windows:
+  node tests/run-stage88-windows-package-smoke.mjs
+
+Finalização:
+  npm run stage88:finalize
+
+CERTIFICAÇÃO OFICIAL
+--------------------
+GitHub Actions:
+  Stage 88 Production Certification
+
+Linux runner:
+  ubuntu-latest
+  Rust 1.97.0
+  Tauri release --no-bundle
+
+Windows runner:
+  windows-latest
+  Rust 1.97.0
+  Tauri release --bundles nsis
+
+REGRAS
+------
+- ETAPA86_AUTOMATED_PASS.json e ETAPA87_AUTOMATED_PASS.json são obrigatórios.
+- Não há materialização de pacotes ZIP.
+- src-tauri/Cargo.toml não pode mudar.
+- O release Linux precisa produzir executável real.
+- O release Windows precisa produzir projeto1.exe e instalador NSIS real.
