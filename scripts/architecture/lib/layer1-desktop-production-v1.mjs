@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-export const LAYER1_DESKTOP_PRODUCTION_AUDIT_VERSION = "2.0.0";
+export const LAYER1_DESKTOP_PRODUCTION_AUDIT_VERSION = "2.0.1";
 
 function abs(root, relativePath) {
   return path.join(root, ...relativePath.split("/"));
@@ -170,6 +170,15 @@ export function auditLayer1DesktopProduction({ projectRoot = process.cwd() } = {
     "release.override",
     stage88Override.build?.beforeBuildCommand === null,
     "override Stage 88 deve evitar build frontend duplicado dentro do Tauri CLI",
+  );
+
+  record(
+    "release.cargo-manifest-preservation",
+    releaseSmoke.includes("preserveCargoManifest") &&
+      releaseSmoke.includes("cargoManifestRestored") &&
+      windowsSmoke.includes("preserveCargoManifest") &&
+      windowsSmoke.includes("cargoManifestRestored"),
+    "smokes nativos devem restaurar Cargo.toml byte-a-byte após normalização transitória do Tauri CLI",
   );
 
   record(
