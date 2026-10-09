@@ -1,0 +1,43 @@
+ETAPA 90 — FINAL LAYER 1 GATE
+=============================
+
+OBJETIVO
+--------
+Agregar a certificação das Stages 71–89 em um único gate executável.
+
+O QUE O GATE EXECUTA
+--------------------
+1. Manifestos e documentos técnicos das Stages 71–89; ETAPA85–89_AUTOMATED_PASS
+   em PASS com zero violações.
+2. Auditoria semântica de cada Stage 71–89.
+3. node agents.mjs (invariantes + freeze lock).
+4. npm run arch:check, tsc --noEmit, vitest run (suíte completa),
+   cargo check, npm run build.
+5. Execução real do binário release Linux sob xvfb (Steam indisponível ⇒ modo
+   offline); o processo precisa continuar vivo e sem panic durante a janela do
+   teste.
+
+AJUSTES FEITOS NESTA STAGE
+--------------------------
+- tests/freeze-invariants.mjs: as invariantes de Steam passaram a apontar para
+  src-tauri/src/steam.rs (Client::init + thread), onde o código vive desde as
+  Stages 84/88.
+- .freeze-lock.json regenerado (node agents.mjs --unlock / --lock) com
+  autorização explícita do dono do repositório, aceitando as mudanças das
+  Stages 75–88 como nova linha de base.
+
+NÃO VERIFICADO (declarado, não escondido)
+-----------------------------------------
+- Execução do .exe/NSIS no Windows: o CI compila, mas não executa.
+- Renderização 3D em GPU real e shutdown gracioso: o smoke Linux usa software
+  rendering e encerra o processo por sinal.
+
+EVIDÊNCIA
+---------
+ETAPA90_RUNTIME_EVIDENCE.json, ETAPA90_AUTOMATED_PASS.json e
+ETAPA90_SHA256SUMS.txt são gerados por npm run stage90:finalize somente se
+npm run stage90:validate passar.
+
+STATUS
+------
+Resultado final em ETAPA90_AUTOMATED_PASS.json (campo layer1Gate).

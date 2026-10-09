@@ -95,7 +95,7 @@ describe("Stage 89 — auditoria da documentação (repositório real)", () => {
     ) as { moduleCount: number; tauriCommandCount: number; layer1FinalGate: string };
     expect(baseline.moduleCount).toBe(23);
     expect(baseline.tauriCommandCount).toBe(37);
-    expect(baseline.layer1FinalGate).toBe("pending-stage-90");
+    expect(baseline.layer1FinalGate).toBe("closed-by-stage-90");
   });
 });
 

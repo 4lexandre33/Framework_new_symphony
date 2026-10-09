@@ -32,7 +32,9 @@
     "stage88:finalize": "node scripts/architecture/stage88-finalize-desktop-production.mjs",
     "stage89:audit": "node scripts/architecture/stage89-audit-documentation.mjs",
     "stage89:validate": "node scripts/architecture/stage89-validate-documentation.mjs",
-    "stage89:finalize": "node scripts/architecture/stage89-finalize-documentation.mjs"
+    "stage89:finalize": "node scripts/architecture/stage89-finalize-documentation.mjs",
+    "stage90:validate": "node scripts/architecture/stage90-validate-layer1-gate.mjs",
+    "stage90:finalize": "node scripts/architecture/stage90-finalize-layer1-gate.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.12.0",

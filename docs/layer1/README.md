@@ -3,7 +3,7 @@
 **Status:** certificada por stages até a Stage 88; documentada na Stage 89  
 **Baseline arquitetural:** v20  
 **Escopo:** `src/core/**`, `src/engine/**`, `src/plugins/**`, `src/contracts/**`, `src/tokens/**` e `src-tauri/**`  
-**Pendente:** Stage 90 (gate final da Layer 1). Este documento **não** declara `LAYER 1 PASS`.
+**Gate final:** Stage 90 agrega as Stages 71–89; o resultado e as ressalvas estão em `ETAPA90_LAYER1_FINAL_GATE.txt` e na evidência de PASS da própria Stage 90, não neste documento.
 
 ## 1. O que é a Layer 1
 

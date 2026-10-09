@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 2,
+  "stage": 90,
+  "stageName": "Final Layer 1 Gate",
+  "layer": 1,
+  "referenceStage": 89,
+  "scope": [
+    "Agregar a certificação das Stages 71–89",
+    "Rodar todas as auditorias 71–89, agents.mjs/freeze, arch:check, tsc, vitest, cargo check e vite build",
+    "Executar o app release Linux sob xvfb e exigir que continue vivo, sem panic"
+  ],
+  "files": [
+    "ETAPA90_MANIFEST.json",
+    "ETAPA90_LAYER1_FINAL_GATE.txt",
+    "scripts/architecture/stage90-validate-layer1-gate.mjs",
+    "scripts/architecture/stage90-finalize-layer1-gate.mjs",
+    ".freeze-lock.json",
+    "tests/freeze-invariants.mjs"
+  ],
+  "generatedAfterPass": [
+    "ETAPA90_RUNTIME_EVIDENCE.json",
+    "ETAPA90_AUTOMATED_PASS.json",
+    "ETAPA90_SHA256SUMS.txt"
+  ],
+  "notVerified": [
+    "Execução do .exe/NSIS no Windows (CI só compila)",
+    "Renderização 3D em GPU real e shutdown gracioso do app"
+  ]
+}

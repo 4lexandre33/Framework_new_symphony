@@ -2,7 +2,7 @@
 
 Projeto desktop de jogo 3D baseado em TypeScript, Three.js, Tauri e Rust, estruturado em torno de um microkernel modular com plugins, capabilities, contratos tipados e fronteiras explícitas entre API pública e implementação interna.
 
-Este README descreve o estado operacional atual do repositório: arquitetura v20, Domain (Layer 2) documentado até a Stage 69 e Layer 1 certificada por stages até a Stage 88 e documentada na Stage 89. O gate final da Layer 1 (Stage 90) ainda está pendente.
+Este README descreve o estado operacional atual do repositório: arquitetura v20, Domain (Layer 2) documentado até a Stage 69 e Layer 1 certificada por stages até a Stage 88 e documentada na Stage 89. O gate final da Layer 1 foi executado na Stage 90 (ver `ETAPA90_LAYER1_FINAL_GATE.txt`).
 
 A documentação técnica está em:
 
