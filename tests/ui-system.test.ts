@@ -368,7 +368,7 @@ describe(
           <span data-bind="maxHp">0</span>
 
           <div
-            id="hud-hp-bar"
+            data-hud-fill="hp"
           ></div>
         `;
 
@@ -419,7 +419,7 @@ describe(
 
         const hpBar =
           root.querySelector<HTMLElement>(
-            "#hud-hp-bar",
+            '[data-hud-fill="hp"]',
           );
 
         expect(
@@ -439,8 +439,8 @@ describe(
           );
 
         root.innerHTML = `
-          <div id="hud-hp-bar"></div>
-          <div id="hud-mp-bar"></div>
+          <div data-hud-fill="hp"></div>
+          <div data-hud-fill="mp"></div>
         `;
 
         document.body.appendChild(
@@ -461,12 +461,12 @@ describe(
 
         const hpBar =
           root.querySelector<HTMLElement>(
-            "#hud-hp-bar",
+            '[data-hud-fill="hp"]',
           );
 
         const mpBar =
           root.querySelector<HTMLElement>(
-            "#hud-mp-bar",
+            '[data-hud-fill="mp"]',
           );
 
         expect(
@@ -486,6 +486,10 @@ describe(
     it(
       "deve rejeitar atualização de HUD com tipo incompatível",
       (): void => {
+        dataBinder.bindHUDData({
+          hp: 100,
+        });
+
         const before =
           dataBinder
             .getSnapshot();
@@ -494,7 +498,7 @@ describe(
           dataBinder
             .updateValue(
               "hp",
-              "oitenta",
+              { invalido: true },
             );
 
         const after =
@@ -524,10 +528,10 @@ describe(
 
         expect(
           localization.translate(
-            "ui.hud.hp",
+            "ui.menu.start",
           ),
         ).toBe(
-          "VIDA",
+          "Iniciar Jogo",
         );
 
         const welcome =
@@ -551,10 +555,10 @@ describe(
 
         expect(
           localization.translate(
-            "ui.hud.hp",
+            "ui.menu.start",
           ),
         ).toBe(
-          "HEALTH",
+          "Start Game",
         );
       },
     );
@@ -569,11 +573,11 @@ describe(
 
         root.innerHTML = `
           <span
-            data-i18n="ui.hud.hp"
+            data-i18n="ui.menu.start"
           ></span>
 
           <span
-            data-i18n="ui.hud.ammo"
+            data-i18n="ui.menu.settings"
           ></span>
         `;
 
@@ -589,21 +593,21 @@ describe(
         expect(
           root
             .querySelector(
-              '[data-i18n="ui.hud.hp"]',
+              '[data-i18n="ui.menu.start"]',
             )
             ?.textContent,
         ).toBe(
-          "VIDA",
+          "Iniciar Jogo",
         );
 
         expect(
           root
             .querySelector(
-              '[data-i18n="ui.hud.ammo"]',
+              '[data-i18n="ui.menu.settings"]',
             )
             ?.textContent,
         ).toBe(
-          "MUNIÇÃO",
+          "Configurações",
         );
       },
     );

@@ -27,7 +27,7 @@
     "declaredModuleTests": 43,
     "declaredNativeModuleFiles": 5,
     "toolingPlugins": 1,
-    "experimentalPlugins": 1,
+    "experimentalPlugins": 0,
     "workerInfrastructureFiles": 4,
     "nativeHostFiles": 8
   },
@@ -937,17 +937,7 @@
       "canonicalEngineModule": false
     }
   ],
-  "experimentalPlugins": [
-    {
-      "key": "player",
-      "pluginId": "game.player",
-      "plugin": "src/plugins/player/plugin.ts",
-      "category": "experimental",
-      "bootstrapped": false,
-      "canonicalEngineModule": false,
-      "status": "orphaned-not-in-createEnginePlugins"
-    }
-  ],
+  "experimentalPlugins": [],
   "workerInfrastructureFiles": [
     "src/engine/streaming/internal/StreamingWorkerPool.ts",
     "src/engine/streaming/internal/streaming.worker.ts",

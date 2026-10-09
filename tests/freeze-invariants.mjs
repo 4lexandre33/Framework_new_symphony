@@ -114,7 +114,6 @@ if (!steam) {
   }
 
   checkSnippet(steam.plugin, "SteamToken", "Registro do Token de Capability da Steam");
-  checkSnippet(steam.plugin, "BossDefeatedEvent", "Definição do evento de chefe no Kernel");
 }
 
 checkSnippet("src-tauri/src/steam.rs", "steamworks::Client::init()", "Inicialização via Client::init() (AppID 480 em src-tauri/steam_appid.txt)");

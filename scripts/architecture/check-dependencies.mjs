@@ -5151,7 +5151,7 @@ function printRuleMatrix() {
     "=== REGRAS FISCALIZADAS ===",
   );
   console.log(
-    "DEP001 composição ativa (23 canônicos + game.debug; player inativo)",
+    "DEP001 composição ativa (23 canônicos + game.debug)",
   );
   console.log(
     "DEP002 shape/id/name dos manifests",

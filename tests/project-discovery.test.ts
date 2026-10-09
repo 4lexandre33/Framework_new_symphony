@@ -26,7 +26,7 @@ describe("descoberta de projetos consumidores", () => {
     }
   });
 
-  it("a engine não referencia projetos consumidores", () => {
+  it("a engine não referencia projetos consumidores nem usa vocabulário de jogo", () => {
     for (const dir of ["src/core", "src/engine", "src/plugins", "src/contracts", "src/tokens"]) {
       const stack = [path.join(ROOT, dir)];
       while (stack.length > 0) {
@@ -35,7 +35,10 @@ describe("descoberta de projetos consumidores", () => {
           const full = path.join(current, entry.name);
           if (entry.isDirectory()) stack.push(full);
           else if (entry.name.endsWith(".ts")) {
-            expect(fs.readFileSync(full, "utf8"), full).not.toMatch(/from\s+["'][^"']*\/projects\//u);
+            const text = fs.readFileSync(full, "utf8");
+            expect(text, full).not.toMatch(/from\s+["'][^"']*\/projects\//u);
+            // vocabulário de jogo não pertence à engine
+            expect(text, full).not.toMatch(/PlayerHUDData|BossDefeated|game\.boss-defeated|game\.player|dragon_boss/u);
           }
         }
       }

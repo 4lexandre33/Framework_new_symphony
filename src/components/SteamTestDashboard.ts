@@ -9,16 +9,6 @@ export class SteamTestDashboard {
 
   constructor(private readonly kernel: Kernel, steamService: SteamApi) {
     this.steamService = steamService;
-    this.subscribeToKernelEvents();
-  }
-
-  private subscribeToKernelEvents(): void {
-    this.unsubscribeKernel = this.kernel.__testSubscribe((env) => {
-      if (env.type === "game.boss-defeated") {
-        const payload = env.payload as { bossId: string; noDamageTaken: boolean };
-        this.log(`📡 [Kernel Event] Chefão Derrotado: ${payload.bossId} (Sem Dano: ${payload.noDamageTaken})`);
-      }
-    });
   }
 
   public destroy(): void {
@@ -62,9 +52,6 @@ export class SteamTestDashboard {
       <div style="display:flex; flex-direction:column; gap:8px;">
         <button id="btn-refresh-steam" style="background:#2a475e; color:#fff; border:none; padding:8px; border-radius:4px; cursor:pointer;">
           🔄 Atualizar Status Steam
-        </button>
-        <button id="btn-trigger-boss" style="background:#a4d007; color:#000; border:none; padding:8px; border-radius:4px; cursor:pointer; font-weight:bold;">
-          ⚔️ Emitir Evento: Boss Defeated
         </button>
         <button id="btn-unlock-ach" style="background:#66c0f4; color:#000; border:none; padding:8px; border-radius:4px; cursor:pointer; font-weight:bold;">
           🏆 Desbloquear Conquista (ACH_KILL_DRAGON)
@@ -114,23 +101,6 @@ export class SteamTestDashboard {
     this.container?.querySelector("#btn-refresh-steam")?.addEventListener("click", async () => {
       this.log("Atualizando status da Steam...");
       await this.updateStatus();
-    });
-
-    this.container?.querySelector("#btn-trigger-boss")?.addEventListener("click", () => {
-      this.log("⚔️ Disparando evento 'game.boss-defeated' no Kernel...");
-      
-      const eventEnvelope = makeEnvelope({
-        kind: "event",
-        type: "game.boss-defeated",
-        payload: {
-          bossId: "dragon_boss",
-          durationSeconds: 60,
-          noDamageTaken: true,
-        },
-        source: "hud-dashboard",
-      });
-
-      this.kernel.__testSubscribeEmit(eventEnvelope);
     });
 
     this.container?.querySelector("#btn-unlock-ach")?.addEventListener("click", async () => {

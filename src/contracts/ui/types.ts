@@ -19,20 +19,13 @@ export interface ModalConfig {
   readonly customData?: Record<string, unknown>;
 }
 
-export interface PlayerHUDData {
-  readonly hp: number;
-  readonly maxHp: number;
-  readonly mp: number;
-  readonly maxMp: number;
-  readonly ammo: number;
-  readonly maxAmmo: number;
-  readonly coins: number;
-  readonly score: number;
-  readonly currentWeapon: string;
-}
+/** Valor exibível no HUD. As chaves são definidas pelo projeto, não pela engine. */
+export type HUDValue = string | number | boolean;
+
+export type HUDData = Readonly<Record<string, HUDValue>>;
 
 export interface HUDStatePayload {
-  readonly data: Partial<PlayerHUDData>;
+  readonly data: HUDData;
 }
 
 export type LocaleDictionary = Record<string, string>;
@@ -66,7 +59,7 @@ export const LocaleChangedEvent = defineEvent<"game.ui.locale-changed", LocaleCh
 );
 
 export interface HUDUpdatedPayload {
-  readonly data: Partial<PlayerHUDData>;
+  readonly data: HUDData;
 }
 
 export const HUDUpdatedEvent = defineEvent<"game.ui.hud-updated", HUDUpdatedPayload>(
@@ -108,7 +101,7 @@ export const SetLocaleCommand = defineCommand<"game.ui.set-locale", SetLocaleReq
 );
 
 export interface BindHUDValueRequest {
-  readonly key: keyof PlayerHUDData;
+  readonly key: string;
   readonly value: unknown;
 }
 

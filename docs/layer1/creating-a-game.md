@@ -25,7 +25,8 @@ Com mais de um projeto em `src/projects/`, escolha o ativo com `VITE_PROJECT=<id
 | Física | `src/tokens/physics.ts` e o evento `CollisionEnterEvent` |
 | Teclado, mouse, gamepad | `src/tokens/input.ts` |
 | Assets e áudio | `src/tokens/assets.ts`, `src/tokens/audio.ts` |
-| UI e HUD | `src/tokens/ui.ts`; o contêiner genérico é `#hud-overlay` |
+| UI e HUD | `src/tokens/ui.ts`. HUD genérico chave/valor: contêiner `#hud-overlay`, `data-bind="<chave>"` para texto e `data-hud-fill="<chave>"` para barras (máximo em `max<Chave>` ou `data-hud-max`). As chaves são do projeto |
+| Conquistas Steam | comando `UnlockAchievementCommand` (a regra "quando desbloquear" é do jogo, não da engine) |
 | Loop de jogo | evento `game.loop.tick` |
 | Exemplo completo | `src/projects/physics-sandbox/` |
 

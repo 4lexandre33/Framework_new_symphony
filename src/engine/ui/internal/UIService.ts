@@ -1,6 +1,6 @@
 import type { PluginContext } from "@core";
 import { type UIApi } from "../../../tokens/ui";
-import { type UIScreenId, type ModalConfig, type PlayerHUDData } from "../../../contracts/ui/types";
+import { type UIScreenId, type ModalConfig, type HUDData } from "../../../contracts/ui/types";
 import { UIManager } from "./UIManager";
 import { HUDDataBinder } from "./HUDDataBinder";
 import { LocalizationEngine } from "./LocalizationEngine";
@@ -130,7 +130,7 @@ export class UIService
 
   public bindHUDData(
     data:
-      Partial<PlayerHUDData>,
+      HUDData,
   ): void {
     if (this.disposed) {
       return;
@@ -150,8 +150,7 @@ export class UIService
   }
 
   public updateHUD(
-    key:
-      keyof PlayerHUDData,
+    key: string,
     value:
       unknown,
   ): void {
@@ -173,7 +172,7 @@ export class UIService
     const data = {
       [key]:
         value,
-    } as Partial<PlayerHUDData>;
+    } as HUDData;
 
     this.ctx.events.emit(
       "game.ui.hud-updated",

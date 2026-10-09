@@ -1,14 +1,4 @@
-import { defineEvent, defineCommand } from "@core";
-
-export interface BossDefeatedPayload {
-  readonly bossId: string;
-  readonly durationSeconds: number;
-  readonly noDamageTaken: boolean;
-}
-
-export const BossDefeatedEvent = defineEvent<"game.boss-defeated", BossDefeatedPayload>(
-  "game.boss-defeated"
-);
+import { defineCommand } from "@core";
 
 export interface UnlockAchievementRequest {
   readonly achievementId: string;

@@ -1,46 +1,25 @@
 import type {
-  PlayerHUDData,
+  HUDData,
+  HUDValue,
 } from "../../../contracts/ui/types";
 
-type MutablePlayerHUDData = {
-  -readonly [
-    Key in keyof PlayerHUDData
-  ]: PlayerHUDData[Key];
-};
-
-const DEFAULT_HUD_DATA:
-  Readonly<PlayerHUDData> = {
-    hp: 100,
-    maxHp: 100,
-
-    mp: 50,
-    maxMp: 50,
-
-    ammo: 30,
-    maxAmmo: 120,
-
-    coins: 0,
-    score: 0,
-
-    currentWeapon:
-      "Pistola",
-  };
-
+/**
+ * Binder de HUD genérico (chave/valor). A engine NÃO conhece o vocabulário do
+ * jogo (vida, mana, munição...): quem define as chaves é o projeto.
+ *
+ * Convenções de marcação no DOM:
+ *  - `data-bind="<chave>"`      → textContent recebe o valor;
+ *  - `data-hud-fill="<chave>"`  → largura em % = valor / máximo;
+ *      máximo = `data-hud-max="<chaveMax>"` ou, por padrão, "max" + Chave
+ *      (ex.: `hp` → `maxHp`).
+ */
 export class HUDDataBinder {
-  private readonly cachedData:
-    MutablePlayerHUDData = {
-      ...DEFAULT_HUD_DATA,
-    };
+  private readonly cachedData: Record<string, HUDValue> = {};
 
-  private rootElement:
-    HTMLElement | null = null;
+  private rootElement: HTMLElement | null = null;
 
-  public attach(
-    root: HTMLElement,
-  ): void {
-    this.rootElement =
-      root;
-
+  public attach(root: HTMLElement): void {
+    this.rootElement = root;
     this.renderInitialHUD();
   }
 
@@ -48,53 +27,18 @@ export class HUDDataBinder {
     this.rootElement = null;
   }
 
-  public bindHUDData(
-    data:
-      Partial<PlayerHUDData>,
-  ): void {
+  public bindHUDData(data: HUDData): void {
     let changed = false;
 
-    const keys =
-      Object.keys(
-        data,
-      ) as Array<
-        keyof PlayerHUDData
-      >;
+    for (const key of Object.keys(data)) {
+      const value = data[key];
 
-    for (
-      let index = 0;
-      index <
-      keys.length;
-      index += 1
-    ) {
-      const key =
-        keys[index];
-
-      if (!key) {
+      if (!this.isValidValue(value)) {
         continue;
       }
 
-      const value =
-        data[key];
-
-      if (
-        value ===
-        undefined
-      ) {
-        continue;
-      }
-
-      if (
-        this.setValue(
-          key,
-          value,
-        )
-      ) {
-        this.updateDOMElement(
-          key,
-          value,
-        );
-
+      if (this.setValue(key, value)) {
+        this.updateDOMElement(key, value);
         changed = true;
       }
     }
@@ -104,248 +48,111 @@ export class HUDDataBinder {
     }
   }
 
-  public updateValue(
-    key:
-      keyof PlayerHUDData,
-    value:
-      unknown,
-  ): boolean {
-    if (
-      !this.isValidValue(
-        key,
-        value,
-      )
-    ) {
+  public updateValue(key: string, value: unknown): boolean {
+    if (key === "" || !this.isValidValue(value)) {
       return false;
     }
 
-    if (
-      !this.setValue(
-        key,
-        value,
-      )
-    ) {
+    if (!this.setValue(key, value)) {
       return false;
     }
 
-    this.updateDOMElement(
-      key,
-      value,
-    );
-
+    this.updateDOMElement(key, value);
     this.updateProgressBars();
 
     return true;
   }
 
-  public getSnapshot():
-    Readonly<PlayerHUDData> {
-    return {
-      ...this.cachedData,
-    };
+  public getSnapshot(): HUDData {
+    return { ...this.cachedData };
   }
 
-  private setValue(
-    key:
-      keyof PlayerHUDData,
-    value:
-      PlayerHUDData[
-        keyof PlayerHUDData
-      ],
-  ): boolean {
-    const state =
-      this.cachedData as unknown as Record<
-        keyof PlayerHUDData,
-        PlayerHUDData[
-          keyof PlayerHUDData
-        ]
-      >;
-
-    if (
-      state[key] ===
-      value
-    ) {
+  private setValue(key: string, value: HUDValue): boolean {
+    if (this.cachedData[key] === value) {
       return false;
     }
 
-    state[key] =
-      value;
+    this.cachedData[key] = value;
 
     return true;
   }
 
-  private isValidValue(
-    key:
-      keyof PlayerHUDData,
-    value:
-      unknown,
-  ): value is
-    PlayerHUDData[
-      keyof PlayerHUDData
-    ] {
-    if (
-      key ===
-      "currentWeapon"
-    ) {
-      return (
-        typeof value ===
-        "string"
-      );
+  private isValidValue(value: unknown): value is HUDValue {
+    if (typeof value === "number") {
+      return Number.isFinite(value);
     }
 
-    return (
-      typeof value ===
-        "number" &&
-      Number.isFinite(
-        value,
-      )
-    );
+    return typeof value === "string" || typeof value === "boolean";
   }
 
-  private updateDOMElement(
-    key:
-      keyof PlayerHUDData,
-    value:
-      unknown,
-  ): void {
-    const root =
-      this.rootElement;
+  private updateDOMElement(key: string, value: HUDValue): void {
+    const root = this.rootElement;
 
     if (!root) {
       return;
     }
 
-    const selector =
-      `[data-bind="${key}"]`;
+    const elements = root.querySelectorAll<HTMLElement>("[data-bind]");
 
-    const elements =
-      root.querySelectorAll<HTMLElement>(
-        selector,
-      );
+    for (let index = 0; index < elements.length; index += 1) {
+      const element = elements[index];
 
-    for (
-      let index = 0;
-      index <
-      elements.length;
-      index += 1
-    ) {
-      const element =
-        elements[index];
-
-      if (!element) {
-        continue;
+      if (element && element.getAttribute("data-bind") === key) {
+        element.textContent = String(value);
       }
-
-      element.textContent =
-        String(
-          value,
-        );
     }
   }
 
-  private updateProgressBars():
-    void {
-    const root =
-      this.rootElement;
+  private updateProgressBars(): void {
+    const root = this.rootElement;
 
     if (!root) {
       return;
     }
 
-    const hpBar =
-      root.querySelector<HTMLElement>(
-        "#hud-hp-bar",
-      );
+    const bars = root.querySelectorAll<HTMLElement>("[data-hud-fill]");
 
-    if (hpBar) {
-      const maxHp =
-        Math.max(
-          1,
-          this.cachedData.maxHp,
-        );
+    for (let index = 0; index < bars.length; index += 1) {
+      const bar = bars[index];
+      const key = bar?.getAttribute("data-hud-fill");
 
-      const percentage =
-        this.clampPercent(
-          (
-            this.cachedData.hp /
-            maxHp
-          ) * 100,
-        );
-
-      hpBar.style.width =
-        `${percentage}%`;
-    }
-
-    const mpBar =
-      root.querySelector<HTMLElement>(
-        "#hud-mp-bar",
-      );
-
-    if (mpBar) {
-      const maxMp =
-        Math.max(
-          1,
-          this.cachedData.maxMp,
-        );
-
-      const percentage =
-        this.clampPercent(
-          (
-            this.cachedData.mp /
-            maxMp
-          ) * 100,
-        );
-
-      mpBar.style.width =
-        `${percentage}%`;
-    }
-  }
-
-  private renderInitialHUD():
-    void {
-    const keys =
-      Object.keys(
-        this.cachedData,
-      ) as Array<
-        keyof PlayerHUDData
-      >;
-
-    for (
-      let index = 0;
-      index <
-      keys.length;
-      index += 1
-    ) {
-      const key =
-        keys[index];
-
-      if (!key) {
+      if (!bar || !key) {
         continue;
       }
 
-      this.updateDOMElement(
-        key,
-        this.cachedData[
-          key
-        ],
-      );
+      const maxKey =
+        bar.getAttribute("data-hud-max") ??
+        `max${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+
+      const value = this.cachedData[key];
+      const max = this.cachedData[maxKey];
+
+      if (typeof value !== "number" || typeof max !== "number") {
+        continue;
+      }
+
+      bar.style.width = `${this.clampPercent((value / Math.max(1, max)) * 100)}%`;
+    }
+  }
+
+  private renderInitialHUD(): void {
+    for (const key of Object.keys(this.cachedData)) {
+      const value = this.cachedData[key];
+
+      if (value !== undefined) {
+        this.updateDOMElement(key, value);
+      }
     }
 
     this.updateProgressBars();
   }
 
-  private clampPercent(
-    value: number,
-  ): number {
-    if (
-      value <= 0
-    ) {
+  private clampPercent(value: number): number {
+    if (value <= 0) {
       return 0;
     }
 
-    if (
-      value >= 100
-    ) {
+    if (value >= 100) {
       return 100;
     }
 

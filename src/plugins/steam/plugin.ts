@@ -1,6 +1,6 @@
 import type { Plugin, PluginContext } from "@core";
 import { SteamToken } from "../../tokens/steam";
-import { BossDefeatedEvent, UnlockAchievementCommand } from "../../contracts/steam/types";
+import { UnlockAchievementCommand } from "../../contracts/steam/types";
 import { CreateLobbyCommand, SendP2PPacketCommand, P2PMessageReceivedEvent, type SteamLobbyType, type P2PSendType } from "../../contracts/steam/net-types";
 import { SteamBridgeService } from "../../engine/steam/internal/SteamBridgeService";
 
@@ -12,7 +12,7 @@ export const steamManifest: Plugin["manifest"] = {
   authority: "game",
   permissions: {
     capabilities: [SteamToken.id],
-    events: ["game.boss-defeated", "game.steam.p2p-received"],
+    events: ["game.steam.p2p-received"],
   },
   capabilities: {
     provides: [
@@ -34,7 +34,6 @@ export function createSteamPlugin(): Plugin {
 
       ctx.caps.provide(SteamToken, steamService);
 
-      ctx.events.define(BossDefeatedEvent);
       ctx.events.define(P2PMessageReceivedEvent);
       ctx.commands.define(UnlockAchievementCommand);
       ctx.commands.define(CreateLobbyCommand);
@@ -66,24 +65,6 @@ export function createSteamPlugin(): Plugin {
             env.payload.sendType,
             env.payload.channel
           );
-        }
-      );
-
-      ctx.events.on<"game.boss-defeated", { bossId: string; noDamageTaken: boolean }>(
-        BossDefeatedEvent.type,
-        async (env) => {
-          const isOnline = await steamService.checkAvailability();
-          if (!isOnline) return;
-
-          if (env.payload.bossId === "dragon_boss") {
-            await steamService.unlockAchievement("ACH_KILL_DRAGON");
-          }
-
-          if (env.payload.noDamageTaken) {
-            await steamService.unlockAchievement("ACH_PERFECT_BOSS");
-          }
-
-          await steamService.storeStats();
         }
       );
 

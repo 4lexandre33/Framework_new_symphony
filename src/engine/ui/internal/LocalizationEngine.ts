@@ -218,18 +218,6 @@ export class LocalizationEngine {
         "ui.menu.exit":
           "Sair para a Área de Trabalho",
 
-        "ui.hud.hp":
-          "VIDA",
-
-        "ui.hud.mp":
-          "MANA",
-
-        "ui.hud.ammo":
-          "MUNIÇÃO",
-
-        "ui.hud.coins":
-          "MOEDAS",
-
         "ui.screen.pause":
           "PAUSA",
 
@@ -261,18 +249,6 @@ export class LocalizationEngine {
 
         "ui.menu.exit":
           "Exit to Desktop",
-
-        "ui.hud.hp":
-          "HEALTH",
-
-        "ui.hud.mp":
-          "MANA",
-
-        "ui.hud.ammo":
-          "AMMO",
-
-        "ui.hud.coins":
-          "COINS",
 
         "ui.screen.pause":
           "PAUSED",

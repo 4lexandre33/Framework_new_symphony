@@ -2,7 +2,7 @@ import { defineCapability } from "@core";
 import type {
   UIScreenId,
   ModalConfig,
-  PlayerHUDData,
+  HUDData,
 } from "../contracts/ui/types";
 
 export interface UIApi {
@@ -14,8 +14,8 @@ export interface UIApi {
   pushModal(config: ModalConfig): void;
   popModal(): boolean;
 
-  bindHUDData(data: Partial<PlayerHUDData>): void;
-  updateHUD(key: keyof PlayerHUDData, value: unknown): void;
+  bindHUDData(data: HUDData): void;
+  updateHUD(key: string, value: unknown): void;
 
   setLocale(locale: string): void;
   translate(key: string, params?: Record<string, string | number>): string;

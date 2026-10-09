@@ -694,17 +694,11 @@ export const TOOLING_PLUGINS = deepFreeze([
   },
 ]);
 
-export const EXPERIMENTAL_PLUGINS = deepFreeze([
-  {
-    key: "player",
-    pluginId: "game.player",
-    plugin: "src/plugins/player/plugin.ts",
-    category: "experimental",
-    bootstrapped: false,
-    canonicalEngineModule: false,
-    status: "orphaned-not-in-createEnginePlugins",
-  },
-]);
+/**
+ * Plugins experimentais/órfãos. Vazio: o antigo `game.player` (vocabulário de
+ * jogo dentro da engine) foi removido; código de jogo vive em src/projects/.
+ */
+export const EXPERIMENTAL_PLUGINS = deepFreeze([]);
 
 export const EXPECTED_STAGE3_ENGINE_MODULES = deepFreeze(
   CANONICAL_MODULES
@@ -1232,9 +1226,6 @@ function validateCanonicalShape() {
   const debug = TOOLING_PLUGINS.find(
     (record) => record.key === "debug",
   );
-  const player = EXPERIMENTAL_PLUGINS.find(
-    (record) => record.key === "player",
-  );
 
   if (
     !debug ||
@@ -1245,12 +1236,9 @@ function validateCanonicalShape() {
     );
   }
 
-  if (
-    !player ||
-    player.bootstrapped !== false
-  ) {
+  if (EXPERIMENTAL_PLUGINS.length !== 0) {
     fail(
-      "game.player deve permanecer experimental e fora do bootstrap canônico.",
+      "EXPERIMENTAL_PLUGINS deve permanecer vazio: código de jogo não pertence à engine.",
     );
   }
 
@@ -1552,23 +1540,11 @@ function validateBootstrap(rootDir) {
     );
   }
 
-  const playerImportPath = "../plugins/player/plugin";
-
-  if (
-    source.includes(`"${playerImportPath}"`) ||
-    source.includes(`'${playerImportPath}'`)
-  ) {
-    fail(
-      "game.player está marcado como experimental/orphaned, mas createEnginePlugins.ts o importa.",
-    );
-  }
-
   return {
     path: relativePath,
     expectedBootstrappedPluginCount:
       expectedBootstrappedPluginKeys.length,
     expectedBootstrappedPluginKeys,
-    playerExcluded: true,
     matches: true,
   };
 }
@@ -1730,9 +1706,6 @@ function buildSummary(report) {
   );
   lines.push(
     "game.debug permanece tooling e participa do bootstrap.",
-  );
-  lines.push(
-    "game.player permanece experimental/orphaned e fora do bootstrap canônico.",
   );
   lines.push("");
   lines.push(
@@ -1904,7 +1877,7 @@ function runStage4() {
       `[OK] ${fileValidation.pluginChecks.length} plugin IDs canônicos conferidos.`,
     );
     console.log(
-      `[OK] Bootstrap: ${bootstrapValidation.expectedBootstrappedPluginCount} plugins esperados; game.player permanece fora.`,
+      `[OK] Bootstrap: ${bootstrapValidation.expectedBootstrappedPluginCount} plugins esperados.`,
     );
 
     console.log("");
@@ -1994,7 +1967,6 @@ function runStage4() {
         "Os 20 módulos funcionais preservam a numeração das camadas congeladas existentes.",
         "game.loop, game.render e game.net são runtimes fundamentais first-party fora da numeração 1..20.",
         "game.debug é tooling bootstrapped, não módulo de engine canônico.",
-        "game.player é experimental/orphaned e não participa de createEnginePlugins.",
         "game.steam.net é capability secundária pertencente ao módulo steam, não um módulo separado.",
         "Steam e game-loop não possuíam diretórios src/engine próprios no inventário da Etapa 3; seus diretórios-alvo continuam reservados no catálogo.",
         "Esta etapa não cria public/internal e não move implementação alguma.",
@@ -2072,7 +2044,7 @@ function runStage4() {
       "20 módulos funcionais + 3 runtimes fundamentais.",
     );
     console.log(
-      "game.debug = tooling | game.player = experimental/orphaned.",
+      "game.debug = tooling.",
     );
     console.log(
       "Nenhuma implementação foi movida nesta etapa.",

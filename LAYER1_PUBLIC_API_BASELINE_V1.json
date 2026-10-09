@@ -42,7 +42,7 @@
       "contracts": [
         {
           "path": "src/contracts/steam/types.ts",
-          "fingerprint": "612fe2a891025c1c5db5157ad08634aabe89f941ea015ffe423e86276f32aeb2"
+          "fingerprint": "76d63e2ace8e4e894771d58680c3333dbaeb8602776b7c4a7701deec56eead8b"
         },
         {
           "path": "src/contracts/steam/net-types.ts",
@@ -221,7 +221,7 @@
       "contracts": [
         {
           "path": "src/contracts/ui/types.ts",
-          "fingerprint": "030dd9cb0026d389a5d05a3c03a3591392581e8b2edbb273062bb2395294047a"
+          "fingerprint": "7858bc80a772a21d692f47abeb3d750424b38b83953244785353ada092a764fe"
         }
       ],
       "tokens": [
@@ -230,7 +230,7 @@
           "capabilityId": "game.ui",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "663a22fe0717798ca705baabb98d302b138e1a781cee5a7e6818504185c41e04"
+          "fingerprint": "6ccbedcbc5b7794f5de5f77146fcbdef90333f22336fbf26cb6cd04f7164de67"
         }
       ]
     },

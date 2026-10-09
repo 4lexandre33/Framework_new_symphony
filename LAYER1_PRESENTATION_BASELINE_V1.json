@@ -16,10 +16,10 @@
   "semanticRuntimeFiles": 41,
   "semanticFingerprints": {
     "src/engine/ui/internal/DOMEventListenerBridge.ts": "83a2954742407ecd85dd0d73e63f87fec1995fa32fffbd57c25a202ffce9dbb0",
-    "src/engine/ui/internal/HUDDataBinder.ts": "bf62e2aae27deee18bd49c6d62d15bea37e889a543978e14a007a8310f2d59bc",
-    "src/engine/ui/internal/LocalizationEngine.ts": "567c29c6d2e8b0fd6d0dcf2f47e4fe9fac1fb3cd36445fab081cf49baa80646b",
+    "src/engine/ui/internal/HUDDataBinder.ts": "8d445700780f6c6a28746599782051c528d12e1c4bc90b15310d1fe9cfd2bd64",
+    "src/engine/ui/internal/LocalizationEngine.ts": "f2f4b67eef70cfdce7072db5fe392246eb20ec52d99215dea24c596f6ac89808",
     "src/engine/ui/internal/UIManager.ts": "7c9e44ea116ccf781864cb72d228c41b6671cd7e48986d2bca6386cf151b4b1b",
-    "src/engine/ui/internal/UIService.ts": "dcc41b6f6ec66c5e63a32af0058099073761530c54657e2fd83448ba7fa96b82",
+    "src/engine/ui/internal/UIService.ts": "eb482c6da20fa26f07e81a831831e2471d3537ed3fcc1834ef1b028ebf6f2390",
     "src/engine/ui/internal/UITemplateRegistry.ts": "7707c2c6e1f84b75a2b8cf30ee0ad581c743f776ca331ba2272ec5b7a01e3096",
     "src/plugins/ui/plugin.ts": "9eaf34174a50150ecb188af852795586a26db7d06b693031abb9c5bdbb32a3d6",
     "src/engine/sprites/internal/InstancedTilemapRenderer.ts": "b43deed47c0b1337e2aac153f57eaaed6fee5fb8663bfbc3d8d429d3562fc154",
