@@ -1,0 +1,184 @@
+name: Stage 88 Production Certification
+
+on:
+  push:
+    branches:
+      - teste/cena-3d-tauri
+    paths:
+      - ".stage-packages/**"
+      - ".github/workflows/stage88-production.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: stage88-production-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    name: Materialize 86/87/88 and preflight
+    runs-on: ubuntu-latest
+    env:
+      CARGO_BUILD_JOBS: "1"
+    steps:
+      - name: Checkout branch head
+        uses: actions/checkout@v4
+        with:
+          ref: teste/cena-3d-tauri
+          fetch-depth: 0
+
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Rust 1.97 stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.97.0
+
+      - name: Linux Tauri build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            curl \
+            file \
+            libappindicator3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            patchelf \
+            pkg-config
+
+      - name: Materialize certification packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 -d .stage-packages/etapa86_performance_resource_lifecycle_v1.0.0-github.zip.b64 > /tmp/stage86.zip
+          unzip -o /tmp/stage86.zip -d .
+          base64 -d .stage-packages/etapa87_failure_recovery_resilience_v1.0.2-github.zip.b64 > /tmp/stage87.zip
+          unzip -o /tmp/stage87.zip -d .
+          base64 -d .stage-packages/etapa88_desktop_steam_production_readiness_v1.0.9-github.zip.b64 > /tmp/stage88.zip
+          unzip -o /tmp/stage88.zip -d .
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Stage 86 validate and finalize
+        run: |
+          node scripts/architecture/stage86-validate-performance-lifecycle.mjs
+          node scripts/architecture/stage86-finalize-performance-lifecycle.mjs
+
+      - name: Stage 87 validate and finalize
+        run: |
+          node scripts/architecture/stage87-validate-failure-recovery.mjs
+          node scripts/architecture/stage87-finalize-failure-recovery.mjs
+
+      - name: Stage 88 preflight without native release
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/architecture/stage88-audit-desktop-production.mjs
+          npx vitest run \
+            tests/layer1-desktop-production-config.test.ts \
+            tests/layer1-desktop-production-lifecycle.test.ts \
+            tests/layer1-desktop-production-selftest.test.ts
+          npm run arch:check
+          npx tsc --noEmit
+          npx vitest run --no-file-parallelism
+          cargo check --manifest-path src-tauri/Cargo.toml
+          npm run build
+
+      - name: Commit materialized Stage 86/87/88 baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            package.json \
+            ETAPA86_* LAYER1_PERFORMANCE_RESOURCE_BASELINE_V1.json \
+            ETAPA87_* LAYER1_FAILURE_RECOVERY_BASELINE_V1.json \
+            ETAPA88_* LAYER1_DESKTOP_PRODUCTION_BASELINE_V1.json \
+            INSTALL_STAGE86.txt INSTALL_STAGE87.txt INSTALL_STAGE88.txt \
+            scripts/architecture \
+            src/app/stage87 \
+            src-tauri/tauri.stage88.conf.json src-tauri/tauri.windows.conf.json \
+            tests
+          if git diff --cached --quiet; then
+            echo "No bootstrap changes to commit."
+          else
+            git commit -m "prepare layer1 stages 86-88 for production certification [skip stage88-bootstrap]"
+            git push origin HEAD:teste/cena-3d-tauri
+          fi
+
+  stage88-windows:
+    name: Stage 88 Windows native certification
+    needs: bootstrap
+    runs-on: windows-latest
+    env:
+      CARGO_BUILD_JOBS: "1"
+    steps:
+      - name: Checkout materialized branch head
+        uses: actions/checkout@v4
+        with:
+          ref: teste/cena-3d-tauri
+          fetch-depth: 0
+
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Rust 1.97 stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.97.0
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Finalize Stage 88 on native Windows
+        run: node scripts/architecture/stage88-finalize-desktop-production.mjs
+
+      - name: Verify Cargo manifest remained unchanged
+        shell: pwsh
+        run: |
+          git diff --exit-code -- src-tauri/Cargo.toml
+
+      - name: Upload NSIS installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: projeto1-stage88-nsis
+          path: src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+
+      - name: Upload Stage 88 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: projeto1-stage88-evidence
+          path: |
+            ETAPA88_RELEASE_SMOKE_EVIDENCE.json
+            ETAPA88_WINDOWS_PACKAGE_EVIDENCE.json
+            ETAPA88_RUNTIME_EVIDENCE.json
+            ETAPA88_PRODUCTION_EVIDENCE.json
+            ETAPA88_AUTOMATED_PASS.json
+            ETAPA88_SHA256SUMS.txt
+
+      - name: Commit Stage 88 certification evidence
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ETAPA88_RELEASE_SMOKE_EVIDENCE.json ETAPA88_WINDOWS_PACKAGE_EVIDENCE.json ETAPA88_RUNTIME_EVIDENCE.json ETAPA88_PRODUCTION_EVIDENCE.json ETAPA88_AUTOMATED_PASS.json ETAPA88_SHA256SUMS.txt
+          if (git diff --cached --quiet) {
+            Write-Host "No Stage88 evidence changes to commit."
+          } else {
+            git commit -m "certify layer1 desktop and steam production readiness [skip stage88-bootstrap]"
+            git push origin HEAD:teste/cena-3d-tauri
+          }
