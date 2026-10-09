@@ -27,7 +27,7 @@ permissions:
 
 concurrency:
   group: stage88-production-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   linux-release:
