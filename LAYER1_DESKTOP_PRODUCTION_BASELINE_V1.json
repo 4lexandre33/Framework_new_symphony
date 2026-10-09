@@ -44,7 +44,9 @@
     "vitestFileParallelism": false,
     "linuxReleaseNoBundle": true,
     "windowsNsisRealBundle": true,
-    "cargoManifestMutationForbidden": true
+    "cargoManifestMutationForbidden": true,
+    "preserveCargoManifestBytes": true,
+    "tauriCliManifestNormalizationIsRestored": true
   },
   "knownToolchainExclusions": {
     "1.99.0": "local investigation reproduced internal compiler SIGSEGV/SIGBUS outside the project",
