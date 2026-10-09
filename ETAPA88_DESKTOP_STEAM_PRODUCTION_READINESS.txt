@@ -12,8 +12,8 @@ PRÉ-REQUISITOS REAIS
 - ETAPA86_AUTOMATED_PASS.json = PASS / 0 violations.
 - ETAPA87_AUTOMATED_PASS.json = PASS / 0 violations.
 
-Não existe mais bootstrap/backfill de ZIPs. A Stage 88 executa diretamente sobre
-a branch remota certificada.
+Não existe bootstrap/backfill de ZIPs. A Stage 88 executa diretamente sobre a
+branch remota certificada.
 
 CONTRATOS CERTIFICADOS
 ----------------------
@@ -31,7 +31,7 @@ CONTRATOS CERTIFICADOS
 - steam_appid.txt=480 existe somente como contrato de desenvolvimento;
 - o AppID 480 não é adicionado aos resources do bundle;
 - Cargo default feature steam permanece explícita;
-- Cargo.toml não pode ser alterado pela Stage 88.
+- Cargo.toml não pode permanecer alterado após a certificação.
 
 CERTIFICAÇÃO NATIVA
 -------------------
@@ -40,7 +40,8 @@ Linux:
 2. Tauri release real com --no-bundle;
 3. executável src-tauri/target/release/projeto1 deve existir;
 4. SHA-256/tamanho do executável são gravados;
-5. Cargo.toml deve manter SHA-256 idêntico antes/depois.
+5. Cargo.toml é snapshotado antes do Tauri CLI e restaurado byte-a-byte depois;
+6. hash final do manifest deve ser idêntico ao hash original.
 
 Windows:
 1. checkout do HEAD após evidência Linux;
@@ -49,7 +50,15 @@ Windows:
 4. projeto1.exe deve existir;
 5. instalador NSIS .exe deve existir;
 6. SHA-256/tamanho de executável e installer são gravados;
-7. Cargo.toml deve permanecer byte-identical.
+7. Cargo.toml é restaurado byte-a-byte caso o Tauri CLI normalize o arquivo.
+
+NORMALIZAÇÃO DO TAURI CLI
+-------------------------
+A primeira execução GitHub desta revisão compilou o release Linux com sucesso,
+mas mostrou que o Tauri CLI normaliza src-tauri/Cargo.toml. A Stage 88 trata
+isso como mutação transitória de ferramenta: os smokes preservam os bytes
+originais, restauram o arquivo após o build e registram explicitamente
+cargoManifestMutatedByTauri/cargoManifestRestored nas evidências.
 
 TOOLCHAIN
 ---------
