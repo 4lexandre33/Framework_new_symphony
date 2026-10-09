@@ -11,8 +11,31 @@ const NSIS_DIR = path.join(ROOT, "src-tauri", "target", "release", "bundle", "ns
 const EVIDENCE = path.join(ROOT, "ETAPA88_WINDOWS_PACKAGE_EVIDENCE.json");
 const TAURI_ARGS = ["tauri", "build", "--bundles", "nsis", "--config", "src-tauri/tauri.stage88.conf.json"];
 
+function sha256Buffer(value) {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
 function sha256File(filePath) {
-  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+  return sha256Buffer(fs.readFileSync(filePath));
+}
+
+function preserveCargoManifest() {
+  const originalBytes = fs.readFileSync(CARGO_MANIFEST);
+
+  return {
+    hash: sha256Buffer(originalBytes),
+    restore() {
+      const currentBytes = fs.readFileSync(CARGO_MANIFEST);
+      const mutated = !currentBytes.equals(originalBytes);
+
+      if (mutated) {
+        fs.writeFileSync(CARGO_MANIFEST, originalBytes);
+        console.log("[OK] src-tauri/Cargo.toml restaurado byte-a-byte após Tauri CLI");
+      }
+
+      return mutated;
+    },
+  };
 }
 
 function rustVersion() {
@@ -22,14 +45,17 @@ function rustVersion() {
     encoding: "utf8",
     shell: true,
   });
+
   if (result.status !== 0) {
     throw new Error("rustc --version falhou no runner Windows");
   }
+
   return String(result.stdout ?? "").trim();
 }
 
 function findInstallers() {
   if (!fs.existsSync(NSIS_DIR)) return [];
+
   return fs.readdirSync(NSIS_DIR)
     .filter((name) => name.toLowerCase().endsWith(".exe"))
     .map((name) => path.join(NSIS_DIR, name))
@@ -39,28 +65,40 @@ function findInstallers() {
 if (process.platform !== "win32") {
   throw new Error(`Stage88 Windows package smoke requer win32; atual=${process.platform}`);
 }
+
 if (!fs.existsSync(path.join(ROOT, "dist", "index.html"))) {
   throw new Error("dist/index.html ausente; execute npm run build antes do package smoke");
 }
 
-const cargoHashBefore = sha256File(CARGO_MANIFEST);
+const cargoSnapshot = preserveCargoManifest();
+const cargoHashBefore = cargoSnapshot.hash;
 const rustToolchain = rustVersion();
+let cargoManifestMutatedByTauri = false;
+let tauriStatus = null;
 
 console.log("===== STAGE88 TAURI WINDOWS RELEASE + NSIS =====");
-const tauri = spawnSync("npx.cmd", TAURI_ARGS, {
-  cwd: ROOT,
-  stdio: "inherit",
-  env: { ...process.env, CARGO_BUILD_JOBS: "1" },
-  shell: true,
-});
-if (tauri.status !== 0) {
-  throw new Error(`Tauri Windows/NSIS falhou com exit code ${String(tauri.status)}`);
+try {
+  const tauri = spawnSync("npx.cmd", TAURI_ARGS, {
+    cwd: ROOT,
+    stdio: "inherit",
+    env: { ...process.env, CARGO_BUILD_JOBS: "1" },
+    shell: true,
+  });
+  tauriStatus = tauri.status;
+} finally {
+  cargoManifestMutatedByTauri = cargoSnapshot.restore();
+}
+
+if (tauriStatus !== 0) {
+  throw new Error(`Tauri Windows/NSIS falhou com exit code ${String(tauriStatus)}`);
 }
 
 const cargoHashAfter = sha256File(CARGO_MANIFEST);
-if (cargoHashAfter !== cargoHashBefore) {
-  throw new Error("src-tauri/Cargo.toml foi modificado pelo Tauri CLI");
+const cargoManifestRestored = cargoHashAfter === cargoHashBefore;
+if (!cargoManifestRestored) {
+  throw new Error("src-tauri/Cargo.toml não foi restaurado ao conteúdo original");
 }
+
 if (!fs.existsSync(EXECUTABLE) || !fs.statSync(EXECUTABLE).isFile()) {
   throw new Error("projeto1.exe release não foi produzido");
 }
@@ -69,6 +107,7 @@ const installers = findInstallers();
 if (installers.length === 0) {
   throw new Error("Nenhum instalador .exe encontrado em src-tauri/target/release/bundle/nsis");
 }
+
 installers.sort((a, b) => fs.statSync(b).size - fs.statSync(a).size);
 const installer = installers[0];
 
@@ -82,6 +121,8 @@ const evidence = {
   cargoBuildJobs: 1,
   cargoHashBefore,
   cargoHashAfter,
+  cargoManifestMutatedByTauri,
+  cargoManifestRestored,
   executablePath: "src-tauri/target/release/projeto1.exe",
   executableBytes: fs.statSync(EXECUTABLE).size,
   executableSha256: sha256File(EXECUTABLE),
