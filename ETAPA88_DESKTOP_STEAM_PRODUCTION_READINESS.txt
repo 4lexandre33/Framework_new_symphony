@@ -44,13 +44,14 @@ Linux:
 6. hash final do manifest deve ser idêntico ao hash original.
 
 Windows:
-1. checkout do HEAD após evidência Linux;
-2. Vite production build;
-3. Tauri release real com --bundles nsis;
-4. projeto1.exe deve existir;
-5. instalador NSIS .exe deve existir;
-6. SHA-256/tamanho de executável e installer são gravados;
-7. Cargo.toml é restaurado byte-a-byte caso o Tauri CLI normalize o arquivo.
+1. checkout do MESMO github.sha imutável certificado no Linux;
+2. download de ETAPA88_RELEASE_SMOKE_EVIDENCE.json via GitHub Actions artifact;
+3. Vite production build;
+4. Tauri release real com --bundles nsis;
+5. projeto1.exe deve existir;
+6. instalador NSIS .exe deve existir;
+7. SHA-256/tamanho de executável e installer são gravados;
+8. Cargo.toml é restaurado byte-a-byte caso o Tauri CLI normalize o arquivo.
 
 NORMALIZAÇÃO DO TAURI CLI
 -------------------------
@@ -71,3 +72,18 @@ AUTORIDADE
 
 A Stage 88 só termina PASS após Linux release + Windows NSIS reais e commit das
 evidências ETAPA88_* pelo GitHub Actions.
+
+REVISION 2.0.2 — IMMUTABLE CROSS-RUNNER CERTIFICATION
+------------------------------------------------------
+Linux e Windows certificam exatamente o mesmo github.sha.
+
+A evidência Linux não é mais commitada no meio do workflow. Ela é transferida
+ao runner Windows por actions/upload-artifact + actions/download-artifact.
+Somente o job Windows final publica o commit de certificação Stage 88.
+
+A concurrency usa cancel-in-progress=true: uma revisão Stage 88 nova invalida e
+cancela certificações obsoletas, impedindo evidência de SHA antigo na branch.
+
+A auditoria normaliza CRLF para LF antes dos checks de texto. Isso elimina
+diferenças artificiais entre checkout Linux e Windows sem relaxar nenhum
+contrato semântico.
