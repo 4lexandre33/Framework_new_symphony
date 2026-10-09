@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "stage": 87,
+  "status": "PASS",
+  "gitHeadBeforeStage87Commit": "372f6cb6f4dcb3ee70d3fe81f2612138438f65cb",
+  "audit": {
+    "schemaVersion": 1,
+    "stage": 87,
+    "auditVersion": "1.0.0",
+    "ok": true,
+    "checks": [
+      {
+        "id": "kernel.strict-rollback",
+        "file": "src/core/runtime/boot.ts",
+        "ok": true,
+        "missingPatterns": []
+      },
+      {
+        "id": "kernel.tolerant-quarantine",
+        "file": "src/core/runtime/boot.ts",
+        "ok": true,
+        "missingPatterns": []
+      },
+      {
+        "id": "kernel.dispose-abort-and-cleanup",
+        "file": "src/core/runtime/dispose.ts",
+        "ok": true,
+        "missingPatterns": []
+      },
+      {
+        "id": "async.timeout-finally",
+        "file": "src/core/internal/ttl.ts",
+        "ok": true,
+        "missingPatterns": []
+      },
+      {
+        "id": "render.context-recovery",
+        "file": "src/engine/render/internal/ThreeRenderEngine.ts",
+        "ok": true,
+        "missingPatterns": []
+      },
+      {
+        "id": "input.focus-recovery",
+        "file": "src/engine/input/internal/KeyboardMouseDriver.ts",
+        "ok": true,
+        "missingPatterns": []
+      },
+      {
+        "id": "assets.late-completion",
+        "file": "src/engine/assets/internal/AssetsManagerService.ts",
+        "ok": true,
+        "missingPatterns": []
+      },
+      {
+        "id": "terrain.worker-fallback",
+        "file": "src/engine/terrain/internal/ProceduralWorkerPool.ts",
+        "ok": true,
+        "missingPatterns": []
+      },
+      {
+        "id": "network.stale-generation",
+        "file": "src/engine/net/internal/WebSocketTransport.ts",
+        "ok": true,
+        "missingPatterns": []
+      },
+      {
+        "id": "storage.fail-closed",
+        "file": "src/engine/storage/internal/SaveRecordCodec.ts",
+        "ok": true,
+        "missingPatterns": []
+      }
+    ],
+    "violations": []
+  },
+  "generatedAtUtc": "2026-10-09T16:10:44.129Z"
+}
