@@ -23,6 +23,10 @@
     "stage86:validate": "node scripts/architecture/stage86-validate-performance-lifecycle.mjs",
     "stage86:smoke": "node tests/run-stage86-performance-smoke.mjs",
     "stage86:finalize": "node scripts/architecture/stage86-finalize-performance-lifecycle.mjs",
+    "stage87:audit": "node scripts/architecture/stage87-audit-failure-recovery.mjs",
+    "stage87:validate": "node scripts/architecture/stage87-validate-failure-recovery.mjs",
+    "stage87:smoke": "node tests/run-stage87-resilience-smoke.mjs",
+    "stage87:finalize": "node scripts/architecture/stage87-finalize-failure-recovery.mjs",
     "stage88:audit": "node scripts/architecture/stage88-audit-desktop-production.mjs",
     "stage88:validate": "node scripts/architecture/stage88-validate-desktop-production.mjs",
     "stage88:finalize": "node scripts/architecture/stage88-finalize-desktop-production.mjs"
