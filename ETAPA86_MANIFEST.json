@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 2,
+  "stage": 86,
+  "stageName": "Performance & Resource Lifecycle",
+  "layer": 1,
+  "packageRevision": "1.0.0-github",
+  "referenceStage": 85,
+  "baselineId": "layer1-performance-resource-v1-stage86",
+  "applyAtProjectRoot": true,
+  "validator": "scripts/architecture/stage86-validate-performance-lifecycle.mjs",
+  "finalizer": "scripts/architecture/stage86-finalize-performance-lifecycle.mjs",
+  "commitMessage": "certify layer1 performance and resource lifecycle",
+  "certifies": [
+    "explicit resource ownership and release",
+    "render hot-path allocation discipline",
+    "listener/socket/worker teardown signals",
+    "physics/render/assets lifecycle ownership",
+    "global architecture and production build regression"
+  ],
+  "files": [
+    "LAYER1_PERFORMANCE_RESOURCE_BASELINE_V1.json",
+    "ETAPA86_PERFORMANCE_RESOURCE_LIFECYCLE.txt",
+    "ETAPA86_MANIFEST.json",
+    "scripts/architecture/lib/layer1-performance-lifecycle-v1.mjs",
+    "scripts/architecture/stage86-audit-performance-lifecycle.mjs",
+    "scripts/architecture/stage86-validate-performance-lifecycle.mjs",
+    "scripts/architecture/stage86-finalize-performance-lifecycle.mjs",
+    "tests/layer1-performance-resource-lifecycle.test.ts",
+    "tests/layer1-performance-hotpaths.test.ts",
+    "tests/run-stage86-performance-smoke.mjs",
+    "INSTALL_STAGE86.txt"
+  ],
+  "generatedAfterPass": [
+    "ETAPA86_RUNTIME_EVIDENCE.json",
+    "ETAPA86_PERFORMANCE_RESOURCE_EVIDENCE.json",
+    "ETAPA86_AUTOMATED_PASS.json"
+  ],
+  "explicitlyDeferred": [
+    "Stage 87 Failure Recovery & Resilience",
+    "Stage 88 Desktop / Steam Production Readiness"
+  ]
+}
