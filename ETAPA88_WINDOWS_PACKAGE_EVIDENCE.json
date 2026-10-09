@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "stage": 88,
+  "status": "PASS",
+  "platform": "win32",
+  "arch": "x64",
+  "rustToolchain": "rustc 1.97.0 (2d8144b78 2026-07-07)",
+  "cargoBuildJobs": 1,
+  "cargoHashBefore": "516c7d8fdde9229c344d364d6747451e973d8ca568e61cc2b265af594cd73377",
+  "cargoHashAfter": "516c7d8fdde9229c344d364d6747451e973d8ca568e61cc2b265af594cd73377",
+  "cargoManifestMutatedByTauri": true,
+  "cargoManifestRestored": true,
+  "executablePath": "src-tauri/target/release/projeto1.exe",
+  "executableBytes": 10642432,
+  "executableSha256": "9b2d902ffbde320693305a7d011b3c165983e8d8a5301d810ead3e62ef95165d",
+  "installerPath": "src-tauri/target/release/bundle/nsis/projeto1_0.1.0_x64-setup.exe",
+  "installerBytes": 2979710,
+  "installerSha256": "9039072b7c8bb5340245035029a85df1ab84b05316d9516cafcfc9aa8555a2ee",
+  "installerCount": 1,
+  "tauriConfigOverride": "src-tauri/tauri.stage88.conf.json",
+  "generatedAtUtc": "2026-10-09T17:41:29.675Z"
+}

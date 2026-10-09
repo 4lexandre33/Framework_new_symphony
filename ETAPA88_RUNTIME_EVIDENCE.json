@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "stage": 88,
+  "status": "PASS",
+  "semanticChecks": 21,
+  "focusedFiles": 3,
+  "focusedTests": 9,
+  "violations": 0,
+  "cargoManifestPreservation": {
+    "linuxMutatedByTauri": true,
+    "linuxRestored": true,
+    "windowsMutatedByTauri": true,
+    "windowsRestored": true
+  },
+  "linuxReleaseExecutable": {
+    "path": "src-tauri/target/release/projeto1",
+    "bytes": 16807176,
+    "sha256": "be88b9103aa62f8c9b3ce78f97e7e47aedbc158f210068c3d36ab9ed863e65b0"
+  },
+  "windowsReleaseExecutable": {
+    "path": "src-tauri/target/release/projeto1.exe",
+    "bytes": 10642432,
+    "sha256": "9b2d902ffbde320693305a7d011b3c165983e8d8a5301d810ead3e62ef95165d"
+  },
+  "windowsNsisInstaller": {
+    "path": "src-tauri/target/release/bundle/nsis/projeto1_0.1.0_x64-setup.exe",
+    "bytes": 2979710,
+    "sha256": "9039072b7c8bb5340245035029a85df1ab84b05316d9516cafcfc9aa8555a2ee"
+  },
+  "generatedAtUtc": "2026-10-09T17:41:30.233Z"
+}

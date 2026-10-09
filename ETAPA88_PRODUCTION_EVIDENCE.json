@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "stage": 88,
+  "status": "PASS",
+  "gitHeadBeforeStage88Commit": "5ca0118685df9018c5f40a0d25fffbf923d4917e",
+  "prerequisites": {
+    "stage86": "PASS",
+    "stage87": "PASS"
+  },
+  "audit": {
+    "schemaVersion": 1,
+    "stage": 88,
+    "auditVersion": "2.0.1",
+    "ok": true,
+    "checks": [
+      {
+        "id": "previous.stage86",
+        "ok": true,
+        "detail": "Stage 86 deve estar PASS/0 violations"
+      },
+      {
+        "id": "previous.stage87",
+        "ok": true,
+        "detail": "Stage 87 deve estar PASS/0 violations"
+      },
+      {
+        "id": "version.sync",
+        "ok": true,
+        "detail": "package.json, tauri.conf.json e Cargo.toml devem compartilhar version 0.1.0"
+      },
+      {
+        "id": "tauri.identity",
+        "ok": true,
+        "detail": "identidade desktop deve permanecer projeto1/com.projeto1.game"
+      },
+      {
+        "id": "tauri.build-paths",
+        "ok": true,
+        "detail": "build Tauri deve usar npm run build, devUrl :1420 e frontendDist ../dist"
+      },
+      {
+        "id": "tauri.bundle-assets",
+        "ok": true,
+        "detail": "bundle deve estar ativo e todos os icons declarados devem existir"
+      },
+      {
+        "id": "tauri.security",
+        "ok": true,
+        "detail": "withGlobalTauri deve estar false e CSP explícita"
+      },
+      {
+        "id": "window.desktop-contract",
+        "ok": true,
+        "detail": "configuração desktop da janela deve permanecer explícita e estável"
+      },
+      {
+        "id": "window.dpi-resize",
+        "ok": true,
+        "detail": "ViewportManager deve limitar DPR e possuir attach/detach de resize"
+      },
+      {
+        "id": "window.focus-input",
+        "ok": true,
+        "detail": "input deve recuperar blur/visibility/pointer-lock sem estado preso"
+      },
+      {
+        "id": "native.release-subsystem",
+        "ok": true,
+        "detail": "binário Windows deve ocultar console apenas em release e delegar ao host"
+      },
+      {
+        "id": "native.startup-shutdown",
+        "ok": true,
+        "detail": "SteamState deve iniciar no host e encerrar no RunEvent::Exit"
+      },
+      {
+        "id": "steam.dev-release-separation",
+        "ok": true,
+        "detail": "AppID 480 é somente desenvolvimento; release não deve hardcodar/bundlar steam_appid.txt"
+      },
+      {
+        "id": "steam.cargo-feature",
+        "ok": true,
+        "detail": "Steamworks deve permanecer feature Cargo explícita e default"
+      },
+      {
+        "id": "cargo.manifest-immutable",
+        "ok": true,
+        "detail": "Stage 88 não deve adicionar profile.release ao Cargo.toml certificado"
+      },
+      {
+        "id": "release.override",
+        "ok": true,
+        "detail": "override Stage 88 deve evitar build frontend duplicado dentro do Tauri CLI"
+      },
+      {
+        "id": "release.cargo-manifest-preservation",
+        "ok": true,
+        "detail": "smokes nativos devem restaurar Cargo.toml byte-a-byte após normalização transitória do Tauri CLI"
+      },
+      {
+        "id": "validation.deterministic",
+        "ok": true,
+        "detail": "gate full deve serializar arquivos Vitest e Cargo jobs"
+      },
+      {
+        "id": "release.linux-real-build",
+        "ok": true,
+        "detail": "smoke Linux deve gerar release real e evidência/hash do executável"
+      },
+      {
+        "id": "release.windows-nsis",
+        "ok": true,
+        "detail": "smoke Windows deve gerar NSIS real e evidência/hash do installer"
+      },
+      {
+        "id": "workflow.immutable-artifact-handoff",
+        "ok": true,
+        "detail": "workflow deve certificar um SHA imutável, transferir evidência Linux por artifact e cancelar revisões obsoletas"
+      }
+    ],
+    "violations": []
+  },
+  "releaseEvidence": {
+    "schemaVersion": 1,
+    "stage": 88,
+    "status": "PASS",
+    "platform": "linux",
+    "arch": "x64",
+    "rustToolchain": "rustc 1.97.0 (2d8144b78 2026-07-07)",
+    "cargoBuildJobs": 1,
+    "cargoHashBefore": "fbfe89089b1eccd8d5901a2143486a61ac3b6ded0c4e5dfc645d278d43648902",
+    "cargoHashAfter": "fbfe89089b1eccd8d5901a2143486a61ac3b6ded0c4e5dfc645d278d43648902",
+    "cargoManifestMutatedByTauri": true,
+    "cargoManifestRestored": true,
+    "executablePath": "src-tauri/target/release/projeto1",
+    "executableBytes": 16807176,
+    "executableSha256": "be88b9103aa62f8c9b3ce78f97e7e47aedbc158f210068c3d36ab9ed863e65b0",
+    "frontendEntry": "dist/index.html",
+    "tauriConfigOverride": "src-tauri/tauri.stage88.conf.json",
+    "generatedAtUtc": "2026-10-09T17:28:18.745Z"
+  },
+  "windowsPackageEvidence": {
+    "schemaVersion": 1,
+    "stage": 88,
+    "status": "PASS",
+    "platform": "win32",
+    "arch": "x64",
+    "rustToolchain": "rustc 1.97.0 (2d8144b78 2026-07-07)",
+    "cargoBuildJobs": 1,
+    "cargoHashBefore": "516c7d8fdde9229c344d364d6747451e973d8ca568e61cc2b265af594cd73377",
+    "cargoHashAfter": "516c7d8fdde9229c344d364d6747451e973d8ca568e61cc2b265af594cd73377",
+    "cargoManifestMutatedByTauri": true,
+    "cargoManifestRestored": true,
+    "executablePath": "src-tauri/target/release/projeto1.exe",
+    "executableBytes": 10642432,
+    "executableSha256": "9b2d902ffbde320693305a7d011b3c165983e8d8a5301d810ead3e62ef95165d",
+    "installerPath": "src-tauri/target/release/bundle/nsis/projeto1_0.1.0_x64-setup.exe",
+    "installerBytes": 2979710,
+    "installerSha256": "9039072b7c8bb5340245035029a85df1ab84b05316d9516cafcfc9aa8555a2ee",
+    "installerCount": 1,
+    "tauriConfigOverride": "src-tauri/tauri.stage88.conf.json",
+    "generatedAtUtc": "2026-10-09T17:41:29.675Z"
+  },
+  "generatedAtUtc": "2026-10-09T17:41:30.233Z"
+}
