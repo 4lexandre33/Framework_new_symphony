@@ -1,5 +1,7 @@
 # Layer 1 — Como criar um jogo (guia curto, para humanos e IA)
 
+Para IA: use o manual completo e compacto em `docs/ai/INDEX.md` (API de todos os módulos + receitas).
+
 A engine é genérica. **O jogo é uma pasta-plugin em `src/projects/<nome>/`**, carregada
 automaticamente e removível apagando a pasta. Nunca coloque código de jogo em
 `src/core`, `src/engine`, `src/plugins`, `src/contracts` ou `src/tokens`.

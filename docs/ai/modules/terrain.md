@@ -1,0 +1,89 @@
+# terrain — Terreno Procedural, Biomas & Voxels
+capability: game.terrain@1.0.0 | category: functional | engine plugin id: game.terrain
+dependsOn: game.loop, game.render
+consumes: RenderToken
+use (from src/projects/<jogo>/**):
+  import { TerrainToken } from "../../tokens/terrain";
+  // acesso: const api = ctx.caps.require(Token)  (declare o token em capabilities.consumes + permissions.capabilities)
+
+## token src/tokens/terrain.ts
+```ts
+interface TerrainApi {
+  setSeed(seed: number): void;
+  getSeed(): number;
+  requestChunk(chunkCoord: Vector3Chunk): void;
+  unloadChunk(chunkCoord: Vector3Chunk): boolean;
+  getVoxelBlock(worldPos: Vector3Chunk): VoxelBlockData;
+  modifyVoxelBlock(request: VoxelModificationRequest): boolean;
+  getBiomeAt(worldPos: Vector3Chunk): BiomeDescriptor;
+  getActiveChunkCount(): number;
+  update(deltaSeconds: number, playerPosition?: Vector3Chunk): void;
+  clear(): void;
+}
+capability TerrainToken = "game.terrain"@1.0.0 api TerrainApi
+```
+## contract src/contracts/terrain/types.ts
+```ts
+interface Vector3Chunk {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
+interface VoxelBlockData {
+  readonly id: number;
+  readonly metadata?: number;
+}
+interface BiomeDescriptor {
+  readonly biomeId: string;
+  readonly name: string;
+  readonly surfaceBlockId: number;
+  readonly subSurfaceBlockId: number;
+  readonly minHeight: number;
+  readonly maxHeight: number;
+  readonly temperature: number;
+  readonly moisture: number;
+}
+interface ChunkDataMatrix {
+  readonly coord: Vector3Chunk;
+  readonly sizeX: number;
+  readonly sizeY: number;
+  readonly sizeZ: number;
+  readonly blocks: Uint8Array;
+}
+interface VoxelModificationRequest {
+  readonly worldPosition: Vector3Chunk;
+  readonly newBlockId: number;
+}
+interface CompiledChunkMeshBuffers {
+  readonly chunkCoord: Vector3Chunk;
+  readonly positions: Float32Array;
+  readonly normals: Float32Array;
+  readonly uvs: Float32Array;
+  readonly indices: Uint32Array;
+  readonly transparentPositions?: Float32Array;
+  readonly transparentNormals?: Float32Array;
+  readonly transparentUvs?: Float32Array;
+  readonly transparentIndices?: Uint32Array;
+}
+interface ChunkGeneratedPayload {
+  readonly chunkCoord: Vector3Chunk;
+  readonly totalVertices: number;
+  readonly generationTimeMs: number;
+}
+event ChunkGeneratedEvent = "game.terrain.chunk-generated" payload ChunkGeneratedPayload
+interface BlockModifiedPayload {
+  readonly worldPosition: Vector3Chunk;
+  readonly oldBlockId: number;
+  readonly newBlockId: number;
+}
+event BlockModifiedEvent = "game.terrain.block-modified" payload BlockModifiedPayload
+interface RequestChunkLoadPayload {
+  readonly chunkCoord: Vector3Chunk;
+  readonly seed: number;
+}
+command RequestChunkLoadCommand = "game.terrain.request-chunk" request RequestChunkLoadPayload
+interface ModifyVoxelBlockPayload {
+  readonly request: VoxelModificationRequest;
+}
+command ModifyVoxelBlockCommand = "game.terrain.modify-block" request ModifyVoxelBlockPayload
+```

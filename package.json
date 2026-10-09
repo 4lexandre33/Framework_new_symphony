@@ -33,6 +33,8 @@
     "stage89:audit": "node scripts/architecture/stage89-audit-documentation.mjs",
     "stage89:validate": "node scripts/architecture/stage89-validate-documentation.mjs",
     "stage89:finalize": "node scripts/architecture/stage89-finalize-documentation.mjs",
+    "ai-manual:generate": "node scripts/architecture/generate-ai-manual.mjs",
+    "ai-manual:check": "node scripts/architecture/generate-ai-manual.mjs --check",
     "project:isolation": "node scripts/architecture/check-project-isolation.mjs",
     "stage90:validate": "node scripts/architecture/stage90-validate-layer1-gate.mjs",
     "stage90:finalize": "node scripts/architecture/stage90-finalize-layer1-gate.mjs"

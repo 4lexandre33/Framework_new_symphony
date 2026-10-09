@@ -8,6 +8,7 @@ A documentação técnica está em:
 
 - `docs/layer1/README.md` — Layer 1 (engine, runtime, Tauri/Steam, projetos consumidores, validação);
 - `docs/layer2/README.md` — Layer 2 (Domain);
+- `docs/ai/INDEX.md` — manual para IA criar jogos sobre a engine (gerado do código);
 - `AGENTS.md` — regras permanentes de engenharia;
 - `WORKFLOW.md` — processo do Symphony;
 - `SPEC.md` — destino, roteiro de stages e critérios de aceite.

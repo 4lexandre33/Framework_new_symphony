@@ -8,6 +8,10 @@ O código de um jogo deve ser consumidor da engine, não uma modificação indis
 
 `SPEC.md` define o destino. O ticket do Linear define o escopo atual. `WORKFLOW.md` define o processo do Symphony.
 
+## Criar jogos com IA
+
+Para criar um jogo sobre a engine, leia **`docs/ai/INDEX.md`** (manual gerado do código: regras, contrato do plugin, API de cada módulo e receitas que compilam). Não é preciso ler `src/engine/**`. O jogo vive somente em `src/projects/<jogo>/`. Mantenha o manual em dia com `npm run ai-manual:generate` (`npm run ai-manual:check` valida).
+
 ## Fontes de verdade
 
 Em caso de conflito:
