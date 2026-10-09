@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "stage": 86,
+  "status": "PASS",
+  "gitHeadBeforeStage86Commit": "9bfa6fb58c892bc06b69c2172371ed52ec2ba8b2",
+  "audit": {
+    "schemaVersion": 1,
+    "stage": 86,
+    "auditVersion": "1.0.0",
+    "ok": true,
+    "checks": [
+      {
+        "id": "render.dispose",
+        "file": "src/engine/render/internal/ThreeRenderEngine.ts",
+        "ok": true,
+        "missingPatterns": []
+      },
+      {
+        "id": "render.resource-ownership",
+        "file": "src/engine/render/internal/SceneGraphManager.ts",
+        "ok": true,
+        "missingPatterns": []
+      },
+      {
+        "id": "viewport.listener-release",
+        "file": "src/engine/render/internal/ViewportManager.ts",
+        "ok": true,
+        "missingPatterns": []
+      },
+      {
+        "id": "input.listener-release",
+        "file": "src/engine/input/internal/KeyboardMouseDriver.ts",
+        "ok": true,
+        "missingPatterns": []
+      },
+      {
+        "id": "assets.lifecycle",
+        "file": "src/engine/assets/internal/AssetsManagerService.ts",
+        "ok": true,
+        "missingPatterns": []
+      },
+      {
+        "id": "terrain.worker-lifecycle",
+        "file": "src/engine/terrain/internal/ProceduralWorkerPool.ts",
+        "ok": true,
+        "missingPatterns": []
+      },
+      {
+        "id": "network.socket-lifecycle",
+        "file": "src/engine/net/internal/WebSocketTransport.ts",
+        "ok": true,
+        "missingPatterns": []
+      },
+      {
+        "id": "physics.lifecycle",
+        "file": "src/engine/physics/internal/PhysicsWorld.ts",
+        "ok": true,
+        "missingPatterns": []
+      },
+      {
+        "id": "kernel.inverse-shutdown",
+        "file": "src/core/runtime/stop.ts",
+        "ok": true,
+        "missingPatterns": []
+      },
+      {
+        "id": "hotpath.render.no-transient-materialization",
+        "file": "src/engine/render/internal/ThreeRenderEngine.ts",
+        "ok": true,
+        "missingPatterns": []
+      }
+    ],
+    "violations": []
+  },
+  "generatedAtUtc": "2026-10-09T15:41:45.204Z"
+}
