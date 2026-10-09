@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "stage": 88,
+  "desktop": {
+    "productName": "projeto1",
+    "identifier": "com.projeto1.game",
+    "frontendDist": "../dist",
+    "releaseBundle": "NSIS",
+    "resizable": true,
+    "cspRequired": true
+  },
+  "steam": {
+    "devAppId": "480",
+    "defaultCargoFeature": "steam",
+    "releaseShutdown": "Tauri RunEvent::Exit -> SteamState.shutdown"
+  },
+  "certification": {
+    "platform": "windows-latest",
+    "rustToolchain": "1.97.0",
+    "cargoBuildJobs": 1,
+    "vitestFileParallelism": false,
+    "cargoManifestMutationForbidden": true
+  },
+  "knownToolchainExclusions": {
+    "1.99.0": "reproduced internal compiler SIGSEGV/SIGBUS in isolated minimal crates during investigation",
+    "1.98.1": "reproduced compiler ICE during local release investigation"
+  }
+}
