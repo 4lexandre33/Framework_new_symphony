@@ -36,3 +36,21 @@ REGRAS
 - src-tauri/Cargo.toml não pode mudar.
 - O release Linux precisa produzir executável real.
 - O release Windows precisa produzir projeto1.exe e instalador NSIS real.
+
+REVISION 2.0.2 — CI
+-------------------
+A certificação oficial usa um SHA imutável em ambos os runners.
+
+Linux:
+  - preflight completo;
+  - Tauri release --no-bundle;
+  - upload do executável e ETAPA88_RELEASE_SMOKE_EVIDENCE.json como artifacts.
+
+Windows:
+  - checkout do mesmo github.sha;
+  - download da evidência Linux;
+  - Tauri release --bundles nsis;
+  - finalização e commit único de ETAPA88_*.
+
+A concurrency cancela execuções Stage 88 obsoletas quando uma revisão nova é
+publicada. A auditoria é CRLF/LF-agnostic.
