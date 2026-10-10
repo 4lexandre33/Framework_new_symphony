@@ -5,3 +5,4 @@
 - `registerEntity`/`updateEntityState`/`getInterpolatedState` funcionam em memória, sem conexão.
 - Para testar multiplayer no jogo: isole a rede atrás de uma porta do jogo e use um transporte loopback de TESTE (dois "peers" em memória).
 - `StateReplicator`: `pushEntitySnapshot` ignora snapshot com `sequence` não mais novo que o último; cria a entidade se não existir (`registerEntity` é opcional). `getInterpolatedState(id, alpha)` interpola entre os DOIS ÚLTIMOS snapshots com `alpha` 0..1 (com 1 snapshot devolve ele). Logo `alpha` deve ser "tempo desde a chegada do último snapshot ÷ intervalo entre snapshots", não o alpha do render. O objeto devolvido é reutilizado: copie os números.
+- Steam: só canais 0 e 1 funcionam; pacote não confiável ≤ 1.200 B (G104). Queda de par não é detectada: faça heartbeat (G105). `rttMs` sempre 0 (G108).

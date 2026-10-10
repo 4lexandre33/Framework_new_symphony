@@ -7,3 +7,5 @@
 - Campos obrigatórios do spring-arm: `targetArmLength`, `probeRadius`, `socketOffset`, `targetOffset`. `configureSpringArm(id, {targetArmLength})` muda o zoom SEM zerar o shake.
 - `addTrauma(0..1)` sacode a câmera ativa (decai sozinho).
 - Isométrica: `rotation` = quaternion de yaw 45° e pitch −35°; spring-arm com braço 25–60; zoom = `configureSpringArm`. Receita: `docs/ai/RECIPES.md` (10-camera).
+- Spring-arm com colisão LIGADA por padrão (G45): sempre `enableCollision: false` salvo se o socket estiver fora de qualquer collider.
+- `priority` é ignorada (G46): chame `setActiveCamera(id, 0)` logo após registrar e `setFollowTarget` logo em seguida. `setFollowTarget` guarda a referência do objeto: passe um objeto dedicado (G48).

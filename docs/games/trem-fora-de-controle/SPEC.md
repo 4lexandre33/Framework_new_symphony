@@ -11,7 +11,7 @@ Este documento é a ORDEM DE SERVIÇO. O GDD é a visão completa; esta SPEC rec
 ### 0.1 Leitura obrigatória, nesta ordem
 1. `docs/ai/INDEX.md` — mapa do manual.
 2. `docs/ai/RULES.md` — regras (inclui a tabela "Quem atualiza o quê").
-3. `docs/ai/GAPS.md` — o que a engine NÃO faz e o contorno aprovado (G1…G24). Esta SPEC já usa esses contornos.
+3. `docs/ai/GAPS.md` — o que a engine NÃO faz e o contorno aprovado (G1…G129, auditoria completa das 23 capacidades). Esta SPEC já usa esses contornos; a §0.6 lista os que mudam o jeito de implementar.
 4. `docs/ai/CORE.md` — contrato de plugin.
 5. Cada `docs/ai/modules/<chave>.md` **no momento** da tarefa que usa o módulo (a tarefa diz qual).
 6. `docs/ai/RECIPES.md` — trechos que compilam (10-camera, 12-input-edge-events, 13-terrain-chunks, 14-local-frame são a base deste jogo).
@@ -60,6 +60,31 @@ git diff --check
 - Nenhum arquivo fora das duas pastas alterado (`git status`).
 - Linha atualizada na matriz do `ENGINE_REPORT.md` para cada capacidade que a tarefa tocou.
 
+### 0.6 Ajustes obrigatórios vindos da auditoria completa (`docs/ai/GAPS.md`)
+Aplique em TODAS as tarefas. O número entre parênteses é o item do GAPS.md com o detalhe.
+- **Comandos não devolvem nada** (G29): para obter resultado use os métodos do token; comandos só "dispare e esqueça" (`game.streaming.set-radius`).
+- **Erros em handlers são engolidos** (G30): `try/catch` no handler de tick do jogo; em erro, estado "Erro" + `dumpCrashReport` (limite 3 por sessão, G115).
+- **Objetos devolvidos são reutilizados** (G31, G33): copie números de `getBodyTransform`, `getInterpolatedState`, `getEntityState`, `getViewportDimensions` e do payload do tick na hora.
+- **Janela nativa** (G32): `tauri.conf.json` vem com `alwaysOnTop: true`, transparente e sem bordas. No boot, `overlay.setAlwaysOnTop(false)`; o menu tem botão "Sair". Slots de save e ids prefixados `trem`.
+- **Física** (G34, G36, G37): remover corpo não emite `collision-exit` (limpe seus conjuntos de contato); `castRay` acerta sensores e o próprio corpo; restitution ≤ 1; consulte por raio só no tick seguinte à criação.
+- **Aba oculta** (G38): ouça `visibilitychange`; em solo, pause ao esconder.
+- **Render** (G41, G42, G43): o desenho ocorre ANTES dos handlers de `game.loop.render` (1 frame de atraso — aceitável); `removeMeshFromScene` LIBERA geometria/material (exceto se outro objeto registrado os usa): registre poucos `Group`s, esconda com `visible=false` e só remova no dispose; Points/Line/Sprite você libera. Far da câmera = 1000.
+- **Câmera** (G45–G48): spring-arm com `enableCollision: false`; `setActiveCamera(id, 0)` logo após registrar; `setFollowTarget` logo após registrar; reaplique trauma após trocar de câmera.
+- **Input** (G49–G53): nunca chame `InputApi.update()`; filtre `state` (o evento sai a cada frame para `held`); `preventDefault` de Space/Tab num adapter e `stopPropagation` de cliques no DOM do HUD (senão disparam `UseTool`); ignore input com campo de texto do jogo focado.
+- **Terreno** (G54–G58): em bioma `mountains` a altura satura em 128 — limite `h = min(h, 120)`; defina a seed só por `setSeed` e nunca use o comando `request-chunk`; `unloadChunk` perde as destruições (aceito; registre); peça no máximo 2 chunks por tick (fila) e trate chunk que não chega em 10 s (timeout + log).
+- **World** (G64, G67, G68): use `querySpatialGrid` (não `queryOctree`); `spawnEntity` com TODOS os campos (`tags: []`, `customData: {}`); ordene e calcule distâncias no jogo.
+- **IA** (G69–G73): `checkLineOfSight: false`, `hearingRadius: 0`, sem `triggerAudioStimulus`; polígonos da navmesh com vértices compartilhados EXATAMENTE iguais nas arestas vizinhas, sem sobreposição em XZ; `navAgentRadius: 0` com a navmesh já recuada 0,4 das paredes; sempre `initialPosition`; valide destino com ponto-no-polígono do jogo.
+- **Animação** (G74–G78): ordem estados → transições → `playAnimation(inicial, 0)`; repetir a mesma ação = `playAnimation("Idle", 0)` e depois a ação no mesmo tick; `durationSeconds` = `clip.duration`; ids sem ":".
+- **Assets** (G79, G81, G82): `loadGLTF` não clona (não usamos glTF); não use `clearCache`; JSON do atlas por `fetch` próprio (não há loader `json`).
+- **Áudio** (G80, G84–G87): `setChannelVolume(c, v, isChannelMuted(c))` (sem o 3º argumento desmuta); `crossfade-completed` sai no início — temporize no jogo; posicionais com `distanceModel: "linear"`; limite 8 one-shots simultâneos.
+- **UI** (G96–G99): a engine captura ESC (abre `pause_menu` e esconde o HUD): ao ver `game.ui.screen-changed` com `pause_menu`, chame `openScreen("hud")` e abra a PAUSA DO JOGO (o ESC então também pausa); não use `setLocale` nem `[data-i18n]`; um modal por vez (`popModal` fecha o do topo); `updateHUD` só quando o valor mudar, com máximos ≥ 1.
+- **Storage** (G101–G103): `loadGame` pode REJEITAR com save corrompido — `try/catch` e volte ao padrão; inclua `playTimeSeconds`, `gameVersion` e `schemaVersion` no topo dos dados; nomes de slot só `[A-Za-z0-9_-]`.
+- **Rede** (G104–G108): canais 0/1 só; heartbeat próprio; `unregisterEntity` de quem sumiu do snapshot; normalize o sinal de quatérnios antes do push; RTT medido pelo jogo.
+- **Segurança** (G113–G115): FPS medido pelo jogo (o do profiler é sempre o tick rate).
+- **Monetização** (G119, G120): só carteira; valide `Number.isSafeInteger(v) && v > 0` antes de creditar/debitar; nunca `clear()`.
+- **Overlay** (G15, G121): não use passthrough nem `setOverlayMode`; garanta elemento interativo no pixel (0,0) (o `#screen-hud` já cobre a tela); não confie nos getters.
+- **Scripting** (G123–G129): sem `conditionVariable` nas escolhas; valide o índice contra `getCurrentDialogueNode().choices`; `startQuest` só se `getQuestState(id)` for `null` ou `not_started`; `registerQuest` só no boot; `triggerOnce: false`; antes de remover entidade checada em zona, `checkEntityInZones(id, {x:Infinity,y:Infinity,z:Infinity})`; `stopCutscene()` antes de cada `playCutscene`; raio de esfera/cilindro em `dimensions.z`.
+
 ---
 
 ## 1. O que é o mini-jogo (escopo)
@@ -96,7 +121,7 @@ Outros modos (§21.2–21.6), mais biomas próprios, robôs auxiliares, espectad
 3. Ao menos uma falha mecânica, uma desconexão de vagão (com reengate) e um evento externo acontecem numa partida com seed 1234 jogada pelo bot roteirizado da T09 (política definida lá) — provado por teste de simulação headless.
 4. Sincronização host↔clientes provada por teste loopback (2 e 4 jogadores).
 5. Partida termina corretamente em vitória e em cada derrota (testes).
-6. Matriz de capacidades (§12) com as 23 capacidades + `game.steam.net` marcadas e evidência.
+6. Matriz de capacidades (§12) com as 23 capacidades marcadas e evidência (mais uma linha para `game.steam.net`: "não fornecido pela engine, G109").
 
 ---
 
@@ -174,12 +199,13 @@ src/projects/trem/
     InputAdapter.ts            (InputApi + game.input.action)
     AnimAdapter.ts             (AnimationApi)
     AudioAdapter.ts            (AssetsApi + AudioApi)
-    VfxAdapter.ts              (VfxApi + AssetsApi)
+    VfxAdapter.ts              (VfxApi + AssetsApi: decals)
+    VoxelParticles.ts          (partículas do jogo: InstancedMesh, G88)
     NavAdapter.ts              (AiApi)
     QuestAdapter.ts            (ScriptingApi)
     HudView.ts  Menus.ts  ValveMinigame.ts   (UIApi + DOM)
-    RoutePanel.ts              (SpritesApi + AssetsApi)
-    NetAdapter.ts              (NetworkApi + SteamNetworkApi)
+    RoutePanel.ts              (SpritesApi: parseAtlas/getFrameUV + malhas do jogo, G92)
+    NetAdapter.ts              (NetworkApi)
     SaveAdapter.ts             (StorageApi + MonetizationApi + SecurityApi)
     SteamAdapter.ts            (SteamApi + UnlockAchievementCommand)
     ModAdapter.ts              (ModdingApi)
@@ -209,7 +235,7 @@ public/projects/trem/
 ### 3.4 Plugin de composição (`TremPlugin.ts`)
 - `manifest.id = "project.trem"`, `kind: "preloaded"`, `authority: "game"`, `version: "0.1.0"`.
 - `dependsOn`: os 23 ids `game.*` com `range: "^1.0.0"` (game.loop, game.render, game.physics, game.input, game.assets, game.storage, game.world, game.ui, game.anim, game.sprites, game.audio, game.camera, game.ai, game.vfx, game.terrain, game.scripting, game.streaming, game.overlay, game.security, game.modding, game.monetization, game.net, game.steam).
-- `capabilities.consumes`: os 24 tokens (os 23 + `SteamNetworkToken` = `game.steam.net`), todos `optional: false`, e `permissions.capabilities` com os mesmos 24 ids. `permissions.events: []`.
+- `capabilities.consumes`: os **23** tokens das capacidades (todos `optional: false`) e `permissions.capabilities` com os mesmos 23 ids. **NÃO consuma `SteamNetworkToken` (`game.steam.net`)**: nenhum plugin o fornece e, declarado como obrigatório, o jogo NÃO SOBE (G109). `permissions.events: []`.
 - `setup(ctx)`: (1) `require` de todos os tokens; (2) cria adapters; (3) cria `Simulation`/sessão em estado `Lobby`; (4) assina tick/render pelo `LoopAdapter`; (5) registra cada dispose; (6) `ctx.lifecycle.ready()`.
 - Carregamento assíncrono (sons, texturas) acontece em `onBoot`/depois do `ready()`, mostrando "Carregando…" no HUD; nunca bloqueie o `setup`.
 
@@ -404,11 +430,11 @@ Forçados: E1 em t = 60 s de jogo (tutorial, GDD §33); E3 e E6 ao entrar na Cri
 
 ### 6.7 Saqueadores (domain/encounter/RaiderBrain.ts + adapters/NavAdapter.ts) — módulo `ai`
 - Quantidade por E3: Escalada 2, Crise 3; +1 se ≥ 3 jogadores; máximo 4 vivos.
-- Surgem numa ledge livre (sem barricada) da oficina ou do tanque (fluxo `RAIDERS`). antes de registrar, `world.spawnEntity` da entidade `raider:<id>` (tipo `raider`, posição da ledge na ilha) e só então `registerAgent({ agentId, entityId, maxSpeed: 2.2, stoppingDistance: 0.6, navAgentRadius: 0.4, initialPosition, perceptionConfig:{ visionAngleDegrees: 120, visionDistance: 8, checkLineOfSight: true } })`. `despawnEntity` quando sumir.
+- Surgem numa ledge livre (sem barricada) da oficina ou do tanque (fluxo `RAIDERS`). antes de registrar, `world.spawnEntity` da entidade `raider:<id>` (tipo `raider`, posição da ledge na ilha) e só então `registerAgent({ agentId, entityId, maxSpeed: 2.2, stoppingDistance: 0.6, navAgentRadius: 0.4, initialPosition, perceptionConfig:{ visionAngleDegrees: 120, visionDistance: 8, hearingRadius: 0, checkLineOfSight: false } })` (linha de visão da engine está quebrada, G69; audição falsa, G70)`. `despawnEntity` quando sumir.
 - Navmesh (`loadNavMesh`) em coordenadas da ilha: retângulos de piso de cada carro, passarelas (só se o engate estiver inteiro), ledges e portas (polígonos de 4 vértices, vizinhos por adjacência). Recarregar a navmesh em todo `CouplingBroke`/`CarRecoupled`.
 - FSM do jogo: `Aproximar` (alvo = componente de menor integridade do carro, ou caixa; malote só se não houver outra caixa) → `Sabotar` (≤ 1,2 do componente: −4/s por 8 s) ou `Roubar` (pega caixa: corpo removido, segue o agente) → `Fugir` (vai à ledge mais próxima e some; caixa perdida). `setAgentTarget` em cada mudança; posição lida por `getAgentPosition` a cada tick.
 - **Pontos de serviço**: cada componente e depósito tem um ponto de serviço (x,z na ilha) SOBRE a navmesh, a 0,8 da face voltada ao corredor. É o alvo do `setAgentTarget` e a referência das distâncias (≤ 1,2 sabotar; jogadores interagem a ≤ 1,8 do mesmo ponto).
-- Ser atingido: `UseTool` com chave ou mãos a ≤ 1,6 e na frente (ângulo < 60°): HP −1 (HP 3), agente **atordoado 1,5 s** (`setAgentTarget` para a própria posição; a API não move agentes); HP 0 ⇒ `Fugir` e derruba a caixa roubada (caixa volta como corpo). `triggerAudioStimulus(pos, 6)` em cada golpe.
+- Ser atingido: `UseTool` com chave ou mãos a ≤ 1,6 e na frente (ângulo < 60°): HP −1 (HP 3), agente **atordoado 1,5 s** (`setAgentTarget` para a própria posição; a API não move agentes); HP 0 ⇒ `Fugir` e derruba a caixa roubada (caixa volta como corpo). (NÃO use `triggerAudioStimulus`: ele redireciona todos os agentes, G70).
 - `unregisterAgent` ao sumir e no dispose.
 
 ### 6.8 Incêndio (domain/survival/Fire.ts)
@@ -455,7 +481,7 @@ Stat Steam: `distancia_total` = `totalDistance` do save (somado no fim da partid
 | Opt1…Opt5 | Digit1…Digit5 | sem menu aberto: Opt1/2/3 = ferramenta gancho/chave/mãos; com menu (fabricar, mensagens) = escolha |
 | CamFollowToggle | KeyC | |
 | CamRotate | KeyR | |
-| Pause | Escape | |
+| Pause | KeyP | (o ESC é capturado pela UI da engine, G96: ver §7.6) |
 | Debug | F3 | |
 - Bordas (Interact pressionado, Jump, UseTool, Drop, Inventory, QuickMsg, Opt*, Cam*, Pause, Debug) pelo evento `game.input.action` (`state:"pressed"`) — enfileire e consuma no próximo tick. Soltar Interact: `state:"released"`. Contínuos (eixos, Sprint, Interact segurado) lidos no tick.
 - **Exceção**: `Pause`, `Inventory`, `Debug` e escolhas de menus são tratados NA HORA no handler do evento (não na fila do tick), porque `GameLoopApi.pause()` congela o tick (G23) e o Esc para sair da pausa nunca seria consumido.
@@ -479,7 +505,7 @@ Receita 10. Tick: `setFollowTarget` com a posição no mundo do jogador local (o
 - `unregisterEntity` no dispose.
 
 ### 7.5 Áudio (adapters/AudioAdapter.ts) — módulos `assets`, `audio`
-- Pré-carregar com `loadAudio(resolve(url))` todos os sons da tabela antes de liberar o botão "Jogar".
+- A primeira tela é "Clique para começar": `loadAudio` fica PENDENTE até o primeiro gesto do usuário (G80). Só depois do clique, pré-carregar com `loadAudio(resolve(url))` todos os sons da tabela; o botão "Jogar" libera quando terminar. Nos testes, mock de assets/áudio (G83, G86).
 | Som | Uso | Canal | Tipo |
 |---|---|---|---|
 | apito.wav | partida, estação, chegada | sfx posicional | one-shot |
@@ -506,27 +532,28 @@ Receita 10. Tick: `setFollowTarget` com a posição no mundo do jogador local (o
 - Objetivos: lista das quests ativas (do QuestAdapter).
 - Barra de progresso de ação segurada (reparo/fabricação/engate).
 - Minigame da válvula: barra horizontal com marcador oscilando (período 1,2 s) e zona verde de 20%; E na zona = sucesso; 3 erros = falha (T +10).
-- Menus por `pushModal({ id, title, contentHtml, closable })` com botões `data-action`, tratados por UM listener delegado no `#trem-hud`/documento (removido no dispose); `popModal` ao fechar. **Escape texto vindo de jogador/rede.** Telas: Principal (Jogar solo, Criar lobby, Entrar, Garagem, Ajustes, Mods), Lobby, Pausa (só solo: `GameLoopApi.pause()`/`resume()`; o botão "Continuar" e o Esc chamam `resume()` direto no handler), Estação (diálogo), Bifurcação, Resultados, Garagem (cosméticos), Ajustes, Mods, Erro.
+- Menus por `pushModal({ id, title, contentHtml, closable })` com botões `data-trem-action` (NÃO `data-action`: a engine intercepta cliques em `[data-action]`, G96), tratados por UM listener delegado no `#trem-hud`/documento (removido no dispose); `popModal` ao fechar. **Escape texto vindo de jogador/rede.** Telas: Principal (Jogar solo, Criar lobby, Entrar, Garagem, Ajustes, Mods), Lobby, Pausa (só solo: `GameLoopApi.pause()`/`resume()`; o botão "Continuar" e o Esc chamam `resume()` direto no handler), Estação (diálogo), Bifurcação, Resultados, Garagem (cosméticos), Ajustes, Mods, Erro.
 - Mensagens rápidas (Q, depois Opt1–Opt5): "Preciso de carvão!", "Vagão desconectando!", "Inimigos na retaguarda!", "Freia o trem!", "Falta água!" — toast para todos (rede) + ícone sobre o jogador (§7.8).
 
-### 7.7 VFX (adapters/VfxAdapter.ts) — módulo `vfx`
-| Efeito | Como (G19: re-emitir em rodízio) |
+### 7.7 VFX (adapters/VfxAdapter.ts + adapters/VoxelParticles.ts) — módulo `vfx`
+**As partículas da engine não aparecem no navegador (G88) e vazam GPU ao parar (G89).** Por isso as partículas são do JOGO: `VoxelParticles` = um pool de `THREE.InstancedMesh` de cubos (máx. 2.000 instâncias, 1 material por cor, `addMeshToScene` UMA vez; instâncias livres com escala 0), simulado no tick (posição, velocidade, gravidade, vida) e copiado para as matrizes no render.
+| Efeito | Como |
 |---|---|
-| Fumaça da chaminé | emissor curto `fumaca-<n%4>` a cada 0,5 s na chaminé; taxa ∝ L⁺+1 |
-| Vapor da válvula | emissor 1 s |
-| Faíscas de reparo | emissor 0,5 s, aditivo |
-| Fogo | `fogo-<carro>-<n%3>` a cada 0,5 s enquanto I>0, tamanho ∝ I |
-| Destroços cúbicos | `triggerVFXPreset` com `particleEmitter.emitterId` em rodízio `detrito-<n%4>` e `screenShakeTrauma: 0` (o trauma vem só do CameraRig, com a opção de acessibilidade) |
-| Chuva | emissor grande em torno do foco, re-emitido a cada 1 s na tempestade |
-| Decal queimado | `projectDecal` (textura `textures/queimado.png` pré-carregada com `loadTexture`) onde explodiu / onde houve fogo; `lifetimeSeconds: 60` |
-| Pós-processamento | `configurePostProcessing({ enableBloom:true, bloomStrength:0.6 })` uma vez e `pulseBloom` em explosões — sem efeito visível hoje (G9); registre no relatório |
-Emissores não têm duração: o VfxAdapter guarda `{id, paraEm}` e chama `stopParticleEmitter(id)` quando o tempo de jogo passa de `paraEm` (fumaça 0,6 s, vapor 1 s, faíscas 0,5 s, fogo 0,6 s, detritos 0,8 s, chuva 1,2 s). No dispose, `stopParticleEmitter` de todos os ids já usados e `clearDecals()`.
+| Fumaça da chaminé | 6 cubos cinza/s × (L⁺+1), sobem 1,5 u/s, vida 2 s, crescem |
+| Vapor da válvula | 40 cubos brancos em 1 s |
+| Faíscas de reparo | 15 cubos amarelos, vida 0,4 s |
+| Fogo | 10 cubos/s × I por foco (laranja→vermelho), vida 0,8 s |
+| Destroços cúbicos | 30–60 cubos com a cor do objeto, impulso radial, gravidade |
+| Chuva | 300 cubos finos em volta do foco, re-posicionados ao sair do volume |
+| Decal queimado | `vfx.projectDecal` (textura `textures/queimado.png` pré-carregada com `loadTexture`), só em superfícies planas, `size.z: 0.01`, SEMPRE `lifetimeSeconds: 60` (G90) |
+| Pós-processamento | `vfx.configurePostProcessing({ enableBloom:true, bloomStrength:0.6 })` uma vez — não desenha nada (G9); registre |
+Uso do módulo `vfx`: `projectDecal`, `clearDecals`, `configurePostProcessing`, `getActiveDecalCount`. NÃO chame `spawnParticleEmitter`/`triggerVFXPreset`. No dispose: `clearDecals()` e remover/liberar o pool.
 
-### 7.8 Painel de rota e ícones (adapters/RoutePanel.ts) — módulo `sprites`
-- Atlas `atlas/icons.png` (ícones 32×32; 23 frames) + `atlas/icons.json` (formato TexturePacker hash) gerados em T01. `await assets.loadTexture(url)`; `parseAtlas(url, json, texture)`.
-- Painel na cabine: `renderTilemap({ layerId:"trem-route", atlasUrl, tileMatrix:{ width:32, height:4, tileSize:0.12, tiles } })` — linha do meio = rota (trilho, estação, bifurcação, rocha, fim), tile do trem na posição atual (recalcular a matriz ao mudar de tile, não por frame). O `InstancedMesh` devolvido é posicionado a cada frame no painel da cabine (pose da loco).
-- Fatos do tilemap (manual `sprites`): o número N em `tiles` usa o frame `tile_N` do atlas (−1 = vazio); chamar de novo com o mesmo `layerId` substitui. O atlas tem por isso também os frames `tile_0` (vazio-chão), `tile_1` (trilho), `tile_2` (estação), `tile_3` (bifurcação), `tile_4` (rocha), `tile_5` (fim), `tile_6` (trem).
-- Ícones flutuantes: `spawnSprite2D` acima de componente com integridade < 40, foco de fogo, saqueador, rocha avisada e mensagem rápida (3 s). Orientar para a câmera a cada frame (copiar quaternion da câmera). `despawnSprite2D` ao sumir.
+### 7.8 Painel de rota e ícones (adapters/RoutePanel.ts) — módulos `sprites`, `assets`
+**`spawnSprite2D`, `renderTilemap`, `despawnSprite2D`, `clear` e os comandos de sprites LANÇAM erro (G92) e o shader do tilemap está errado (G93).** Use do módulo `sprites` só `parseAtlas` e `getFrameUV`; o desenho é do JOGO.
+- Atlas `atlas/icons.png` (ícones 32×32, 23 frames) + `atlas/icons.json` (formato TexturePacker hash, sem `rotated`/`trimmed`) gerados em T01. `await assets.loadTexture(url)`; `sprites.parseAtlas(url, json, texture)`; `getFrameUV(url, nome)` → UVs.
+- Painel na cabine: `THREE.InstancedMesh` de planos 0,12 × 0,12 (32 × 4 tiles) com `MeshBasicMaterial({ map: texturaClonada, transparent:true })` e atributo de instância com o UV de cada tile (shader próprio via `onBeforeCompile` ou um material por tipo de tile — escolha o mais simples e documente). Linha do meio = rota (`tile_1` trilho, `tile_2` estação, `tile_3` bifurcação, `tile_4` rocha, `tile_5` fim; `tile_6` = trem na posição atual). Recalcular só ao mudar de tile. Posicionar no painel da cabine (pose da loco).
+- Ícones flutuantes: planos do jogo (`PlaneGeometry` + material com a textura clonada, UV do frame) acima de componente com integridade < 40, foco de fogo, saqueador, rocha avisada e mensagem rápida (3 s), orientados para a câmera a cada frame. Clone a textura (G95) para não mudar filtros da textura do cache.
 
 ### 7.9 Missões, diálogos, zonas, cutscenes (adapters/QuestAdapter.ts) — módulo `scripting`
 - Quests (`registerQuest` + `startQuest` + `advanceQuestProgress`): `malote` (obrigatória, 1 passo "Entregar o malote na estação final"), tutorial `fornalha` (abasteça 1×), `balde` (encha 1 balde), `primeiro-reparo` (1 reparo), opcionais `carvao-15` (deposite 15 carvão), `reparos-3`, `saqueadores-5`. O HUD lê `quest-updated`.
@@ -545,10 +572,12 @@ Emissores não têm duração: o VfxAdapter guarda `{id, paraEm}` e chama `stopP
 - `AssetResolver.resolve(url) = modding.getAssetOverride(url) ?? url` — usado por TODA carga de asset.
 - Tela Mods: lista `getLoadedMods()` (vazia sem Steam: "Nenhum mod instalado") e um interruptor "Mod de exemplo: apito alternativo" que faz `registerAssetOverride({ virtualPath:"/projects/trem/audio/apito.wav", realPath:"/projects/trem/mods/demo/apito-alt.wav", modId:"demo-apito", priority:10 })` e recarrega o som. Não há API para remover override: ao DESLIGAR, o `AssetResolver` passa a ignorar overrides do `modId` "demo-apito" (lista de mods desligados nos ajustes) e recarrega o som original; tente também `disableMod("demo-apito")` e registre o efeito no relatório.
 
-### 7.12 Steam e lobby (adapters/SteamAdapter.ts, NetAdapter.ts) — módulos `steam`, `game.steam.net`, `net`
-- `steam.isAvailable` falso ⇒ botões de lobby desabilitados com dica "Disponível no app da Steam".
-- Conquistas: `ctx.commands.send(UnlockAchievementCommand.type, { achievementId })` (não espere resposta). Stats: `setStat("distancia_total", total)` + `storeStats()` no fim.
-- Lobby (só com Steam): host `steamNet.createLobby("friendsOnly", 8)` → `setLobbyData(id, "seed", String(seed))`, `setLobbyData(id, "proto", "1")` e `setLobbyData(id, "host", (await steam.getUser())!.steamId)`; mostra o lobbyId na tela para o amigo digitar. Cliente: tela "Entrar" pede o lobbyId → `joinLobby(id)` → `getLobbyData(id,"host")`/`"seed"`/`"proto"` (proto diferente ⇒ recusar). Não há busca nem convite pela API: registre como lacuna. Sessão P2P: `game.steam.p2p-session-request` ⇒ `acceptP2PSession`. Transporte: `NetworkApi` (`startHost` no host; `connect(hostSteamId)` no cliente).
+### 7.12 Steam e lobby (adapters/SteamAdapter.ts, NetAdapter.ts) — módulos `steam`, `net`
+- `game.steam.net` NÃO existe em tempo de execução (G109) e os eventos `lobby-*`/`p2p-*` nunca saem (G110). Não use nada de `steam-net`.
+- No boot: `await steam.checkAvailability()` antes de decidir (`isAvailable` começa `false`, G112). Indisponível ⇒ botões de multiplayer desabilitados com dica "Disponível no app da Steam".
+- Conquistas: `steam.unlockAchievement(id)` (resolve `false` sem Steam; se `false` com Steam disponível, tente de novo no fim da partida). Stats: `setStat("distancia_total", Math.floor(totalDistance))` (só inteiro) + `storeStats()`.
+- Sessão (só com Steam): o host chama `steam.createLobby("friendsOnly", 8)` (só "sala"; sem membros nem dados, G26) e `net.startHost()`; mostra o SEU SteamID (`(await steam.getUser())!.steamId`) para o amigo. O cliente digita o SteamID do host → `net.connect(steamId)` → envia `Hello`. "Conectado" só depois do `Welcome` (G105: `connect` Steam não contata ninguém). Heartbeat: ping a cada 1 s; sem resposta por 5 s ⇒ par caiu.
+- Pacotes: só canais 0 e 1 (G104), não confiável ≤ 1.100 B; recepção por `game.net.packet-received`.
 
 ### 7.13 Overlay (adapters/OverlayAdapter.ts) — módulo `overlay`
 Ajuste "Modo transmissão": `setAlwaysOnTop(true/false)` + HUD compacto (só velocidade, integridade geral, alertas). NÃO chame `setPassthrough` nem `setOverlayMode` (G15). Registre no relatório o comportamento sem Tauri.
@@ -611,9 +640,9 @@ Host mantém o estado de um jogador desconectado por 60 s (personagem fica "Desm
 
 ### T00 — Esqueleto do projeto [CORE, RULES, GAPS] **[MARCO]**
 - Arquivos: `index.ts`, `TremPlugin.ts`, `config/balance.ts` (vazio com cabeçalho), `ENGINE_REPORT.md` (modelo da §12).
-- Passos: copiar a forma de `src/projects/_template/`; manifest da §3.4 com os 23 `dependsOn` e 24 consumes; `setup` só faz `require` de todos os tokens, loga "Trem pronto" e `ready()`.
+- Passos: copiar a forma de `src/projects/_template/`; manifest da §3.4 com os 23 `dependsOn` e 23 consumes; `setup` só faz `require` de todos os tokens, loga "Trem pronto" e `ready()`.
 - Aceite: `VITE_PROJECT=trem npm run build` passa; `project:isolation` passa.
-- Testes: `manifest.test.ts` — o manifest consome exatamente os 24 ids e depende dos 23; `permissions.capabilities` igual a consumes; `events` vazio.
+- Testes: `manifest.test.ts` — o manifest consome exatamente os 23 ids (e NÃO `game.steam.net`) e depende dos 23; `permissions.capabilities` igual a consumes; `events` vazio.
 
 ### T01 — Gerador de assets
 - Arquivos: `tools/gen-assets.mjs` e saída em `public/projects/trem/`.
@@ -674,7 +703,7 @@ Host mantém o estado de um jogador desconectado por 60 s (personagem fica "Desm
 - Arquivos: `AssetResolver.ts`, `AudioAdapter.ts`. Testes: todo som pré-carregado antes de tocar; clac com intervalo pela velocidade; música troca por intensidade; chuva liga/desliga por volume do canal `voice`; ouvinte atualizado no render.
 
 ### T16 — VFX [vfx]
-- Arquivos: `VfxAdapter.ts`. Testes: rodízio de ids de fumaça/fogo; decal só após textura carregada; dispose para emissores e limpa decals.
+- Arquivos: `VfxAdapter.ts`, `VoxelParticles.ts`. Testes: pool não passa de 2.000 instâncias e reaproveita livres; decal só após textura carregada e sempre com `lifetimeSeconds`; nenhuma chamada a `spawnParticleEmitter`/`triggerVFXPreset` (G88); dispose limpa decals e libera o pool.
 
 ### T17 — Saqueadores [ai, world]
 - Arquivos: `NavAdapter.ts` (navmesh da ilha; recarregar em engate rompido/reengatado), integração com `RaiderBrain`.
@@ -688,13 +717,13 @@ Host mantém o estado de um jogador desconectado por 60 s (personagem fica "Desm
 - Testes (jsdom): chaves data-bind presentes; atualização limitada (não por tick); alertas por nível com ícone; escape de nomes (`<img onerror>` vira texto); minigame sucesso/falha; dispose remove `#trem-hud` e o listener delegado.
 
 ### T20 — Painel de rota e ícones [sprites, assets]
-- Arquivos: `RoutePanel.ts`. Testes com fake: atlas parseado com a URL como chave; tilemap recalculado só ao mudar de tile; ícones criados/removidos.
+- Arquivos: `RoutePanel.ts`. Testes com fake: atlas parseado com a URL como chave e UVs vindos de `getFrameUV`; painel recalculado só ao mudar de tile; ícones criados/removidos; NENHUMA chamada a `spawnSprite2D`/`renderTilemap` (G92).
 
 ### T21 — Progresso, carteira, cosméticos, integridade [storage, monetization, security]
 - Arquivos: `SaveAdapter.ts`. Testes com fakes: slot ausente ⇒ padrão; hidratação da carteira única; compra debita e salva; `verifyIntegrity` falso impede crédito; checkpoint chama `serializeWorldState`.
 
-### T22 — Steam [steam, game.steam.net]
-- Arquivos: `SteamAdapter.ts`. Testes: sem Steam botões desabilitados e conquistas enviadas por comando sem quebrar; com fake "disponível", lobby criado com seed e proto.
+### T22 — Steam [steam]
+- Arquivos: `SteamAdapter.ts`. Testes: `checkAvailability` antes de decidir; sem Steam botões desabilitados e conquistas tentadas sem quebrar; com fake "disponível", host cria sala e mostra o SteamID; `setStat` recebe inteiro; nenhum uso de `SteamNetworkToken` (G109).
 
 ### T23 — Multiplayer [net] **[MARCO]**
 - Arquivos: `domain/net/*`, `adapters/NetAdapter.ts`, `testing/LoopbackHub.ts`. Testes da §8.5.
@@ -707,7 +736,7 @@ Host mantém o estado de um jogador desconectado por 60 s (personagem fica "Desm
 
 ### T26 — Composição final e cobertura de capacidades **[MARCO]**
 - `TremPlugin.ts` liga tudo; ordem de dispose inversa à criação.
-- `capabilities.test.ts`: monta o plugin com um `PluginContext` falso cujos 24 tokens são fakes que registram chamadas; roda 600 ticks de uma partida roteirizada; afirma que CADA capacidade teve ao menos as chamadas listadas na matriz §12 (ex.: terrain.requestChunk, streaming.registerSector, ai.loadNavMesh, sprites.renderTilemap, monetization.creditCurrency, modding.getAssetOverride, overlay.setAlwaysOnTop quando o ajuste é ligado, net.getStateReplicator, steamNet.createLobby com fake disponível…). Depois chama o dispose e afirma que tudo foi liberado (corpos removidos, emissores parados, agentes desregistrados, meshes removidas, listeners desfeitos). O `PluginContext` falso pode ser parcial (`as unknown as PluginContext`) com `id, log, caps, events, commands, lifecycle` implementados; `ctx.commands.send` não exige `permissions.events` (só `emit` é verificado pelo kernel).
+- `capabilities.test.ts`: monta o plugin com um `PluginContext` falso cujos 23 tokens são fakes que registram chamadas; roda 600 ticks de uma partida roteirizada; afirma que CADA capacidade teve ao menos as chamadas listadas na matriz §12 (ex.: terrain.requestChunk, streaming.registerSector, ai.loadNavMesh, sprites.getFrameUV, monetization.creditCurrency, modding.getAssetOverride, overlay.setAlwaysOnTop quando o ajuste é ligado, net.getStateReplicator, steam.createLobby com fake disponível…). Depois chama o dispose e afirma que tudo foi liberado (corpos removidos, pool de partículas e decals liberados, agentes desregistrados, meshes removidas, listeners desfeitos). O `PluginContext` falso pode ser parcial (`as unknown as PluginContext`) com `id, log, caps, events, commands, lifecycle` implementados; `ctx.commands.send` não exige `permissions.events` (só `emit` é verificado pelo kernel).
 - Aceite: todos os gates da §0.4 completos verdes.
 
 ### T27 — Smoke visual (se o ambiente permitir)
@@ -747,11 +776,11 @@ Modelo:
 | Capacidade | Usada em (arquivo) | Métodos/eventos usados | Status | Evidência |
 |---|---|---|---|---|
 | game.loop | LoopAdapter | tick, render, pause/resume, getStats | OK / OK com contorno Gx / BUG / NÃO TESTÁVEL (motivo) | teste X / captura Y |
-… (24 linhas: 23 + game.steam.net)
+… (23 linhas + 1 linha `game.steam.net` = "NÃO FORNECIDO (G109)")
 ## Bugs encontrados (novos)
 | # | Módulo | Descrição | Reprodução mínima (teste ou passos) | Severidade |
 ## Lacunas novas (não listadas em docs/ai/GAPS.md)
-## Confirmações de lacunas conhecidas (G1…G24) observadas
+## Confirmações de lacunas conhecidas (G1…G129) observadas
 ## Itens do manual que estavam errados/incompletos
 ## Desvios da SPEC (o que mudou e por quê)
 ## Desempenho observado (§11)
@@ -762,5 +791,5 @@ Status permitidos: `OK`, `OK (contorno Gx)`, `BUG (#n)`, `NÃO TESTÁVEL SEM TAU
 - [ ] T00–T28 concluídas, gates completos verdes.
 - [ ] `git status` só mostra `src/projects/trem/**` e `public/projects/trem/**`.
 - [ ] Apagar as duas pastas ⇒ `npm run project:isolation` verde.
-- [ ] Matriz com 24 linhas preenchidas e evidência.
+- [ ] Matriz com as 23 capacidades preenchidas e evidência (+ linha `game.steam.net`).
 - [ ] Critérios 1.3.1–1.3.6 demonstrados.

@@ -5,3 +5,5 @@
 - Códigos: `KeyboardEvent.code` (`KeyW`, `Space`, `ShiftLeft`, `Tab`), mouse `Mouse0`/`Mouse1`/`Mouse2`, gamepad `GamepadButtonN`. O analógico do gamepad só alimenta eixos chamados exatamente `MoveForward` e `MoveRight`.
 - LACUNA: não há roda do mouse. Para zoom, registre `wheel` no DOM dentro de um adapter do jogo (com `{ passive: true }`) e remova no dispose.
 - Teardown: devolva o dispose de qualquer listener registrado.
+- `game.input.action` sai A CADA FRAME para ações mantidas (`state:"held"`): filtre `pressed`/`released`. Toque curtíssimo emite `pressed` sem `released` (G50): "segurando" sempre por `isActionHeld` no tick.
+- Teclas/cliques são capturados mesmo com um campo de texto em foco (G51): ignore ações enquanto a UI do jogo tiver foco; `preventDefault` de Space/Tab num adapter. `getMouseDelta()` leia no render (G52).

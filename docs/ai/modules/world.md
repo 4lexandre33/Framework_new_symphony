@@ -124,3 +124,4 @@ command DespawnEntityCommand = "game.world.despawn-entity" request DespawnEntity
 - Os índices espaciais (`querySpatialGrid`, `queryOctree`) são atualizados no tick pela engine.
 - `world` é só dado (ECS + consultas): não cria malha nem corpo físico.
 - `game.ai` lê `world.getEntityState` em `registerAgent` (posição inicial) e em `setAgentTargetEntity` (posição do alvo no momento da chamada).
+- `spawnEntity` com id existente SOBRESCREVE (move) e reemite `entity-spawned` (G6). Todos os campos obrigatórios (G67). `queryOctree` só dentro de ±500 sem `worldBounds` (G64).

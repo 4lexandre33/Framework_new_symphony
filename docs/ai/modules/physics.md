@@ -116,3 +116,4 @@ command CastRayCommand = "game.physics.cast-ray" request CastRayRequest
 - `castRay` parte de `origin`: se o raio nascer dentro do próprio corpo ele o acerta. Comece abaixo/além da base do corpo.
 - `syncMeshTransform(id, mesh)` MUTA `mesh.position` e `mesh.quaternion` (copia do corpo para a malha).
 - O terreno voxel (`game.terrain`) NÃO cria colisores: o chão físico é responsabilidade do jogo.
+- `getBodyTransform` devolve SEMPRE o mesmo objeto (G33): copie os números na hora. Remover corpo não emite `collision-exit`/`trigger-exit` (G34). `restitution` > 1 lança (G37).

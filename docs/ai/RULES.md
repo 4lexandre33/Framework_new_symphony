@@ -13,13 +13,13 @@
 - Só por: `@core` (kernel), `src/tokens/*` (capabilities) e `src/contracts/*` (tipos/eventos/comandos). Nunca `src/engine/**/internal`, `src/core/internal`, `window.__*`, nem `game.debug`.
 - Fluxo: declare o token em `manifest.capabilities.consumes` E `manifest.permissions.capabilities`, depois `ctx.caps.require(Token)`.
 - Ordem de boot: `manifest.dependsOn` com ids `game.*` (ex.: `game.render`, `game.physics`). Cada módulo diz seu id em `docs/ai/modules/<chave>.md`.
-- Comunicar: eventos (`ctx.events.on/emit`) e comandos (`ctx.commands.send/handle`) com os tipos de `src/contracts`. Emitir um evento exige declará-lo em `permissions.events`.
+- Comunicar: eventos (`ctx.events.on/emit`) e comandos (`ctx.commands.send/handle`) com os tipos de `src/contracts`. Emitir um evento exige declará-lo em `permissions.events`. Comandos NÃO devolvem resultado (G29) e eventos são entregues depois, por referência (G122): para obter dados use os métodos dos tokens.
 - O plugin do jogo só COMPÕE (pede capabilities, liga eventos, faz dispose). Lógica de jogo vai em classes da pasta, sem acessar o kernel direto, para ser testável com mocks.
 - Three.js e DOM são permitidos nos adapters do jogo (a engine expõe `THREE.Scene` via render). Rapier NÃO: use só `PhysicsApi`.
 
 ## Ciclo de vida (erros mais comuns)
 1. Sempre `ctx.lifecycle.ready()` no fim do `setup`.
-2. Tudo que você adquire tem dispose registrado em `ctx.lifecycle.onDispose` (ordem inversa): listeners (`on` devolve o unsubscribe), meshes (`removeMeshFromScene` + dispose de geometry/material), corpos (`removeBody`), assets (`releaseAsset`), nós de DOM.
+2. Tudo que você adquire tem dispose registrado em `ctx.lifecycle.onDispose` (ordem inversa): listeners (`on` devolve o unsubscribe), meshes (`removeMeshFromScene`, que já libera geometria/material dos `Mesh`), corpos (`removeBody`), assets (`releaseAsset`), nós de DOM.
 3. Lógica de simulação no evento `game.loop.tick` (passo fixo, `deltaSeconds`); a física já avança sozinha nesse tick. Apresentação/render usa interpolação.
 4. Sem alocação por tick/frame (reuse objetos).
 5. Não dependa de Steam: sem Steam tudo continua funcionando (`commands.send` devolve `Promise<void>`; métodos do `SteamApi` resolvem `false`/`null`).
@@ -51,7 +51,7 @@ Testes do jogo ficam DENTRO da pasta do jogo (`src/projects/<jogo>/*.test.ts`), 
 | net | só `pollPackets` no tick | gerar/serializar/enviar snapshots |
 
 ## Limitações conhecidas
-Antes de planejar um jogo, leia `docs/ai/GAPS.md` (o que a engine NÃO faz hoje e como contornar sem tocar nela).
+Antes de planejar um jogo, leia `docs/ai/GAPS.md` (auditoria completa: ~130 lacunas/bugs por módulo, com contorno). Alguns módulos estão QUEBRADOS hoje: sprites (cena), partículas de vfx, `game.steam.net`, compras, Workshop e execução de mods.
 
 ## Mapa do manual
 - `docs/ai/INDEX.md` — qual módulo para qual necessidade, com tamanhos.

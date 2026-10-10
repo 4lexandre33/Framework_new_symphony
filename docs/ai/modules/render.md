@@ -82,6 +82,7 @@ command SetCameraModeCommand = "game.render.set-camera-mode" request SetCameraMo
 ```
 ## notas verificadas (comportamento)
 - A câmera do render é sobrescrita por `game.camera` a cada frame (ver `modules/camera.md`). Use `getScene()`/`addMeshToScene` para conteúdo e `game.camera` para enquadramento.
-- Three.js é permitido nos adapters do jogo: crie geometrias/materiais e adicione com `addMeshToScene(chaveÚnica, obj)`; no dispose `removeMeshFromScene` + `geometry.dispose()`/`material.dispose()`.
+- Three.js é permitido nos adapters do jogo: crie geometrias/materiais e adicione com `addMeshToScene(chaveÚnica, obj)`; no dispose basta `removeMeshFromScene` — ele JÁ faz dispose de geometria/material/texturas dos `Mesh` (G42; não remova objetos cuja geometria está em cache compartilhado; `Points`/`Line` você libera).
 - Voxel: prefira `THREE.InstancedMesh` (um por cor/material) ou geometria mesclada; evite milhares de `Mesh` separados.
 - A luz direcional da engine é UMA só e seu alvo fica na origem: longe de (0,0,0) a direção muda e a sombra some. Para mundos grandes, desligue a da engine (`setDirectionalLight({...intensity:0, castShadow:false})`) e adicione a SUA `THREE.DirectionalLight` via `addMeshToScene`, movendo luz e `light.target` junto com o foco da câmera (e adicionando o target também).
+- O desenho ocorre ANTES dos seus handlers de `game.loop.render` (G41): mova malhas no `game.loop.tick` para não atrasar 1 frame. Far plane 1000 e sem API de câmera (G43). Nunca chame `dispose()` (G44).

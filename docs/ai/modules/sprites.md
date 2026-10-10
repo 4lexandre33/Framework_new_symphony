@@ -114,7 +114,7 @@ interface SetParallaxSpeedRequest {
 command SetParallaxSpeedCommand = "game.sprites.set-parallax-speed" request SetParallaxSpeedRequest
 ```
 ## notas verificadas (comportamento)
-- Sprites e tilemaps são malhas na MESMA cena 3D do render (não há câmera/overlay 2D separado). Use para painéis no mundo (ex.: mapa na cabine) ou ícones flutuantes.
-- A textura do atlas vem do cache de `game.assets`: `await loadTexture(atlasUrl)` antes; use o próprio `atlasUrl` como `atlasKey` em `parseAtlas`/`getFrameUV`.
-- `spawnSprite2D` devolve o `THREE.Mesh`; oriente-o você mesmo (ex.: copiar o quaternion da câmera) para encarar a vista. Mesmo `spriteId` substitui. `despawnSprite2D` no dispose.
-- Tilemap: o número `N` em `tiles` usa o frame do atlas chamado `tile_N`; valor negativo = vazio. Linhas crescem para −Y, colunas para +X a partir de `position`, cada tile `tileSize` de lado (plano XY). Chamar `renderTilemap` de novo com o MESMO `layerId` substitui o anterior.
+- BUG GRAVE (G92): o plugin não declara acesso ao render/assets. `spawnSprite2D`, `despawnSprite2D`, `renderTilemap`, `createParallaxBackground`, `clear`, `dispose` e os comandos LANÇAM erro. Funcionam só `parseAtlas`, `getFrameUV`, `updateParallax`, `setPixelPerfectScaling`.
+- BUG (G93): mesmo corrigido o acesso, o shader do tilemap mostraria o atlas inteiro em cada tile.
+- Uso recomendado hoje: `await assets.loadTexture(url)` → `parseAtlas(url, json, texture)` → `getFrameUV(url, nome)` para obter UVs; desenhe sprites/tilemaps com malhas do PRÓPRIO jogo (`PlaneGeometry`/`InstancedMesh` + `MeshBasicMaterial`, `addMeshToScene`).
+- Convenção do tilemap da engine (para quando for corrigido): o número N em `tiles` usa o frame `tile_N`; −1 = vazio; mesmo `layerId` substitui.
