@@ -248,6 +248,32 @@ export class AssetCache {
     return this.cache.size;
   }
 
+  /** Chaves e refCounts atuais (cópia; não usar em hot path). */
+  public snapshot(): Array<{ readonly key: string; readonly refCount: number }> {
+    const result: Array<{ readonly key: string; readonly refCount: number }> = [];
+
+    for (const [key, record] of this.cache) {
+      result.push({ key, refCount: record.refCount });
+    }
+
+    return result;
+  }
+
+  /** Libera só registros sem referência viva (refCount <= 0). Devolve quantos. */
+  public releaseUnreferenced(): number {
+    let freed = 0;
+
+    for (const [key, record] of this.cache) {
+      if (record.refCount <= 0) {
+        this.disposeResource(record.data, record.type);
+        this.cache.delete(key);
+        freed += 1;
+      }
+    }
+
+    return freed;
+  }
+
   public clear(): void {
     for (
       const record of

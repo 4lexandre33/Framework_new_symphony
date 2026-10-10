@@ -19,6 +19,8 @@ import {
   PlaySoundCommand,
   PositionalSoundTriggeredEvent,
   SetChannelVolumeCommand,
+  StopMusicCommand,
+  MusicStoppedEvent,
 } from "../../contracts/audio/types";
 
 import type {
@@ -26,11 +28,25 @@ import type {
   PlayPositionalSoundRequest,
   PlaySoundRequest,
   SetChannelVolumeRequest,
+  StopMusicRequest,
 } from "../../contracts/audio/types";
 
 import {
   AudioService,
 } from "../../engine/audio/internal/AudioService";
+
+import {
+  AudioMixer,
+} from "../../engine/audio/internal/AudioMixer";
+
+export interface AudioPluginOptions {
+  /** Contexto Web Audio injetado (testes/host). `null` força o modo mudo. */
+  readonly audioContext?: AudioContext | null;
+  /** Vozes simultâneas (padrão 32); acima disso o one-shot mais antigo é roubado. */
+  readonly maxVoices?: number;
+  /** Vozes HRTF simultâneas (padrão 16); acima disso usa "equalpower". */
+  readonly maxHrtfVoices?: number;
+}
 
 export const audioManifest:
   Plugin["manifest"] = {
@@ -59,6 +75,7 @@ export const audioManifest:
         AudioChannelVolumeChangedEvent.type,
         MusicCrossfadeCompletedEvent.type,
         PositionalSoundTriggeredEvent.type,
+        MusicStoppedEvent.type,
       ],
     },
 
@@ -88,7 +105,11 @@ export const audioManifest:
     },
   };
 
-export function createAudioPlugin():
+export function createAudioPlugin(
+  options:
+    AudioPluginOptions =
+      {},
+):
   Plugin {
   return {
     manifest:
@@ -98,9 +119,20 @@ export function createAudioPlugin():
       ctx:
         PluginContext,
     ): void {
+      // Sem Web Audio (node/jsdom/WebView restrito) o mixer entra em modo
+      // "unavailable" e o plugin sobe normalmente, mudo (G86).
       const audioService =
         new AudioService(
           ctx,
+          new AudioMixer(
+            options.audioContext,
+          ),
+          {
+            maxVoices:
+              options.maxVoices,
+            maxHrtfVoices:
+              options.maxHrtfVoices,
+          },
         );
 
       ctx.caps.provide(
@@ -118,6 +150,14 @@ export function createAudioPlugin():
 
       ctx.events.define(
         PositionalSoundTriggeredEvent,
+      );
+
+      ctx.events.define(
+        MusicStoppedEvent,
+      );
+
+      ctx.commands.define(
+        StopMusicCommand,
       );
 
       ctx.commands.define(
@@ -210,8 +250,26 @@ export function createAudioPlugin():
           },
         );
 
+      const unbindStopMusic =
+        ctx.commands.handle(
+          StopMusicCommand.type,
+          (
+            envelope,
+          ): Promise<void> => {
+            const payload =
+              envelope.payload as
+                StopMusicRequest |
+                undefined;
+
+            return audioService.stopMusic(
+              payload?.fadeSeconds,
+            );
+          },
+        );
+
       ctx.lifecycle.onDispose(
         (): void => {
+          unbindStopMusic();
           unbindPlay();
           unbindPositional();
           unbindVolume();

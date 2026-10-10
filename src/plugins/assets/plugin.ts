@@ -5,12 +5,27 @@ import type {
 
 import {
   AssetLoadedEvent,
+  AssetLoadFailedEvent,
   AssetProgressEvent,
+  ManifestProgressEvent,
 } from "../../contracts/assets/types";
 
 import {
   AssetsManagerService,
 } from "../../engine/assets/internal/AssetsManagerService";
+
+import type {
+  AssetLoaderSet,
+} from "../../engine/assets/internal/AssetsManagerService";
+
+export interface AssetsPluginOptions {
+  /** Substitui loaders (testes em node, hosts sem DOM/Web Audio). */
+  readonly loaders?: Partial<AssetLoaderSet>;
+  /** Base para resolver URLs relativas (padrão document.baseURI/location). */
+  readonly baseUrl?: string;
+  /** fetch dos loaders padrão (json, binary, áudio, textura). */
+  readonly fetch?: (input: string) => Promise<Response>;
+}
 
 import {
   AssetsToken,
@@ -41,6 +56,8 @@ export const assetsManifest:
       events: [
         AssetProgressEvent.type,
         AssetLoadedEvent.type,
+        ManifestProgressEvent.type,
+        AssetLoadFailedEvent.type,
       ],
     },
 
@@ -60,7 +77,11 @@ export const assetsManifest:
     },
   };
 
-export function createAssetsPlugin():
+export function createAssetsPlugin(
+  options:
+    AssetsPluginOptions =
+      {},
+):
   Plugin {
   return {
     manifest:
@@ -118,6 +139,39 @@ export function createAssetsPlugin():
               },
             );
           },
+
+          onLoadFailed(
+            id,
+            url,
+            type,
+            error,
+          ): void {
+            ctx.events.emit(
+              AssetLoadFailedEvent.type,
+              {
+                id,
+                url,
+                type,
+                error,
+              },
+            );
+          },
+
+          onManifestProgress(
+            payload,
+          ): void {
+            ctx.events.emit(
+              ManifestProgressEvent.type,
+              payload,
+            );
+          },
+        },
+        options.loaders,
+        {
+          baseUrl:
+            options.baseUrl,
+          fetch:
+            options.fetch,
         });
 
       ctx.caps.provide(
@@ -131,6 +185,14 @@ export function createAssetsPlugin():
 
       ctx.events.define(
         AssetLoadedEvent,
+      );
+
+      ctx.events.define(
+        ManifestProgressEvent,
+      );
+
+      ctx.events.define(
+        AssetLoadFailedEvent,
       );
 
       ctx.lifecycle.onDispose(
