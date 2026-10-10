@@ -252,7 +252,7 @@ describe(
     );
 
     it(
-      "WorldService.tick sincroniza SpatialGrid e Octree após mudança técnica de posição",
+      "WorldService sincroniza SpatialGrid e Octree após updateEntityTransform",
       (): void => {
         const world =
           new WorldService(
@@ -277,17 +277,30 @@ describe(
           state,
         ).not.toBeNull();
 
-        const mutablePosition =
-          state?.position as {
-            x: number;
-            y: number;
-            z: number;
-          };
+        // Snapshots são imutáveis (G31): a mudança técnica de posição
+        // passa pela API e os índices ficam consistentes após o tick.
+        expect(
+          Object.isFrozen(
+            state?.position,
+          ),
+        ).toBe(
+          true,
+        );
 
-        mutablePosition.x =
-          64;
-        mutablePosition.z =
-          64;
+        expect(
+          world.updateEntityTransform(
+            "walker",
+            {
+              position: {
+                x: 64,
+                y: 0,
+                z: 64,
+              },
+            },
+          ),
+        ).toBe(
+          true,
+        );
 
         world.tick();
 

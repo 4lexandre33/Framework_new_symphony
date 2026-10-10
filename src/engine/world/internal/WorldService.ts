@@ -6,13 +6,27 @@ import type {
   WorldApi,
 } from "../../../tokens/world";
 
+import {
+  AssetsToken,
+  type AssetsApi,
+} from "../../../tokens/assets";
+
+import {
+  GameLoopToken,
+} from "../../../tokens/game-loop";
+
 import type {
   AABBBounds3D,
   EntityComponentState,
+  EntitySpawnInput,
+  EntityStatePatch,
+  EntityTransformPatch,
+  SceneAssetDescriptor,
   SceneDescriptor,
   SceneLoadOptions,
   SpatialPoint2D,
   SpatialQueryResult,
+  WorldPosition3D,
 } from "../../../contracts/world/types";
 
 import {
@@ -29,6 +43,8 @@ import {
 
 import {
   SceneManager,
+  type SceneAssetPort,
+  type SceneLoopPort,
 } from "./SceneManager";
 
 import {
@@ -93,6 +109,12 @@ export class WorldService
         this.entityManager,
         this.spatialGrid,
         this.octreeManager,
+        {
+          getAssets: (): SceneAssetPort | null =>
+            this.resolveAssetPort(),
+          getLoop: (): SceneLoopPort | null =>
+            this.resolveLoopPort(),
+        },
       );
   }
 
@@ -141,7 +163,7 @@ export class WorldService
   }
 
   public spawnEntity(
-    state: EntityComponentState,
+    state: EntitySpawnInput,
   ): boolean {
     const spawned =
       this.entityManager
@@ -215,6 +237,59 @@ export class WorldService
     return true;
   }
 
+  public hasEntity(
+    entityId: string,
+  ): boolean {
+    return this.entityManager
+      .hasEntity(
+        entityId,
+      );
+  }
+
+  public updateEntityTransform(
+    entityId: string,
+    patch: EntityTransformPatch,
+  ): boolean {
+    const next =
+      this.entityManager
+        .updateTransform(
+          entityId,
+          patch,
+        );
+
+    if (next === null) {
+      return false;
+    }
+
+    this.updateEntitySpatialIndexes(
+      next,
+    );
+
+    return true;
+  }
+
+  public patchEntity(
+    entityId: string,
+    patch: EntityStatePatch,
+  ): boolean {
+    const next =
+      this.entityManager
+        .patchEntity(
+          entityId,
+          patch,
+        );
+
+    if (next === null) {
+      return false;
+    }
+
+    this.updateEntitySpatialIndexes(
+      next,
+    );
+
+    return true;
+  }
+
   public getEntityState(
     entityId: string,
   ): EntityComponentState | null {
@@ -222,6 +297,12 @@ export class WorldService
       .getEntityState(
         entityId,
       );
+  }
+
+  public getAllEntities():
+    EntityComponentState[] {
+    return this.entityManager
+      .getAllEntities();
   }
 
   public querySpatialGrid(
@@ -244,35 +325,109 @@ export class WorldService
       );
   }
 
+  public querySphere(
+    center: WorldPosition3D,
+    radius: number,
+  ): SpatialQueryResult[] {
+    return this.octreeManager
+      .querySphere(
+        center,
+        radius,
+      );
+  }
+
   public serializeWorldState():
     string {
     return WorldStateSerializer
       .serialize(
         this.currentSceneId,
         this.entityManager,
+        this.sceneManager
+          .currentWorldBounds,
       );
   }
 
   public deserializeWorldState(
     serializedData: string,
   ): boolean {
-    const restored =
+    // Valida tudo ANTES de tocar o estado atual.
+    const snapshot =
       WorldStateSerializer
-        .deserialize(
+        .parse(
           serializedData,
-          this.entityManager,
         );
 
-    if (!restored) {
+    if (snapshot === null) {
+      console.error(
+        "[WorldService] ❌ deserializeWorldState: snapshot inválido; estado atual preservado.",
+      );
+
       return false;
     }
 
-    /*
-     * Persistência/backend e restauração do sceneId serão auditados
-     * na Etapa 82. Nesta etapa os índices espaciais derivados do ECS
-     * são reconstruídos de forma determinística após o restore.
-     */
+    const previousIds =
+      this.entityManager
+        .getEntityIds();
+
+    this.entityManager.clear();
+
+    for (
+      const entity of
+      snapshot.entities
+    ) {
+      this.entityManager.spawnEntity(
+        entity,
+      );
+    }
+
+    this.sceneManager.restoreScene(
+      snapshot.sceneId,
+      snapshot.worldBounds,
+    );
+
     this.rebuildSpatialIndexes();
+
+    for (
+      const entityId of
+      previousIds
+    ) {
+      this.ctx.events.emit(
+        "game.world.entity-despawned",
+        {
+          entityId,
+        },
+      );
+    }
+
+    for (
+      const entity of
+      snapshot.entities
+    ) {
+      this.ctx.events.emit(
+        "game.world.entity-spawned",
+        {
+          entityId:
+            entity.entityId,
+
+          type:
+            entity.type,
+
+          position:
+            entity.position,
+        },
+      );
+    }
+
+    this.ctx.events.emit(
+      "game.world.state-restored",
+      {
+        sceneId:
+          snapshot.sceneId,
+
+        totalEntities:
+          snapshot.entities.length,
+      },
+    );
 
     return true;
   }
@@ -281,6 +436,9 @@ export class WorldService
     /*
      * Não materializa Array.from() por frame.
      * O callback é criado uma única vez na instância do serviço.
+     * Os índices já são atualizados de forma imediata por
+     * spawn/updateEntityTransform/patchEntity; esta passada mantém a
+     * reconciliação defensiva por tick.
      */
     this.entityManager
       .forEachEntity(
@@ -301,5 +459,78 @@ export class WorldService
       .forEachEntity(
         this.insertEntitySpatialIndexes,
       );
+  }
+
+  /**
+   * game.assets é opcional: sem ele a cena carrega sem pré-carregamento
+   * (os assets aparecem em failedAssets).
+   */
+  private resolveAssetPort():
+    SceneAssetPort | null {
+    let assets:
+      AssetsApi | undefined;
+
+    try {
+      assets =
+        this.ctx.caps.get(
+          AssetsToken,
+        );
+    } catch {
+      return null;
+    }
+
+    if (assets === undefined) {
+      return null;
+    }
+
+    return {
+      async load(
+        asset: SceneAssetDescriptor,
+      ): Promise<void> {
+        switch (asset.type) {
+          case "gltf":
+            await assets.loadGLTF(
+              asset.url,
+            );
+            return;
+
+          case "texture":
+            await assets.loadTexture(
+              asset.url,
+            );
+            return;
+
+          case "audio":
+            await assets.loadAudio(
+              asset.url,
+            );
+            return;
+
+          default:
+            throw new RangeError(
+              `tipo de asset desconhecido: ${String((asset as { type: unknown }).type)}`,
+            );
+        }
+      },
+
+      release(
+        url: string,
+      ): void {
+        assets.releaseAsset(
+          url,
+        );
+      },
+    };
+  }
+
+  private resolveLoopPort():
+    SceneLoopPort | null {
+    try {
+      return this.ctx.caps.get(
+        GameLoopToken,
+      ) ?? null;
+    } catch {
+      return null;
+    }
   }
 }

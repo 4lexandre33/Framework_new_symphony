@@ -15,6 +15,7 @@ import {
   CastRayCommand,
   CollisionEnterEvent,
   CollisionExitEvent,
+  ContactForceEvent,
   CreateBodyCommand,
   RemoveBodyCommand,
   TriggerEnterEvent,
@@ -84,6 +85,7 @@ export const physicsManifest:
         "game.physics.collision-exit",
         "game.physics.trigger-enter",
         "game.physics.trigger-exit",
+        "game.physics.contact-force",
         "game.loop.tick",
       ],
     },
@@ -160,6 +162,10 @@ export function createPhysicsPlugin(
 
       ctx.events.define(
         TriggerExitEvent,
+      );
+
+      ctx.events.define(
+        ContactForceEvent,
       );
 
       ctx.commands.define(

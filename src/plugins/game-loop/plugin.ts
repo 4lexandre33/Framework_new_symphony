@@ -1,6 +1,6 @@
 import type { Plugin, PluginContext } from "@core";
 import { GameLoopToken } from "../../tokens/game-loop";
-import { GameTickEvent, GameRenderEvent, PauseGameCommand, ResumeGameCommand } from "../../contracts/game-loop/types";
+import { GameTickEvent, GameRenderEvent, PauseGameCommand, ResumeGameCommand, type PauseOptions } from "../../contracts/game-loop/types";
 import { DeterministicGameLoop } from "../../engine/game-loop/internal/DeterministicGameLoop";
 
 export const gameLoopManifest: Plugin["manifest"] = {
@@ -41,8 +41,11 @@ export function createGameLoopPlugin(): Plugin {
       ctx.commands.define(ResumeGameCommand);
 
       // 3. Handlers de Comandos
-      const unbindPause = ctx.commands.handle("game.loop.pause", () => {
-        gameLoop.pause();
+      const unbindPause = ctx.commands.handle("game.loop.pause", (envelope) => {
+        const payload = envelope.payload as PauseOptions | undefined;
+        gameLoop.pause(
+          payload?.freezeRender === true ? { freezeRender: true } : undefined,
+        );
       });
 
       const unbindResume = ctx.commands.handle("game.loop.resume", () => {

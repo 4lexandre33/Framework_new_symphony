@@ -147,7 +147,7 @@ describe(
     );
 
     it(
-      "mantém transform snapshots separados por entityId sem alocação por leitura",
+      "getBodyTransform devolve cópias independentes por leitura (G33)",
       (): void => {
         world.createBody(
           "a",
@@ -197,7 +197,10 @@ describe(
           );
 
         expect(firstA)
-          .toBe(secondA);
+          .not.toBe(secondA);
+
+        expect(firstA)
+          .toEqual(secondA);
 
         expect(firstA)
           .not.toBe(b);

@@ -1,6 +1,8 @@
 import type { Plugin, PluginContext } from "@core";
 import { WorldToken } from "../../tokens/world";
-import { SceneLoadingEvent, SceneLoadedEvent, EntitySpawnedEvent, EntityDespawnedEvent, LoadSceneCommand, UnloadSceneCommand, SpawnEntityCommand, DespawnEntityCommand, type SceneDescriptor, type SceneLoadOptions, type EntityComponentState } from "../../contracts/world/types";
+import { AssetsToken } from "../../tokens/assets";
+import { GameLoopToken } from "../../tokens/game-loop";
+import { SceneLoadingEvent, SceneLoadedEvent, SceneUnloadedEvent, WorldStateRestoredEvent, EntitySpawnedEvent, EntityDespawnedEvent, LoadSceneCommand, UnloadSceneCommand, SpawnEntityCommand, DespawnEntityCommand, UpdateEntityTransformCommand, type SceneDescriptor, type SceneLoadOptions, type EntitySpawnInput, type UpdateEntityTransformRequest } from "../../contracts/world/types";
 import { WorldService } from "../../engine/world/internal/WorldService";
 
 export const worldManifest:
@@ -23,11 +25,15 @@ export const worldManifest:
     permissions: {
       capabilities: [
         WorldToken.id,
+        AssetsToken.id,
+        GameLoopToken.id,
       ],
 
       events: [
         "game.world.scene-loading",
         "game.world.scene-loaded",
+        "game.world.scene-unloaded",
+        "game.world.state-restored",
         "game.world.entity-spawned",
         "game.world.entity-despawned",
         "game.loop.tick",
@@ -43,6 +49,23 @@ export const worldManifest:
 
           version:
             "1.0.0",
+        },
+      ],
+      // Opcionais: pré-carregamento de assets da cena e autoStartLoop.
+      consumes: [
+        {
+          id:
+            AssetsToken.id,
+          range:
+            "^1.0.0",
+          optional: true,
+        },
+        {
+          id:
+            GameLoopToken.id,
+          range:
+            "^1.0.0",
+          optional: true,
         },
       ],
       conflicts: [],
@@ -84,6 +107,14 @@ export function createWorldPlugin():
         EntityDespawnedEvent,
       );
 
+      ctx.events.define(
+        SceneUnloadedEvent,
+      );
+
+      ctx.events.define(
+        WorldStateRestoredEvent,
+      );
+
       ctx.commands.define(
         LoadSceneCommand,
       );
@@ -98,6 +129,10 @@ export function createWorldPlugin():
 
       ctx.commands.define(
         DespawnEntityCommand,
+      );
+
+      ctx.commands.define(
+        UpdateEntityTransformCommand,
       );
 
       const unbindTick =
@@ -159,7 +194,7 @@ export function createWorldPlugin():
             const payload =
               env.payload as {
                 state:
-                  EntityComponentState;
+                  EntitySpawnInput;
               };
 
             return worldService
@@ -188,9 +223,27 @@ export function createWorldPlugin():
           },
         );
 
+      const unbindUpdateTransform =
+        ctx.commands.handle(
+          "game.world.update-entity-transform",
+          (
+            env,
+          ) => {
+            const payload =
+              env.payload as UpdateEntityTransformRequest;
+
+            return worldService
+              .updateEntityTransform(
+                payload.entityId,
+                payload.patch,
+              );
+          },
+        );
+
       ctx.lifecycle.onDispose(
         (): void => {
           unbindTick();
+          unbindUpdateTransform();
           unbindLoad();
           unbindUnload();
           unbindSpawn();

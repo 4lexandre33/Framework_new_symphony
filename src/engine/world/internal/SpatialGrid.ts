@@ -6,20 +6,37 @@ import type {
 
 interface SpatialGridEntry {
   readonly entityId: string;
-
   x: number;
   y: number;
   z: number;
-
   cellX: number;
   cellZ: number;
 }
 
+export function compareByDistance(
+  first: SpatialQueryResult,
+  second: SpatialQueryResult,
+): number {
+  return first.distance - second.distance ||
+    (first.entityId < second.entityId
+      ? -1
+      : first.entityId > second.entityId
+        ? 1
+        : 0);
+}
+
+/**
+ * Grade uniforme 2D no plano XZ (Y é ignorado nas consultas).
+ *
+ * As células são indexadas por coordenadas numéricas em mapas aninhados
+ * (sem string por célula). Consultas com raio grande varrem as entidades
+ * diretamente quando isso é mais barato que varrer as células.
+ */
 export class SpatialGrid {
   private readonly grid =
     new Map<
-      string,
-      Set<string>
+      number,
+      Map<number, Set<string>>
     >();
 
   private readonly entities =
@@ -27,6 +44,8 @@ export class SpatialGrid {
       string,
       SpatialGridEntry
     >();
+
+  private occupiedCellCount = 0;
 
   public constructor(
     private readonly cellSize = 16,
@@ -43,7 +62,8 @@ export class SpatialGrid {
     }
   }
 
-  public get entityCount(): number {
+  public get entityCount():
+    number {
     return this.entities.size;
   }
 
@@ -52,7 +72,8 @@ export class SpatialGrid {
     position: WorldPosition3D,
   ): void {
     if (
-      entityId.length === 0
+      entityId.length ===
+      0
     ) {
       throw new Error(
         "SpatialGrid.insert requer um entityId válido.",
@@ -88,19 +109,14 @@ export class SpatialGrid {
     const entry:
       SpatialGridEntry = {
         entityId,
-
         x:
           position.x,
-
         y:
           position.y,
-
         z:
           position.z,
-
         cellX:
           newCellX,
-
         cellZ:
           newCellZ,
       };
@@ -175,6 +191,9 @@ export class SpatialGrid {
     return true;
   }
 
+  /**
+   * Entidades a até `radius` do centro no plano XZ, ordenadas por distância.
+   */
   public queryRadius(
     center: SpatialPoint2D,
     radius: number,
@@ -183,114 +202,131 @@ export class SpatialGrid {
       !Number.isFinite(
         radius,
       ) ||
-      radius < 0
+      radius < 0 ||
+      !Number.isFinite(
+        center.x,
+      ) ||
+      !Number.isFinite(
+        center.z,
+      )
     ) {
       return [];
     }
 
     const results:
-      SpatialQueryResult[] = [];
+      SpatialQueryResult[] =
+        [];
+
+    const radiusSquared =
+      radius *
+      radius;
 
     const minCellX =
       this.getCellCoordinate(
-        center.x - radius,
+        center.x -
+          radius,
       );
 
     const maxCellX =
       this.getCellCoordinate(
-        center.x + radius,
+        center.x +
+          radius,
       );
 
     const minCellZ =
       this.getCellCoordinate(
-        center.z - radius,
+        center.z -
+          radius,
       );
 
     const maxCellZ =
       this.getCellCoordinate(
-        center.z + radius,
+        center.z +
+          radius,
       );
 
-    const radiusSquared =
-      radius * radius;
+    const cellsToScan =
+      (
+        maxCellX -
+        minCellX +
+        1
+      ) *
+      (
+        maxCellZ -
+        minCellZ +
+        1
+      );
 
-    for (
-      let cellX = minCellX;
-      cellX <= maxCellX;
-      cellX += 1
+    if (
+      cellsToScan >
+      this.occupiedCellCount
     ) {
+      // Raio grande: varrer entidades é mais barato que varrer células vazias.
       for (
-        let cellZ = minCellZ;
-        cellZ <= maxCellZ;
-        cellZ += 1
+        const entry of
+        this.entities.values()
       ) {
-        const cell =
+        this.collectIfInside(
+          entry,
+          center,
+          radiusSquared,
+          results,
+        );
+      }
+    } else {
+      for (
+        let cellX = minCellX;
+        cellX <= maxCellX;
+        cellX += 1
+      ) {
+        const column =
           this.grid.get(
-            this.getCellKey(
-              cellX,
-              cellZ,
-            ),
+            cellX,
           );
 
-        if (!cell) {
+        if (!column) {
           continue;
         }
 
         for (
-          const entityId of
-          cell
+          let cellZ = minCellZ;
+          cellZ <= maxCellZ;
+          cellZ += 1
         ) {
-          const entry =
-            this.entities.get(
-              entityId,
+          const cell =
+            column.get(
+              cellZ,
             );
 
-          if (!entry) {
+          if (!cell) {
             continue;
           }
 
-          const dx =
-            entry.x -
-            center.x;
-
-          const dz =
-            entry.z -
-            center.z;
-
-          const distanceSquared =
-            dx * dx +
-            dz * dz;
-
-          if (
-            distanceSquared >
-            radiusSquared
+          for (
+            const entityId of
+            cell
           ) {
-            continue;
+            const entry =
+              this.entities.get(
+                entityId,
+              );
+
+            if (entry) {
+              this.collectIfInside(
+                entry,
+                center,
+                radiusSquared,
+                results,
+              );
+            }
           }
-
-          results.push({
-            entityId:
-              entry.entityId,
-
-            distance:
-              Math.sqrt(
-                distanceSquared,
-              ),
-
-            position: {
-              x:
-                entry.x,
-
-              y:
-                entry.y,
-
-              z:
-                entry.z,
-            },
-          });
         }
       }
     }
+
+    results.sort(
+      compareByDistance,
+    );
 
     return results;
   }
@@ -298,6 +334,50 @@ export class SpatialGrid {
   public clear(): void {
     this.grid.clear();
     this.entities.clear();
+    this.occupiedCellCount = 0;
+  }
+
+  private collectIfInside(
+    entry: SpatialGridEntry,
+    center: SpatialPoint2D,
+    radiusSquared: number,
+    results: SpatialQueryResult[],
+  ): void {
+    const dx =
+      entry.x -
+      center.x;
+
+    const dz =
+      entry.z -
+      center.z;
+
+    const distanceSquared =
+      dx * dx +
+      dz * dz;
+
+    if (
+      distanceSquared >
+      radiusSquared
+    ) {
+      return;
+    }
+
+    results.push({
+      entityId:
+        entry.entityId,
+      distance:
+        Math.sqrt(
+          distanceSquared,
+        ),
+      position: {
+        x:
+          entry.x,
+        y:
+          entry.y,
+        z:
+          entry.z,
+      },
+    });
   }
 
   private updateExistingEntry(
@@ -354,25 +434,36 @@ export class SpatialGrid {
     cellX: number,
     cellZ: number,
   ): void {
-    const key =
-      this.getCellKey(
+    let column =
+      this.grid.get(
         cellX,
-        cellZ,
       );
 
+    if (!column) {
+      column =
+        new Map<number, Set<string>>();
+
+      this.grid.set(
+        cellX,
+        column,
+      );
+    }
+
     let cell =
-      this.grid.get(
-        key,
+      column.get(
+        cellZ,
       );
 
     if (!cell) {
       cell =
         new Set<string>();
 
-      this.grid.set(
-        key,
+      column.set(
+        cellZ,
         cell,
       );
+
+      this.occupiedCellCount += 1;
     }
 
     cell.add(
@@ -385,18 +476,20 @@ export class SpatialGrid {
     cellX: number,
     cellZ: number,
   ): void {
-    const key =
-      this.getCellKey(
+    const column =
+      this.grid.get(
         cellX,
-        cellZ,
       );
 
     const cell =
-      this.grid.get(
-        key,
+      column?.get(
+        cellZ,
       );
 
-    if (!cell) {
+    if (
+      !column ||
+      !cell
+    ) {
       return;
     }
 
@@ -405,11 +498,23 @@ export class SpatialGrid {
     );
 
     if (
-      cell.size === 0
+      cell.size ===
+      0
     ) {
-      this.grid.delete(
-        key,
+      column.delete(
+        cellZ,
       );
+
+      this.occupiedCellCount -= 1;
+
+      if (
+        column.size ===
+        0
+      ) {
+        this.grid.delete(
+          cellX,
+        );
+      }
     }
   }
 
@@ -420,12 +525,5 @@ export class SpatialGrid {
       value /
         this.cellSize,
     );
-  }
-
-  private getCellKey(
-    cellX: number,
-    cellZ: number,
-  ): string {
-    return `${cellX}:${cellZ}`;
   }
 }

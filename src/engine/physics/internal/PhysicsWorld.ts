@@ -1,18 +1,33 @@
 import RAPIER from "@dimforge/rapier3d-compat";
 
 import type {
+  AxisFlagsDTO,
+  BodyTransformDTO,
   ColliderDescriptor,
+  CollisionGroupsDTO,
+  JointDescriptor,
+  JointMotorDTO,
+  KinematicTargetDTO,
+  MutableBodyTransformDTO,
+  OverlapQueryRequest,
   PhysicsStats,
   QuaternionDTO,
   RaycastHit,
   RaycastRequest,
   RigidBodyDescriptor,
+  ShapeCastHit,
+  ShapeCastRequest,
   Vector3DTO,
 } from "../../../contracts/physics/types";
 
 import type { CollisionEventManager } from "./CollisionEventManager";
 import { RaycasterQueries } from "./RaycasterQueries";
-import { RigidBodyFactory } from "./RigidBodyFactory";
+import {
+  RigidBodyFactory,
+  assertQuaternion,
+  assertVector3,
+  toInteractionGroups,
+} from "./RigidBodyFactory";
 
 export const PHYSICS_MIN_STEP_SECONDS =
   1 /
@@ -34,19 +49,34 @@ interface MutableQuaternionDTO {
   w: number;
 }
 
-interface MutableTransformSnapshot {
-  readonly position:
-    MutableVector3DTO;
-  readonly rotation:
-    MutableQuaternionDTO;
-}
-
 interface MutablePhysicsStats {
   rigidBodyCount: number;
   colliderCount: number;
   stepTimeMs: number;
   isWasmLoaded: boolean;
 }
+
+interface JointRecord {
+  readonly joint: RAPIER.ImpulseJoint;
+  readonly type: JointDescriptor["type"];
+  readonly entityIdA: string;
+  readonly entityIdB: string;
+}
+
+const ZERO_VECTOR: Vector3DTO =
+  Object.freeze({
+    x: 0,
+    y: 0,
+    z: 0,
+  });
+
+const IDENTITY_ROTATION: QuaternionDTO =
+  Object.freeze({
+    x: 0,
+    y: 0,
+    z: 0,
+    w: 1,
+  });
 
 function defaultNowMs(): number {
   const clock =
@@ -97,28 +127,25 @@ function assertStepDelta(
   }
 }
 
-function createTransformSnapshot():
-  MutableTransformSnapshot {
-  return {
-    position: {
-      x:
-        0,
-      y:
-        0,
-      z:
-        0,
-    },
-    rotation: {
-      x:
-        0,
-      y:
-        0,
-      z:
-        0,
-      w:
-        1,
-    },
-  };
+function toRapierVector(
+  value: Vector3DTO,
+): RAPIER.Vector3 {
+  return new RAPIER.Vector3(
+    value.x,
+    value.y,
+    value.z,
+  );
+}
+
+function toRapierQuaternion(
+  value: QuaternionDTO,
+): RAPIER.Quaternion {
+  return new RAPIER.Quaternion(
+    value.x,
+    value.y,
+    value.z,
+    value.w,
+  );
 }
 
 export class PhysicsWorld {
@@ -148,11 +175,15 @@ export class PhysicsWorld {
       boolean
     >();
 
-  private readonly transformCache =
+  private readonly joints =
     new Map<
       string,
-      MutableTransformSnapshot
+      JointRecord
     >();
+
+  /** Scratch reutilizado em removeBody (handles dos colliders do corpo). */
+  private readonly removalHandles =
+    new Set<number>();
 
   private readonly stats:
     MutablePhysicsStats = {
@@ -165,6 +196,18 @@ export class PhysicsWorld {
       isWasmLoaded:
         false,
     };
+
+  private attachedEventManager:
+    CollisionEventManager |
+    null = null;
+
+  /**
+   * true quando corpos/colliders foram criados, removidos ou teleportados
+   * desde o último step: consultas (raycast, shape-cast, overlap) atualizam
+   * o query pipeline antes de executar, para enxergar o estado atual.
+   */
+  private queriesDirty =
+    false;
 
   private isInitialized =
     false;
@@ -241,6 +284,19 @@ export class PhysicsWorld {
     }
   }
 
+  /**
+   * Gerenciador usado para emitir `collision-exit`/`trigger-exit` quando um
+   * corpo é removido fora do step. O PhysicsService anexa o seu.
+   */
+  public attachEventManager(
+    eventManager:
+      CollisionEventManager |
+      null,
+  ): void {
+    this.attachedEventManager =
+      eventManager;
+  }
+
   public step(
     deltaTimeSeconds: number,
     eventManager?:
@@ -288,6 +344,10 @@ export class PhysicsWorld {
       this.world.step();
     }
 
+    // world.step atualiza o query pipeline ao final.
+    this.queriesDirty =
+      false;
+
     const elapsed =
       this.nowMs() -
       startTimeMs;
@@ -317,15 +377,9 @@ export class PhysicsWorld {
       return false;
     }
 
-    if (
-      entityId.trim()
-        .length ===
-      0
-    ) {
-      throw new RangeError(
-        "entityId não pode ser vazio.",
-      );
-    }
+    this.assertEntityId(
+      entityId,
+    );
 
     // Valide todos os descriptors antes de tocar o world. Uma tentativa de
     // replacement inválida não pode destruir o body antigo.
@@ -366,21 +420,11 @@ export class PhysicsWorld {
         colliderDesc !==
           undefined
       ) {
-        const collider =
-          this.world.createCollider(
-            rapierColliderDesc,
-            body,
-          );
-
-        this.handleToEntityMap.set(
-          collider.handle,
+        this.attachCollider(
           entityId,
-        );
-
-        this.handleToSensorMap.set(
-          collider.handle,
-          colliderDesc.isSensor ===
-            true,
+          body,
+          rapierColliderDesc,
+          colliderDesc.isSensor === true,
         );
       }
     } catch (error) {
@@ -396,14 +440,59 @@ export class PhysicsWorld {
       body,
     );
 
-    this.transformCache.set(
-      entityId,
-      createTransformSnapshot(),
-    );
+    this.queriesDirty =
+      true;
 
     this.refreshStats();
 
     return true;
+  }
+
+  public addCollider(
+    entityId: string,
+    colliderDesc:
+      ColliderDescriptor,
+  ): boolean {
+    const body =
+      this.getBody(
+        entityId,
+      );
+
+    if (
+      body ===
+      undefined
+    ) {
+      return false;
+    }
+
+    const rapierColliderDesc =
+      RigidBodyFactory
+        .createColliderDesc(
+          colliderDesc,
+        );
+
+    this.attachCollider(
+      entityId,
+      body,
+      rapierColliderDesc,
+      colliderDesc.isSensor === true,
+    );
+
+    this.queriesDirty =
+      true;
+
+    this.refreshStats();
+
+    return true;
+  }
+
+  public hasBody(
+    entityId: string,
+  ): boolean {
+    return this.getBody(
+      entityId,
+    ) !==
+      undefined;
   }
 
   public removeBody(
@@ -432,6 +521,8 @@ export class PhysicsWorld {
     const colliderCount =
       body.numColliders();
 
+    this.removalHandles.clear();
+
     for (
       let index =
         0;
@@ -440,18 +531,58 @@ export class PhysicsWorld {
       index +=
         1
     ) {
-      const collider =
+      this.removalHandles.add(
         body.collider(
           index,
-        );
+        ).handle,
+      );
+    }
 
+    // Contatos ativos deste corpo terminam agora: o Rapier só reportaria o
+    // fim no próximo step, quando os handles já não mapeiam mais a entidade.
+    if (
+      this.attachedEventManager !==
+      null
+    ) {
+      this.attachedEventManager
+        .emitExitsForColliders(
+          this.removalHandles,
+        );
+    }
+
+    for (
+      const handle of
+      this.removalHandles
+    ) {
       this.handleToEntityMap.delete(
-        collider.handle,
+        handle,
       );
 
       this.handleToSensorMap.delete(
-        collider.handle,
+        handle,
       );
+    }
+
+    this.removalHandles.clear();
+
+    // O Rapier remove automaticamente os joints ligados ao corpo.
+    for (
+      const [
+        jointId,
+        record,
+      ] of
+      this.joints
+    ) {
+      if (
+        record.entityIdA ===
+          entityId ||
+        record.entityIdB ===
+          entityId
+      ) {
+        this.joints.delete(
+          jointId,
+        );
+      }
     }
 
     this.world.removeRigidBody(
@@ -462,9 +593,8 @@ export class PhysicsWorld {
       entityId,
     );
 
-    this.transformCache.delete(
-      entityId,
-    );
+    this.queriesDirty =
+      true;
 
     this.refreshStats();
 
@@ -477,16 +607,13 @@ export class PhysicsWorld {
       Vector3DTO,
   ): boolean {
     const body =
-      this.entityToBodyMap.get(
+      this.getDynamicBody(
         entityId,
       );
 
     if (
       body ===
-        undefined ||
-      body.bodyType() !==
-        RAPIER.RigidBodyType
-          .Dynamic
+      undefined
     ) {
       return false;
     }
@@ -510,16 +637,13 @@ export class PhysicsWorld {
       Vector3DTO,
   ): boolean {
     const body =
-      this.entityToBodyMap.get(
+      this.getDynamicBody(
         entityId,
       );
 
     if (
       body ===
-        undefined ||
-      body.bodyType() !==
-        RAPIER.RigidBodyType
-          .Dynamic
+      undefined
     ) {
       return false;
     }
@@ -531,6 +655,62 @@ export class PhysicsWorld {
 
     body.addForce(
       force,
+      true,
+    );
+
+    return true;
+  }
+
+  public applyTorqueImpulse(
+    entityId: string,
+    torqueImpulse:
+      Vector3DTO,
+  ): boolean {
+    const body =
+      this.getDynamicBody(
+        entityId,
+      );
+
+    if (
+      body ===
+      undefined
+    ) {
+      return false;
+    }
+
+    assertFiniteVector(
+      torqueImpulse,
+      "torqueImpulse",
+    );
+
+    body.applyTorqueImpulse(
+      torqueImpulse,
+      true,
+    );
+
+    return true;
+  }
+
+  public resetForces(
+    entityId: string,
+  ): boolean {
+    const body =
+      this.getDynamicBody(
+        entityId,
+      );
+
+    if (
+      body ===
+      undefined
+    ) {
+      return false;
+    }
+
+    body.resetForces(
+      true,
+    );
+
+    body.resetTorques(
       true,
     );
 
@@ -570,14 +750,78 @@ export class PhysicsWorld {
       };
     }
 
+    this.refreshQueriesIfDirty();
+
     return RaycasterQueries
       .castRay(
         this.world,
         this.handleToEntityMap,
         request,
+        this.entityToBodyMap,
       );
   }
 
+  public castShape(
+    request:
+      ShapeCastRequest,
+  ): ShapeCastHit {
+    if (
+      this.world ===
+        null ||
+      this.disposed
+    ) {
+      return {
+        hit:
+          false,
+        distance:
+          0,
+        point: {
+          ...ZERO_VECTOR,
+        },
+        normal: {
+          ...ZERO_VECTOR,
+        },
+      };
+    }
+
+    this.refreshQueriesIfDirty();
+
+    return RaycasterQueries
+      .castShape(
+        this.world,
+        this.handleToEntityMap,
+        request,
+        this.entityToBodyMap,
+      );
+  }
+
+  public queryOverlap(
+    request:
+      OverlapQueryRequest,
+  ): string[] {
+    if (
+      this.world ===
+        null ||
+      this.disposed
+    ) {
+      return [];
+    }
+
+    this.refreshQueriesIfDirty();
+
+    return RaycasterQueries
+      .queryOverlap(
+        this.world,
+        this.handleToEntityMap,
+        request,
+        this.entityToBodyMap,
+      );
+  }
+
+  /**
+   * Retorna um snapshot NOVO (seguro para guardar/mutar pelo chamador).
+   * Para leitura sem alocação use getBodyTransformInto.
+   */
   public getBodyTransform(
     entityId: string,
   ): {
@@ -586,23 +830,50 @@ export class PhysicsWorld {
     rotation:
       QuaternionDTO;
   } | null {
-    const body =
-      this.entityToBodyMap.get(
-        entityId,
-      );
+    const out = {
+      position: {
+        x:
+          0,
+        y:
+          0,
+        z:
+          0,
+      },
+      rotation: {
+        x:
+          0,
+        y:
+          0,
+        z:
+          0,
+        w:
+          1,
+      },
+    };
 
-    const snapshot =
-      this.transformCache.get(
+    return this.getBodyTransformInto(
+      entityId,
+      out,
+    )
+      ? out
+      : null;
+  }
+
+  public getBodyTransformInto(
+    entityId: string,
+    out:
+      MutableBodyTransformDTO,
+  ): boolean {
+    const body =
+      this.getBody(
         entityId,
       );
 
     if (
       body ===
-        undefined ||
-      snapshot ===
-        undefined
+      undefined
     ) {
-      return null;
+      return false;
     }
 
     const translation =
@@ -611,28 +882,733 @@ export class PhysicsWorld {
     const rotation =
       body.rotation();
 
-    snapshot.position.x =
+    out.position.x =
       translation.x;
 
-    snapshot.position.y =
+    out.position.y =
       translation.y;
 
-    snapshot.position.z =
+    out.position.z =
       translation.z;
 
-    snapshot.rotation.x =
+    out.rotation.x =
       rotation.x;
 
-    snapshot.rotation.y =
+    out.rotation.y =
       rotation.y;
 
-    snapshot.rotation.z =
+    out.rotation.z =
       rotation.z;
 
-    snapshot.rotation.w =
+    out.rotation.w =
       rotation.w;
 
-    return snapshot;
+    return true;
+  }
+
+  public setBodyTranslation(
+    entityId: string,
+    position:
+      Vector3DTO,
+    wakeUp = true,
+  ): boolean {
+    const body =
+      this.getBody(
+        entityId,
+      );
+
+    if (
+      body ===
+      undefined
+    ) {
+      return false;
+    }
+
+    assertVector3(
+      position,
+      "position",
+    );
+
+    body.setTranslation(
+      toRapierVector(
+        position,
+      ),
+      wakeUp,
+    );
+
+    this.queriesDirty =
+      true;
+
+    return true;
+  }
+
+  public setBodyRotation(
+    entityId: string,
+    rotation:
+      QuaternionDTO,
+    wakeUp = true,
+  ): boolean {
+    const body =
+      this.getBody(
+        entityId,
+      );
+
+    if (
+      body ===
+      undefined
+    ) {
+      return false;
+    }
+
+    assertQuaternion(
+      rotation,
+    );
+
+    body.setRotation(
+      toRapierQuaternion(
+        rotation,
+      ),
+      wakeUp,
+    );
+
+    this.queriesDirty =
+      true;
+
+    return true;
+  }
+
+  public setBodyTransform(
+    entityId: string,
+    transform:
+      Partial<BodyTransformDTO>,
+    wakeUp = true,
+  ): boolean {
+    const body =
+      this.getBody(
+        entityId,
+      );
+
+    if (
+      body ===
+      undefined
+    ) {
+      return false;
+    }
+
+    // Valida tudo antes de aplicar (sem aplicação parcial).
+    if (
+      transform.position !==
+      undefined
+    ) {
+      assertVector3(
+        transform.position,
+        "position",
+      );
+    }
+
+    if (
+      transform.rotation !==
+      undefined
+    ) {
+      assertQuaternion(
+        transform.rotation,
+      );
+    }
+
+    if (
+      transform.position !==
+      undefined
+    ) {
+      body.setTranslation(
+        toRapierVector(
+          transform.position,
+        ),
+        wakeUp,
+      );
+    }
+
+    if (
+      transform.rotation !==
+      undefined
+    ) {
+      body.setRotation(
+        toRapierQuaternion(
+          transform.rotation,
+        ),
+        wakeUp,
+      );
+    }
+
+    this.queriesDirty =
+      true;
+
+    return true;
+  }
+
+  public setNextKinematicTransform(
+    entityId: string,
+    target:
+      KinematicTargetDTO,
+  ): boolean {
+    const body =
+      this.getBody(
+        entityId,
+      );
+
+    if (
+      body ===
+        undefined ||
+      body.bodyType() !==
+        RAPIER.RigidBodyType
+          .KinematicPositionBased
+    ) {
+      return false;
+    }
+
+    if (
+      target.position !==
+      undefined
+    ) {
+      assertVector3(
+        target.position,
+        "position",
+      );
+    }
+
+    if (
+      target.rotation !==
+      undefined
+    ) {
+      assertQuaternion(
+        target.rotation,
+      );
+    }
+
+    if (
+      target.position !==
+      undefined
+    ) {
+      body.setNextKinematicTranslation(
+        toRapierVector(
+          target.position,
+        ),
+      );
+    }
+
+    if (
+      target.rotation !==
+      undefined
+    ) {
+      body.setNextKinematicRotation(
+        toRapierQuaternion(
+          target.rotation,
+        ),
+      );
+    }
+
+    return true;
+  }
+
+  public getLinearVelocity(
+    entityId: string,
+  ): Vector3DTO | null {
+    const body =
+      this.getBody(
+        entityId,
+      );
+
+    if (
+      body ===
+      undefined
+    ) {
+      return null;
+    }
+
+    const velocity =
+      body.linvel();
+
+    return {
+      x:
+        velocity.x,
+      y:
+        velocity.y,
+      z:
+        velocity.z,
+    };
+  }
+
+  public setLinearVelocity(
+    entityId: string,
+    velocity:
+      Vector3DTO,
+    wakeUp = true,
+  ): boolean {
+    const body =
+      this.getVelocityDrivenBody(
+        entityId,
+      );
+
+    if (
+      body ===
+      undefined
+    ) {
+      return false;
+    }
+
+    assertVector3(
+      velocity,
+      "velocity",
+    );
+
+    body.setLinvel(
+      toRapierVector(
+        velocity,
+      ),
+      wakeUp,
+    );
+
+    return true;
+  }
+
+  public getAngularVelocity(
+    entityId: string,
+  ): Vector3DTO | null {
+    const body =
+      this.getBody(
+        entityId,
+      );
+
+    if (
+      body ===
+      undefined
+    ) {
+      return null;
+    }
+
+    const velocity =
+      body.angvel();
+
+    return {
+      x:
+        velocity.x,
+      y:
+        velocity.y,
+      z:
+        velocity.z,
+    };
+  }
+
+  public setAngularVelocity(
+    entityId: string,
+    velocity:
+      Vector3DTO,
+    wakeUp = true,
+  ): boolean {
+    const body =
+      this.getVelocityDrivenBody(
+        entityId,
+      );
+
+    if (
+      body ===
+      undefined
+    ) {
+      return false;
+    }
+
+    assertVector3(
+      velocity,
+      "angularVelocity",
+    );
+
+    body.setAngvel(
+      toRapierVector(
+        velocity,
+      ),
+      wakeUp,
+    );
+
+    return true;
+  }
+
+  public setEnabledRotations(
+    entityId: string,
+    axes:
+      AxisFlagsDTO,
+    wakeUp = true,
+  ): boolean {
+    const body =
+      this.getBody(
+        entityId,
+      );
+
+    if (
+      body ===
+      undefined
+    ) {
+      return false;
+    }
+
+    if (
+      typeof axes.x !==
+        "boolean" ||
+      typeof axes.y !==
+        "boolean" ||
+      typeof axes.z !==
+        "boolean"
+    ) {
+      throw new RangeError(
+        "axes precisa ser {x:boolean,y:boolean,z:boolean}.",
+      );
+    }
+
+    body.setEnabledRotations(
+      axes.x,
+      axes.y,
+      axes.z,
+      wakeUp,
+    );
+
+    return true;
+  }
+
+  public lockRotations(
+    entityId: string,
+    locked: boolean,
+    wakeUp = true,
+  ): boolean {
+    const body =
+      this.getBody(
+        entityId,
+      );
+
+    if (
+      body ===
+      undefined
+    ) {
+      return false;
+    }
+
+    body.lockRotations(
+      locked,
+      wakeUp,
+    );
+
+    if (
+      locked
+    ) {
+      // Zera a rotação residual para o corpo parar de girar imediatamente.
+      body.setAngvel(
+        toRapierVector(
+          ZERO_VECTOR,
+        ),
+        wakeUp,
+      );
+    }
+
+    return true;
+  }
+
+  public getBodyMass(
+    entityId: string,
+  ): number | null {
+    const body =
+      this.getBody(
+        entityId,
+      );
+
+    return body ===
+      undefined
+      ? null
+      : body.mass();
+  }
+
+  public isBodySleeping(
+    entityId: string,
+  ): boolean | null {
+    const body =
+      this.getBody(
+        entityId,
+      );
+
+    return body ===
+      undefined
+      ? null
+      : body.isSleeping();
+  }
+
+  public wakeBody(
+    entityId: string,
+  ): boolean {
+    const body =
+      this.getBody(
+        entityId,
+      );
+
+    if (
+      body ===
+      undefined
+    ) {
+      return false;
+    }
+
+    body.wakeUp();
+
+    return true;
+  }
+
+  public setCollisionGroups(
+    entityId: string,
+    groups:
+      CollisionGroupsDTO,
+  ): boolean {
+    const body =
+      this.getBody(
+        entityId,
+      );
+
+    if (
+      body ===
+      undefined
+    ) {
+      return false;
+    }
+
+    const packed =
+      toInteractionGroups(
+        groups,
+      );
+
+    const colliderCount =
+      body.numColliders();
+
+    for (
+      let index =
+        0;
+      index <
+      colliderCount;
+      index +=
+        1
+    ) {
+      body.collider(
+        index,
+      ).setCollisionGroups(
+        packed,
+      );
+    }
+
+    this.queriesDirty =
+      true;
+
+    return true;
+  }
+
+  public createJoint(
+    jointId: string,
+    desc:
+      JointDescriptor,
+  ): boolean {
+    if (
+      this.world ===
+        null ||
+      this.disposed
+    ) {
+      return false;
+    }
+
+    if (
+      typeof jointId !==
+        "string" ||
+      jointId.trim()
+        .length ===
+        0
+    ) {
+      throw new RangeError(
+        "jointId não pode ser vazio.",
+      );
+    }
+
+    const bodyA =
+      this.entityToBodyMap.get(
+        desc.entityIdA,
+      );
+
+    const bodyB =
+      this.entityToBodyMap.get(
+        desc.entityIdB,
+      );
+
+    if (
+      bodyA ===
+        undefined ||
+      bodyB ===
+        undefined ||
+      bodyA ===
+        bodyB
+    ) {
+      return false;
+    }
+
+    const data =
+      this.createJointData(
+        desc,
+      );
+
+    if (
+      this.joints.has(
+        jointId,
+      )
+    ) {
+      this.removeJoint(
+        jointId,
+      );
+    }
+
+    const joint =
+      this.world.createImpulseJoint(
+        data,
+        bodyA,
+        bodyB,
+        true,
+      );
+
+    if (
+      desc.collideConnected ===
+      false
+    ) {
+      joint.setContactsEnabled(
+        false,
+      );
+    }
+
+    this.joints.set(
+      jointId,
+      {
+        joint,
+        type:
+          desc.type,
+        entityIdA:
+          desc.entityIdA,
+        entityIdB:
+          desc.entityIdB,
+      },
+    );
+
+    return true;
+  }
+
+  public removeJoint(
+    jointId: string,
+  ): boolean {
+    const record =
+      this.joints.get(
+        jointId,
+      );
+
+    if (
+      record ===
+        undefined ||
+      this.world ===
+        null
+    ) {
+      return false;
+    }
+
+    this.joints.delete(
+      jointId,
+    );
+
+    if (
+      record.joint.isValid()
+    ) {
+      this.world.removeImpulseJoint(
+        record.joint,
+        true,
+      );
+    }
+
+    return true;
+  }
+
+  public hasJoint(
+    jointId: string,
+  ): boolean {
+    return this.joints.has(
+      jointId,
+    );
+  }
+
+  public setJointMotor(
+    jointId: string,
+    motor:
+      JointMotorDTO,
+  ): boolean {
+    const record =
+      this.joints.get(
+        jointId,
+      );
+
+    if (
+      record ===
+        undefined ||
+      (
+        record.type !==
+          "revolute" &&
+        record.type !==
+          "prismatic"
+      )
+    ) {
+      return false;
+    }
+
+    const targetPosition =
+      motor.targetPosition ?? 0;
+    const targetVelocity =
+      motor.targetVelocity ?? 0;
+    const stiffness =
+      motor.stiffness ?? 0;
+    const damping =
+      motor.damping ?? 0;
+
+    if (
+      !Number.isFinite(
+        targetPosition,
+      ) ||
+      !Number.isFinite(
+        targetVelocity,
+      ) ||
+      !Number.isFinite(
+        stiffness,
+      ) ||
+      !Number.isFinite(
+        damping,
+      ) ||
+      stiffness <
+        0 ||
+      damping <
+        0
+    ) {
+      throw new RangeError(
+        "motor precisa de valores finitos (stiffness/damping >= 0).",
+      );
+    }
+
+    (
+      record.joint as
+        RAPIER.UnitImpulseJoint
+    ).configureMotor(
+      targetPosition,
+      targetVelocity,
+      stiffness,
+      damping,
+    );
+
+    record.joint.body1()
+      .wakeUp();
+    record.joint.body2()
+      .wakeUp();
+
+    return true;
   }
 
   public syncMeshTransform(
@@ -717,6 +1693,44 @@ export class PhysicsWorld {
         gravity.y,
         gravity.z,
       );
+
+    // Corpos dormindo não reagem à nova gravidade até acordar.
+    for (
+      const body of
+      this.entityToBodyMap.values()
+    ) {
+      if (
+        body.bodyType() ===
+        RAPIER.RigidBodyType
+          .Dynamic
+      ) {
+        body.wakeUp();
+      }
+    }
+  }
+
+  public getGravity():
+    Vector3DTO {
+    if (
+      this.world ===
+      null
+    ) {
+      return {
+        ...ZERO_VECTOR,
+      };
+    }
+
+    const gravity =
+      this.world.gravity;
+
+    return {
+      x:
+        gravity.x,
+      y:
+        gravity.y,
+      z:
+        gravity.z,
+    };
   }
 
   public getStats():
@@ -739,7 +1753,10 @@ export class PhysicsWorld {
     this.entityToBodyMap.clear();
     this.handleToEntityMap.clear();
     this.handleToSensorMap.clear();
-    this.transformCache.clear();
+    this.joints.clear();
+    this.removalHandles.clear();
+    this.attachedEventManager =
+      null;
 
     if (
       this.eventQueue !==
@@ -761,6 +1778,381 @@ export class PhysicsWorld {
 
     this.lastResetStats();
     this.isInitialized =
+      false;
+  }
+
+  private assertEntityId(
+    entityId: string,
+  ): void {
+    if (
+      typeof entityId !==
+        "string" ||
+      entityId.trim()
+        .length ===
+        0
+    ) {
+      throw new RangeError(
+        "entityId não pode ser vazio.",
+      );
+    }
+  }
+
+  private getBody(
+    entityId: string,
+  ): RAPIER.RigidBody | undefined {
+    if (
+      this.world ===
+        null ||
+      this.disposed
+    ) {
+      return undefined;
+    }
+
+    return this.entityToBodyMap.get(
+      entityId,
+    );
+  }
+
+  private getDynamicBody(
+    entityId: string,
+  ): RAPIER.RigidBody | undefined {
+    const body =
+      this.getBody(
+        entityId,
+      );
+
+    return body !==
+        undefined &&
+      body.bodyType() ===
+        RAPIER.RigidBodyType
+          .Dynamic
+      ? body
+      : undefined;
+  }
+
+  /** dynamic ou kinematicVelocityBased: aceitam velocidade definida pelo usuário. */
+  private getVelocityDrivenBody(
+    entityId: string,
+  ): RAPIER.RigidBody | undefined {
+    const body =
+      this.getBody(
+        entityId,
+      );
+
+    if (
+      body ===
+      undefined
+    ) {
+      return undefined;
+    }
+
+    const type =
+      body.bodyType();
+
+    return type ===
+        RAPIER.RigidBodyType
+          .Dynamic ||
+      type ===
+        RAPIER.RigidBodyType
+          .KinematicVelocityBased
+      ? body
+      : undefined;
+  }
+
+  private attachCollider(
+    entityId: string,
+    body:
+      RAPIER.RigidBody,
+    colliderDesc:
+      RAPIER.ColliderDesc,
+    isSensor: boolean,
+  ): void {
+    if (
+      this.world ===
+      null
+    ) {
+      return;
+    }
+
+    const collider =
+      this.world.createCollider(
+        colliderDesc,
+        body,
+      );
+
+    this.handleToEntityMap.set(
+      collider.handle,
+      entityId,
+    );
+
+    this.handleToSensorMap.set(
+      collider.handle,
+      isSensor,
+    );
+
+    // Sem isto a massa só é atualizada no próximo step (getBodyMass imediato).
+    body.recomputeMassPropertiesFromColliders();
+  }
+
+  private createJointData(
+    desc:
+      JointDescriptor,
+  ): RAPIER.JointData {
+    const anchorA =
+      desc.anchorA ?? ZERO_VECTOR;
+    const anchorB =
+      desc.anchorB ?? ZERO_VECTOR;
+
+    assertVector3(
+      anchorA,
+      "anchorA",
+    );
+    assertVector3(
+      anchorB,
+      "anchorB",
+    );
+
+    const rapierAnchorA =
+      toRapierVector(
+        anchorA,
+      );
+    const rapierAnchorB =
+      toRapierVector(
+        anchorB,
+      );
+
+    const readAxis = (): RAPIER.Vector3 => {
+      const axis =
+        desc.axis;
+
+      if (
+        axis ===
+        undefined
+      ) {
+        throw new RangeError(
+          `joint ${desc.type} requer axis.`,
+        );
+      }
+
+      assertVector3(
+        axis,
+        "axis",
+      );
+
+      const length =
+        Math.hypot(
+          axis.x,
+          axis.y,
+          axis.z,
+        );
+
+      if (
+        length <=
+        Number.EPSILON
+      ) {
+        throw new RangeError(
+          "axis não pode ser o vetor zero.",
+        );
+      }
+
+      return new RAPIER.Vector3(
+        axis.x /
+          length,
+        axis.y /
+          length,
+        axis.z /
+          length,
+      );
+    };
+
+    let data: RAPIER.JointData;
+
+    switch (
+      desc.type
+    ) {
+      case "fixed": {
+        const frameA =
+          desc.frameA ?? IDENTITY_ROTATION;
+        const frameB =
+          desc.frameB ?? IDENTITY_ROTATION;
+
+        assertQuaternion(
+          frameA,
+          "frameA",
+        );
+        assertQuaternion(
+          frameB,
+          "frameB",
+        );
+
+        data =
+          RAPIER.JointData.fixed(
+            rapierAnchorA,
+            toRapierQuaternion(
+              frameA,
+            ),
+            rapierAnchorB,
+            toRapierQuaternion(
+              frameB,
+            ),
+          );
+        break;
+      }
+
+      case "spherical":
+        data =
+          RAPIER.JointData.spherical(
+            rapierAnchorA,
+            rapierAnchorB,
+          );
+        break;
+
+      case "revolute":
+        data =
+          RAPIER.JointData.revolute(
+            rapierAnchorA,
+            rapierAnchorB,
+            readAxis(),
+          );
+        break;
+
+      case "prismatic":
+        data =
+          RAPIER.JointData.prismatic(
+            rapierAnchorA,
+            rapierAnchorB,
+            readAxis(),
+          );
+        break;
+
+      case "rope": {
+        const length =
+          desc.length ?? 1;
+
+        if (
+          !Number.isFinite(
+            length,
+          ) ||
+          length <
+            0
+        ) {
+          throw new RangeError(
+            "rope.length precisa ser finito e >= 0.",
+          );
+        }
+
+        data =
+          RAPIER.JointData.rope(
+            length,
+            rapierAnchorA,
+            rapierAnchorB,
+          );
+        break;
+      }
+
+      case "spring": {
+        const length =
+          desc.length ?? 1;
+        const stiffness =
+          desc.stiffness ?? 1;
+        const damping =
+          desc.damping ?? 0;
+
+        if (
+          !Number.isFinite(
+            length,
+          ) ||
+          !Number.isFinite(
+            stiffness,
+          ) ||
+          !Number.isFinite(
+            damping,
+          ) ||
+          length <
+            0 ||
+          stiffness <
+            0 ||
+          damping <
+            0
+        ) {
+          throw new RangeError(
+            "spring precisa de length/stiffness/damping finitos e >= 0.",
+          );
+        }
+
+        data =
+          RAPIER.JointData.spring(
+            length,
+            stiffness,
+            damping,
+            rapierAnchorA,
+            rapierAnchorB,
+          );
+        break;
+      }
+
+      default:
+        throw new RangeError(
+          `JointType inválido: ${String((desc as { type: unknown }).type)}.`,
+        );
+    }
+
+    if (
+      desc.limits !==
+      undefined
+    ) {
+      if (
+        desc.type !==
+          "revolute" &&
+        desc.type !==
+          "prismatic"
+      ) {
+        throw new RangeError(
+          "limits só se aplica a joints revolute/prismatic.",
+        );
+      }
+
+      if (
+        !Number.isFinite(
+          desc.limits.min,
+        ) ||
+        !Number.isFinite(
+          desc.limits.max,
+        ) ||
+        desc.limits.min >
+          desc.limits.max
+      ) {
+        throw new RangeError(
+          "limits precisa ter min <= max finitos.",
+        );
+      }
+
+      data.limitsEnabled =
+        true;
+      data.limits = [
+        desc.limits.min,
+        desc.limits.max,
+      ];
+    }
+
+    return data;
+  }
+
+  private refreshQueriesIfDirty(): void {
+    if (
+      !this.queriesDirty ||
+      this.world ===
+        null
+    ) {
+      return;
+    }
+
+    this.world
+      .propagateModifiedBodyPositionsToColliders();
+    this.world
+      .updateSceneQueries();
+
+    this.queriesDirty =
       false;
   }
 

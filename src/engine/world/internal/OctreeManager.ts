@@ -37,6 +37,18 @@ const DEFAULT_BOUNDS:
     },
   };
 
+function compareResultsByDistance(
+  first: SpatialQueryResult,
+  second: SpatialQueryResult,
+): number {
+  return first.distance - second.distance ||
+    (first.entityId < second.entityId
+      ? -1
+      : first.entityId > second.entityId
+        ? 1
+        : 0);
+}
+
 export class OctreeManager {
   private readonly entries =
     new Map<
@@ -56,11 +68,23 @@ export class OctreeManager {
   private indexDirty =
     false;
 
+  /**
+   * Limites configurados pela cena. A raiz real é a união destes limites com
+   * a extensão das entidades: nada fica fora do índice (G64).
+   */
+  private configuredBounds:
+    AABBBounds3D;
+
   public constructor(
     bounds:
       AABBBounds3D =
         DEFAULT_BOUNDS,
   ) {
+    this.configuredBounds =
+      this.cloneBounds(
+        bounds,
+      );
+
     this.root = {
       bounds:
         this.cloneBounds(
@@ -80,6 +104,11 @@ export class OctreeManager {
   public resetBounds(
     bounds: AABBBounds3D,
   ): void {
+    this.configuredBounds =
+      this.cloneBounds(
+        bounds,
+      );
+
     this.root.bounds =
       this.cloneBounds(
         bounds,
@@ -195,6 +224,26 @@ export class OctreeManager {
     return removed;
   }
 
+  public get configuredWorldBounds():
+    AABBBounds3D {
+    return this.cloneBounds(
+      this.configuredBounds,
+    );
+  }
+
+  /** Limites efetivos da raiz (configurados ∪ extensão das entidades). */
+  public getEffectiveBounds():
+    AABBBounds3D {
+    this.ensureIndex();
+
+    return this.cloneBounds(
+      this.root.bounds,
+    );
+  }
+
+  /**
+   * Entidades dentro do AABB, ordenadas pela distância 3D ao centro do AABB.
+   */
   public queryBounds(
     bounds: AABBBounds3D,
   ): SpatialQueryResult[] {
@@ -206,7 +255,63 @@ export class OctreeManager {
     this.queryNodeBounds(
       this.root,
       bounds,
+      (bounds.min.x + bounds.max.x) * 0.5,
+      (bounds.min.y + bounds.max.y) * 0.5,
+      (bounds.min.z + bounds.max.z) * 0.5,
+      Number.POSITIVE_INFINITY,
       results,
+    );
+
+    results.sort(
+      compareResultsByDistance,
+    );
+
+    return results;
+  }
+
+  /** Entidades a até `radius` (3D) do centro, ordenadas por distância. */
+  public querySphere(
+    center: WorldPosition3D,
+    radius: number,
+  ): SpatialQueryResult[] {
+    if (
+      !Number.isFinite(radius) ||
+      radius < 0 ||
+      !Number.isFinite(center.x) ||
+      !Number.isFinite(center.y) ||
+      !Number.isFinite(center.z)
+    ) {
+      return [];
+    }
+
+    this.ensureIndex();
+
+    const results:
+      SpatialQueryResult[] = [];
+
+    this.queryNodeBounds(
+      this.root,
+      {
+        min: {
+          x: center.x - radius,
+          y: center.y - radius,
+          z: center.z - radius,
+        },
+        max: {
+          x: center.x + radius,
+          y: center.y + radius,
+          z: center.z + radius,
+        },
+      },
+      center.x,
+      center.y,
+      center.z,
+      radius,
+      results,
+    );
+
+    results.sort(
+      compareResultsByDistance,
     );
 
     return results;
@@ -238,6 +343,9 @@ export class OctreeManager {
 
     this.root.children =
       null;
+
+    this.root.bounds =
+      this.computeRootBounds();
 
     for (
       const entry of
@@ -528,6 +636,10 @@ export class OctreeManager {
   private queryNodeBounds(
     node: OctreeNode,
     queryBounds: AABBBounds3D,
+    centerX: number,
+    centerY: number,
+    centerZ: number,
+    maxDistance: number,
     results: SpatialQueryResult[],
   ): void {
     if (
@@ -538,6 +650,10 @@ export class OctreeManager {
     ) {
       return;
     }
+
+    const maxDistanceSquared =
+      maxDistance *
+      maxDistance;
 
     for (
       const item of
@@ -552,12 +668,35 @@ export class OctreeManager {
         continue;
       }
 
+      const dx =
+        item.position.x -
+        centerX;
+      const dy =
+        item.position.y -
+        centerY;
+      const dz =
+        item.position.z -
+        centerZ;
+      const distanceSquared =
+        dx * dx +
+        dy * dy +
+        dz * dz;
+
+      if (
+        distanceSquared >
+        maxDistanceSquared
+      ) {
+        continue;
+      }
+
       results.push({
         entityId:
           item.entityId,
 
         distance:
-          0,
+          Math.sqrt(
+            distanceSquared,
+          ),
 
         position: {
           x:
@@ -586,9 +725,71 @@ export class OctreeManager {
       this.queryNodeBounds(
         child,
         queryBounds,
+        centerX,
+        centerY,
+        centerZ,
+        maxDistance,
         results,
       );
     }
+  }
+
+  /**
+   * União dos limites configurados com a extensão das entidades (com folga),
+   * para que nenhuma entidade fique fora da raiz.
+   */
+  private computeRootBounds():
+    AABBBounds3D {
+    let minX = this.configuredBounds.min.x;
+    let minY = this.configuredBounds.min.y;
+    let minZ = this.configuredBounds.min.z;
+    let maxX = this.configuredBounds.max.x;
+    let maxY = this.configuredBounds.max.y;
+    let maxZ = this.configuredBounds.max.z;
+    let expanded = false;
+
+    for (
+      const entry of
+      this.entries.values()
+    ) {
+      const position =
+        entry.position;
+
+      if (
+        !Number.isFinite(position.x) ||
+        !Number.isFinite(position.y) ||
+        !Number.isFinite(position.z)
+      ) {
+        continue;
+      }
+
+      if (position.x < minX) { minX = position.x; expanded = true; }
+      if (position.y < minY) { minY = position.y; expanded = true; }
+      if (position.z < minZ) { minZ = position.z; expanded = true; }
+      if (position.x > maxX) { maxX = position.x; expanded = true; }
+      if (position.y > maxY) { maxY = position.y; expanded = true; }
+      if (position.z > maxZ) { maxZ = position.z; expanded = true; }
+    }
+
+    if (!expanded) {
+      return this.cloneBounds(
+        this.configuredBounds,
+      );
+    }
+
+    // Folga de 1 unidade para pontos exatamente na borda.
+    return {
+      min: {
+        x: minX - 1,
+        y: minY - 1,
+        z: minZ - 1,
+      },
+      max: {
+        x: maxX + 1,
+        y: maxY + 1,
+        z: maxZ + 1,
+      },
+    };
   }
 
   private writePosition(
