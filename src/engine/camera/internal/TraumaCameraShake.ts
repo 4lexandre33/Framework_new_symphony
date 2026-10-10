@@ -62,9 +62,35 @@ export class TraumaCameraShake {
     };
 
   public constructor(
-    private readonly config:
+    private config:
       CameraShakeConfig = {},
   ) {}
+
+  /**
+   * Troca os parâmetros do ruído sem zerar o trauma acumulado (G48).
+   */
+  public setConfig(
+    config:
+      CameraShakeConfig,
+  ): void {
+    this.config =
+      config;
+
+    const maxTrauma =
+      Math.max(
+        0,
+        config.maxTrauma ??
+          1,
+      );
+
+    if (
+      this.trauma >
+      maxTrauma
+    ) {
+      this.trauma =
+        maxTrauma;
+    }
+  }
 
   public get currentTrauma():
     number {

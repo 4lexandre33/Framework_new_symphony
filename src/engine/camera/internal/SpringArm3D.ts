@@ -36,6 +36,12 @@ interface MutableRaycastRequest {
 
   solid:
     boolean;
+
+  excludeEntityId:
+    string | undefined;
+
+  excludeSensors:
+    boolean;
 }
 
 function finiteNonNegative(
@@ -105,6 +111,12 @@ export class SpringArm3D {
 
       solid:
         true,
+
+      excludeEntityId:
+        undefined,
+
+      excludeSensors:
+        true,
     };
 
   public constructor(
@@ -167,6 +179,8 @@ export class SpringArm3D {
     deltaSeconds =
       1 /
       60,
+    ignoreEntityId?:
+      string,
   ): THREE.Vector3 {
     const targetArmLength =
       this.targetArmLength;
@@ -234,9 +248,25 @@ export class SpringArm3D {
     this.isColliding =
       false;
 
+    // G45: o raio sai de dentro do collider do alvo; sem uma entidade a
+    // ignorar a colisão só liga com `enableCollision: true` explícito.
+    const ignoredEntity =
+      this.config
+        .collisionIgnoreEntityId ??
+      ignoreEntityId;
+
+    const collisionEnabled =
+      this.config.enableCollision ===
+        true ||
+      (
+        this.config.enableCollision ===
+          undefined &&
+        ignoredEntity !==
+          undefined
+      );
+
     if (
-      this.config.enableCollision !==
-        false &&
+      collisionEnabled &&
       physics !==
         null &&
       physics !==
@@ -273,6 +303,10 @@ export class SpringArm3D {
       this.rayRequest
         .maxDistance =
           targetArmLength;
+
+      this.rayRequest
+        .excludeEntityId =
+          ignoredEntity;
 
       const rayHit =
         physics.castRay(

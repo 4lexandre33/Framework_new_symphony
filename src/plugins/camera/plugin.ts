@@ -3,7 +3,7 @@ import { CameraToken } from "../../tokens/camera";
 import { PhysicsToken } from "../../tokens/physics";
 import { RenderToken } from "../../tokens/render";
 import type { GameRenderPayload } from "../../contracts/game-loop/types";
-import { CameraStateChangedEvent, CameraShakeTriggeredEvent, CameraCollisionEvent, AddCameraTraumaCommand, SetActiveVirtualCameraCommand, SetCameraFollowTargetCommand, type AddCameraTraumaRequest, type SetActiveVirtualCameraRequest, type SetCameraFollowTargetRequest } from "../../contracts/camera/types";
+import { CameraStateChangedEvent, CameraShakeTriggeredEvent, CameraCollisionEvent, CameraOcclusionChangedEvent, AddCameraTraumaCommand, SetActiveVirtualCameraCommand, SetCameraFollowTargetCommand, type AddCameraTraumaRequest, type SetActiveVirtualCameraRequest, type SetCameraFollowTargetRequest } from "../../contracts/camera/types";
 import { CameraService } from "../../engine/camera/internal/CameraService";
 
 export const cameraManifest:
@@ -60,6 +60,7 @@ export const cameraManifest:
         "game.camera.state-changed",
         "game.camera.shake-triggered",
         "game.camera.collision-changed",
+        "game.camera.occlusion-changed",
         "game.loop.render",
       ],
     },
@@ -170,6 +171,10 @@ export function createCameraPlugin():
 
       ctx.events.define(
         CameraCollisionEvent,
+      );
+
+      ctx.events.define(
+        CameraOcclusionChangedEvent,
       );
 
       ctx.commands.define(

@@ -17,18 +17,51 @@ import {
   TraumaCameraShake,
 } from "./TraumaCameraShake";
 
+/** Blend usado quando nem a chamada nem o descritor definem duração. */
+export const DEFAULT_CAMERA_BLEND_SECONDS =
+  0.5;
+
 export interface ActiveVirtualCameraState {
-  readonly descriptor:
+  descriptor:
     VirtualCameraDescriptor;
 
-  readonly springArm:
+  springArm:
     SpringArm3D | null;
 
+  /**
+   * Shake GLOBAL da pilha (mesma instância em todas as câmeras, G48).
+   */
   readonly shake:
     TraumaCameraShake;
 
-  followTargetPos:
-    Vector3Camera | null;
+  priority:
+    number;
+
+  /** Alvo manual (`setFollowTarget`), copiado (G48). */
+  readonly manualFollow:
+    THREE.Vector3;
+
+  hasManualFollow:
+    boolean;
+
+  /** Última posição lida do corpo `followTargetId` (G47). */
+  readonly entityFollow:
+    THREE.Vector3;
+
+  hasEntityFollow:
+    boolean;
+
+  readonly manualLookAt:
+    THREE.Vector3;
+
+  hasManualLookAt:
+    boolean;
+
+  readonly entityLookAt:
+    THREE.Vector3;
+
+  hasEntityLookAt:
+    boolean;
 }
 
 export interface VirtualCameraTransform {
@@ -42,12 +75,30 @@ export interface VirtualCameraTransform {
     number;
 }
 
+interface MutableBodyTransform {
+  readonly position: { x: number; y: number; z: number };
+  readonly rotation: { x: number; y: number; z: number; w: number };
+}
+
+function finitePriority(
+  value: number,
+): number {
+  return Number.isFinite(
+    value,
+  )
+    ? value
+    : 0;
+}
+
 export class VirtualCameraStack {
   private readonly cameras =
     new Map<
       string,
       ActiveVirtualCameraState
     >();
+
+  private readonly shake =
+    new TraumaCameraShake();
 
   private activeCameraId:
     string | null =
@@ -108,10 +159,54 @@ export class VirtualCameraStack {
   private readonly shakeRotation =
     new THREE.Quaternion();
 
+  private readonly bodyScratch:
+    MutableBodyTransform = {
+      position: {
+        x:
+          0,
+        y:
+          0,
+        z:
+          0,
+      },
+      rotation: {
+        x:
+          0,
+        y:
+          0,
+        z:
+          0,
+        w:
+          1,
+      },
+    };
+
+  private readonly lookMatrix =
+    new THREE.Matrix4();
+
+  private readonly up =
+    new THREE.Vector3(
+      0,
+      1,
+      0,
+    );
+
+  private readonly targetScratch =
+    new THREE.Vector3();
+
+  /**
+   * Registra/substitui. Retorna true se a câmera ficou ATIVA por causa do
+   * registro (primeira câmera ou prioridade maior que a ativa, G46).
+   */
   public registerCamera(
     descriptor:
       VirtualCameraDescriptor,
-  ): void {
+  ): boolean {
+    const existing =
+      this.cameras.get(
+        descriptor.id,
+      );
+
     const springArm =
       descriptor.springArmConfig
         ? new SpringArm3D(
@@ -119,36 +214,101 @@ export class VirtualCameraStack {
           )
         : null;
 
-    const shake =
-      new TraumaCameraShake(
-        descriptor.shakeConfig ??
-          {},
+    if (
+      existing !==
+      undefined
+    ) {
+      // Re-registro preserva alvos, trauma global e status de ativa (G4/G48).
+      existing.descriptor =
+        descriptor;
+      existing.springArm =
+        springArm;
+      existing.priority =
+        finitePriority(
+          descriptor.priority,
+        );
+      existing.hasEntityFollow =
+        false;
+      existing.hasEntityLookAt =
+        false;
+
+      if (
+        this.activeCameraId ===
+        descriptor.id
+      ) {
+        this.shake.setConfig(
+          descriptor.shakeConfig ??
+            {},
+        );
+      }
+    } else {
+      this.cameras.set(
+        descriptor.id,
+        {
+          descriptor,
+          springArm,
+          shake:
+            this.shake,
+          priority:
+            finitePriority(
+              descriptor.priority,
+            ),
+          manualFollow:
+            new THREE.Vector3(),
+          hasManualFollow:
+            false,
+          entityFollow:
+            new THREE.Vector3(),
+          hasEntityFollow:
+            false,
+          manualLookAt:
+            new THREE.Vector3(),
+          hasManualLookAt:
+            false,
+          entityLookAt:
+            new THREE.Vector3(),
+          hasEntityLookAt:
+            false,
+        },
       );
-
-    const state:
-      ActiveVirtualCameraState = {
-        descriptor,
-
-        springArm,
-
-        shake,
-
-        followTargetPos:
-          descriptor.position,
-      };
-
-    this.cameras.set(
-      descriptor.id,
-      state,
-    );
+    }
 
     if (
       this.activeCameraId ===
       null
     ) {
-      this.activeCameraId =
-        descriptor.id;
+      // Primeira câmera: corte direto.
+      this.setActiveCamera(
+        descriptor.id,
+        0,
+      );
+      return true;
     }
+
+    if (
+      this.activeCameraId ===
+      descriptor.id
+    ) {
+      return this.reevaluateActivePriority();
+    }
+
+    const active =
+      this.getActiveCameraState();
+
+    if (
+      active !==
+        null &&
+      finitePriority(
+        descriptor.priority,
+      ) >
+        active.priority
+    ) {
+      return this.setActiveCamera(
+        descriptor.id,
+      );
+    }
+
+    return false;
   }
 
   public unregisterCamera(
@@ -167,17 +327,7 @@ export class VirtualCameraStack {
       this.previousCameraId ===
       cameraId
     ) {
-      this.previousCameraId =
-        null;
-
-      this.isBlending =
-        false;
-
-      this.blendDuration =
-        0;
-
-      this.blendProgress =
-        0;
+      this.finishBlend();
     }
 
     if (
@@ -187,31 +337,41 @@ export class VirtualCameraStack {
       this.activeCameraId =
         this.getHighestPriorityCameraId();
 
-      this.previousCameraId =
-        null;
+      this.finishBlend();
 
-      this.isBlending =
-        false;
+      const next =
+        this.getActiveCameraState();
 
-      this.blendDuration =
-        0;
-
-      this.blendProgress =
-        0;
+      if (
+        next !==
+        null
+      ) {
+        this.shake.setConfig(
+          next.descriptor.shakeConfig ??
+            {},
+        );
+      }
     }
 
     return true;
   }
 
+  /**
+   * Ativa a câmera. Sem duração usa `descriptor.blendDurationSeconds` da
+   * câmera de destino (padrão 0,5 s, G47).
+   */
   public setActiveCamera(
     cameraId: string,
-    blendDurationSeconds =
-      0.5,
+    blendDurationSeconds?: number,
   ): boolean {
-    if (
-      !this.cameras.has(
+    const target =
+      this.cameras.get(
         cameraId,
-      )
+      );
+
+    if (
+      target ===
+      undefined
     ) {
       return false;
     }
@@ -225,7 +385,10 @@ export class VirtualCameraStack {
 
     const safeBlendDuration =
       this.sanitizeNonNegative(
-        blendDurationSeconds,
+        this.resolveBlendDuration(
+          cameraId,
+          blendDurationSeconds,
+        ),
       );
 
     this.previousCameraId =
@@ -251,6 +414,88 @@ export class VirtualCameraStack {
     ) {
       this.previousCameraId =
         null;
+    }
+
+    this.shake.setConfig(
+      target.descriptor.shakeConfig ??
+        {},
+    );
+
+    return true;
+  }
+
+  /** Duração efetiva que `setActiveCamera` usaria. */
+  public resolveBlendDuration(
+    cameraId: string,
+    blendDurationSeconds?: number,
+  ): number {
+    if (
+      blendDurationSeconds !==
+      undefined
+    ) {
+      return blendDurationSeconds;
+    }
+
+    const descriptorBlend =
+      this.cameras.get(
+        cameraId,
+      )?.descriptor
+        .blendDurationSeconds;
+
+    return descriptorBlend !==
+      undefined &&
+      Number.isFinite(
+        descriptorBlend,
+      )
+      ? descriptorBlend
+      : DEFAULT_CAMERA_BLEND_SECONDS;
+  }
+
+  /**
+   * Muda a prioridade e reavalia a câmera ativa (G46). Retorna false se a
+   * câmera não existe.
+   */
+  public setCameraPriority(
+    cameraId: string,
+    priority: number,
+  ): boolean {
+    const camera =
+      this.cameras.get(
+        cameraId,
+      );
+
+    if (
+      camera ===
+      undefined
+    ) {
+      return false;
+    }
+
+    camera.priority =
+      finitePriority(
+        priority,
+      );
+
+    if (
+      this.activeCameraId ===
+      cameraId
+    ) {
+      this.reevaluateActivePriority();
+      return true;
+    }
+
+    const active =
+      this.getActiveCameraState();
+
+    if (
+      active ===
+        null ||
+      camera.priority >
+        active.priority
+    ) {
+      this.setActiveCamera(
+        cameraId,
+      );
     }
 
     return true;
@@ -289,6 +534,17 @@ export class VirtualCameraStack {
     return this.activeCameraId;
   }
 
+  public getCameraCount():
+    number {
+    return this.cameras.size;
+  }
+
+  public getShake():
+    TraumaCameraShake {
+    return this.shake;
+  }
+
+  /** Copia os números do alvo (nunca guarda a referência, G48). */
   public setFollowTarget(
     cameraId: string,
     targetPos:
@@ -303,8 +559,22 @@ export class VirtualCameraStack {
       return false;
     }
 
-    camera.followTargetPos =
-      targetPos;
+    camera.manualFollow.set(
+      targetPos.x,
+      targetPos.y,
+      targetPos.z,
+    );
+
+    camera.hasManualFollow =
+      Number.isFinite(
+        targetPos.x,
+      ) &&
+      Number.isFinite(
+        targetPos.y,
+      ) &&
+      Number.isFinite(
+        targetPos.z,
+      );
 
     return true;
   }
@@ -321,10 +591,87 @@ export class VirtualCameraStack {
       return false;
     }
 
-    camera.followTargetPos =
-      null;
+    camera.hasManualFollow =
+      false;
 
     return true;
+  }
+
+  public setLookAtTarget(
+    cameraId: string,
+    targetPos:
+      Vector3Camera | null,
+  ): boolean {
+    const camera =
+      this.cameras.get(
+        cameraId,
+      );
+
+    if (!camera) {
+      return false;
+    }
+
+    if (
+      targetPos ===
+      null
+    ) {
+      camera.hasManualLookAt =
+        false;
+      return true;
+    }
+
+    camera.manualLookAt.set(
+      targetPos.x,
+      targetPos.y,
+      targetPos.z,
+    );
+
+    camera.hasManualLookAt =
+      Number.isFinite(
+        targetPos.x,
+      ) &&
+      Number.isFinite(
+        targetPos.y,
+      ) &&
+      Number.isFinite(
+        targetPos.z,
+      );
+
+    return true;
+  }
+
+  /**
+   * Alvo de seguimento efetivo da câmera (manual > entidade) ou null.
+   * Retorna um vetor INTERNO (não guarde).
+   */
+  public getEffectiveFollowTarget(
+    state:
+      ActiveVirtualCameraState,
+  ): THREE.Vector3 | null {
+    if (
+      state.hasManualFollow
+    ) {
+      return state.manualFollow;
+    }
+
+    return state.hasEntityFollow
+      ? state.entityFollow
+      : null;
+  }
+
+  public getEffectiveLookAtTarget(
+    state:
+      ActiveVirtualCameraState,
+  ): THREE.Vector3 | null {
+    if (
+      state.hasManualLookAt
+    ) {
+      return state.manualLookAt;
+    }
+
+    return state.hasEntityLookAt
+      ? state.entityLookAt
+      : null;
   }
 
   public update(
@@ -367,11 +714,8 @@ export class VirtualCameraStack {
       this.currentTransform,
     );
 
-    this.applyShake(
-      activeState,
-      safeDelta,
-      this.currentTransform,
-    );
+    let blended =
+      false;
 
     if (
       this.isBlending &&
@@ -440,14 +784,25 @@ export class VirtualCameraStack {
           this.finishBlend();
         }
 
-        return this.finalTransform;
+        blended =
+          true;
+      } else {
+        this.finishBlend();
       }
-
-      this.finishBlend();
     }
 
-    this.copyTransform(
-      this.currentTransform,
+    if (
+      !blended
+    ) {
+      this.copyTransform(
+        this.currentTransform,
+        this.finalTransform,
+      );
+    }
+
+    // Shake global aplicado depois do blend (G48).
+    this.applyShake(
+      safeDelta,
       this.finalTransform,
     );
 
@@ -455,12 +810,7 @@ export class VirtualCameraStack {
   }
 
   public clear(): void {
-    for (
-      const camera of
-      this.cameras.values()
-    ) {
-      camera.shake.reset();
-    }
+    this.shake.reset();
 
     this.cameras.clear();
 
@@ -519,6 +869,72 @@ export class VirtualCameraStack {
       60;
   }
 
+  private reevaluateActivePriority(): boolean {
+    const active =
+      this.getActiveCameraState();
+
+    const highestId =
+      this.getHighestPriorityCameraId();
+
+    if (
+      active ===
+        null ||
+      highestId ===
+        null ||
+      highestId ===
+        this.activeCameraId
+    ) {
+      return false;
+    }
+
+    const highest =
+      this.cameras.get(
+        highestId,
+      );
+
+    if (
+      highest !==
+        undefined &&
+      highest.priority >
+        active.priority
+    ) {
+      this.setActiveCamera(
+        highestId,
+      );
+    }
+
+    return false;
+  }
+
+  private readEntityPosition(
+    entityId: string,
+    physics:
+      PhysicsApi | null,
+    out:
+      THREE.Vector3,
+  ): boolean {
+    if (
+      physics ===
+        null ||
+      typeof physics.getBodyTransformInto !==
+        "function" ||
+      !physics.getBodyTransformInto(
+        entityId,
+        this.bodyScratch,
+      )
+    ) {
+      return false;
+    }
+
+    out.set(
+      this.bodyScratch.position.x,
+      this.bodyScratch.position.y,
+      this.bodyScratch.position.z,
+    );
+
+    return true;
+  }
+
   private computeSingleCameraTransform(
     state:
       ActiveVirtualCameraState,
@@ -547,23 +963,72 @@ export class VirtualCameraStack {
       output.rotation.normalize();
     }
 
+    // G47: alvos por id de entidade, lidos da física a cada frame (a
+    // última posição conhecida é mantida se o corpo sumir).
     if (
-      state.springArm &&
-      state.followTargetPos
+      descriptor.followTargetId !==
+        undefined &&
+      this.readEntityPosition(
+        descriptor.followTargetId,
+        physics,
+        state.entityFollow,
+      )
     ) {
-      const springArmPosition =
-        state.springArm
-          .computeCameraPosition(
-            state.followTargetPos,
-            output.rotation,
-            physics,
-            this.lastDeltaSeconds,
-          );
+      state.hasEntityFollow =
+        true;
+    }
 
-      output.position.copy(
-        springArmPosition,
+    if (
+      descriptor.lookAtTargetId !==
+        undefined &&
+      this.readEntityPosition(
+        descriptor.lookAtTargetId,
+        physics,
+        state.entityLookAt,
+      )
+    ) {
+      state.hasEntityLookAt =
+        true;
+    }
+
+    const followTarget =
+      this.getEffectiveFollowTarget(
+        state,
       );
+
+    if (
+      followTarget !==
+      null
+    ) {
+      if (
+        state.springArm
+      ) {
+        const springArmPosition =
+          state.springArm
+            .computeCameraPosition(
+              followTarget,
+              output.rotation,
+              physics,
+              this.lastDeltaSeconds,
+              descriptor.followTargetId,
+            );
+
+        output.position.copy(
+          springArmPosition,
+        );
+      } else {
+        // Sem spring-arm: `position` é o offset em relação ao alvo.
+        output.position.set(
+          followTarget.x +
+            descriptor.position.x,
+          followTarget.y +
+            descriptor.position.y,
+          followTarget.z +
+            descriptor.position.z,
+        );
+      }
     } else {
+      // G46: sem alvo a câmera fica em `position` (nunca usa position como alvo).
       output.position.set(
         descriptor.position.x,
         descriptor.position.y,
@@ -571,23 +1036,56 @@ export class VirtualCameraStack {
       );
     }
 
+    const lookAtTarget =
+      this.getEffectiveLookAtTarget(
+        state,
+      );
+
+    if (
+      lookAtTarget !==
+        null &&
+      output.position
+        .distanceToSquared(
+          lookAtTarget,
+        ) >
+        0.000001
+    ) {
+      this.targetScratch.copy(
+        lookAtTarget,
+      );
+
+      // Matrix4.lookAt(eye, target, up) orienta -Z para o alvo (convenção de câmera).
+      this.lookMatrix.lookAt(
+        output.position,
+        this.targetScratch,
+        this.up,
+      );
+
+      output.rotation
+        .setFromRotationMatrix(
+          this.lookMatrix,
+        );
+    }
+
     output.fov =
       Number.isFinite(
         descriptor.fov,
-      )
+      ) &&
+      descriptor.fov >
+        0 &&
+      descriptor.fov <
+        180
         ? descriptor.fov
         : 60;
   }
 
   private applyShake(
-    state:
-      ActiveVirtualCameraState,
     deltaSeconds: number,
     transform:
       VirtualCameraTransform,
   ): void {
     const shake =
-      state.shake.update(
+      this.shake.update(
         deltaSeconds,
       );
 
@@ -651,10 +1149,8 @@ export class VirtualCameraStack {
     ) {
       if (
         !highest ||
-        camera.descriptor
-          .priority >
-          highest.descriptor
-            .priority
+        camera.priority >
+          highest.priority
       ) {
         highest =
           camera;

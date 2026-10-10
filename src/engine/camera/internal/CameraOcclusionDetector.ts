@@ -33,6 +33,12 @@ interface MutableRayRequest {
 
   solid:
     boolean;
+
+  excludeEntityId:
+    string | undefined;
+
+  excludeSensors:
+    boolean;
 }
 
 export class CameraOcclusionDetector {
@@ -64,6 +70,12 @@ export class CameraOcclusionDetector {
 
       solid:
         true,
+
+      excludeEntityId:
+        undefined,
+
+      excludeSensors:
+        true,
     };
 
   public checkOcclusion(
@@ -73,6 +85,8 @@ export class CameraOcclusionDetector {
       Vector3Camera,
     physics:
       PhysicsApi,
+    ignoreEntityId?:
+      string,
   ): ReadonlySet<string> {
     this.occludedEntityIds
       .clear();
@@ -132,6 +146,9 @@ export class CameraOcclusionDetector {
 
     request.maxDistance =
       maxDistance;
+
+    request.excludeEntityId =
+      ignoreEntityId;
 
     const hit =
       physics.castRay(

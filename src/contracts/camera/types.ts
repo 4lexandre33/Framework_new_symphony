@@ -19,7 +19,16 @@ export interface SpringArmConfig {
   readonly socketOffset: Vector3Camera;
   readonly targetOffset: Vector3Camera;
   readonly smoothTimeSeconds?: number;
+  /**
+   * Raio de colisão do braço (G45). O raio IGNORA o collider do alvo
+   * (`followTargetId` ou `collisionIgnoreEntityId`) e sensores.
+   * Padrão: true somente quando há entidade a ignorar; sem ela o raio
+   * nasceria dentro do collider do alvo e colapsaria o braço, então o
+   * padrão vira false. `true` explícito liga sempre.
+   */
   readonly enableCollision?: boolean;
+  /** Entidade física ignorada pelo raio do braço (normalmente o personagem seguido). */
+  readonly collisionIgnoreEntityId?: string;
 }
 
 export interface CameraShakeConfig {
@@ -30,6 +39,21 @@ export interface CameraShakeConfig {
   readonly maxPitchYawRollDegrees?: Vector3Camera;
 }
 
+/**
+ * Câmera virtual.
+ *
+ * - `priority` (G46): a câmera de MAIOR prioridade fica ativa ao ser
+ *   registrada (ou ao mudar a prioridade); `setActiveCamera` força outra.
+ * - `position`: posição fixa; com alvo de seguimento e SEM spring-arm vira
+ *   o OFFSET em relação ao alvo (G47).
+ * - `followTargetId` / `lookAtTargetId` (G47): ids de entidades com corpo
+ *   físico (`game.physics`); a posição é lida a cada frame. Para alvos sem
+ *   corpo use `setFollowTarget` / `setLookAtTarget`.
+ * - `blendDurationSeconds` (G47): blend padrão ao ATIVAR esta câmera
+ *   (padrão 0,5 s quando omitido).
+ * - `detectOcclusion`: emite `game.camera.occlusion-changed` com as
+ *   entidades entre a câmera e o alvo (o jogo decide o fade).
+ */
 export interface VirtualCameraDescriptor {
   readonly id: string;
   readonly priority: number;
@@ -41,6 +65,7 @@ export interface VirtualCameraDescriptor {
   readonly springArmConfig?: SpringArmConfig;
   readonly shakeConfig?: CameraShakeConfig;
   readonly blendDurationSeconds?: number;
+  readonly detectOcclusion?: boolean;
 }
 
 export interface CameraTransformSnapshot {
@@ -86,6 +111,17 @@ export const CameraCollisionEvent = defineEvent<
   "game.camera.collision-changed",
   CameraCollisionPayload
 >("game.camera.collision-changed");
+
+export interface CameraOcclusionPayload {
+  readonly cameraId: string;
+  /** Entidades (físicas) entre a câmera e o alvo neste momento. */
+  readonly occludedEntityIds: ReadonlyArray<string>;
+}
+
+export const CameraOcclusionChangedEvent = defineEvent<
+  "game.camera.occlusion-changed",
+  CameraOcclusionPayload
+>("game.camera.occlusion-changed");
 
 // ── COMANDOS DE CÂMERA ──────────────────────────────────────────────────────
 

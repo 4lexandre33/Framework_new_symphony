@@ -18,6 +18,7 @@ import type {
 
 import {
   CameraCollisionEvent,
+  CameraOcclusionChangedEvent,
   CameraShakeTriggeredEvent,
   CameraStateChangedEvent,
 } from "../../../contracts/camera/types";
@@ -32,6 +33,10 @@ import type {
 import {
   VirtualCameraStack,
 } from "./VirtualCameraStack";
+
+import {
+  CameraOcclusionDetector,
+} from "./CameraOcclusionDetector";
 
 export class CameraService
   implements CameraApi {
@@ -55,6 +60,20 @@ export class CameraService
 
   private disposed =
     false;
+
+  // G4: com false a câmera do render não é tocada.
+  private enabled =
+    true;
+
+  private readonly occlusionDetector =
+    new CameraOcclusionDetector();
+
+  private readonly lastOccluded =
+    new Set<string>();
+
+  private lastOcclusionCameraId:
+    string | null =
+      null;
 
   public constructor(
     private readonly ctx:
@@ -90,10 +109,18 @@ export class CameraService
       return;
     }
 
+    const previousCameraId =
+      this.stack
+        .getActiveCameraId();
+
     this.stack
       .registerCamera(
         descriptor,
       );
+
+    this.emitActivationIfChanged(
+      previousCameraId,
+    );
   }
 
   public unregisterVirtualCamera(
@@ -106,11 +133,24 @@ export class CameraService
       return false;
     }
 
+    const previousCameraId =
+      this.stack
+        .getActiveCameraId();
+
     const removed =
       this.stack
         .unregisterCamera(
           cameraId,
         );
+
+    if (
+      removed
+    ) {
+      this.emitActivationIfChanged(
+        previousCameraId,
+        0,
+      );
+    }
 
     if (
       removed &&
@@ -130,8 +170,8 @@ export class CameraService
   public setActiveCamera(
     cameraId:
       string,
-    blendDurationSeconds =
-      0.5,
+    blendDurationSeconds?:
+      number,
   ): boolean {
     if (
       this.disposed
@@ -143,9 +183,14 @@ export class CameraService
       this.stack
         .getActiveCameraId();
 
+    // G47: sem duração explícita usa o blend do descritor de destino.
     const safeBlendDuration =
       this.sanitizeNonNegative(
-        blendDurationSeconds,
+        this.stack
+          .resolveBlendDuration(
+            cameraId,
+            blendDurationSeconds,
+          ),
       );
 
     const changed =
@@ -206,21 +251,14 @@ export class CameraService
       return;
     }
 
-    const active =
+    // G48: trauma global, sobrevive à troca de câmera.
+    const shake =
       this.stack
-        .getActiveCameraState();
+        .getShake();
 
-    if (
-      active ===
-      null
-    ) {
-      return;
-    }
-
-    active.shake
-      .addTrauma(
-        safeTrauma,
-      );
+    shake.addTrauma(
+      safeTrauma,
+    );
 
     this.ctx.events.emit(
       CameraShakeTriggeredEvent.type,
@@ -229,8 +267,7 @@ export class CameraService
           safeTrauma,
 
         currentTotalTrauma:
-          active.shake
-            .currentTrauma,
+          shake.currentTrauma,
       },
     );
   }
@@ -285,6 +322,96 @@ export class CameraService
       .updateConfig(
         config,
       );
+  }
+
+  public clearFollowTarget(
+    cameraId:
+      string,
+  ): boolean {
+    if (
+      this.disposed
+    ) {
+      return false;
+    }
+
+    return this.stack
+      .clearFollowTarget(
+        cameraId,
+      );
+  }
+
+  public setLookAtTarget(
+    cameraId:
+      string,
+    targetPosition:
+      Vector3Camera | null,
+  ): boolean {
+    if (
+      this.disposed
+    ) {
+      return false;
+    }
+
+    return this.stack
+      .setLookAtTarget(
+        cameraId,
+        targetPosition,
+      );
+  }
+
+  public setCameraPriority(
+    cameraId:
+      string,
+    priority:
+      number,
+  ): boolean {
+    if (
+      this.disposed
+    ) {
+      return false;
+    }
+
+    const previousCameraId =
+      this.stack
+        .getActiveCameraId();
+
+    const updated =
+      this.stack
+        .setCameraPriority(
+          cameraId,
+          priority,
+        );
+
+    if (
+      updated
+    ) {
+      this.emitActivationIfChanged(
+        previousCameraId,
+      );
+    }
+
+    return updated;
+  }
+
+  public setEnabled(
+    enabled:
+      boolean,
+  ): void {
+    this.enabled =
+      enabled ===
+      true;
+  }
+
+  public isEnabled():
+    boolean {
+    return this.enabled;
+  }
+
+  public getTrauma():
+    number {
+    return this.stack
+      .getShake()
+      .currentTrauma;
   }
 
   public getActiveCameraId():
@@ -390,7 +517,8 @@ export class CameraService
         0,
 
       currentTrauma:
-        active.shake
+        this.stack
+          .getShake()
           .currentTrauma,
     };
   }
@@ -408,9 +536,14 @@ export class CameraService
     const renderApi =
       this.renderApi;
 
+    // G4: sem câmera virtual (ou desabilitado) a câmera do render é do jogo.
     if (
       renderApi ===
-      null
+        null ||
+      !this.enabled ||
+      this.stack
+        .getActiveCameraState() ===
+        null
     ) {
       return;
     }
@@ -451,6 +584,10 @@ export class CameraService
     }
 
     this.emitCollisionChangeIfNeeded();
+
+    this.updateOcclusion(
+      activeThreeCamera.position,
+    );
   }
 
   public dispose(): void {
@@ -472,11 +609,181 @@ export class CameraService
     this.lastCollisionState =
       false;
 
+    this.lastOccluded
+      .clear();
+
+    this.lastOcclusionCameraId =
+      null;
+
     this.physics =
       null;
 
     this.renderApi =
       null;
+  }
+
+  /**
+   * Emite `game.camera.state-changed` quando a câmera ativa mudou por
+   * registro/prioridade/remoção (G46).
+   */
+  private emitActivationIfChanged(
+    previousCameraId:
+      string | null,
+    forcedBlendSeconds?:
+      number,
+  ): void {
+    const activeCameraId =
+      this.stack
+        .getActiveCameraId();
+
+    if (
+      activeCameraId ===
+        null ||
+      activeCameraId ===
+        previousCameraId
+    ) {
+      return;
+    }
+
+    const blendDurationSeconds =
+      previousCameraId ===
+        null
+        ? 0
+        : this.sanitizeNonNegative(
+            forcedBlendSeconds ??
+              this.stack
+                .resolveBlendDuration(
+                  activeCameraId,
+                ),
+          );
+
+    this.ctx.events.emit(
+      CameraStateChangedEvent.type,
+      {
+        activeCameraId,
+
+        previousCameraId,
+
+        blendDurationSeconds,
+      },
+    );
+  }
+
+  /**
+   * Oclusão câmera→alvo (G47). Só roda para câmeras com
+   * `detectOcclusion`; emite quando o conjunto muda.
+   */
+  private updateOcclusion(
+    cameraPosition:
+      Vector3Camera,
+  ): void {
+    const active =
+      this.stack
+        .getActiveCameraState();
+
+    const physics =
+      this.physics;
+
+    if (
+      active ===
+        null ||
+      active.descriptor
+        .detectOcclusion !==
+        true ||
+      physics ===
+        null
+    ) {
+      return;
+    }
+
+    const target =
+      this.stack
+        .getEffectiveLookAtTarget(
+          active,
+        ) ??
+      this.stack
+        .getEffectiveFollowTarget(
+          active,
+        );
+
+    if (
+      target ===
+      null
+    ) {
+      return;
+    }
+
+    const occluded =
+      this.occlusionDetector
+        .checkOcclusion(
+          cameraPosition,
+          target,
+          physics,
+          active.descriptor
+            .followTargetId ??
+            active.descriptor
+              .lookAtTargetId,
+        );
+
+    const cameraId =
+      active.descriptor.id;
+
+    let changed =
+      this.lastOcclusionCameraId !==
+        cameraId ||
+      occluded.size !==
+        this.lastOccluded.size;
+
+    if (
+      !changed
+    ) {
+      for (
+        const entityId of
+        occluded
+      ) {
+        if (
+          !this.lastOccluded.has(
+            entityId,
+          )
+        ) {
+          changed =
+            true;
+          break;
+        }
+      }
+    }
+
+    if (
+      !changed
+    ) {
+      return;
+    }
+
+    this.lastOcclusionCameraId =
+      cameraId;
+
+    this.lastOccluded.clear();
+
+    for (
+      const entityId of
+      occluded
+    ) {
+      this.lastOccluded.add(
+        entityId,
+      );
+    }
+
+    this.ctx.events.emit(
+      CameraOcclusionChangedEvent.type,
+      {
+        cameraId,
+
+        occludedEntityIds:
+          Array.from(
+            occluded,
+          ),
+      },
+    );
   }
 
   private emitCollisionChangeIfNeeded():

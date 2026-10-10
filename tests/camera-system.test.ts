@@ -77,10 +77,12 @@ describe("Camada de Câmera Dinâmica & SpringArm (game.camera)", () => {
       rotation: { x: 0, y: 0, z: 0, w: 1 },
     });
 
-    expect(stack.getActiveCameraId()).toBe("cam_follow");
-
-    stack.setActiveCamera("cam_aim", 0.2);
+    // G46: a câmera de maior prioridade assume ao ser registrada.
     expect(stack.getActiveCameraId()).toBe("cam_aim");
+    stack.update(1); // conclui o blend de entrada (0,5 s padrão)
+
+    stack.setActiveCamera("cam_follow", 0.2);
+    expect(stack.getActiveCameraId()).toBe("cam_follow");
 
     const blended = stack.update(0.1);
     expect(blended.fov).toBeCloseTo(50, 1);
