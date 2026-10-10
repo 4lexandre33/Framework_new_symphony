@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import {
   beforeEach,
   describe,
@@ -126,9 +127,22 @@ describe("Camada de Streaming & LOD (game.streaming)", (): void => {
         boundingRadius: 30,
       });
 
+      // G61: registrar um cluster não economiza nada (antes era contabilidade
+      // fictícia); a economia real vem de fundir malhas.
       const stats = hlodBuilder.getStats();
       expect(stats.totalClusters).toBe(1);
-      expect(stats.drawCallsSaved).toBe(3);
+      expect(stats.drawCallsSaved).toBe(0);
+
+      const material = new THREE.MeshBasicMaterial();
+      const meshes = [0, 1, 2, 3].map((index) => {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material);
+        mesh.position.set(index * 2, 0, 0);
+        return mesh;
+      });
+      const merged = hlodBuilder.merge(meshes, "hlod_test");
+      expect(merged?.sourceMeshCount).toBe(4);
+      expect(merged?.mergedDrawCalls).toBe(1);
+      expect(merged?.vertexCount).toBe(4 * 24);
     });
   });
 

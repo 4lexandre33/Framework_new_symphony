@@ -24,8 +24,12 @@ export interface LODLevelDescriptor {
 export interface LODEntityDescriptor {
   readonly entityId: string;
   readonly worldPosition: Vector3Streaming;
+  /** Qualquer ordem: a engine ordena por `distanceThreshold` (G63). */
   readonly lodLevels: ReadonlyArray<LODLevelDescriptor>;
+  /** Nível inicial declarado; o real é avaliado JÁ no registro (G63). */
   readonly currentLevel: LODLevel;
+  /** Histerese (unidades de mundo) desta entidade. Padrão = `setLODHysteresis` (2). */
+  readonly hysteresis?: number;
 }
 
 export interface HLODClusterDescriptor {
@@ -43,8 +47,54 @@ export interface StreamingSectorDescriptor {
   readonly sectorCoord: SectorCoord;
   readonly boundsMin: Vector3Streaming;
   readonly boundsMax: Vector3Streaming;
+  /**
+   * Carregados via `game.assets` (se presente) antes de `sector-loaded` e
+   * liberados no unload (G17). Tipo pela extensão: .gltf/.glb, imagens,
+   * áudio, .json; demais como binário.
+   */
   readonly assetUrls: ReadonlyArray<string>;
   readonly hlodCluster?: HLODClusterDescriptor;
+  /** Prioridade de carga (maior primeiro). Padrão 0. */
+  readonly priority?: number;
+}
+
+/** Origem do centro do streaming (G17). */
+export type StreamingCenterSource = "camera" | "explicit";
+
+export interface HLODBuildOptions {
+  /** Distância (do centro ao centro do setor) a partir da qual o proxy aparece. Padrão = raio de carga. */
+  readonly switchDistance?: number;
+  /** Além disto o proxy também some. Padrão infinito. */
+  readonly maxDistance?: number;
+  /** Esconde os originais (chaves de cena) enquanto o proxy está ativo. Padrão true. */
+  readonly hideSources?: boolean;
+}
+
+export interface HLODBuildResult {
+  /** Chave de cena do proxy (`hlod_<x>:<y>:<z>`). */
+  readonly sceneKey: string;
+  readonly sourceMeshCount: number;
+  /** Draw calls do proxy (1 por material). */
+  readonly mergedDrawCalls: number;
+  readonly vertexCount: number;
+  /** Malhas ignoradas (skinned, instanced, multi-material). */
+  readonly skippedMeshCount: number;
+}
+
+export interface StreamingStats {
+  readonly registeredSectors: number;
+  readonly loadedSectors: number;
+  readonly loadingSectors: number;
+  readonly queuedSectors: number;
+  readonly pinnedSectors: number;
+  readonly lodEntities: number;
+  readonly hlodClusters: number;
+  readonly activeHLODs: number;
+  readonly assetsLoaded: number;
+  readonly assetsFailed: number;
+  readonly lastLoadTimeMs: number;
+  readonly averageLoadTimeMs: number;
+  readonly centerSource: StreamingCenterSource;
 }
 
 // ── EVENTOS DE STREAMING & LOD ─────────────────────────────────────────────
@@ -53,6 +103,10 @@ export interface SectorLoadedPayload {
   readonly sectorCoord: SectorCoord;
   readonly loadedAssetsCount: number;
   readonly loadTimeMs: number;
+  /** Assets que falharam (o setor carrega mesmo assim). */
+  readonly failedAssetsCount?: number;
+  /** true se foi pedido à mão (`loadSector`): fica fixo até `releaseSector`/`unloadSector`. */
+  readonly pinned?: boolean;
 }
 
 export const SectorLoadedEvent = defineEvent<
@@ -73,6 +127,8 @@ export interface LODLevelChangedPayload {
   readonly entityId: string;
   readonly previousLevel: LODLevel;
   readonly newLevel: LODLevel;
+  /** `meshUrl` do novo nível (pré-carregado via `game.assets` quando presente). */
+  readonly meshUrl?: string;
 }
 
 export const LODLevelChangedEvent = defineEvent<

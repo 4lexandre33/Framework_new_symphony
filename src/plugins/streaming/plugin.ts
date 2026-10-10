@@ -1,6 +1,8 @@
 import type { Plugin, PluginContext } from "@core";
 import { StreamingToken } from "../../tokens/streaming";
-import { CameraToken } from "../../tokens/camera";
+import { CameraToken, type CameraApi } from "../../tokens/camera";
+import { RenderToken, type Render3DApi } from "../../tokens/render";
+import { AssetsToken, type AssetsApi } from "../../tokens/assets";
 import type { GameTickPayload } from "../../contracts/game-loop/types";
 import { ForceSectorUnloadCommand, LODLevelChangedEvent, RequestSectorLoadCommand, SectorLoadedEvent, SectorUnloadedEvent, SetStreamingRadiusCommand, type ForceSectorUnloadPayload, type RequestSectorLoadPayload, type SetStreamingRadiusPayload } from "../../contracts/streaming/types";
 import { StreamingService } from "../../engine/streaming/internal/StreamingService";
@@ -16,15 +18,29 @@ export const streamingManifest: Plugin["manifest"] = {
       id: "game.loop",
       range: "^1.0.0",
     },
+    // Opcionais: centro pela câmera, HLOD (render) e assetUrls/meshUrl (assets).
     {
       id: "game.camera",
       range: "^1.0.0",
+      optional: true,
+    },
+    {
+      id: "game.render",
+      range: "^1.0.0",
+      optional: true,
+    },
+    {
+      id: "game.assets",
+      range: "^1.0.0",
+      optional: true,
     },
   ],
   permissions: {
     capabilities: [
       StreamingToken.id,
       CameraToken.id,
+      RenderToken.id,
+      AssetsToken.id,
     ],
     events: [
       SectorLoadedEvent.type,
@@ -44,12 +60,30 @@ export const streamingManifest: Plugin["manifest"] = {
       {
         id: CameraToken.id,
         range: "^1.0.0",
-        optional: false,
+        optional: true,
+      },
+      {
+        id: RenderToken.id,
+        range: "^1.0.0",
+        optional: true,
+      },
+      {
+        id: AssetsToken.id,
+        range: "^1.0.0",
+        optional: true,
       },
     ],
     conflicts: [],
   },
 };
+
+function getOptional<T>(read: () => T | undefined): T | null {
+  try {
+    return read() ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export function createStreamingPlugin(): Plugin {
   let streamingService: StreamingService | null = null;
@@ -63,9 +97,11 @@ export function createStreamingPlugin(): Plugin {
           throw new Error("StreamingService não foi criado durante setup().");
         }
 
-        streamingService.bindCamera(
-          ctx.caps.require(CameraToken),
-        );
+        streamingService.bindDependencies({
+          camera: getOptional<CameraApi>(() => ctx.caps.get(CameraToken)),
+          render: getOptional<Render3DApi>(() => ctx.caps.get(RenderToken)),
+          assets: getOptional<AssetsApi>(() => ctx.caps.get(AssetsToken)),
+        });
       },
     },
   };
@@ -99,7 +135,7 @@ export function createStreamingPlugin(): Plugin {
         RequestSectorLoadCommand.type,
         (envelope): Promise<boolean> => {
           const payload = envelope.payload as RequestSectorLoadPayload;
-          return service.loadSector(payload.sectorCoord);
+          return service.loadSector(payload.sectorCoord, payload.priority ?? 0);
         },
       );
 
