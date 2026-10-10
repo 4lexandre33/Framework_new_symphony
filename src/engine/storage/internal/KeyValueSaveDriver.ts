@@ -762,6 +762,16 @@ export class KeyValueSaveDriver {
             key,
             fromBackup.raw,
           );
+
+          if (
+            fromBackup.result.metadata
+          ) {
+            await this.updateIndex(
+              prefix,
+              key,
+              fromBackup.result.metadata,
+            );
+          }
         } catch {
           // mantém o backup; o próximo save regrava o principal
         }

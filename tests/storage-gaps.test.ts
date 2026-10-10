@@ -9,7 +9,7 @@ import {
   type KeyValueStorageBackend,
 } from "../src/engine/storage/internal/KeyValueStorageBackend";
 import { LocalDatabaseDriver } from "../src/engine/storage/internal/LocalDatabaseDriver";
-import { calculateSaveChecksum } from "../src/engine/storage/internal/SaveRecordCodec";
+import { calculateSaveChecksum, computeHmac, hmacSha256Fallback } from "../src/engine/storage/internal/SaveRecordCodec";
 import type { ProfileHttpTransport } from "../src/engine/storage/internal/RemoteProfileBackend";
 
 interface Emitted {
@@ -135,6 +135,8 @@ describe("storage gaps (G12, G100–G103)", () => {
     const detailed = await svc.loadGameDetailed<{ coins: number }>("main");
     expect(detailed).toMatchObject({ status: "recovered", data: { coins: 2 }, backupIndex: 1 });
     expect(emitted.some((e) => e.type === "game.storage.save-recovered")).toBe(true);
+    // índice reflete o registro restaurado
+    expect((await svc.listSaves()).find((m) => m.slotName === "main")?.timestamp).toBe(detailed.metadata?.timestamp);
     // o principal foi restaurado a partir do backup
     expect(await svc.loadGame("main")).toEqual({ coins: 2 });
 
@@ -259,6 +261,18 @@ describe("storage gaps (G12, G100–G103)", () => {
     gap.configureSaves({ schemaVersion: 4 });
     gap.registerMigration(3, (d) => d);
     await expect(gap.loadGame("old")).rejects.toMatchObject({ reason: "migration-failed" });
+  });
+
+  it("G101: HMAC JS (contexto inseguro sem WebCrypto) igual ao WebCrypto e ao vetor RFC 4231", async () => {
+    const enc = new TextEncoder();
+    const hex = (b: Uint8Array): string => Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+    // RFC 4231 caso 2
+    expect(hex(hmacSha256Fallback(enc.encode("Jefe"), enc.encode("what do ya want for nothing?")))).toBe(
+      "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843",
+    );
+    const long = "ç".repeat(300);
+    const viaSubtle = await computeHmac("k".repeat(100), long);
+    expect(viaSubtle).toBe(`hmac-sha256:${hex(hmacSha256Fallback(enc.encode("k".repeat(100)), enc.encode(long)))}`);
   });
 
   it("compat: driver direto continua estrito sem backend (sem fallback silencioso)", async () => {
