@@ -39,27 +39,27 @@
   "files": [
     {
       "path": "src/engine/assets/internal/AssetCache.ts",
-      "fingerprint": "897919f33b6beb28ef57ba1e6e20e6ab789fd7e83f21be8a3f68ad5ed73bf9b0"
+      "fingerprint": "6251f678ab52c38b6b1e1644837c6cc23fc030a78c0834e56997d1db6c523e35"
     },
     {
       "path": "src/engine/assets/internal/AssetsManagerService.ts",
-      "fingerprint": "2686ac808facdf627a3073a754871b9aaa4a23a03d88a13c93bf94fb984ca834"
+      "fingerprint": "952f209b18e126139724c3bf731bc659ff88e974915209d056bf7b3e2af4fd9f"
     },
     {
       "path": "src/engine/assets/internal/AudioLoaderService.ts",
-      "fingerprint": "b4d423ec2ca3064dd1b9223f566d7d3b464b1a6ebad4e326ea9c3b24e54cb0c2"
+      "fingerprint": "e89916bf6cfefb24459c0cb0383349984cbc847753b495ff8574f45e17c3359e"
     },
     {
       "path": "src/engine/assets/internal/GLTFLoaderService.ts",
-      "fingerprint": "73bdb41ff277881913164c2a27916280f978b38c40380c0d210049db0d43eb31"
+      "fingerprint": "b137c3914e32fc6e513bf6b14cac0f4bae4676e6ec68569b650730cb2725c622"
     },
     {
       "path": "src/engine/assets/internal/TextureLoaderService.ts",
-      "fingerprint": "4a1ff8d0492a13db632a3fc62608ec497208ff9a6aedeed61f6fed3824684058"
+      "fingerprint": "2ef0b080f253760dfae0eef19824a294693f2438e1942ca13139a01624fea692"
     },
     {
       "path": "src/plugins/assets/plugin.ts",
-      "fingerprint": "7c8bd051615a51b61a000e44b9d1d9ef2d43ab7679c54312ad461929d3e289a0"
+      "fingerprint": "962732af5a39c68873d68311a391d90c19baa6b46c1fef5b63f3f5df479a1f94"
     },
     {
       "path": "src/engine/streaming/internal/DistanceLODManager.ts",

@@ -35,23 +35,23 @@
   "files": [
     {
       "path": "src/engine/render/internal/ViewportManager.ts",
-      "fingerprint": "f42ebb200a86410fd6fb97c6de69003e77328754c2c00c56f27366367947494f"
+      "fingerprint": "d4ce3513ae19288cb97f35fa7ef69b6a1c9f397e8342e8d0c22ef3d5d01258d8"
     },
     {
       "path": "src/engine/render/internal/CameraManager.ts",
-      "fingerprint": "a476e6d4ba15253e91e308a3d447130159ff1025a7f37d9d5c3068fbe11706bd"
+      "fingerprint": "fe7c40d87dcfd9c864d52625f3da5d99d7cd41724932d0af2b18b787cbb060ae"
     },
     {
       "path": "src/engine/render/internal/SceneGraphManager.ts",
-      "fingerprint": "d3b95404e0513ff27c2c821bfafea309be7790721b4922af554c4bb5e07260ff"
+      "fingerprint": "00cfccc250b6858e2a006a44fcb2a4378d20a55353465c14d2865c56d2f60dc5"
     },
     {
       "path": "src/engine/render/internal/ThreeRenderEngine.ts",
-      "fingerprint": "da004906557f759fda855b0732410081c93f2fb84f49748c95f79f77264da681"
+      "fingerprint": "c1961711485edb363545ab3fbcecbba0955f3255c06323900e133518bc28fd76"
     },
     {
       "path": "src/plugins/render/plugin.ts",
-      "fingerprint": "01b108bdc005999a5b6b7e37122e9960483786e5e795f0bbc4e7a67fc28c5371"
+      "fingerprint": "733b586eeb390390a4886c993ae21a00c3627f423cb5c8a26948291050514bcf"
     }
   ]
 }

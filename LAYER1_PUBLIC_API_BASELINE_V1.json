@@ -81,7 +81,7 @@
       "contracts": [
         {
           "path": "src/contracts/input/types.ts",
-          "fingerprint": "f1c358dee5ab729151be2a4a884858114016330c41fcb26635a7922319414a70"
+          "fingerprint": "764e006ed4cd4533a3b1f5da2894bd9d3bd12323fc87d95127f084260fed45bb"
         }
       ],
       "tokens": [
@@ -90,7 +90,7 @@
           "capabilityId": "game.input",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "08790b1aa8a74d9a530b015d0cd7fd6f6d19b92e1d353f4b2e9366d6cca85dd9"
+          "fingerprint": "6b6e51072083cbb8d7d119bede6f5d4b51521d906205ae1cb3a90c2f5b6e482f"
         }
       ]
     },
@@ -109,7 +109,7 @@
       "contracts": [
         {
           "path": "src/contracts/assets/types.ts",
-          "fingerprint": "4eb04b951d305954f1567f03e47c265edefb85925ecd421b8ab7da7c720df540"
+          "fingerprint": "769cf8b7098172b9ba9ec21244be54fbc3fe57c50d1968225118bee8fb7c0345"
         }
       ],
       "tokens": [
@@ -118,7 +118,7 @@
           "capabilityId": "game.assets",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "94d432ebe20fbf24f6e353e127efccae4914a416054f21e99498218f93ba3f15"
+          "fingerprint": "816c1b708fa679b9a49947a7f3f3e0fb930319b75bdf55cdd2ef478b464318d3"
         }
       ]
     },
@@ -221,7 +221,7 @@
       "contracts": [
         {
           "path": "src/contracts/ui/types.ts",
-          "fingerprint": "7858bc80a772a21d692f47abeb3d750424b38b83953244785353ada092a764fe"
+          "fingerprint": "333eb22097955bb5fbaa971371bda77fc37a52e3df9e49accb796385f86ecec5"
         }
       ],
       "tokens": [
@@ -230,7 +230,7 @@
           "capabilityId": "game.ui",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "6ccbedcbc5b7794f5de5f77146fcbdef90333f22336fbf26cb6cd04f7164de67"
+          "fingerprint": "5d5b603417bc376e8ea45e066b843ae0e4e174d48783b44cc607a7cbce283f9a"
         }
       ]
     },
@@ -277,7 +277,7 @@
       "contracts": [
         {
           "path": "src/contracts/sprites/types.ts",
-          "fingerprint": "aae29af44ef5b5bf097bf03512847050b9bebed1be78feb85dcc530ae9cdcbe9"
+          "fingerprint": "5793881117047159c66ba6fabcb3c1efa0590411098cfb16139d76052d95c3c4"
         }
       ],
       "tokens": [
@@ -286,7 +286,7 @@
           "capabilityId": "game.sprites",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "c40134c1dc3f01803ee3b712505d43b79e05cf9363edabac660df8db69e534bf"
+          "fingerprint": "e306e19c5ce9ef0c6962559bed2f437ec0b1912b1243160fc864675e14f481ae"
         }
       ]
     },
@@ -305,7 +305,7 @@
       "contracts": [
         {
           "path": "src/contracts/audio/types.ts",
-          "fingerprint": "5993bc8f17527c5a3282b4c5303e988386e89309fff7cc1f91080d4bad369295"
+          "fingerprint": "55be545aeb1a32715b793348027d9f4f0ab0c08adcafe28b427e522f0deb4388"
         }
       ],
       "tokens": [
@@ -314,7 +314,7 @@
           "capabilityId": "game.audio",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "051de2f42dcc539c0800e6c97db4218156583f6e99737bafe983b70dc4281873"
+          "fingerprint": "0b2ba9887bc5c8118370ac845fc044b135520003492c64983cfe3af5a94c6f89"
         }
       ]
     },
@@ -333,7 +333,7 @@
       "contracts": [
         {
           "path": "src/contracts/camera/types.ts",
-          "fingerprint": "6fe34356a194657ce1cf4b3079bcd110fb390577eab9657893edb06c35b58651"
+          "fingerprint": "88a10fd60f3a9a13c70bac05842e8c027bb71c95f326952b2d00a286ef3425fd"
         }
       ],
       "tokens": [
@@ -342,7 +342,7 @@
           "capabilityId": "game.camera",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "706a57ab076744ce36ddb1621630c3019b02b3fe2d56d121acaf05713e8e9658"
+          "fingerprint": "5d779d32a8d142a043190a30a2649fa5149f074c590fb5f22327002b25bda65f"
         }
       ]
     },
@@ -389,7 +389,7 @@
       "contracts": [
         {
           "path": "src/contracts/vfx/types.ts",
-          "fingerprint": "af8fb61bb3319bbd022adeb85e77fea2e990697550295be2da503cfa7003bca3"
+          "fingerprint": "edf980783fe50f14c74c1b72a417be29ff035fc5ef944534bc89a997c577fd5a"
         }
       ],
       "tokens": [
@@ -398,7 +398,7 @@
           "capabilityId": "game.vfx",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "5303376775314f3844d137385043247841c8c7c549073cbcca58085da8081864"
+          "fingerprint": "d9ed99ad86b4f9b8775482d4dec312c7db487a7d4afca7068ca01aa779619fc9"
         }
       ]
     },
@@ -641,7 +641,7 @@
       "contracts": [
         {
           "path": "src/contracts/render/types.ts",
-          "fingerprint": "485b472ed4eb79e155b7b95fed394916b821f820f431dc3c4ff042b417eb356e"
+          "fingerprint": "c4ce38045003b1dad155ced3d76ea94d12601ac52bcbcefa047e893757940b19"
         }
       ],
       "tokens": [
@@ -650,7 +650,7 @@
           "capabilityId": "game.render",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "be1111f3e6177454b788dc76a37928ac2264ddd426fea4b2dfc229ea927c4a2d"
+          "fingerprint": "c882beb84a47627815de38695cd8314a630fcf25a61e4de5998f6365290af830"
         }
       ]
     },

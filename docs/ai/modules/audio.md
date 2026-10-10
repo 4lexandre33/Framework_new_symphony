@@ -8,14 +8,28 @@ use (from src/projects/<jogo>/**):
 ## token src/tokens/audio.ts
 ```ts
 interface AudioApi {
-  playSound(soundUrl: string, channel?: AudioChannelType, volume?: number, loop?: boolean): void;
-  playPositionalSound(soundUrl: string, options: PositionalAudioOptions): void;
-  setChannelVolume(channel: AudioChannelType, volume: number, muted?: boolean): void;
+  playSound( soundUrl: string, channel?: AudioChannelType, volume?: number, loop?: boolean, options?: PlaySoundOptions, ): SoundHandle; // Toca um som já carregado (assets).
+  playPositionalSound(soundUrl: string, options: PositionalAudioOptions): SoundHandle; // Som 3D; `options.channel` escolhe o canal (padrão "sfx").
+  stopSound(handle: SoundHandle, fadeSeconds?: number): boolean; // Para um som (com fade opcional).
+  setSoundVolume(handle: SoundHandle, volume: number, fadeSeconds?: number): boolean; // Volume (0..1) de um som ativo, com rampa opcional.
+  setSoundPosition(handle: SoundHandle, position: Vector3Audio): boolean; // Move um som posicional ativo.
+  setSoundOrientation(handle: SoundHandle, direction: Vector3Audio): boolean; // Aponta o cone de um som posicional ativo.
+  setSoundPlaybackRate(handle: SoundHandle, rate: number): boolean; // Velocidade/pitch de um som ativo.
+  isSoundPlaying(handle: SoundHandle): boolean;
+  stopChannel(channel: AudioChannelType, fadeSeconds?: number): void; // Para todos os sons de um canal (não afeta a música; para ela use `stopMusic`).
+  setChannelVolume(channel: AudioChannelType, volume: number, muted?: boolean): void; // `muted` omitido mantém o estado de mudo atual (não desmuta).
+  setChannelMuted(channel: AudioChannelType, muted: boolean): void;
   getChannelVolume(channel: AudioChannelType): number;
   isChannelMuted(channel: AudioChannelType): boolean;
-  crossfadeMusic(trackUrl: string, options?: MusicCrossfadeOptions): Promise<void>;
+  crossfadeMusic(trackUrl: string, options?: MusicCrossfadeOptions): Promise<void>; // Troca a música com crossfade.
+  stopMusic(fadeSeconds?: number): Promise<void>; // Para só a música (fade opcional).
+  getCurrentMusicTrack(): string | null; // URL normalizada da música atual, ou null.
   updateListenerPosition(position: Vector3Audio, forward?: Vector3Audio, up?: Vector3Audio): void;
-  stopAllSounds(): void;
+  stopAllSounds(fadeSeconds?: number): void; // Para sons e música; `fadeSeconds` > 0 faz fade-out em vez de corte seco.
+  readonly state: AudioSystemState; // Estado do contexto Web Audio ("unavailable" sem Web Audio).
+  resume(): Promise<boolean>; // Tenta desbloquear o áudio (chame dentro de um gesto do usuário).
+  readonly activeVoiceCount: number; // Vozes ativas (sem a música).
+  setVoiceLimit(maxVoices: number, maxHrtfVoices?: number): void; // Limite de vozes simultâneas (rouba o one-shot mais antigo).
 }
 capability AudioToken = "game.audio"@1.0.0 api AudioApi
 ```
@@ -28,10 +42,21 @@ interface Vector3Audio {
   readonly y: number;
   readonly z: number;
 }
+export type SoundHandle = number; // Handle de um som tocando (inteiro > 0).
+export type AudioSystemState = "running" | "suspended" | "closed" | "interrupted" | "unavailable"; // Estado do sistema de áudio: "unavailable" = sem Web Audio (a engine segue muda).
+interface PlaySoundOptions {
+  readonly playbackRate?: number; // Velocidade/pitch (1 = normal).
+  readonly fadeInSeconds?: number; // Fade-in em segundos.
+}
 interface PositionalAudioOptions {
   readonly position: Vector3Audio;
+  readonly channel?: AudioChannelType; // Canal do mixer (padrão "sfx").
+  readonly orientation?: Vector3Audio; // Direção para onde o cone aponta (padrão Web Audio: +X).
+  readonly panningModel?: "HRTF" | "equalpower"; // Modelo de panning.
+  readonly playbackRate?: number;
   readonly refDistance?: number;
-  readonly maxDistance?: number;
+  readonly maxDistance?: number; // Distância máxima.
+  readonly maxDistanceMode?: "silence" | "clamp";
   readonly rolloffFactor?: number;
   readonly distanceModel?: DistanceModelType;
   readonly coneInnerAngle?: number;
@@ -42,6 +67,7 @@ interface PositionalAudioOptions {
 }
 interface MusicCrossfadeOptions {
   readonly durationSeconds: number;
+  readonly restart?: boolean; // Reinicia mesmo se a faixa pedida já estiver tocando (padrão false: no-op).
   readonly loop?: boolean;
   readonly fadeCurve?: "linear" | "exponential";
 }
@@ -51,7 +77,7 @@ interface AudioChannelVolumeChangedPayload {
   readonly muted: boolean;
 }
 event AudioChannelVolumeChangedEvent = "game.audio.channel-volume-changed" payload AudioChannelVolumeChangedPayload
-interface MusicCrossfadeCompletedPayload {
+interface MusicCrossfadeCompletedPayload { // Emitido quando o fade TERMINA (não no início).
   readonly trackUrl: string;
   readonly durationSeconds: number;
 }
@@ -59,6 +85,8 @@ event MusicCrossfadeCompletedEvent = "game.audio.crossfade-completed" payload Mu
 interface PositionalSoundTriggeredPayload {
   readonly soundUrl: string;
   readonly position: Vector3Audio;
+  readonly handle?: SoundHandle;
+  readonly channel?: AudioChannelType;
 }
 event PositionalSoundTriggeredEvent = "game.audio.positional-sound-triggered" payload PositionalSoundTriggeredPayload
 interface PlaySoundRequest {
@@ -84,6 +112,14 @@ interface CrossfadeMusicRequest {
   readonly options?: MusicCrossfadeOptions;
 }
 command CrossfadeMusicCommand = "game.audio.crossfade-music" request CrossfadeMusicRequest
+interface StopMusicRequest {
+  readonly fadeSeconds?: number;
+}
+command StopMusicCommand = "game.audio.stop-music" request StopMusicRequest
+interface MusicStoppedPayload {
+  readonly trackUrl: string | null; // Faixa que parou (null se não havia música).
+}
+event MusicStoppedEvent = "game.audio.music-stopped" payload MusicStoppedPayload // Emitido quando `stopMusic` conclui (após o fade).
 ```
 ## notas verificadas (comportamento)
 - Tocar um som que NÃO foi carregado/cacheado apenas emite warn silencioso (não lança). Carregue antes (assets) e só então toque.

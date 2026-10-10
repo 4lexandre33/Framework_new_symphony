@@ -67,7 +67,7 @@
       "path": "src/plugins/render/plugin.ts",
       "readyCalls": 1,
       "onDisposeCalls": 1,
-      "hasOnBootHook": false,
+      "hasOnBootHook": true,
       "hasOnStopHook": false
     },
     {

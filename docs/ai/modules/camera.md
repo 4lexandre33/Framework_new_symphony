@@ -8,15 +8,21 @@ use (from src/projects/<jogo>/**):
 
 ## token src/tokens/camera.ts
 ```ts
-interface CameraApi {
-  registerVirtualCamera(descriptor: VirtualCameraDescriptor): void;
+interface CameraApi { // Câmeras virtuais que dirigem a câmera do `game.render`.
+  registerVirtualCamera(descriptor: VirtualCameraDescriptor): void; // Registra (ou substitui, mesmo id) uma câmera.
   unregisterVirtualCamera(cameraId: string): boolean;
-  setActiveCamera(cameraId: string, blendDurationSeconds?: number): boolean;
-  addTrauma(traumaAmount: number): void;
-  setFollowTarget(cameraId: string, targetPosition: Vector3Camera): void;
+  setActiveCamera(cameraId: string, blendDurationSeconds?: number): boolean; // Ativa a câmera.
+  addTrauma(traumaAmount: number): void; // Trauma GLOBAL (G48): sobrevive à troca/re-registro de câmeras; o ruído usa o `shakeConfig` da câmera ativa.
+  setFollowTarget(cameraId: string, targetPosition: Vector3Camera): void; // Alvo de seguimento manual (os números são COPIADOS; G48).
   configureSpringArm(cameraId: string, config: Partial<SpringArmConfig>): void;
   getActiveCameraId(): string | null;
   getCurrentCameraSnapshot(): CameraTransformSnapshot | null;
+  clearFollowTarget(cameraId: string): boolean; // Remove o alvo manual (volta a usar `followTargetId`, se houver).
+  setLookAtTarget(cameraId: string, targetPosition: Vector3Camera | null): boolean; // Ponto para onde a câmera olha (copiado); sobrescreve `rotation`.
+  setCameraPriority(cameraId: string, priority: number): boolean; // Muda a prioridade e reavalia qual câmera fica ativa (G46).
+  setEnabled(enabled: boolean): void; // Liga/desliga a escrita na câmera do render (G4).
+  isEnabled(): boolean;
+  getTrauma(): number; // Trauma global atual (0..maxTrauma).
 }
 capability CameraToken = "game.camera"@1.0.0 api CameraApi
 ```
@@ -39,7 +45,8 @@ interface SpringArmConfig {
   readonly socketOffset: Vector3Camera;
   readonly targetOffset: Vector3Camera;
   readonly smoothTimeSeconds?: number;
-  readonly enableCollision?: boolean;
+  readonly enableCollision?: boolean; // Raio de colisão do braço (G45).
+  readonly collisionIgnoreEntityId?: string; // Entidade física ignorada pelo raio do braço (normalmente o personagem seguido).
 }
 interface CameraShakeConfig {
   readonly maxTrauma?: number;
@@ -48,7 +55,7 @@ interface CameraShakeConfig {
   readonly maxTranslationOffset?: Vector3Camera;
   readonly maxPitchYawRollDegrees?: Vector3Camera;
 }
-interface VirtualCameraDescriptor {
+interface VirtualCameraDescriptor { // Câmera virtual.
   readonly id: string;
   readonly priority: number;
   readonly fov: number;
@@ -59,6 +66,7 @@ interface VirtualCameraDescriptor {
   readonly springArmConfig?: SpringArmConfig;
   readonly shakeConfig?: CameraShakeConfig;
   readonly blendDurationSeconds?: number;
+  readonly detectOcclusion?: boolean;
 }
 interface CameraTransformSnapshot {
   readonly position: Vector3Camera;
@@ -86,6 +94,11 @@ interface CameraCollisionPayload {
   readonly actualLength: number;
 }
 event CameraCollisionEvent = "game.camera.collision-changed" payload CameraCollisionPayload
+interface CameraOcclusionPayload {
+  readonly cameraId: string;
+  readonly occludedEntityIds: ReadonlyArray<string>; // Entidades (físicas) entre a câmera e o alvo neste momento.
+}
+event CameraOcclusionChangedEvent = "game.camera.occlusion-changed" payload CameraOcclusionPayload
 interface AddCameraTraumaRequest {
   readonly traumaAmount: number;
 }

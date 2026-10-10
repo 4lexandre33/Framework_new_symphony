@@ -7,17 +7,26 @@ use (from src/projects/<jogo>/**):
 
 ## token src/tokens/vfx.ts
 ```ts
-interface VfxApi {
-  spawnParticleEmitter( config: GPUParticleEmitterConfig, ): void; // Cria ou substitui um emissor de partículas.
-  stopParticleEmitter( emitterId: string, ): boolean; // Encerra e remove um emissor ativo.
-  projectDecal( config: DecalConfig, ): void; // Projeta um decal na cena.
+interface VfxApi { // Efeitos visuais.
+  spawnParticleEmitter( config: GPUParticleEmitterConfig, ): void; // Cria ou substitui um emissor de partículas (o anterior com o mesmo id é liberado: geometria, material e textu…
+  stopParticleEmitter( emitterId: string, options?: StopParticleEmitterOptions, ): boolean; // Encerra e remove um emissor ativo (libera GPU).
+  setEmitterPosition( emitterId: string, position: Vector3VFX, ): boolean; // Move o ponto de nascimento das próximas partículas (G19).
+  burstParticles( emitterId: string, count: number, ): boolean; // Emite `count` partículas extras no próximo frame.
+  hasParticleEmitter( emitterId: string, ): boolean;
+  projectDecal( config: DecalConfig, ): void; // Projeta um decal na cena (ver `DecalConfig`; G90).
+  removeDecal( decalId: string, ): boolean; // Remove o decal `decalId` (libera GPU).
+  setMaxDecals( maxDecals: number, ): void; // Limite de decals simultâneos (padrão 200); o mais antigo é reciclado.
   clearDecals(): void; // Remove todos os decals ativos.
-  configurePostProcessing( config: Partial<PostProcessingConfig>, ): void; // Atualiza as configurações globais de pós-processamento.
+  configurePostProcessing( config: Partial<PostProcessingConfig>, ): void; // Atualiza as configurações globais de pós-processamento e o liga (salvo `enabled: false`).
+  isPostProcessingActive(): boolean; // true se o pós-processamento está sendo desenhado neste momento.
   triggerVFXPreset( preset: VFXPresetDescriptor, ): void; // Executa um preset composto de VFX.
-  pulseBloom( strength: number, durationSeconds: number, ): void; // Gera um pulso temporário de bloom.
+  registerVFXPreset( preset: VFXPresetDescriptor, ): void; // Registra (ou substitui) um preset reutilizável.
+  unregisterVFXPreset( presetId: string, ): boolean;
+  triggerVFXPresetById( presetId: string, options?: VFXPresetTriggerOptions, ): VFXPresetInstance | null; // Dispara um preset registrado.
+  pulseBloom( strength: number, durationSeconds: number, ): void; // Gera um pulso temporário de bloom (desenhado mesmo com o pós-processamento desligado, só enquanto dura o puls…
   getActiveParticleCount(): number; // Retorna a quantidade total de slots de partículas atualmente registrados.
   getActiveDecalCount(): number; // Retorna a quantidade de decals ativos.
-  update( deltaSeconds: number, ): void; // Atualiza os sistemas temporais da camada.
+  update( deltaSeconds: number, ): void; // Atualiza os sistemas temporais da camada (a engine já chama no render).
 }
 capability VfxToken = "game.vfx"@1.0.0 api VfxApi
 ```
@@ -34,7 +43,7 @@ interface ColorVFX {
   readonly b: number;
   readonly a?: number;
 }
-interface GPUParticleEmitterConfig {
+interface GPUParticleEmitterConfig { // Emissor de partículas (GPU, `THREE.Points` + `ShaderMaterial`).
   readonly emitterId: string;
   readonly maxParticles: number;
   readonly spawnRatePerSecond: number;
@@ -49,8 +58,10 @@ interface GPUParticleEmitterConfig {
   readonly gravityScale?: number;
   readonly textureUrl?: string;
   readonly blendingMode?: "additive" | "normal";
+  readonly durationSeconds?: number;
+  readonly burstCount?: number;
 }
-interface DecalConfig {
+interface DecalConfig { // Decal projetado (G90): a textura é PROJETADA sobre as malhas da cena que cruzam a caixa `size` (x/y = área, z…
   readonly decalId: string;
   readonly textureUrl: string;
   readonly position: Vector3VFX;
@@ -59,7 +70,8 @@ interface DecalConfig {
   readonly lifetimeSeconds?: number;
   readonly fadeDurationSeconds?: number;
 }
-interface PostProcessingConfig {
+interface PostProcessingConfig { // Pós-processamento (G9), desenhado por EffectComposer instalado no `game.render` (RenderPass → SSAO → Bloom → …
+  readonly enabled?: boolean;
   readonly enableBloom?: boolean;
   readonly bloomStrength?: number;
   readonly bloomRadius?: number;
@@ -70,14 +82,32 @@ interface PostProcessingConfig {
   readonly lutTextureUrl?: string;
   readonly vignetteIntensity?: number;
   readonly chromaticAberrationOffset?: number;
+  readonly colorGradingIntensity?: number; // Mistura do LUT 0..1 (padrão 1).
 }
-interface VFXPresetDescriptor {
+interface VFXPresetDescriptor { // Preset composto (G91).
   readonly presetId: string;
   readonly particleEmitter?: GPUParticleEmitterConfig;
   readonly decal?: DecalConfig;
   readonly screenShakeTrauma?: number;
   readonly postFXPulseBloomStrength?: number;
+  readonly postFXPulseDurationSeconds?: number; // Duração do pulso de bloom (padrão 0,3 s).
 }
+interface VFXPresetTriggerOptions {
+  readonly position?: Vector3VFX; // Desloca emissor e decal para esta posição.
+  readonly instanceId?: string; // Sufixo dos ids gerados (padrão: contador).
+}
+interface VFXPresetInstance {
+  readonly presetId: string;
+  readonly emitterId: string | null;
+  readonly decalId: string | null;
+}
+interface StopParticleEmitterOptions {
+  readonly graceful?: boolean; // true = para de emitir e deixa as vivas terminarem (remove sozinho depois).
+}
+interface VFXEmitterFinishedPayload {
+  readonly emitterId: string;
+}
+event VFXEmitterFinishedEvent = "game.vfx.emitter-finished" payload VFXEmitterFinishedPayload
 interface VFXSpawnedPayload {
   readonly emitterId: string;
   readonly position: Vector3VFX;

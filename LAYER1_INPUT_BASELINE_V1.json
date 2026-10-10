@@ -44,15 +44,15 @@
   "files": [
     {
       "path": "src/engine/input/internal/KeyboardMouseDriver.ts",
-      "fingerprint": "9c45251951803ed4128a080adc8464ea5050ee43a0dfef2852479a40a0f33eca"
+      "fingerprint": "b95556f056fa7397b5a8a51dc5074c17c31de9fdd7fa64a588e78e0e2eaddca8"
     },
     {
       "path": "src/engine/input/internal/GamepadDriver.ts",
-      "fingerprint": "9f7ae2207c5c57509a9ae39970dd53ef9ae883bb117082b662b730773c566bb3"
+      "fingerprint": "75448282604306a2cb61dc68cc9c78efb365fc9fc7ad3a7aa39d9bae066662c4"
     },
     {
       "path": "src/engine/input/internal/InputManager.ts",
-      "fingerprint": "243499b45dd9bf23f9ed96dfc0ec863b90270ae1ab1453370d4ee20fab5168a1"
+      "fingerprint": "e72a67291df649cb6a92b0332cdcfa98c5aeccf1eac913750cb9a2a33bd71ff5"
     },
     {
       "path": "src/engine/input/internal/InputFramePump.ts",
@@ -60,7 +60,7 @@
     },
     {
       "path": "src/plugins/input/plugin.ts",
-      "fingerprint": "64a004a86f01affc997ff65570521e7ab2491fe1e1017593193b706763bc55fc"
+      "fingerprint": "3952ade980a12136c8e1b1e0a33e1bd4a1a7cc6c401cedd92380661dcda1fccd"
     },
     {
       "path": "src/debug/hud/InputDiagnostics.ts",

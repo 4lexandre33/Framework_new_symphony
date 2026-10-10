@@ -13,18 +13,18 @@ versão 1.0.0 · GERADO por `npm run ai-manual:generate` (não edite à mão; `n
 | preciso de | módulo (chave) | capability / id do plugin (use em dependsOn) | plugin depende de | ~tokens |
 |---|---|---|---|---|
 | Steamworks & P2P | steam | game.steam | - | 1895 |
-| Input Manager | input | game.input | - | 1110 |
-| Asset Pipeline & VRAM Cache | assets | game.assets | - | 588 |
+| Input Manager | input | game.input | - | 2212 |
+| Asset Pipeline & VRAM Cache | assets | game.assets | - | 1320 |
 | Motor de Física (Rapier WASM) | physics | game.physics | - | 4040 |
 | Persistência & Banco de Dados | storage | game.storage | - | 1099 |
 | Gerenciador de Mundo, Cenas & ECS | world | game.world | - | 2303 |
-| Interface de Usuário & HUD | ui | game.ui | - | 1144 |
+| Interface de Usuário & HUD | ui | game.ui | - | 1990 |
 | Pipeline de Animações & State Machines | anim | game.anim | game.loop | 1213 |
-| Motor 2D, Tilemaps & Pixel Art | sprites | game.sprites | - | 1402 |
-| Mixer de Áudio Espacial 3D | audio | game.audio | - | 1239 |
-| Câmera Dinâmica & SpringArm | camera | game.camera | game.loop, game.physics, game.render | 1506 |
+| Motor 2D, Tilemaps & Pixel Art | sprites | game.sprites | game.render, game.assets | 1827 |
+| Mixer de Áudio Espacial 3D | audio | game.audio | - | 2110 |
+| Câmera Dinâmica & SpringArm | camera | game.camera | game.loop, game.physics, game.render | 1887 |
 | Inteligência Artificial & NavMesh | ai | game.ai | game.loop, game.physics, game.world | 1425 |
-| Partículas GPU, Decals & Pós-Processamento | vfx | game.vfx | - | 1442 |
+| Partículas GPU, Decals & Pós-Processamento | vfx | game.vfx | - | 2123 |
 | Terreno Procedural, Biomas & Voxels | terrain | game.terrain | game.loop, game.render | 1109 |
 | Cutscenes, Diálogos & Quests | scripting | game.scripting | game.loop | 1744 |
 | Streaming Espacial, LOD & HLOD | streaming | game.streaming | game.loop, game.camera | 1245 |
@@ -33,10 +33,10 @@ versão 1.0.0 · GERADO por `npm run ai-manual:generate` (não edite à mão; `n
 | Steam Workshop, Dynamic Loading & Asset Override | modding | game.modding | - | 1108 |
 | Microtransações Steam & Steam Inventory Service | monetization | game.monetization | - | 1447 |
 | Deterministic Game Loop | game-loop | game.loop | - | 825 |
-| Render Runtime | render | game.render | - | 1268 |
+| Render Runtime | render | game.render | - | 2774 |
 | Multiplayer Network & State Replication | net | game.net | game.loop | 1652 |
 
-Tamanho: RULES ≈ 1751, CORE ≈ 2859, RECIPES ≈ 4771, todos os módulos ≈ 32638 tokens (estimativa: caracteres/3,6).
+Tamanho: RULES ≈ 1751, CORE ≈ 2859, RECIPES ≈ 4771, todos os módulos ≈ 39182 tokens (estimativa: caracteres/3,6).
 
 ## Atalhos por tipo de jogo
 - 3D com física: render, camera, physics, input, assets, audio, ui, game-loop.
