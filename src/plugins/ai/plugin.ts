@@ -3,7 +3,7 @@ import { AiToken } from "../../tokens/ai";
 import { PhysicsToken } from "../../tokens/physics";
 import { WorldToken } from "../../tokens/world";
 import type { GameTickPayload } from "../../contracts/game-loop/types";
-import { BehaviorStateChangedEvent, PathCalculatedEvent, RequestPathCommand, SetAgentTargetCommand, SetBlackboardValueCommand, TargetSpottedEvent, type RequestPathRequest, type SetAgentTargetRequest, type SetBlackboardValueRequest } from "../../contracts/ai/types";
+import { AgentArrivedEvent, StimulusHeardEvent, BehaviorStateChangedEvent, PathCalculatedEvent, RequestPathCommand, SetAgentTargetCommand, SetBlackboardValueCommand, TargetSpottedEvent, type RequestPathRequest, type SetAgentTargetRequest, type SetBlackboardValueRequest } from "../../contracts/ai/types";
 import { AIService } from "../../engine/ai/internal/AIService";
 
 export const aiManifest:
@@ -60,6 +60,8 @@ export const aiManifest:
         "game.ai.path-calculated",
         "game.ai.behavior-changed",
         "game.ai.target-spotted",
+        "game.ai.agent-arrived",
+        "game.ai.stimulus-heard",
         "game.loop.tick",
       ],
     },
@@ -172,6 +174,14 @@ export function createAIPlugin():
         TargetSpottedEvent,
       );
 
+      ctx.events.define(
+        AgentArrivedEvent,
+      );
+
+      ctx.events.define(
+        StimulusHeardEvent,
+      );
+
       ctx.commands.define(
         RequestPathCommand,
       );
@@ -210,11 +220,16 @@ export function createAIPlugin():
               envelope.payload as
                 RequestPathRequest;
 
-            return service
-              .setAgentTarget(
-                payload.agentId,
-                payload.targetPosition,
-              );
+            // G73: só move quando pedido (`move: true`).
+            return payload.move === true
+              ? service.setAgentTarget(
+                  payload.agentId,
+                  payload.targetPosition,
+                )
+              : service.requestAgentPath(
+                  payload.agentId,
+                  payload.targetPosition,
+                );
           },
         );
 

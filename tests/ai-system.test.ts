@@ -187,12 +187,20 @@ describe(
         );
 
         /*
-         * start + portal compartilhado + target.
+         * G73: com funnel a linha reta cabe no corredor -> start + target
+         * (antes: start + meio do portal + target, em zig-zag).
          */
         expect(
           result.waypoints,
         ).toHaveLength(
-          3,
+          2,
+        );
+
+        expect(
+          result.totalDistance,
+        ).toBeCloseTo(
+          Math.hypot(18, 4),
+          5,
         );
 
         expect(
