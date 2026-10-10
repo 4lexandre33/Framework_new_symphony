@@ -4,6 +4,7 @@ import type {
   CameraMode,
   OrthographicCameraOptions,
   PerspectiveCameraOptions,
+  RenderCameraSettings,
   Vector3D,
   ViewportDimensions,
 } from "../../../contracts/render/types";
@@ -175,6 +176,24 @@ export class CameraManager {
     this.activeCamera.lookAt(
       this.targetPositionScratch,
     );
+  }
+
+  public getSettings(): RenderCameraSettings {
+    return {
+      mode: this.currentMode,
+      perspective: {
+        fov: this.perspectiveCamera.fov,
+        near: this.perspectiveCamera.near,
+        far: this.perspectiveCamera.far,
+        aspect: this.perspectiveCamera.aspect,
+      },
+      orthographic: {
+        size: this.orthographicHalfSize,
+        near: this.orthographicCamera.near,
+        far: this.orthographicCamera.far,
+        zoom: this.orthographicCamera.zoom,
+      },
+    };
   }
 
   public updateAspect(viewport: ViewportDimensions): void {

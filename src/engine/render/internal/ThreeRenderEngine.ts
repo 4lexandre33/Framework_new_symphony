@@ -1,16 +1,27 @@
 import * as THREE from "three";
 
-import type { Render3DApi } from "../../../tokens/render";
+import type {
+  Render3DApi,
+  RenderFrameRenderer,
+} from "../../../tokens/render";
 import type {
   AmbientLightConfig,
   CameraMode,
   DirectionalLightConfig,
+  OrthographicCameraOptions,
+  PerspectiveCameraOptions,
+  RemoveMeshOptions,
+  RenderCameraSettings,
+  SceneLightConfig,
   Vector3D,
   ViewportDimensions,
+  ViewportOptions,
+  ViewportRect,
 } from "../../../contracts/render/types";
 
 import { CameraManager } from "./CameraManager";
 import { SceneGraphManager } from "./SceneGraphManager";
+import { TransformInterpolator } from "./TransformInterpolator";
 import {
   ViewportManager,
   type ViewportResizeCallback,
@@ -30,6 +41,39 @@ interface CanvasResolution {
 }
 
 const NOOP_DISPOSER = (): void => {};
+
+/** true = contexto perdido; false = restaurado. */
+export type RenderContextChangeCallback = (contextLost: boolean) => void;
+
+interface MutableViewportRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+function assertUnitRect(rect: ViewportRect): void {
+  const values = [rect.x, rect.y, rect.width, rect.height];
+
+  for (const value of values) {
+    if (!Number.isFinite(value)) {
+      throw new RangeError("ViewportRect precisa conter valores finitos.");
+    }
+  }
+
+  if (
+    rect.x < 0 ||
+    rect.y < 0 ||
+    rect.width <= 0 ||
+    rect.height <= 0 ||
+    rect.x + rect.width > 1.000001 ||
+    rect.y + rect.height > 1.000001
+  ) {
+    throw new RangeError(
+      "ViewportRect é normalizado: 0 <= x,y; width,height > 0; x+width <= 1; y+height <= 1.",
+    );
+  }
+}
 
 function createWebGLRenderer(
   canvas: HTMLCanvasElement,
@@ -55,6 +99,19 @@ export class ThreeRenderEngine implements Render3DApi {
   private contextLost = false;
   private disposed = false;
 
+  private readonly interpolator = new TransformInterpolator();
+  private frameRenderer: RenderFrameRenderer | null = null;
+  private readonly contextCallbacks = new Set<RenderContextChangeCallback>();
+
+  // G43: sub-retângulo normalizado do canvas (null = canvas inteiro).
+  private viewportRect: MutableViewportRect | null = null;
+  private readonly effectiveDimensions: ViewportDimensions = {
+    width: 1,
+    height: 1,
+    aspectRatio: 1,
+    pixelRatio: 1,
+  };
+
   private readonly contextLostHandler = (event: Event): void => {
     if (this.disposed) {
       return;
@@ -62,6 +119,7 @@ export class ThreeRenderEngine implements Render3DApi {
 
     event.preventDefault();
     this.contextLost = true;
+    this.notifyContextChange(true);
   };
 
   private readonly contextRestoredHandler = (): void => {
@@ -75,6 +133,7 @@ export class ThreeRenderEngine implements Render3DApi {
     this.handleResize(
       this.viewportManager.getDimensions(),
     );
+    this.notifyContextChange(false);
   };
 
   public constructor(
@@ -142,8 +201,8 @@ export class ThreeRenderEngine implements Render3DApi {
   }
 
   public render(
-    _alphaInterpolation: number,
-    _deltaSeconds: number,
+    alphaInterpolation: number,
+    deltaSeconds: number,
   ): void {
     if (
       this.disposed ||
@@ -154,11 +213,31 @@ export class ThreeRenderEngine implements Render3DApi {
 
     const activeCamera =
       this.cameraManager.getActiveCamera();
+    const scene =
+      this.sceneGraphManager.getScene();
 
-    this.renderer.render(
-      this.sceneGraphManager.getScene(),
-      activeCamera,
+    // G40: transforms interpolados só durante o desenho.
+    this.interpolator.apply(
+      alphaInterpolation,
     );
+
+    try {
+      if (this.frameRenderer !== null) {
+        this.frameRenderer.render(
+          this.renderer,
+          scene,
+          activeCamera,
+          deltaSeconds,
+        );
+      } else {
+        this.renderer.render(
+          scene,
+          activeCamera,
+        );
+      }
+    } finally {
+      this.interpolator.restore();
+    }
   }
 
   public resize(
@@ -249,6 +328,36 @@ export class ThreeRenderEngine implements Render3DApi {
     );
   }
 
+  public setShadowFocus(center: Vector3D): void {
+    if (this.disposed) {
+      return;
+    }
+
+    this.sceneGraphManager.setShadowFocus(center);
+  }
+
+  public addLight(
+    lightId: string,
+    config: SceneLightConfig,
+  ): void {
+    if (this.disposed) {
+      return;
+    }
+
+    this.sceneGraphManager.addLight(
+      lightId,
+      config,
+    );
+  }
+
+  public removeLight(lightId: string): boolean {
+    if (this.disposed) {
+      return false;
+    }
+
+    return this.sceneGraphManager.removeLight(lightId);
+  }
+
   public addMeshToScene(
     key: string,
     object: THREE.Object3D,
@@ -257,18 +366,185 @@ export class ThreeRenderEngine implements Render3DApi {
       return;
     }
 
+    const previous =
+      this.sceneGraphManager.getMesh(key);
+
     this.sceneGraphManager.addMesh(
       key,
       object,
     );
+
+    if (
+      previous !== null &&
+      previous !== object
+    ) {
+      this.interpolator.remove(previous);
+    }
   }
 
-  public removeMeshFromScene(key: string): void {
+  public removeMeshFromScene(
+    key: string,
+    options?: RemoveMeshOptions,
+  ): void {
     if (this.disposed) {
       return;
     }
 
-    this.sceneGraphManager.removeMesh(key);
+    const object =
+      this.sceneGraphManager.getMesh(key);
+
+    if (object !== null) {
+      this.interpolator.remove(object);
+    }
+
+    this.sceneGraphManager.removeMesh(
+      key,
+      options?.disposeResources !== false,
+    );
+  }
+
+  public getMeshFromScene(key: string): THREE.Object3D | null {
+    return this.sceneGraphManager.getMesh(key);
+  }
+
+  public setInterpolated(
+    key: string,
+    enabled: boolean,
+  ): boolean {
+    if (this.disposed) {
+      return false;
+    }
+
+    const object =
+      this.sceneGraphManager.getMesh(key);
+
+    if (object === null) {
+      return false;
+    }
+
+    if (enabled) {
+      this.interpolator.add(object);
+    } else {
+      this.interpolator.remove(object);
+    }
+
+    return true;
+  }
+
+  public snapInterpolation(key: string): void {
+    const object =
+      this.sceneGraphManager.getMesh(key);
+
+    if (object !== null) {
+      this.interpolator.snap(object);
+    }
+  }
+
+  public captureInterpolationState(): void {
+    if (this.disposed) {
+      return;
+    }
+
+    this.interpolator.capture();
+  }
+
+  public configurePerspectiveCamera(
+    options: Partial<PerspectiveCameraOptions>,
+  ): void {
+    if (this.disposed) {
+      return;
+    }
+
+    this.cameraManager.configurePerspective(options);
+  }
+
+  public configureOrthographicCamera(
+    options: Partial<OrthographicCameraOptions>,
+  ): void {
+    if (this.disposed) {
+      return;
+    }
+
+    this.cameraManager.configureOrthographic(options);
+  }
+
+  public getCameraSettings(): RenderCameraSettings {
+    return this.cameraManager.getSettings();
+  }
+
+  public setViewportOptions(options: ViewportOptions): void {
+    if (this.disposed) {
+      return;
+    }
+
+    if (options.rect !== undefined) {
+      if (options.rect === null) {
+        this.viewportRect = null;
+        this.renderer.setScissorTest(false);
+      } else {
+        assertUnitRect(options.rect);
+        this.viewportRect = {
+          x: options.rect.x,
+          y: options.rect.y,
+          width: options.rect.width,
+          height: options.rect.height,
+        };
+      }
+    }
+
+    // Reaplica tamanho/limites e notifica `game.render.resize`.
+    this.viewportManager.setOptions(
+      options.autoResize,
+      options.maxPixelRatio,
+    );
+  }
+
+  public getViewportRect(): ViewportRect | null {
+    return this.viewportRect === null
+      ? null
+      : {
+          x: this.viewportRect.x,
+          y: this.viewportRect.y,
+          width: this.viewportRect.width,
+          height: this.viewportRect.height,
+        };
+  }
+
+  public setFrameRenderer(
+    frameRenderer: RenderFrameRenderer | null,
+  ): void {
+    if (this.disposed) {
+      return;
+    }
+
+    this.frameRenderer = frameRenderer;
+
+    if (frameRenderer !== null) {
+      this.syncFrameRendererSize();
+    }
+  }
+
+  public getFrameRenderer(): RenderFrameRenderer | null {
+    return this.frameRenderer;
+  }
+
+  public isContextLost(): boolean {
+    return this.contextLost;
+  }
+
+  /** Assina perda/restauração de contexto WebGL (G44). */
+  public onContextChange(
+    callback: RenderContextChangeCallback,
+  ): () => void {
+    if (this.disposed) {
+      return NOOP_DISPOSER;
+    }
+
+    this.contextCallbacks.add(callback);
+
+    return (): void => {
+      this.contextCallbacks.delete(callback);
+    };
   }
 
   public onViewportResize(
@@ -290,6 +566,9 @@ export class ThreeRenderEngine implements Render3DApi {
 
     this.disposed = true;
 
+    this.frameRenderer = null;
+    this.contextCallbacks.clear();
+    this.interpolator.clear();
     this.detachContextHandlers();
     this.viewportManager.dispose();
     this.sceneGraphManager.dispose();
@@ -325,9 +604,63 @@ export class ThreeRenderEngine implements Render3DApi {
       false,
     );
 
+    const effective =
+      this.effectiveDimensions;
+
+    effective.pixelRatio = dimensions.pixelRatio;
+
+    if (this.viewportRect === null) {
+      effective.width = dimensions.width;
+      effective.height = dimensions.height;
+      effective.aspectRatio = dimensions.aspectRatio;
+    } else {
+      const rect = this.viewportRect;
+      const x = Math.floor(rect.x * dimensions.width);
+      const y = Math.floor(rect.y * dimensions.height);
+
+      effective.width = Math.max(1, Math.floor(rect.width * dimensions.width));
+      effective.height = Math.max(1, Math.floor(rect.height * dimensions.height));
+      effective.aspectRatio = effective.width / effective.height;
+
+      // setSize redefine o viewport para o canvas inteiro; reaplica o recorte.
+      this.renderer.setViewport(x, y, effective.width, effective.height);
+      this.renderer.setScissor(x, y, effective.width, effective.height);
+      this.renderer.setScissorTest(true);
+    }
+
     this.cameraManager.updateAspect(
-      dimensions,
+      effective,
     );
+
+    this.syncFrameRendererSize();
+  }
+
+  private syncFrameRendererSize(): void {
+    const frameRenderer = this.frameRenderer;
+
+    if (
+      frameRenderer === null ||
+      frameRenderer.setSize === undefined
+    ) {
+      return;
+    }
+
+    const effective =
+      this.viewportRect === null
+        ? this.viewportManager.getDimensions()
+        : this.effectiveDimensions;
+
+    frameRenderer.setSize(
+      effective.width,
+      effective.height,
+      effective.pixelRatio,
+    );
+  }
+
+  private notifyContextChange(contextLost: boolean): void {
+    for (const callback of this.contextCallbacks) {
+      callback(contextLost);
+    }
   }
 
   private attachContextHandlers(): void {

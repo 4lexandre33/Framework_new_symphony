@@ -1,4 +1,7 @@
-import type { ViewportDimensions } from "../../../contracts/render/types";
+import type {
+  ViewportAutoResizeMode,
+  ViewportDimensions,
+} from "../../../contracts/render/types";
 
 export interface ViewportResizeCallback {
   (dimensions: Readonly<ViewportDimensions>): void;
@@ -15,12 +18,15 @@ function normalizeDimension(value: number): number {
   return Math.max(1, Math.floor(value));
 }
 
-function normalizePixelRatio(value: number | undefined): number {
+function normalizePixelRatio(
+  value: number | undefined,
+  maxPixelRatio: number = MAX_PIXEL_RATIO,
+): number {
   if (value === undefined || !Number.isFinite(value) || value <= 0) {
     return 1;
   }
 
-  return Math.min(MAX_PIXEL_RATIO, value);
+  return Math.min(maxPixelRatio, value);
 }
 
 export class ViewportManager {
@@ -30,6 +36,12 @@ export class ViewportManager {
   private readonly callbacks = new Set<ViewportResizeCallback>();
 
   private disposed = false;
+
+  // G43: política de tamanho. "window" preserva o comportamento original.
+  private autoResizeMode: ViewportAutoResizeMode = "window";
+  private maxPixelRatio = MAX_PIXEL_RATIO;
+  private lastRequestedPixelRatio: number | undefined;
+  private parentObserver: ResizeObserver | null = null;
 
   public constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -59,13 +71,7 @@ export class ViewportManager {
         return;
       }
 
-      this.updateDimensions(
-        this.hostWindow.innerWidth,
-        this.hostWindow.innerHeight,
-        this.hostWindow.devicePixelRatio,
-      );
-
-      this.notifyCallbacks();
+      this.applyAutoResize();
     };
 
     this.hostWindow.addEventListener(
@@ -118,6 +124,61 @@ export class ViewportManager {
     this.notifyCallbacks();
   }
 
+  public getAutoResizeMode(): ViewportAutoResizeMode {
+    return this.autoResizeMode;
+  }
+
+  public getMaxPixelRatio(): number {
+    return this.maxPixelRatio;
+  }
+
+  /**
+   * Muda a política de auto-resize e/ou o limite de pixelRatio.
+   * Reaplica o tamanho imediatamente quando o modo segue janela/pai.
+   */
+  public setOptions(
+    autoResize: ViewportAutoResizeMode | undefined,
+    maxPixelRatio: number | undefined,
+  ): void {
+    if (this.disposed) {
+      return;
+    }
+
+    if (maxPixelRatio !== undefined) {
+      if (!Number.isFinite(maxPixelRatio) || maxPixelRatio <= 0) {
+        throw new RangeError("maxPixelRatio precisa ser finito e > 0.");
+      }
+
+      this.maxPixelRatio = maxPixelRatio;
+    }
+
+    if (autoResize !== undefined) {
+      if (
+        autoResize !== "window" &&
+        autoResize !== "parent" &&
+        autoResize !== "none"
+      ) {
+        throw new RangeError(`autoResize inválido: ${String(autoResize)}.`);
+      }
+
+      this.autoResizeMode = autoResize;
+    }
+
+    this.syncParentObserver();
+
+    if (this.autoResizeMode === "none") {
+      this.updateDimensions(
+        this.dimensions.width,
+        this.dimensions.height,
+        this.lastRequestedPixelRatio ?? this.hostWindow.devicePixelRatio,
+      );
+      this.notifyCallbacks();
+      return;
+    }
+
+    this.applyAutoResize();
+  }
+
   public getDimensions(): Readonly<ViewportDimensions> {
     return this.dimensions;
   }
@@ -128,6 +189,7 @@ export class ViewportManager {
     }
 
     this.detachResizeListener();
+    this.disconnectParentObserver();
     this.callbacks.clear();
     this.disposed = true;
   }
@@ -139,7 +201,11 @@ export class ViewportManager {
   ): void {
     const validWidth = normalizeDimension(width);
     const validHeight = normalizeDimension(height);
-    const validPixelRatio = normalizePixelRatio(pixelRatio);
+    this.lastRequestedPixelRatio = pixelRatio;
+    const validPixelRatio = normalizePixelRatio(
+      pixelRatio,
+      this.maxPixelRatio,
+    );
 
     this.dimensions.width = validWidth;
     this.dimensions.height = validHeight;
@@ -150,6 +216,65 @@ export class ViewportManager {
     // ViewportManager governa apenas CSS + dimensões lógicas.
     this.canvas.style.width = `${validWidth}px`;
     this.canvas.style.height = `${validHeight}px`;
+  }
+
+  private syncParentObserver(): void {
+    this.disconnectParentObserver();
+
+    const parent = this.canvas.parentElement;
+    const observerCtor = (
+      this.hostWindow as Window & { ResizeObserver?: typeof ResizeObserver }
+    ).ResizeObserver;
+
+    if (
+      this.autoResizeMode !== "parent" ||
+      parent === null ||
+      typeof observerCtor !== "function"
+    ) {
+      return;
+    }
+
+    this.parentObserver = new observerCtor((): void => {
+      if (!this.disposed) {
+        this.applyAutoResize();
+      }
+    });
+    this.parentObserver.observe(parent);
+  }
+
+  private disconnectParentObserver(): void {
+    if (this.parentObserver !== null) {
+      this.parentObserver.disconnect();
+      this.parentObserver = null;
+    }
+  }
+
+  private applyAutoResize(): void {
+    if (this.autoResizeMode === "none") {
+      return;
+    }
+
+    if (this.autoResizeMode === "parent") {
+      const parent = this.canvas.parentElement;
+
+      if (parent !== null) {
+        this.updateDimensions(
+          parent.clientWidth,
+          parent.clientHeight,
+          this.hostWindow.devicePixelRatio,
+        );
+        this.notifyCallbacks();
+        return;
+      }
+    }
+
+    this.updateDimensions(
+      this.hostWindow.innerWidth,
+      this.hostWindow.innerHeight,
+      this.hostWindow.devicePixelRatio,
+    );
+
+    this.notifyCallbacks();
   }
 
   private notifyCallbacks(): void {

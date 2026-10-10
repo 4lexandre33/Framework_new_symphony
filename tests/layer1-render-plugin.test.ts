@@ -72,6 +72,27 @@ class FakeRenderEngine {
 
   public setCameraMode(): void {}
 
+  // G43/G44/G40: superfície usada pelo plugin desde a correção dos gaps.
+  public getViewportDimensions(): Readonly<ViewportDimensions> {
+    return {
+      width:
+        640,
+      height:
+        480,
+      aspectRatio:
+        4 /
+        3,
+      pixelRatio:
+        1,
+    };
+  }
+
+  public onContextChange(): () => void {
+    return (): void => {};
+  }
+
+  public captureInterpolationState(): void {}
+
   public dispose(): void {
     this.disposed +=
       1;
@@ -252,8 +273,20 @@ describe(
           .emitQueue
           .drain();
 
+        // G43: o boot publica as dimensões iniciais antes do resize do host.
         expect(resizes)
           .toEqual([
+            {
+              width:
+                640,
+              height:
+                480,
+              aspectRatio:
+                4 /
+                3,
+              pixelRatio:
+                1,
+            },
             {
               width:
                 800,
