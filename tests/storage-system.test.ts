@@ -17,6 +17,7 @@ import {
 
 import {
   CloudDatabaseDriver,
+  MemoryPlayerProfileBackend,
 } from "../src/engine/storage/internal/CloudDatabaseDriver";
 
 import type {
@@ -44,8 +45,12 @@ describe(
       steamDriver =
         new SteamCloudDriver();
 
+      // G100: o padrão não finge online; injeta um backend em memória.
       cloudDriver =
-        new CloudDatabaseDriver();
+        new CloudDatabaseDriver({
+          backend:
+            new MemoryPlayerProfileBackend(),
+        });
     });
 
     it(

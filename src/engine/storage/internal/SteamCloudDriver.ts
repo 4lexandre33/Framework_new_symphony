@@ -1,5 +1,7 @@
 import type {
+  LoadGameResult,
   SaveGameMetadata,
+  SaveGameOptions,
 } from "../../../contracts/storage/types";
 
 import {
@@ -7,16 +9,17 @@ import {
 } from "./KeyValueStorageBackend";
 
 import type {
-  KeyValueStorageBackend,
+  AnyKeyValueStorageBackend,
 } from "./KeyValueStorageBackend";
 
 import {
   KeyValueSaveDriver,
+  type SaveDriverConfig,
 } from "./KeyValueSaveDriver";
 
 export interface SteamCloudDriverOptions {
   readonly backend?:
-    KeyValueStorageBackend;
+    AnyKeyValueStorageBackend;
 
   readonly now?:
     () => number;
@@ -56,6 +59,15 @@ export class SteamCloudDriver {
       });
   }
 
+  public configure(
+    config:
+      SaveDriverConfig,
+  ): void {
+    this.driver.configure(
+      config,
+    );
+  }
+
   public saveGame(
     slotName: string,
     data:
@@ -63,6 +75,8 @@ export class SteamCloudDriver {
         string,
         unknown
       >,
+    options?:
+      SaveGameOptions,
   ): Promise<
     SaveGameMetadata
   > {
@@ -70,6 +84,22 @@ export class SteamCloudDriver {
       .saveGame(
         slotName,
         data,
+        options,
+      );
+  }
+
+  public loadGameDetailed<
+    T =
+      Record<
+        string,
+        unknown
+      >,
+  >(
+    slotName: string,
+  ): Promise<LoadGameResult<T>> {
+    return this.driver
+      .loadGameDetailed<T>(
+        slotName,
       );
   }
 

@@ -10,6 +10,7 @@ import type {
 
 import {
   CloudDatabaseDriver,
+  MemoryPlayerProfileBackend,
 } from "../src/engine/storage/internal/CloudDatabaseDriver";
 
 import {
@@ -212,6 +213,14 @@ describe(
                 new SteamCloudDriver({
                   backend:
                     new MemoryKeyValueStorageBackend(),
+                }),
+
+              // G100: o padrão é "unsupported"; este teste usa um backend
+              // explícito (em memória) para validar o encaminhamento.
+              cloudDbDriver:
+                new CloudDatabaseDriver({
+                  backend:
+                    new MemoryPlayerProfileBackend(),
                 }),
 
               now:

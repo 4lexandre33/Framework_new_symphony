@@ -2,7 +2,16 @@ import type {
   PlayerOnlineProfile,
 } from "../../../contracts/storage/types";
 
+/**
+ * Backend remoto de perfis (G100). Implemente para o seu serviço (BaaS,
+ * servidor próprio, Steam...) ou use `HttpPlayerProfileBackend` com um
+ * endpoint. Erros devem ser lançados (viram `success: false` + mensagem).
+ */
 export interface PlayerProfileBackend {
+  /** false = o backend não faz sincronização real (padrão sem configuração). */
+  readonly supported?:
+    boolean;
+
   write(
     profile:
       PlayerOnlineProfile,
@@ -43,9 +52,28 @@ function cloneProfile(
 }
 
 /**
- * Backend local determinístico usado como default de compatibilidade.
- * Um BaaS real entra via PlayerProfileBackend; CloudDatabaseDriver não faz
- * fetch direto nem carrega credenciais no frontend.
+ * Padrão SEM backend remoto configurado (G100): nunca finge sucesso.
+ * `syncProfile` retorna false com erro "unsupported" e `fetchProfile` null.
+ */
+export class UnsupportedPlayerProfileBackend
+  implements PlayerProfileBackend {
+  public readonly supported =
+    false;
+
+  public async write(): Promise<void> {
+    throw new Error(
+      "unsupported",
+    );
+  }
+
+  public async read(): Promise<null> {
+    return null;
+  }
+}
+
+/**
+ * Backend em memória (testes/protótipos). NÃO é online: os dados somem ao
+ * fechar o jogo. Precisa ser injetado explicitamente.
  */
 export class MemoryPlayerProfileBackend
   implements PlayerProfileBackend {
@@ -97,11 +125,15 @@ export interface CloudDatabaseDriverOptions {
 }
 
 export class CloudDatabaseDriver {
-  private readonly backend:
+  private backend:
     PlayerProfileBackend;
 
   private disposed =
     false;
+
+  private lastError:
+    string | null =
+      null;
 
   public constructor(
     options:
@@ -110,7 +142,37 @@ export class CloudDatabaseDriver {
   ) {
     this.backend =
       options.backend ??
-      new MemoryPlayerProfileBackend();
+      new UnsupportedPlayerProfileBackend();
+  }
+
+  /** Troca o backend remoto (o anterior é descartado). */
+  public setBackend(
+    backend:
+      PlayerProfileBackend | null,
+  ): void {
+    if (
+      this.backend !==
+        backend
+    ) {
+      this.backend.dispose?.();
+    }
+
+    this.backend =
+      backend ??
+      new UnsupportedPlayerProfileBackend();
+  }
+
+  /** true se há um backend real configurado. */
+  public get isSupported():
+    boolean {
+    return this.backend.supported !==
+      false;
+  }
+
+  /** Erro da última operação ("unsupported", mensagem do backend) ou null. */
+  public getLastError():
+    string | null {
+    return this.lastError;
   }
 
   public async syncProfile(
@@ -120,6 +182,18 @@ export class CloudDatabaseDriver {
     if (
       this.disposed
     ) {
+      this.lastError =
+        "disposed";
+
+      return false;
+    }
+
+    if (
+      !this.isSupported
+    ) {
+      this.lastError =
+        "unsupported";
+
       return false;
     }
 
@@ -131,8 +205,18 @@ export class CloudDatabaseDriver {
           ),
         );
 
+      this.lastError =
+        null;
+
       return true;
-    } catch {
+    } catch (
+      error
+    ) {
+      this.lastError =
+        error instanceof Error
+          ? error.message
+          : String(error);
+
       return false;
     }
   }
@@ -145,6 +229,18 @@ export class CloudDatabaseDriver {
     if (
       this.disposed
     ) {
+      this.lastError =
+        "disposed";
+
+      return null;
+    }
+
+    if (
+      !this.isSupported
+    ) {
+      this.lastError =
+        "unsupported";
+
       return null;
     }
 
@@ -155,13 +251,23 @@ export class CloudDatabaseDriver {
             playerId,
           );
 
+      this.lastError =
+        null;
+
       return profile ===
         null
         ? null
         : cloneProfile(
             profile,
           );
-    } catch {
+    } catch (
+      error
+    ) {
+      this.lastError =
+        error instanceof Error
+          ? error.message
+          : String(error);
+
       return null;
     }
   }

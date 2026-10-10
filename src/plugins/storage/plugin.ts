@@ -8,11 +8,14 @@ import {
   ProfileSyncedEvent,
   SaveCompletedEvent,
   SaveGameCommand,
+  SaveRecoveredEvent,
   SyncProfileCommand,
 } from "../../contracts/storage/types";
 
 import type {
   LoadGameRequest,
+  OnlineProfileEndpointConfig,
+  SaveConfiguration,
   SaveGameRequest,
   SyncProfileRequest,
 } from "../../contracts/storage/types";
@@ -55,6 +58,7 @@ export const storageManifest:
       events: [
         "game.storage.save-completed",
         "game.storage.profile-synced",
+        "game.storage.save-recovered",
       ],
     },
 
@@ -87,7 +91,18 @@ export const storageManifest:
     },
   };
 
-export function createStoragePlugin():
+export interface StoragePluginOptions
+  extends SaveConfiguration {
+  /** Backend remoto HTTP de perfis (sem isto o online é "unsupported"). */
+  readonly onlineProfile?:
+    OnlineProfileEndpointConfig;
+}
+
+export function createStoragePlugin(
+  options:
+    StoragePluginOptions =
+      {},
+):
   Plugin {
   return {
     manifest:
@@ -101,6 +116,18 @@ export function createStoragePlugin():
           ctx,
         );
 
+      storageService.configureSaves(
+        options,
+      );
+
+      if (
+        options.onlineProfile
+      ) {
+        storageService.configureOnlineProfile(
+          options.onlineProfile,
+        );
+      }
+
       ctx.caps.provide(
         StorageToken,
         storageService,
@@ -112,6 +139,10 @@ export function createStoragePlugin():
 
       ctx.events.define(
         ProfileSyncedEvent,
+      );
+
+      ctx.events.define(
+        SaveRecoveredEvent,
       );
 
       ctx.commands.define(
@@ -134,13 +165,26 @@ export function createStoragePlugin():
           ) => {
             const payload =
               envelope.payload as
-                SaveGameRequest;
+                SaveGameRequest | undefined;
+
+            if (
+              !payload ||
+              typeof payload.slotName !==
+                "string" ||
+              typeof payload.data !==
+                "object" ||
+              payload.data ===
+                null
+            ) {
+              return null;
+            }
 
             return await storageService
               .saveGame(
                 payload.slotName,
                 payload.data,
                 payload.driverPreference,
+                payload.options,
               );
           },
         );
@@ -153,7 +197,15 @@ export function createStoragePlugin():
           ) => {
             const payload =
               envelope.payload as
-                LoadGameRequest;
+                LoadGameRequest | undefined;
+
+            if (
+              !payload ||
+              typeof payload.slotName !==
+                "string"
+            ) {
+              return null;
+            }
 
             return await storageService
               .loadGame(
@@ -171,7 +223,13 @@ export function createStoragePlugin():
           ) => {
             const payload =
               envelope.payload as
-                SyncProfileRequest;
+                SyncProfileRequest | undefined;
+
+            if (
+              !payload?.profile
+            ) {
+              return false;
+            }
 
             return await storageService
               .syncOnlineProfile(

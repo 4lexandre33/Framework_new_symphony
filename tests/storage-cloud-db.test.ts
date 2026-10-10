@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { CloudDatabaseDriver } from "../src/engine/storage/internal/CloudDatabaseDriver";
+import { CloudDatabaseDriver, MemoryPlayerProfileBackend } from "../src/engine/storage/internal/CloudDatabaseDriver";
 import { StorageService } from "../src/engine/storage/internal/StorageService";
 import type { PluginContext } from "@core";
 import type { PlayerOnlineProfile } from "../src/contracts/storage/types";
@@ -41,7 +41,8 @@ describe("Camada de Armazenamento - 3º Driver: CloudDatabaseDriver (BaaS / Nuve
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    cloudDriver = new CloudDatabaseDriver();
+    // G100: o padrão não finge online; o teste injeta um backend em memória.
+    cloudDriver = new CloudDatabaseDriver({ backend: new MemoryPlayerProfileBackend() });
   });
 
   it("deve sincronizar o perfil online do jogador no servidor remoto e confirmar o recebimento do payload", async () => {
@@ -71,7 +72,9 @@ describe("Camada de Armazenamento - 3º Driver: CloudDatabaseDriver (BaaS / Nuve
 
   it("deve integrar o CloudDatabaseDriver ao StorageService e disparar o evento 'game.storage.profile-synced' no Microkernel", async () => {
     const { ctx, eventsEmitted } = createMockPluginContext();
-    const storageService = new StorageService(ctx);
+    const storageService = new StorageService(ctx, {
+      cloudDbDriver: new CloudDatabaseDriver({ backend: new MemoryPlayerProfileBackend() }),
+    });
 
     const perfilJogador: PlayerOnlineProfile = {
       playerId: "usr_99_crossplay",

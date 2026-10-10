@@ -1,23 +1,37 @@
 import type {
   SaveGameMetadata,
+  SaveGameOptions,
 } from "../../../contracts/storage/types";
 
 import {
   StorageInfrastructureError,
   normalizeStorageError,
+  storageError,
 } from "./StorageErrors";
 
+/**
+ * v1: { formatVersion: 1, metadata, payload }.
+ * v2: v1 + `signature` (HMAC opcional) — metadata pode trazer schemaVersion/label.
+ * O decoder lê v1, v2 e o container legado ({ metadata, data }).
+ */
 const CURRENT_FORMAT_VERSION =
-  1;
+  2;
 
-interface StoredSaveContainerV1 {
+/** Tamanho máximo do nome do slot (o nome é codificado na chave). */
+export const MAX_SLOT_NAME_LENGTH =
+  256;
+
+interface StoredSaveContainer {
   readonly formatVersion:
-    1;
+    1 | 2;
 
   readonly metadata:
     SaveGameMetadata;
 
   readonly payload:
+    string;
+
+  readonly signature?:
     string;
 }
 
@@ -40,74 +54,71 @@ export interface DecodedSaveRecord<
 
   readonly migratedFromLegacy:
     boolean;
+
+  /** Assinatura HMAC gravada (v2), se houver. */
+  readonly signature?:
+    string;
+
+  /** Texto que a assinatura cobre (para verificação assíncrona). */
+  readonly signingInput:
+    string;
 }
 
-function assertSlotName(
+export type SlotOperation =
+  | "save"
+  | "load"
+  | "list"
+  | "delete";
+
+/**
+ * Slot válido: string com algo além de espaços e até 256 caracteres.
+ * Qualquer caractere é aceito (a chave é codificada).
+ */
+export function assertSlotName(
   slotName: string,
+  operation: SlotOperation = "save",
 ): void {
   if (
+    typeof slotName !==
+      "string" ||
     slotName.trim().length ===
       0 ||
     slotName.length >
-      128 ||
-    /[\u0000-\u001f\u007f]/u.test(
-      slotName,
-    )
+      MAX_SLOT_NAME_LENGTH
   ) {
-    throw new StorageInfrastructureError(
+    throw storageError(
       "operation-failed",
-      "save",
-      "slotName inválido para persistência.",
+      operation,
+      `slotName inválido para persistência (não vazio, até ${String(MAX_SLOT_NAME_LENGTH)} caracteres).`,
       false,
+      "invalid-slot",
     );
   }
 }
 
-function readPlayTimeSeconds(
-  data:
-    Record<
-      string,
-      unknown
-    >,
-): number {
-  const value =
-    data.playTimeSeconds;
-
-  if (
-    typeof value ===
+function finiteNonNegative(
+  value: unknown,
+): number | undefined {
+  return typeof value ===
       "number" &&
     Number.isFinite(
       value,
     ) &&
     value >=
       0
-  ) {
-    return value;
-  }
-
-  return 0;
+    ? value
+    : undefined;
 }
 
-function readGameVersion(
-  data:
-    Record<
-      string,
-      unknown
-    >,
-): string {
-  const value =
-    data.gameVersion;
-
-  if (
-    typeof value ===
+function nonEmptyString(
+  value: unknown,
+): string | undefined {
+  return typeof value ===
       "string" &&
     value.trim().length >
       0
-  ) {
-    return value;
-  }
-
-  return "1.0.0";
+    ? value
+    : undefined;
 }
 
 function legacyChecksum(
@@ -151,8 +162,10 @@ function legacyChecksum(
 /**
  * FNV-1a 32-bit.
  *
- * É checksum de integridade, não assinatura criptográfica. O formato inclui
- * o prefixo do algoritmo para permitir upgrades compatíveis no futuro.
+ * É checksum de integridade (detecta corrupção acidental), não assinatura.
+ * Para detectar adulteração use `integrityKey` (HMAC-SHA256). Nada no
+ * cliente é confiável contra um jogador determinado: valide no servidor o
+ * que for competitivo.
  */
 export function calculateSaveChecksum(
   content: string,
@@ -249,7 +262,7 @@ function parsePayload<
   }
 }
 
-function isMetadata(
+export function isMetadata(
   value: unknown,
 ): value is SaveGameMetadata {
   if (
@@ -286,7 +299,12 @@ function isMetadata(
     typeof metadata.gameVersion ===
       "string" &&
     typeof metadata.checksum ===
-      "string"
+      "string" &&
+    (metadata.schemaVersion ===
+      undefined ||
+      Number.isSafeInteger(
+        metadata.schemaVersion,
+      ))
   );
 }
 
@@ -299,11 +317,12 @@ function verifyMetadata(
     metadata.slotName !==
       expectedSlotName
   ) {
-    throw new StorageInfrastructureError(
+    throw storageError(
       "corrupted",
       "load",
       `Save '${expectedSlotName}' contém metadata de outro slot.`,
       false,
+      "slot-mismatch",
     );
   }
 }
@@ -343,7 +362,40 @@ function verifyChecksum(
   );
 }
 
-export function createStoredSave(
+/** Texto coberto pela assinatura HMAC: slot, timestamp, schema e payload. */
+export function buildSigningInput(
+  metadata:
+    SaveGameMetadata,
+  payload: string,
+): string {
+  return `${metadata.slotName}\n${String(metadata.timestamp)}\n${String(metadata.schemaVersion ?? "")}\n${payload}`;
+}
+
+export interface PreparedSave {
+  readonly metadata:
+    SaveGameMetadata;
+
+  readonly payload:
+    string;
+
+  readonly signingInput:
+    string;
+}
+
+export interface SaveMetadataDefaults {
+  readonly gameVersion?:
+    string;
+
+  readonly schemaVersion?:
+    number;
+}
+
+/**
+ * Monta metadata + payload. `playTimeSeconds`/`gameVersion` vêm de
+ * `options`, depois do topo de `data` (compatibilidade) e por fim dos
+ * padrões (G103).
+ */
+export function prepareSave(
   slotName: string,
   data:
     Record<
@@ -352,13 +404,11 @@ export function createStoredSave(
     >,
   saveIdPrefix: string,
   timestamp: number,
-): {
-  readonly metadata:
-    SaveGameMetadata;
-
-  readonly serialized:
-    string;
-} {
+  options?:
+    SaveGameOptions,
+  defaults?:
+    SaveMetadataDefaults,
+): PreparedSave {
   assertSlotName(
     slotName,
   );
@@ -378,9 +428,38 @@ export function createStoredSave(
     );
   }
 
+  if (
+    typeof data !==
+      "object" ||
+    data ===
+      null
+  ) {
+    throw storageError(
+      "operation-failed",
+      "save",
+      "data do save deve ser um objeto serializável em JSON.",
+      false,
+      "invalid-data",
+    );
+  }
+
   const payload =
     serializePayload(
       data,
+    );
+
+  const schemaVersion =
+    options?.schemaVersion !==
+      undefined &&
+    Number.isSafeInteger(
+      options.schemaVersion,
+    )
+      ? options.schemaVersion
+      : defaults?.schemaVersion;
+
+  const label =
+    nonEmptyString(
+      options?.label,
     );
 
   const metadata:
@@ -391,31 +470,86 @@ export function createStoredSave(
       slotName,
 
       playTimeSeconds:
-        readPlayTimeSeconds(
-          data,
-        ),
+        finiteNonNegative(
+          options?.playTimeSeconds,
+        ) ??
+        finiteNonNegative(
+          data.playTimeSeconds,
+        ) ??
+        0,
 
       timestamp,
 
       gameVersion:
-        readGameVersion(
-          data,
-        ),
+        nonEmptyString(
+          options?.gameVersion,
+        ) ??
+        nonEmptyString(
+          data.gameVersion,
+        ) ??
+        defaults?.gameVersion ??
+        "1.0.0",
 
       checksum:
         calculateSaveChecksum(
           payload,
         ),
+
+      ...(schemaVersion !==
+      undefined
+        ? { schemaVersion }
+        : {}),
+
+      ...(label !==
+      undefined
+        ? { label }
+        : {}),
     };
 
+  return {
+    metadata,
+    payload,
+    signingInput:
+      buildSigningInput(
+        metadata,
+        payload,
+      ),
+  };
+}
+
+export function serializePreparedSave(
+  prepared:
+    PreparedSave,
+  signature?:
+    string,
+): {
+  readonly metadata:
+    SaveGameMetadata;
+
+  readonly serialized:
+    string;
+} {
+  const metadata:
+    SaveGameMetadata =
+      signature !==
+        undefined
+        ? { ...prepared.metadata, signed: true }
+        : prepared.metadata;
+
   const container:
-    StoredSaveContainerV1 = {
+    StoredSaveContainer = {
       formatVersion:
         CURRENT_FORMAT_VERSION,
 
       metadata,
 
-      payload,
+      payload:
+        prepared.payload,
+
+      ...(signature !==
+      undefined
+        ? { signature }
+        : {}),
     };
 
   return {
@@ -426,6 +560,36 @@ export function createStoredSave(
         container,
       ),
   };
+}
+
+/** Compatibilidade: cria o registro sem assinatura. */
+export function createStoredSave(
+  slotName: string,
+  data:
+    Record<
+      string,
+      unknown
+    >,
+  saveIdPrefix: string,
+  timestamp: number,
+  options?:
+    SaveGameOptions,
+): {
+  readonly metadata:
+    SaveGameMetadata;
+
+  readonly serialized:
+    string;
+} {
+  return serializePreparedSave(
+    prepareSave(
+      slotName,
+      data,
+      saveIdPrefix,
+      timestamp,
+      options,
+    ),
+  );
 }
 
 export function decodeStoredSave<
@@ -479,25 +643,34 @@ export function decodeStoredSave<
       readonly payload?:
         unknown;
 
+      readonly signature?:
+        unknown;
+
       readonly data?:
         unknown;
     };
 
   if (
     candidate.formatVersion ===
-      CURRENT_FORMAT_VERSION
+      1 ||
+    candidate.formatVersion ===
+      2
   ) {
     if (
       !isMetadata(
         candidate.metadata,
       ) ||
       typeof candidate.payload !==
-        "string"
+        "string" ||
+      (candidate.signature !==
+        undefined &&
+        typeof candidate.signature !==
+          "string")
     ) {
       throw new StorageInfrastructureError(
         "corrupted",
         "load",
-        `Save '${expectedSlotName}' possui envelope v1 inválido.`,
+        `Save '${expectedSlotName}' possui envelope v${String(candidate.formatVersion)} inválido.`,
         false,
       );
     }
@@ -525,6 +698,17 @@ export function decodeStoredSave<
 
       migratedFromLegacy:
         false,
+
+      ...(typeof candidate.signature ===
+      "string"
+        ? { signature: candidate.signature }
+        : {}),
+
+      signingInput:
+        buildSigningInput(
+          candidate.metadata,
+          candidate.payload,
+        ),
     };
   }
 
@@ -602,7 +786,40 @@ export function decodeStoredSave<
 
     migratedFromLegacy:
       true,
+
+    signingInput:
+      buildSigningInput(
+        legacy.metadata,
+        legacyPayload,
+      ),
   };
+}
+
+/** Lê só o slot gravado no registro (sem validar), ou null. */
+export function peekStoredSlotName(
+  raw: string,
+): string | null {
+  try {
+    const parsed =
+      JSON.parse(
+        raw,
+      ) as { metadata?: { slotName?: unknown } } | null;
+
+    return typeof parsed?.metadata?.slotName ===
+      "string"
+      ? parsed.metadata.slotName
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export function encodeSlotName(
+  slotName: string,
+): string {
+  return encodeURIComponent(
+    slotName,
+  );
 }
 
 export function makeStorageKey(
@@ -615,7 +832,7 @@ export function makeStorageKey(
 
   return (
     prefix +
-    encodeURIComponent(
+    encodeSlotName(
       slotName,
     )
   );
@@ -633,4 +850,132 @@ export function makeLegacyStorageKey(
     prefix +
     slotName
   );
+}
+
+/**
+ * Chaves internas usam "#" logo após o prefixo: `encodeURIComponent` sempre
+ * escapa "#", então não colidem com slots.
+ */
+export function makeBackupKey(
+  prefix: string,
+  slotName: string,
+  index: number,
+): string {
+  return `${prefix}#bak${String(index)}:${encodeSlotName(slotName)}`;
+}
+
+export function makeIndexKey(
+  prefix: string,
+): string {
+  return `${prefix}#index`;
+}
+
+export function isInternalKey(
+  prefix: string,
+  key: string,
+): boolean {
+  return key.startsWith(
+    `${prefix}#`,
+  );
+}
+
+/* ───────────────────────────── HMAC (WebCrypto) ───────────────────────── */
+
+interface SubtleLike {
+  importKey(
+    format: "raw",
+    keyData: Uint8Array,
+    algorithm: { name: "HMAC"; hash: "SHA-256" },
+    extractable: boolean,
+    usages: string[],
+  ): Promise<unknown>;
+
+  sign(
+    algorithm: "HMAC",
+    key: unknown,
+    data: Uint8Array,
+  ): Promise<ArrayBuffer>;
+}
+
+function resolveSubtle(): SubtleLike | null {
+  const cryptoApi =
+    (
+      globalThis as unknown as {
+        readonly crypto?: { readonly subtle?: SubtleLike };
+      }
+    ).crypto;
+
+  return cryptoApi?.subtle ?? null;
+}
+
+export function isHmacAvailable(): boolean {
+  return resolveSubtle() !== null;
+}
+
+/** HMAC-SHA256 em hex com prefixo de algoritmo. */
+export async function computeHmac(
+  key: string,
+  content: string,
+): Promise<string> {
+  const subtle =
+    resolveSubtle();
+
+  if (!subtle) {
+    throw storageError(
+      "unavailable",
+      "save",
+      "WebCrypto indisponível: não é possível assinar o save.",
+      false,
+      "hmac-unavailable",
+    );
+  }
+
+  const encoder =
+    new TextEncoder();
+
+  const cryptoKey =
+    await subtle.importKey(
+      "raw",
+      encoder.encode(
+        key,
+      ),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+
+  const digest =
+    new Uint8Array(
+      await subtle.sign(
+        "HMAC",
+        cryptoKey,
+        encoder.encode(
+          content,
+        ),
+      ),
+    );
+
+  let hex =
+    "";
+
+  for (
+    let index =
+      0;
+    index <
+    digest.length;
+    index +=
+      1
+  ) {
+    hex +=
+      (digest[index] ?? 0)
+        .toString(
+          16,
+        )
+        .padStart(
+          2,
+          "0",
+        );
+  }
+
+  return `hmac-sha256:${hex}`;
 }

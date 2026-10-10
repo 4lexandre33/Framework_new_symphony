@@ -31,6 +31,14 @@ export class StorageInfrastructureError
   public readonly originalError:
     unknown;
 
+  /**
+   * Detalhe opcional do motivo ("invalid-slot", "migration-failed",
+   * "unsupported-schema", "unsupported", "signature-mismatch"...).
+   */
+  public reason:
+    string | undefined =
+      undefined;
+
   public constructor(
     code:
       StorageInfrastructureErrorCode,
@@ -138,4 +146,31 @@ export function normalizeStorageError(
     true,
     error,
   );
+}
+
+/** Cria o erro já com `reason` preenchido. */
+export function storageError(
+  code:
+    StorageInfrastructureErrorCode,
+  operation:
+    StorageInfrastructureOperation,
+  message: string,
+  recoverable: boolean,
+  reason: string,
+  originalError: unknown =
+    null,
+): StorageInfrastructureError {
+  const error =
+    new StorageInfrastructureError(
+      code,
+      operation,
+      message,
+      recoverable,
+      originalError,
+    );
+
+  error.reason =
+    reason;
+
+  return error;
 }
