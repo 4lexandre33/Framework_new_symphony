@@ -165,7 +165,7 @@
       "contracts": [
         {
           "path": "src/contracts/storage/types.ts",
-          "fingerprint": "45a3ad07e28f089a76dbd0c096200f1aabc393592e17f523c6b5934a4096ca58"
+          "fingerprint": "6f58d479c863c741db3b834a7ae366f83a782ff52e6a225b15098d3636094090"
         }
       ],
       "tokens": [
@@ -174,7 +174,7 @@
           "capabilityId": "game.storage",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "12c2012b3086681d3e089a19406d10adf8f78ae8e9e42b4725436580e189691d"
+          "fingerprint": "1df56fe768c8d80971c081f4a9aa25b52c4f7e6936b02f6eaf80498e5cbd4972"
         }
       ]
     },
@@ -249,7 +249,7 @@
       "contracts": [
         {
           "path": "src/contracts/anim/types.ts",
-          "fingerprint": "119b92866789b43515984a3b45f29070abbec8221ae166ad2ac14b5e8853463b"
+          "fingerprint": "ebda341bbb2f64edbc1b4cdb2de6e110cf71a084874f642033588a0fe1ca6e09"
         }
       ],
       "tokens": [
@@ -258,7 +258,7 @@
           "capabilityId": "game.anim",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "ad28031e63567a78065629142e5e9c5dc5a7b8b83fbe0769c3cac305920d05ff"
+          "fingerprint": "88d9c9c5c3c335e2adba8cd842c268b72f304df71b0e35876a87bc963168a2a0"
         }
       ]
     },
@@ -361,7 +361,7 @@
       "contracts": [
         {
           "path": "src/contracts/ai/types.ts",
-          "fingerprint": "1e0eb3d31d455dc9cf4706842cc7cf6a82bb404c8f45833b4714d34b22dcce76"
+          "fingerprint": "78d86570209429dc236c73214c3b51cbaa137774f5a38dfb78f7095e0381296a"
         }
       ],
       "tokens": [
@@ -370,7 +370,7 @@
           "capabilityId": "game.ai",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "ffb79eadc953b0962e26a7942dfe4524686d50992c716eed7887acb34d362f94"
+          "fingerprint": "cac767a6a4bd095e090db3a8eeb58e059bc1934de97cb882c9628f7954e438f4"
         }
       ]
     },
@@ -417,7 +417,7 @@
       "contracts": [
         {
           "path": "src/contracts/terrain/types.ts",
-          "fingerprint": "8542a79c029824c0ccb10ddcbea1e5d5981854937ccf2e64aa015a222c670da0"
+          "fingerprint": "ad32da9c0a8d9b10d87c4b488e516e3d13e7a43c87868b57f7dfe52bbdee4695"
         }
       ],
       "tokens": [
@@ -426,7 +426,7 @@
           "capabilityId": "game.terrain",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "3710e88c8dad68c288e532378f00068fcd89016ee61efde720ed9eeb9a4d12c4"
+          "fingerprint": "a50d9eb2d2830cc82e522a4ccc6fec1d560ad46ac5147ced8c04f3074ff0cd71"
         }
       ]
     },
@@ -445,7 +445,7 @@
       "contracts": [
         {
           "path": "src/contracts/scripting/types.ts",
-          "fingerprint": "f58f04b079a4fe1f238d94d88f31ee2bc340852028431b48f51a01de97d74530"
+          "fingerprint": "1d0543475445c57000828d705b5c1561e31fb14d7fd90090d12cbe44f067c09a"
         }
       ],
       "tokens": [
@@ -454,7 +454,7 @@
           "capabilityId": "game.scripting",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "6f5cf0100d7bcfd733fd59441544012982e1e08ce1f05eaac81ecc78b572b0e1"
+          "fingerprint": "d965c7250ed33a221ebc8f7c24e8639b1262f06a50d455b15d4aca62c32015c7"
         }
       ]
     },
@@ -473,7 +473,7 @@
       "contracts": [
         {
           "path": "src/contracts/streaming/types.ts",
-          "fingerprint": "8eb9b3a6c739083dfc164b086b03321065dca8a617390f74ca12cea704e00a86"
+          "fingerprint": "befc4986f95b7e1b6b7df6244133f34a4523e55b5b017e444cff2aaec513b136"
         }
       ],
       "tokens": [
@@ -482,7 +482,7 @@
           "capabilityId": "game.streaming",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "9934ed5991e1c90788c52d89e37ec1a57405c78d5d9782ac52ef6ef386e0f620"
+          "fingerprint": "fabcd3ff222d1e3c8b4122ef7d2d97d7e24b646093c4e8facfbc7fef48a4db4e"
         }
       ]
     },

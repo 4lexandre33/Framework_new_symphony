@@ -5,16 +5,16 @@
   "baselineId": "layer1-storage-v1-stage82",
   "module": "game.storage",
   "semanticFingerprints": {
-    "src/engine/storage/internal/StorageErrors.ts": "36f91d44d344dd92c227d342107e5fb6ba806540b6b9765f4e5420dbf351b422",
-    "src/engine/storage/internal/KeyValueStorageBackend.ts": "cb472cfce5768836125a5062de835f07a4cd6fbba7c766ffa1eae033302a744e",
-    "src/engine/storage/internal/SaveRecordCodec.ts": "f14214d337ba8a74f9063d1ed7fe440ab99ddd74f0671d29cd904a984f0cfc79",
-    "src/engine/storage/internal/KeyValueSaveDriver.ts": "07b46853f22562e79d508f7108989f0834ec98df3ca3d00887de2cccc42fd240",
-    "src/engine/storage/internal/LocalDatabaseDriver.ts": "1773e0a8d420aa94a3114c61e681ea6ee93133e20cd96b7f1a746104a5d23238",
-    "src/engine/storage/internal/SteamCloudDriver.ts": "f176689e896539bdec1709d6dd1f569b56b4a808d55a4567a9ffa4aedc965a0c",
-    "src/engine/storage/internal/CloudDatabaseDriver.ts": "a5e9ec6330fc3632298448e7deb64621db239af50a04f4d6e374da03ce83bd01",
-    "src/engine/storage/internal/StorageService.ts": "a38dc85ebfd82c69d79bad3151ab02986cffff628ea58f4b68332b9aa90fe38e",
+    "src/engine/storage/internal/StorageErrors.ts": "8d736a0ddbd653c52a85ed65c0bb27bcc9c4169ba26aacfd29141b73746fb46f",
+    "src/engine/storage/internal/KeyValueStorageBackend.ts": "3fa4a4775a2b0d3b03bec9008e52b69cbbe6511850e4d7a06c9fd55916ca28f2",
+    "src/engine/storage/internal/SaveRecordCodec.ts": "1efb66590a90fc4aedf1bc0721564338a4d00a5a47eb47e7f3d2c5223dc6c3be",
+    "src/engine/storage/internal/KeyValueSaveDriver.ts": "1500e3e58594a96bc04ac533ecf85ff17168e743c1397dfff6b0609af39c8415",
+    "src/engine/storage/internal/LocalDatabaseDriver.ts": "c057bc16afc5f2c416d7eddc1497022bff8ab1a00e1d3917d1b09a84384174ce",
+    "src/engine/storage/internal/SteamCloudDriver.ts": "6d1865a5d9ecf69402ffd543d31635d063acd90b76fc5f93fbc2ecb56ab84c6e",
+    "src/engine/storage/internal/CloudDatabaseDriver.ts": "47268cc1769407f5fc3159c7be0094a7bb704d40bbd06edcbda7de47f91faa68",
+    "src/engine/storage/internal/StorageService.ts": "5d8c64289676fc4657f3a1f8042ebf0d63ff5e3c45a1060b6a261e4596f479c3",
     "src/engine/storage/internal/DomainSaveGamePortAdapter.ts": "44f554e69397d73f2bd673643a9d7587fc91646d804fe35d90890424cb9cf3fd",
-    "src/plugins/storage/plugin.ts": "967ab5929b749ce2b7a5134c4efc73f32e3a123d581ed9ec2b895a7cfa158a5f"
+    "src/plugins/storage/plugin.ts": "a90046e1e9b62392f184da14c59cd6373a50bc779ac0a83427a73b393300de02"
   },
   "capturedCounts": {
     "semanticRuntimeFiles": 10,

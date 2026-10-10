@@ -348,7 +348,9 @@ export function readMove(input: InputApi, out: { x: number; z: number; sprint: b
 
 ## 13-terrain-chunks.ts
 ```ts
-// Terreno: update() da engine é no-op. O jogo pede/descarrega chunks (16x128x16) ao redor de um ponto.
+// Terreno: chunks de 16x256x16. Prefira o streaming da engine:
+//   terrain.configure({ streaming: { enabled: true, radiusChunks: 4 } }); terrain.setStreamingCenter(pos)
+// ChunkWindow abaixo é a alternativa manual (chunks pedidos à mão ficam fixos).
 import type { PluginContext } from "@core";
 import { ChunkGeneratedEvent } from "../../../contracts/terrain/types";
 import type { ChunkGeneratedPayload } from "../../../contracts/terrain/types";
@@ -387,10 +389,7 @@ export class ChunkWindow {
 
 /** Altura da superfície numa coluna (use após chunk-generated; não por tick). */
 export function surfaceHeight(terrain: TerrainApi, x: number, z: number): number {
-  for (let y = 127; y >= 0; y -= 1) {
-    if (terrain.getVoxelBlock({ x, y, z }).id !== 0) return y + 1;
-  }
-  return 0;
+  return terrain.getSurfaceHeight(x, z) + 1;
 }
 
 export function onChunkReady(ctx: PluginContext, fn: (p: ChunkGeneratedPayload) => void): () => void {

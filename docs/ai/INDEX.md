@@ -16,18 +16,18 @@ versão 1.0.0 · GERADO por `npm run ai-manual:generate` (não edite à mão; `n
 | Input Manager | input | game.input | - | 2212 |
 | Asset Pipeline & VRAM Cache | assets | game.assets | - | 1320 |
 | Motor de Física (Rapier WASM) | physics | game.physics | - | 4040 |
-| Persistência & Banco de Dados | storage | game.storage | - | 1099 |
+| Persistência & Banco de Dados | storage | game.storage | - | 2380 |
 | Gerenciador de Mundo, Cenas & ECS | world | game.world | - | 2303 |
 | Interface de Usuário & HUD | ui | game.ui | - | 1990 |
-| Pipeline de Animações & State Machines | anim | game.anim | game.loop | 1213 |
+| Pipeline de Animações & State Machines | anim | game.anim | game.loop | 1998 |
 | Motor 2D, Tilemaps & Pixel Art | sprites | game.sprites | game.render, game.assets | 1827 |
 | Mixer de Áudio Espacial 3D | audio | game.audio | - | 2110 |
 | Câmera Dinâmica & SpringArm | camera | game.camera | game.loop, game.physics, game.render | 1887 |
-| Inteligência Artificial & NavMesh | ai | game.ai | game.loop, game.physics, game.world | 1425 |
+| Inteligência Artificial & NavMesh | ai | game.ai | game.loop, game.physics, game.world | 3501 |
 | Partículas GPU, Decals & Pós-Processamento | vfx | game.vfx | - | 2123 |
-| Terreno Procedural, Biomas & Voxels | terrain | game.terrain | game.loop, game.render | 1109 |
-| Cutscenes, Diálogos & Quests | scripting | game.scripting | game.loop | 1744 |
-| Streaming Espacial, LOD & HLOD | streaming | game.streaming | game.loop, game.camera | 1245 |
+| Terreno Procedural, Biomas & Voxels | terrain | game.terrain | game.loop, game.render, game.physics, game.camera | 2788 |
+| Cutscenes, Diálogos & Quests | scripting | game.scripting | game.loop | 3651 |
+| Streaming Espacial, LOD & HLOD | streaming | game.streaming | game.loop, game.camera, game.render, game.assets | 2369 |
 | Desktop Overlay & Raycast Click Passthrough | overlay | game.overlay | game.loop | 875 |
 | Profiler, Anti-cheat & Crash Dumper | security | game.security | game.loop | 959 |
 | Steam Workshop, Dynamic Loading & Asset Override | modding | game.modding | - | 1108 |
@@ -36,7 +36,7 @@ versão 1.0.0 · GERADO por `npm run ai-manual:generate` (não edite à mão; `n
 | Render Runtime | render | game.render | - | 2774 |
 | Multiplayer Network & State Replication | net | game.net | game.loop | 1652 |
 
-Tamanho: RULES ≈ 1751, CORE ≈ 2859, RECIPES ≈ 4771, todos os módulos ≈ 39182 tokens (estimativa: caracteres/3,6).
+Tamanho: RULES ≈ 1751, CORE ≈ 2859, RECIPES ≈ 4791, todos os módulos ≈ 48034 tokens (estimativa: caracteres/3,6).
 
 ## Atalhos por tipo de jogo
 - 3D com física: render, camera, physics, input, assets, audio, ui, game-loop.

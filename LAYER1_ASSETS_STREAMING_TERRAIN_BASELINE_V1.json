@@ -63,15 +63,15 @@
     },
     {
       "path": "src/engine/streaming/internal/DistanceLODManager.ts",
-      "fingerprint": "849a3d544004381fdb625ce73d7d7ffb08acebece66ee5c6a40f694daa5556f9"
+      "fingerprint": "f72b935330f8be02ad86127bcfb9b95d557b2008952d6b7632b77aa72d740aa8"
     },
     {
       "path": "src/engine/streaming/internal/HLODBuilder.ts",
-      "fingerprint": "b89cb95016f783e9fa7a5fe46911621006528ee2778f2493caf9cabddd5048ae"
+      "fingerprint": "a837ffc4321b1a298d8fb378733e290b532793318da5c463c2dc103f9e86cbaf"
     },
     {
       "path": "src/engine/streaming/internal/StreamingService.ts",
-      "fingerprint": "2177ef21d6abd5175c1f806245ea31f04a738f4001835b79b36bc2ece041af24"
+      "fingerprint": "ec83a4625c450b9c1c92dd385d41ea99cc813d764128ad8c839a84878eeef111"
     },
     {
       "path": "src/engine/streaming/internal/StreamingWorkerPool.ts",
@@ -79,7 +79,7 @@
     },
     {
       "path": "src/engine/streaming/internal/WorldStreamingSectorManager.ts",
-      "fingerprint": "cb7482585c92567fffd13c0e322118ca3c4da46082dc8b1035e474553d890a6f"
+      "fingerprint": "ada51e959b8ab7d9b05e97179cdc98dcfc350b2d759d91864e8ca3d8d056f8b5"
     },
     {
       "path": "src/engine/streaming/internal/streaming.worker.ts",
@@ -87,15 +87,15 @@
     },
     {
       "path": "src/plugins/streaming/plugin.ts",
-      "fingerprint": "ef97dc1794433424b7cfe97f4996f4cb7f0e3fd017d7ef5bc41a5d7c148b563d"
+      "fingerprint": "214536fc1640c4563993921d931f4c76901cb55a896adb0d1bc04e5f969ba31d"
     },
     {
       "path": "src/engine/terrain/internal/BiomeEvaluator.ts",
-      "fingerprint": "cf988045462185abd228988901c82d479da0b021425b1a674ef08559562834df"
+      "fingerprint": "b57763a69e8c3171ddabbfad5d71caa73d582e4ea92f0552b959f43f4ce2ecb7"
     },
     {
       "path": "src/engine/terrain/internal/GreedyMesher.ts",
-      "fingerprint": "59229fabd10393ea5e26758b512760e01f24e9d73c687bb0f24f6278dda2ab23"
+      "fingerprint": "e8e93be4c7f7dad09e26b9684453f63f815816e7b5c2abe611ad518e0465b44a"
     },
     {
       "path": "src/engine/terrain/internal/PerlinNoiseService.ts",
@@ -103,23 +103,23 @@
     },
     {
       "path": "src/engine/terrain/internal/ProceduralWorkerPool.ts",
-      "fingerprint": "b0702b390a65cfa4deefe26fbb311cc6cd374711c3c16574033e3bc4135c3b47"
+      "fingerprint": "3ed43f9fc0123be830ecad21a90ac95546d45e1fa88b7c2df9a49e2f16fa925c"
     },
     {
       "path": "src/engine/terrain/internal/TerrainService.ts",
-      "fingerprint": "c62d27dc8ff58f158067cf4b9b489daf6848e713a7938d93e335e447cf21db23"
+      "fingerprint": "b58d3c21bc4aeaf30ce36411d4a690a085e9eddd5e92ff5d104565a9522a2b1f"
     },
     {
       "path": "src/engine/terrain/internal/VoxelChunkManager.ts",
-      "fingerprint": "f0636dc697331e34faa2fff99bad8326c874048ac2696634076a320776eed01c"
+      "fingerprint": "cb03b3dd15f97a6bced27bd313820fbcf09a2b6acf8703cab50158738dc62fda"
     },
     {
       "path": "src/engine/terrain/internal/terrain.worker.ts",
-      "fingerprint": "5009ea76d228b64f806c5cd3206ca58a6fabd67deb75cba20d445556e556c76f"
+      "fingerprint": "0bdedacf2c5a58a333118a8d179038a8e4241d2744c926e15d3a0ee2ee875e34"
     },
     {
       "path": "src/plugins/terrain/plugin.ts",
-      "fingerprint": "bfe7dbc25e07dba878fc5431e701f731df8c337632a9c80fd7343ab1f1fc125f"
+      "fingerprint": "080c10429826f739876e22dbdcc4cbf62fe9c49385490d8ed2b54b6ebcd452d1"
     }
   ]
 }

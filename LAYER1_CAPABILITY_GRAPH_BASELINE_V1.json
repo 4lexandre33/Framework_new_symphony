@@ -16,14 +16,14 @@
     "activePlugins": 24,
     "provisions": 23,
     "providedCapabilityIds": 23,
-    "requiredCapabilityRequirements": 29,
-    "optionalCapabilityRequirements": 2,
-    "resolvedCapabilityRequirements": 31,
+    "requiredCapabilityRequirements": 28,
+    "optionalCapabilityRequirements": 15,
+    "resolvedCapabilityRequirements": 43,
     "optionalUnresolved": 0,
     "conflictsDeclared": 0,
-    "pluginDependencies": 15,
-    "requiredPluginDependencies": 15,
-    "optionalPluginDependencies": 0,
+    "pluginDependencies": 21,
+    "requiredPluginDependencies": 14,
+    "optionalPluginDependencies": 7,
     "cycles": 0,
     "providerAmbiguities": 0,
     "semverViolations": 0,
@@ -429,6 +429,15 @@
         "providerPriority": 0
       },
       {
+        "consumerPluginId": "game.scripting",
+        "capabilityId": "game.anim",
+        "range": "^1.0.0",
+        "optional": true,
+        "providerPluginId": "game.anim",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
         "consumerPluginId": "game.audio",
         "capabilityId": "game.assets",
         "range": "^1.0.0",
@@ -447,10 +456,37 @@
         "providerPriority": 0
       },
       {
+        "consumerPluginId": "game.sprites",
+        "capabilityId": "game.assets",
+        "range": "^1.0.0",
+        "optional": true,
+        "providerPluginId": "game.assets",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.streaming",
+        "capabilityId": "game.assets",
+        "range": "^1.0.0",
+        "optional": true,
+        "providerPluginId": "game.assets",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
         "consumerPluginId": "game.vfx",
         "capabilityId": "game.assets",
         "range": "^1.0.0",
         "optional": false,
+        "providerPluginId": "game.assets",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.world",
+        "capabilityId": "game.assets",
+        "range": "^1.0.0",
+        "optional": true,
         "providerPluginId": "game.assets",
         "providerVersion": "1.0.0",
         "providerPriority": 0
@@ -465,6 +501,15 @@
         "providerPriority": 0
       },
       {
+        "consumerPluginId": "game.scripting",
+        "capabilityId": "game.audio",
+        "range": "^1.0.0",
+        "optional": true,
+        "providerPluginId": "game.audio",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
         "consumerPluginId": "game.debug",
         "capabilityId": "game.camera",
         "range": "^1.0.0",
@@ -474,10 +519,28 @@
         "providerPriority": 0
       },
       {
+        "consumerPluginId": "game.scripting",
+        "capabilityId": "game.camera",
+        "range": "^1.0.0",
+        "optional": true,
+        "providerPluginId": "game.camera",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
         "consumerPluginId": "game.streaming",
         "capabilityId": "game.camera",
         "range": "^1.0.0",
-        "optional": false,
+        "optional": true,
+        "providerPluginId": "game.camera",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.terrain",
+        "capabilityId": "game.camera",
+        "range": "^1.0.0",
+        "optional": true,
         "providerPluginId": "game.camera",
         "providerVersion": "1.0.0",
         "providerPriority": 0
@@ -488,6 +551,15 @@
         "range": "^1.0.0",
         "optional": false,
         "providerPluginId": "game.input",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.world",
+        "capabilityId": "game.loop",
+        "range": "^1.0.0",
+        "optional": true,
+        "providerPluginId": "game.loop",
         "providerVersion": "1.0.0",
         "providerPriority": 0
       },
@@ -537,10 +609,37 @@
         "providerPriority": 0
       },
       {
+        "consumerPluginId": "game.terrain",
+        "capabilityId": "game.physics",
+        "range": "^1.0.0",
+        "optional": true,
+        "providerPluginId": "game.physics",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
         "consumerPluginId": "game.camera",
         "capabilityId": "game.render",
         "range": "^1.0.0",
         "optional": false,
+        "providerPluginId": "game.render",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.sprites",
+        "capabilityId": "game.render",
+        "range": "^1.0.0",
+        "optional": true,
+        "providerPluginId": "game.render",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.streaming",
+        "capabilityId": "game.render",
+        "range": "^1.0.0",
+        "optional": true,
         "providerPluginId": "game.render",
         "providerVersion": "1.0.0",
         "providerPriority": 0
@@ -663,6 +762,15 @@
         "providerPriority": 0
       },
       {
+        "consumerPluginId": "game.scripting",
+        "capabilityId": "game.vfx",
+        "range": "^1.0.0",
+        "optional": true,
+        "providerPluginId": "game.vfx",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
         "consumerPluginId": "game.ai",
         "capabilityId": "game.world",
         "range": "^1.0.0",
@@ -695,15 +803,15 @@
       "plugins": 24,
       "provisions": 23,
       "providedCapabilityIds": 23,
-      "requiredCapabilityRequirements": 29,
-      "optionalCapabilityRequirements": 2,
-      "resolvedCapabilityRequirements": 31,
+      "requiredCapabilityRequirements": 28,
+      "optionalCapabilityRequirements": 15,
+      "resolvedCapabilityRequirements": 43,
       "optionalUnresolved": 0,
       "conflictsDeclared": 0,
-      "pluginDependencies": 15,
-      "requiredPluginDependencies": 15,
-      "optionalPluginDependencies": 0
+      "pluginDependencies": 21,
+      "requiredPluginDependencies": 14,
+      "optionalPluginDependencies": 7
     },
-    "semanticSha256": "ead3b4fce5c384ad58cab7b1c3e6cd7de252e95908777982b8ad797418eb04ca"
+    "semanticSha256": "427844801bc6b5d3a75a80965b1ab411ed0f5c879fbac4a0c9e6d5e38cdb60ec"
   }
 }
