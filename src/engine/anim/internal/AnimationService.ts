@@ -1,6 +1,15 @@
 import type { PluginContext } from "@core";
 import { type AnimationApi } from "../../../tokens/anim";
-import { type AnimationClipConfig, type AnimationParamValue, type AnimationTransition, type SpriteAnimationFrame } from "../../../contracts/anim/types";
+import {
+  type AnimationClipConfig,
+  type AnimationClockSource,
+  type AnimationParamValue,
+  type AnimationStateInfo,
+  type AnimationTransition,
+  type PlayAnimationOptions,
+  type SpriteAnimationFrame,
+  type SpriteRegistrationOptions,
+} from "../../../contracts/anim/types";
 import { AnimationState } from "./AnimationState";
 import { AnimationStateMachine } from "./AnimationStateMachine";
 import { SkeletalAnimationDriver } from "./SkeletalAnimationDriver";
@@ -8,6 +17,14 @@ import { Sprite2DAnimationDriver, type SpriteMaterialLike } from "./Sprite2DAnim
 import { AnimationEventManager } from "./AnimationEventManager";
 import type { AnimationClip, Object3D } from "three";
 
+/**
+ * Serviço de animação.
+ *
+ * Relógio único (G78): FSM, triggers, mixer 3D e sprites 2D avançam no MESMO
+ * passo (`advance`), alimentado por `game.loop.tick` (padrão, determinístico)
+ * ou `game.loop.render` (`setClockSource("render")`). A duração do estado vem
+ * do clip real quando ele existe.
+ */
 export class AnimationService
   implements AnimationApi {
   private readonly fsms =
@@ -25,8 +42,25 @@ export class AnimationService
   private readonly eventManager:
     AnimationEventManager;
 
+  private clockSource:
+    AnimationClockSource = "tick";
+
   private disposed =
     false;
+
+  /** Delta do passo atual (evita closure por tick). */
+  private stepDelta =
+    0;
+
+  private readonly advanceEntityBound = (
+    fsm: AnimationStateMachine,
+    entityId: string,
+  ): void => {
+    this.advanceEntity(
+      entityId,
+      fsm,
+    );
+  };
 
   public constructor(
     private readonly ctx:
@@ -43,46 +77,88 @@ export class AnimationService
     config:
       AnimationClipConfig,
   ): boolean {
+    if (
+      !config ||
+      typeof config.name !==
+        "string" ||
+      typeof config.id !==
+        "string"
+    ) {
+      return false;
+    }
+
     const fsm =
       this.getOrCreateStateMachine(
         entityId,
       );
 
-    return fsm.addState(
+    const state =
       new AnimationState(
         config.name,
         config.id,
-        config.durationSeconds,
+        config.durationSeconds ??
+          Number.NaN,
         config.timeScale ??
           1,
         config.loopMode ??
           "LoopRepeat",
         config.triggers ??
           [],
-      ),
+      );
+
+    if (
+      state.name.length ===
+        0
+    ) {
+      return false;
+    }
+
+    this.syncStateDuration(
+      entityId,
+      state,
+    );
+
+    return fsm.addState(
+      state,
     );
   }
 
+  /**
+   * Independente de ordem (G76): transições para estados ainda não
+   * registrados ficam pendentes e valem quando os estados existirem.
+   */
   public addTransition(
     entityId: string,
     transition:
       AnimationTransition,
   ): boolean {
+    if (
+      !transition ||
+      typeof transition.fromState !==
+        "string" ||
+      typeof transition.toState !==
+        "string"
+    ) {
+      return false;
+    }
+
     const fsm =
       this.getOrCreateStateMachine(
         entityId,
       );
 
-    return fsm.addTransition(
+    return fsm.addTransitionDeferred(
       transition,
     );
   }
 
   public playAnimation(
     entityId: string,
-    stateName: string,
+    stateNameRaw: string,
     fadeDurationSeconds =
       0.2,
+    options?:
+      PlayAnimationOptions,
   ): boolean {
     const fsm =
       this.fsms.get(
@@ -91,36 +167,124 @@ export class AnimationService
 
     if (
       !fsm ||
+      typeof stateNameRaw !==
+        "string" ||
       !fsm.hasState(
-        stateName,
+        stateNameRaw,
       )
     ) {
       return false;
     }
 
+    const state =
+      fsm.getState(
+        stateNameRaw,
+      );
+
+    if (!state) {
+      return false;
+    }
+
+    const stateName =
+      state.name;
+
+    const fade =
+      Number.isFinite(
+        fadeDurationSeconds,
+      )
+        ? Math.max(
+            0,
+            fadeDurationSeconds,
+          )
+        : 0;
+
+    // O estado inicial ainda não tocou: toca agora (fade 0) e anuncia.
+    const initialJustStarted =
+      this.flushInitialState(
+        entityId,
+        fsm,
+      ) ===
+      stateName;
+
     const previousState =
       fsm.getCurrentStateName();
+
+    const previousTarget =
+      fsm.getTargetStateName();
+
+    if (
+      previousState ===
+      stateName
+    ) {
+      /*
+       * G74: pedir o estado atual de novo. Padrão: reinicia só se for
+       * LoopOnce e já terminou; `restart: true` sempre reinicia.
+       */
+      const restart =
+        !initialJustStarted &&
+        (options?.restart ??
+          fsm.isCurrentStateFinished());
+
+      if (
+        previousTarget !==
+        null
+      ) {
+        // Cancela o crossfade em andamento e volta para este estado.
+        fsm.startCrossFade(
+          stateName,
+          0,
+        );
+
+        this.playVisual(
+          entityId,
+          state,
+          fade,
+          restart,
+        );
+      }
+
+      if (restart) {
+        fsm.restartCurrentState();
+
+        this.playVisual(
+          entityId,
+          state,
+          0,
+          true,
+        );
+      }
+
+      return true;
+    }
+
+    if (
+      previousTarget ===
+        stateName &&
+      options?.restart !==
+        true
+    ) {
+      // Já está em crossfade para este estado.
+      return true;
+    }
 
     const started =
       fsm.startCrossFade(
         stateName,
-        fadeDurationSeconds,
+        fade,
       );
 
     if (!started) {
       return false;
     }
 
-    this.playSkeletalState(
+    this.playVisual(
       entityId,
-      fsm,
-      stateName,
-      fadeDurationSeconds,
+      state,
+      fade,
+      options?.restart ===
+        true,
     );
 
-    /*
-     * Fade zero troca a FSM imediatamente.
-     */
     const currentState =
       fsm.getCurrentStateName();
 
@@ -129,11 +293,6 @@ export class AnimationService
       previousState !==
         currentState
     ) {
-      this.eventManager
-        .resetEntityTriggers(
-          entityId,
-        );
-
       this.emitStateChanged(
         entityId,
         previousState,
@@ -166,7 +325,10 @@ export class AnimationService
       fromState !==
         "*" &&
       currentState !==
-        fromState
+        (typeof fromState ===
+          "string"
+          ? fromState.trim()
+          : fromState)
     ) {
       return false;
     }
@@ -221,12 +383,15 @@ export class AnimationService
       animations,
     );
 
+    const fsm =
+      this.getOrCreateStateMachine(
+        entityId,
+      );
+
     /*
-     * Cada AnimationClip do GLTF vira automaticamente
-     * um estado da FSM com o mesmo nome.
-     *
-     * O jogo ainda pode registrar um estado lógico
-     * diferente depois usando registerState().
+     * Cada AnimationClip vira automaticamente um estado (marcado como
+     * automático). Um estado registrado explicitamente com registerState()
+     * substitui o automático como estado inicial (G76).
      */
     for (
       let index = 0;
@@ -237,16 +402,8 @@ export class AnimationService
       const clip =
         animations[index];
 
-      if (!clip) {
-        continue;
-      }
-
-      const fsm =
-        this.getOrCreateStateMachine(
-          entityId,
-        );
-
       if (
+        !clip ||
         fsm.hasState(
           clip.name,
         )
@@ -254,27 +411,63 @@ export class AnimationService
         continue;
       }
 
-      this.registerState(
+      fsm.addState(
+        new AnimationState(
+          clip.name,
+          clip.name,
+          Math.max(
+            0.001,
+            clip.duration,
+          ),
+          1,
+          "LoopRepeat",
+          [],
+          true,
+        ),
+      );
+    }
+
+    // Durações dos estados existentes passam a seguir os clips reais (G78).
+    fsm.forEachState(
+      (
+        state,
+      ): void => {
+        this.syncStateDuration(
+          entityId,
+          state,
+        );
+      },
+    );
+
+    /*
+     * Mixer novo: o estado visível (inicial ou já em andamento) começa a
+     * tocar já, alinhado ao tempo da FSM.
+     */
+    const visualName =
+      fsm.getVisualStateName();
+
+    const visualState =
+      visualName !== null
+        ? fsm.getState(
+            visualName,
+          )
+        : null;
+
+    if (
+      visualState &&
+      !fsm.hasVisualStartPending()
+    ) {
+      this.playVisual(
         entityId,
-        {
-          id:
-            clip.name,
+        visualState,
+        0,
+        true,
+      );
 
-          name:
-            clip.name,
-
-          durationSeconds:
-            Math.max(
-              0.001,
-              clip.duration,
-            ),
-
-          loopMode:
-            "LoopRepeat",
-
-          timeScale:
-            1,
-        },
+      this.skeletalDriver.setActionTime(
+        entityId,
+        visualState.clipId,
+        fsm.getVisualElapsedSeconds(),
       );
     }
   }
@@ -284,13 +477,61 @@ export class AnimationService
     material: unknown,
     frames:
       ReadonlyArray<SpriteAnimationFrame>,
-  ): void {
-    this.spriteDriver.register(
+    options?:
+      SpriteRegistrationOptions,
+  ): unknown {
+    return this.spriteDriver.register(
       entityId,
       material as
         SpriteMaterialLike,
+      frames ??
+        [],
+      options,
+    );
+  }
+
+  public register2DSpriteState(
+    entityId: string,
+    stateName: string,
+    frames:
+      ReadonlyArray<SpriteAnimationFrame>,
+  ): boolean {
+    if (
+      !this.spriteDriver.has(
+        entityId,
+      ) ||
+      typeof stateName !==
+        "string" ||
+      !Array.isArray(
+        frames,
+      )
+    ) {
+      return false;
+    }
+
+    this.spriteDriver.registerStateFrames(
+      entityId,
+      stateName.trim(),
       frames,
     );
+
+    const state =
+      this.fsms
+        .get(
+          entityId,
+        )
+        ?.getState(
+          stateName,
+        );
+
+    if (state) {
+      this.syncStateDuration(
+        entityId,
+        state,
+      );
+    }
+
+    return true;
   }
 
   public unregisterEntity(
@@ -309,13 +550,13 @@ export class AnimationService
       .unregister(
         entityId,
       );
-
-    this.eventManager
-      .resetEntityTriggers(
-        entityId,
-      );
   }
 
+  /**
+   * Estado lógico atual. Durante um crossfade continua sendo o estado de
+   * ORIGEM até o fade terminar; use `getTargetState`/`getStateInfo` para o
+   * estado pedido.
+   */
   public getCurrentState(
     entityId: string,
   ): string | null {
@@ -328,122 +569,141 @@ export class AnimationService
     );
   }
 
-  public tick(
-    deltaSeconds: number,
-  ): void {
-    const safeDelta =
-      this.sanitizeDelta(
-        deltaSeconds,
+  public getTargetState(
+    entityId: string,
+  ): string | null {
+    return (
+      this.fsms.get(
+        entityId,
+      )
+        ?.getTargetStateName() ??
+      null
+    );
+  }
+
+  public getStateInfo(
+    entityId: string,
+  ): AnimationStateInfo | null {
+    const fsm =
+      this.fsms.get(
+        entityId,
       );
 
-    for (
-      const [
-        entityId,
-        fsm,
-      ] of
-      this.fsms.entries()
+    if (!fsm) {
+      return null;
+    }
+
+    const current =
+      fsm.getCurrentState();
+
+    const target =
+      fsm.getTargetStateName();
+
+    return {
+      currentState:
+        current?.name ??
+        null,
+
+      targetState:
+        target,
+
+      requestedState:
+        target ??
+        current?.name ??
+        null,
+
+      normalizedTime:
+        fsm.getCurrentNormalizedTime(),
+
+      elapsedSeconds:
+        fsm.getCurrentElapsedSeconds(),
+
+      durationSeconds:
+        current?.durationSeconds ??
+        0,
+
+      isCrossFading:
+        fsm.isInCrossFade(),
+
+      isFinished:
+        fsm.isCurrentStateFinished(),
+    };
+  }
+
+  public setClockSource(
+    source:
+      AnimationClockSource,
+  ): void {
+    if (
+      source ===
+        "tick" ||
+      source ===
+        "render"
     ) {
-      const previousCurrentState =
-        fsm.getCurrentStateName();
-
-      const previousTargetState =
-        fsm.getTargetStateName();
-
-      const result =
-        fsm.update(
-          safeDelta,
-        );
-
-      /*
-       * Transição disparada por parâmetros da FSM.
-       *
-       * O driver esquelético é acionado apenas
-       * quando aparece um novo target.
-       */
-      if (
-        result.targetState &&
-        result.targetState !==
-          previousTargetState
-      ) {
-        this.playSkeletalState(
-          entityId,
-          fsm,
-          result.targetState,
-          result.crossFadeDurationSeconds,
-        );
-      }
-
-      /*
-       * A troca lógica do estado só é anunciada
-       * quando o crossfade terminou.
-       */
-      if (
-        result.currentState &&
-        result.currentState !==
-          previousCurrentState
-      ) {
-        /*
-         * Caso a transição tenha começado e terminado
-         * no mesmo tick, garante que o clip visual
-         * também seja ativado.
-         */
-        if (
-          previousTargetState !==
-          result.currentState
-        ) {
-          this.playSkeletalState(
-            entityId,
-            fsm,
-            result.currentState,
-            0,
-          );
-        }
-
-        this.eventManager
-          .resetEntityTriggers(
-            entityId,
-          );
-
-        this.emitStateChanged(
-          entityId,
-          previousCurrentState,
-          result.currentState,
-        );
-      }
-
-      const state =
-        fsm.getCurrentState();
-
-      if (
-        state &&
-        state.triggers.length >
-          0
-      ) {
-        this.eventManager
-          .processTriggers(
-            entityId,
-            state.name,
-            fsm.getCurrentNormalizedTime(),
-            state.triggers,
-          );
-      }
+      this.clockSource =
+        source;
     }
   }
 
+  public getClockSource():
+    AnimationClockSource {
+    return this.clockSource;
+  }
+
+  /** Chamado em `game.loop.tick`: avança se o relógio for "tick". */
+  public tick(
+    deltaSeconds: number,
+  ): void {
+    if (
+      this.clockSource ===
+      "tick"
+    ) {
+      this.advance(
+        deltaSeconds,
+      );
+    }
+  }
+
+  /** Chamado em `game.loop.render`: avança se o relógio for "render". */
   public render(
     deltaSeconds: number,
   ): void {
-    const safeDelta =
+    if (
+      this.clockSource ===
+      "render"
+    ) {
+      this.advance(
+        deltaSeconds,
+      );
+    }
+  }
+
+  /**
+   * Passo único: FSM → triggers/fim de clip → mixer 3D → sprites 2D, todos
+   * com o mesmo delta.
+   */
+  public advance(
+    deltaSeconds: number,
+  ): void {
+    if (this.disposed) {
+      return;
+    }
+
+    this.stepDelta =
       this.sanitizeDelta(
         deltaSeconds,
       );
 
+    this.fsms.forEach(
+      this.advanceEntityBound,
+    );
+
     this.skeletalDriver.update(
-      safeDelta,
+      this.stepDelta,
     );
 
     this.spriteDriver.update(
-      safeDelta,
+      this.stepDelta,
     );
   }
 
@@ -462,6 +722,237 @@ export class AnimationService
     this.spriteDriver.dispose();
 
     this.eventManager.clear();
+  }
+
+  private advanceEntity(
+    entityId: string,
+    fsm:
+      AnimationStateMachine,
+  ): void {
+    this.flushInitialState(
+      entityId,
+      fsm,
+    );
+
+    const previousCurrentState =
+      fsm.getCurrentStateName();
+
+    const previousTargetState =
+      fsm.getTargetStateName();
+
+    const result =
+      fsm.update(
+        this.stepDelta,
+      );
+
+    if (
+      result.targetState &&
+      result.targetState !==
+        previousTargetState
+    ) {
+      const target =
+        fsm.getState(
+          result.targetState,
+        );
+
+      if (target) {
+        this.playVisual(
+          entityId,
+          target,
+          result.crossFadeDurationSeconds,
+          false,
+        );
+      }
+    }
+
+    if (
+      result.currentState &&
+      result.currentState !==
+        previousCurrentState
+    ) {
+      // Transição imediata (fade 0) dentro do update: ativa o clip.
+      if (
+        previousTargetState !==
+        result.currentState
+      ) {
+        const current =
+          fsm.getState(
+            result.currentState,
+          );
+
+        if (current) {
+          this.playVisual(
+            entityId,
+            current,
+            0,
+            true,
+          );
+        }
+      }
+
+      this.emitStateChanged(
+        entityId,
+        previousCurrentState,
+        result.currentState,
+      );
+    }
+
+    // Última janela do estado que saiu (triggers/fim de clip não se perdem).
+    if (
+      result.exitedState !==
+      null
+    ) {
+      const exited =
+        fsm.getState(
+          result.exitedState,
+        );
+
+      if (exited) {
+        this.processStateWindow(
+          entityId,
+          exited,
+          result.exitedWindowStartCycles,
+          result.exitedWindowEndCycles,
+        );
+      }
+    }
+
+    const state =
+      fsm.getCurrentState();
+
+    if (state) {
+      this.processStateWindow(
+        entityId,
+        state,
+        result.windowStartCycles,
+        result.windowEndCycles,
+      );
+    }
+
+    if (
+      this.spriteDriver.has(
+        entityId,
+      )
+    ) {
+      const visualName =
+        fsm.getVisualStateName();
+
+      const visual =
+        visualName !== null
+          ? fsm.getState(
+              visualName,
+            )
+          : null;
+
+      if (visual) {
+        this.spriteDriver.syncToState(
+          entityId,
+          visual.name,
+          fsm.getVisualElapsedSeconds(),
+          visual.loopMode,
+        );
+      }
+    }
+  }
+
+  private processStateWindow(
+    entityId: string,
+    state: AnimationState,
+    windowStart: number,
+    windowEnd: number,
+  ): void {
+    if (
+      state.triggers.length >
+      0
+    ) {
+      this.eventManager.processWindow(
+        entityId,
+        state.name,
+        state.loopMode,
+        windowStart,
+        windowEnd,
+        state.triggers,
+      );
+    }
+
+    this.eventManager.processClipEnd(
+      entityId,
+      state.name,
+      state.clipId,
+      state.loopMode,
+      windowStart,
+      windowEnd,
+    );
+  }
+
+  /**
+   * G76: o estado inicial (primeiro registrado) passa a tocar de verdade e
+   * é anunciado com `state-changed` (fromState "none"). Retorna o estado
+   * iniciado ou null.
+   */
+  private flushInitialState(
+    entityId: string,
+    fsm:
+      AnimationStateMachine,
+  ): string | null {
+    if (
+      !fsm.hasVisualStartPending()
+    ) {
+      return null;
+    }
+
+    const name =
+      fsm.consumeVisualStart();
+
+    const state =
+      name !== null
+        ? fsm.getState(
+            name,
+          )
+        : null;
+
+    if (!state) {
+      return null;
+    }
+
+    this.playVisual(
+      entityId,
+      state,
+      0,
+      true,
+    );
+
+    this.emitStateChanged(
+      entityId,
+      null,
+      state.name,
+    );
+
+    return state.name;
+  }
+
+  private syncStateDuration(
+    entityId: string,
+    state: AnimationState,
+  ): void {
+    const clipDuration =
+      this.skeletalDriver.getClipDuration(
+        entityId,
+        state.clipId,
+      ) ??
+      this.spriteDriver.getStateCycleSeconds(
+        entityId,
+        state.name,
+      );
+
+    if (
+      clipDuration !==
+      null
+    ) {
+      state.setDurationSeconds(
+        clipDuration,
+      );
+    }
   }
 
   private getOrCreateStateMachine(
@@ -485,29 +976,20 @@ export class AnimationService
     return fsm;
   }
 
-  private playSkeletalState(
+  private playVisual(
     entityId: string,
-    fsm:
-      AnimationStateMachine,
-    stateName: string,
+    state: AnimationState,
     fadeDurationSeconds:
       number,
+    restart: boolean,
   ): void {
-    const state =
-      fsm.getState(
-        stateName,
-      );
-
-    if (!state) {
-      return;
-    }
-
     this.skeletalDriver.play(
       entityId,
       state.clipId,
       fadeDurationSeconds,
       state.timeScale,
       state.loopMode,
+      restart,
     );
   }
 

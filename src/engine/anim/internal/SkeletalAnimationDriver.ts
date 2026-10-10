@@ -129,6 +129,55 @@ export class SkeletalAnimationDriver {
     );
   }
 
+  public has(
+    entityId: string,
+  ): boolean {
+    return this.entityAnimations.has(
+      entityId,
+    );
+  }
+
+  /** Duração real do clip (s) ou null. */
+  public getClipDuration(
+    entityId: string,
+    clipName: string,
+  ): number | null {
+    const action =
+      this.entityAnimations
+        .get(
+          entityId,
+        )
+        ?.actions.get(
+          clipName,
+        );
+
+    if (!action) {
+      return null;
+    }
+
+    const duration =
+      action.getClip().duration;
+
+    return Number.isFinite(
+      duration,
+    ) &&
+      duration >
+        0
+      ? duration
+      : null;
+  }
+
+  public getCurrentActionName(
+    entityId: string,
+  ): string | null {
+    return (
+      this.entityAnimations.get(
+        entityId,
+      )?.currentActionName ??
+      null
+    );
+  }
+
   public play(
     entityId: string,
     clipName: string,
@@ -139,6 +188,8 @@ export class SkeletalAnimationDriver {
     loopMode:
       AnimationLoopMode =
         "LoopRepeat",
+    restart =
+      false,
   ): boolean {
     const animation =
       this.entityAnimations.get(
@@ -195,6 +246,11 @@ export class SkeletalAnimationDriver {
       animation.currentActionName ===
       clipName
     ) {
+      if (restart) {
+        // G74: mesmo clip pedido de novo com reinício: volta ao quadro 0.
+        targetAction.reset();
+      }
+
       targetAction.play();
 
       return true;
@@ -239,6 +295,33 @@ export class SkeletalAnimationDriver {
       clipName;
 
     return true;
+  }
+
+  /** Alinha o tempo do clip ao relógio da FSM (registro tardio do esqueleto). */
+  public setActionTime(
+    entityId: string,
+    clipName: string,
+    seconds: number,
+  ): void {
+    const action =
+      this.entityAnimations
+        .get(
+          entityId,
+        )
+        ?.actions.get(
+          clipName,
+        );
+
+    if (
+      action &&
+      Number.isFinite(
+        seconds,
+      ) &&
+      seconds >= 0
+    ) {
+      action.time =
+        seconds;
+    }
   }
 
   public update(

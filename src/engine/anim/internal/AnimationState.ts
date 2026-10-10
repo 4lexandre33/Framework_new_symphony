@@ -44,8 +44,21 @@ export class AnimationState {
   public readonly clipId:
     string;
 
-  public readonly durationSeconds:
+  /**
+   * Duração (s) de um ciclo do clip no relógio da FSM. Quando o clip real
+   * existe (mixer 3D ou quadros 2D), o serviço sobrescreve com a duração do
+   * clip para que FSM e mixer usem o mesmo relógio (G78).
+   */
+  public durationSeconds:
     number;
+
+  /** true quando o jogo informou `durationSeconds` explicitamente. */
+  public readonly durationExplicit:
+    boolean;
+
+  /** Estado criado automaticamente por `register3DSkeleton`. */
+  public readonly auto:
+    boolean;
 
   public readonly timeScale:
     number;
@@ -75,7 +88,19 @@ export class AnimationState {
         AnimationEventTrigger
       > =
         [],
+    auto =
+      false,
   ) {
+    this.auto =
+      auto;
+
+    this.durationExplicit =
+      Number.isFinite(
+        durationSeconds,
+      ) &&
+      durationSeconds >
+        0;
+
     this.name =
       name.trim();
 
@@ -99,5 +124,21 @@ export class AnimationState {
 
     this.triggers =
       triggers;
+  }
+
+  /** Atualiza a duração (ignora valores inválidos). */
+  public setDurationSeconds(
+    seconds: number,
+  ): void {
+    if (
+      Number.isFinite(
+        seconds,
+      ) &&
+      seconds >
+        0
+    ) {
+      this.durationSeconds =
+        seconds;
+    }
   }
 }

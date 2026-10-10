@@ -42,7 +42,12 @@ export interface AnimationClipConfig {
    */
   readonly name: string;
 
-  readonly durationSeconds: number;
+  /**
+   * Duração de um ciclo (s). Opcional: quando o clip real existe (clip 3D do
+   * mixer ou quadros 2D do estado) a duração do clip é usada — FSM e mixer
+   * compartilham o mesmo relógio. Sem clip e sem valor: 1 s.
+   */
+  readonly durationSeconds?: number;
 
   readonly loopMode?:
     AnimationLoopMode;
@@ -90,6 +95,71 @@ export interface AnimationTransition {
 
   readonly conditionValue?:
     number | string | boolean;
+
+  /**
+   * Tempo de saída normalizado do estado de origem (0..n). A transição só
+   * dispara quando o clip atinge esse ponto (e a condição, se houver, é
+   * verdadeira). Em clips em loop, valores < 1 são verificados a cada ciclo;
+   * valores >= 1 após N ciclos. Em `LoopOnce`, >= 1 = fim do clip.
+   *
+   * Padrão: transição SEM `conditionParam` usa 1 (fim do clip);
+   * transição com condição não tem tempo de saída.
+   */
+  readonly exitTime?: number;
+
+  /**
+   * `false` desliga o tempo de saída (transição sem condição volta a
+   * disparar imediatamente, no próximo tick). `true` com `exitTime`
+   * ausente usa 1.
+   */
+  readonly hasExitTime?: boolean;
+}
+
+export interface PlayAnimationOptions {
+  /**
+   * Pedir o estado atual de novo:
+   * - `true`: reinicia o clip do começo (golpe repetido, triggers de novo);
+   * - `false`: nunca reinicia (continua tocando);
+   * - ausente: reinicia só se o estado for `LoopOnce` e já tiver terminado.
+   */
+  readonly restart?: boolean;
+}
+
+/** Relógio que avança FSM, mixer 3D e sprites 2D (sempre o MESMO para os três). */
+export type AnimationClockSource =
+  | "tick"
+  | "render";
+
+export interface SpriteRegistrationOptions {
+  /**
+   * Textura por entidade: `true` clona `material.map` para esta entidade;
+   * `"auto"` (padrão) clona só se o mesmo `map` já estiver em uso por outra
+   * entidade registrada; `false` usa a textura recebida.
+   */
+  readonly cloneTexture?: boolean | "auto";
+
+  /**
+   * Objeto (Sprite/Mesh) dono do material. Se informado e o material já
+   * estiver em uso por outra entidade (ou `cloneMaterial: true`), o material
+   * é clonado e atribuído a `target.material` — cada entidade anima sozinha.
+   */
+  readonly target?: { material: unknown };
+
+  readonly cloneMaterial?: boolean;
+}
+
+export interface AnimationStateInfo {
+  readonly currentState: string | null;
+  /** Estado de destino durante um crossfade (null se não houver). */
+  readonly targetState: string | null;
+  /** `targetState ?? currentState`: o último estado pedido/em vigor. */
+  readonly requestedState: string | null;
+  readonly normalizedTime: number;
+  readonly elapsedSeconds: number;
+  readonly durationSeconds: number;
+  readonly isCrossFading: boolean;
+  /** `LoopOnce` que já chegou ao fim. */
+  readonly isFinished: boolean;
 }
 
 export type AnimationParamValue =
@@ -130,6 +200,33 @@ export const AnimationStateChangedEvent =
     "game.anim.state-changed",
   );
 
+export interface AnimationClipFinishedPayload {
+  readonly entityId: string;
+
+  readonly stateName: string;
+
+  readonly clipId: string;
+
+  readonly loopMode: AnimationLoopMode;
+
+  /**
+   * Ciclos completos desde a entrada no estado (LoopOnce: sempre 1).
+   */
+  readonly completedCycles: number;
+}
+
+/**
+ * Emitido quando um clip chega ao fim: uma vez em `LoopOnce`; a cada ciclo
+ * completo em `LoopRepeat`/`LoopPingPong`.
+ */
+export const AnimationClipFinishedEvent =
+  defineEvent<
+    "game.anim.clip-finished",
+    AnimationClipFinishedPayload
+  >(
+    "game.anim.clip-finished",
+  );
+
 export const AnimationTriggeredEvent =
   defineEvent<
     "game.anim.event-triggered",
@@ -149,6 +246,10 @@ export interface PlayAnimationRequest {
 
   readonly fadeDurationSeconds?:
     number;
+
+  /** Ver `PlayAnimationOptions.restart`. */
+  readonly restart?:
+    boolean;
 }
 
 export const PlayAnimationCommand =

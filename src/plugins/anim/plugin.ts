@@ -1,6 +1,6 @@
 import type { Plugin, PluginContext } from "@core";
 import { AnimationToken } from "../../tokens/anim";
-import { AnimationStateChangedEvent, AnimationTriggeredEvent, PlayAnimationCommand, CrossFadeCommand, SetAnimParamCommand, type CrossFadeRequest, type PlayAnimationRequest, type SetAnimParamRequest } from "../../contracts/anim/types";
+import { AnimationClipFinishedEvent, AnimationStateChangedEvent, AnimationTriggeredEvent, PlayAnimationCommand, CrossFadeCommand, SetAnimParamCommand, type CrossFadeRequest, type PlayAnimationRequest, type SetAnimParamRequest } from "../../contracts/anim/types";
 import type { GameRenderPayload, GameTickPayload } from "../../contracts/game-loop/types";
 import { AnimationService } from "../../engine/anim/internal/AnimationService";
 
@@ -39,6 +39,7 @@ export const animManifest:
       events: [
         "game.anim.state-changed",
         "game.anim.event-triggered",
+        "game.anim.clip-finished",
       ],
     },
 
@@ -81,6 +82,10 @@ export function createAnimationPlugin():
 
       ctx.events.define(
         AnimationTriggeredEvent,
+      );
+
+      ctx.events.define(
+        AnimationClipFinishedEvent,
       );
 
       ctx.commands.define(
@@ -135,13 +140,20 @@ export function createAnimationPlugin():
           ) => {
             const payload =
               envelope.payload as
-                PlayAnimationRequest;
+                PlayAnimationRequest | undefined;
+
+            if (!payload) {
+              return false;
+            }
 
             return animService
               .playAnimation(
                 payload.entityId,
                 payload.stateName,
                 payload.fadeDurationSeconds,
+                payload.restart === undefined
+                  ? undefined
+                  : { restart: payload.restart },
               );
           },
         );
@@ -154,7 +166,11 @@ export function createAnimationPlugin():
           ) => {
             const payload =
               envelope.payload as
-                CrossFadeRequest;
+                CrossFadeRequest | undefined;
+
+            if (!payload) {
+              return false;
+            }
 
             return animService
               .crossFade(
@@ -174,7 +190,11 @@ export function createAnimationPlugin():
           ) => {
             const payload =
               envelope.payload as
-                SetAnimParamRequest;
+                SetAnimParamRequest | undefined;
+
+            if (!payload) {
+              return;
+            }
 
             animService.setParam(
               payload.entityId,

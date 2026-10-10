@@ -3,9 +3,21 @@ import {
 } from "./AnimationState";
 
 import type {
+  AnimationLoopMode,
   AnimationParamValue,
   AnimationTransition,
 } from "../../../contracts/anim/types";
+
+/**
+ * Cursor "antes do início": permite que triggers em 0,0 disparem na
+ * entrada do estado (a janela de cruzamento é aberta à esquerda).
+ */
+export const BEFORE_START_CYCLES =
+  -1e-9;
+
+/** Limite de cruzamentos por trigger/tick (clips curtíssimos). */
+const MAX_CROSSINGS_PER_UPDATE =
+  16;
 
 export interface AnimationStateMachineUpdateResult {
   currentState:
@@ -20,6 +32,149 @@ export interface AnimationStateMachineUpdateResult {
 
   crossFadeDurationSeconds:
     number;
+
+  /**
+   * Janela (em ciclos, não normalizada) percorrida pelo estado atual neste
+   * update: (windowStartCycles, windowEndCycles]. Usada para triggers e
+   * eventos de fim de clip, sem perder 0,0/1,0 nem ciclos repetidos.
+   */
+  windowStartCycles: number;
+
+  windowEndCycles: number;
+
+  /**
+   * Estado que DEIXOU de ser o atual neste update (transição imediata ou
+   * fim de crossfade), com a última janela percorrida por ele — para que
+   * seus triggers/fim de clip não se percam. null se não houve troca.
+   */
+  exitedState: string | null;
+
+  exitedWindowStartCycles: number;
+
+  exitedWindowEndCycles: number;
+}
+
+/**
+ * Quantas vezes o ponto normalizado `t` foi cruzado na janela (a, b] de
+ * ciclos, considerando o modo de loop. Puro, sem alocação.
+ */
+export function countCrossings(
+  t: number,
+  a: number,
+  b: number,
+  loopMode: AnimationLoopMode,
+): number {
+  if (
+    !Number.isFinite(t) ||
+    !(b > a)
+  ) {
+    return 0;
+  }
+
+  const point =
+    Math.min(
+      1,
+      Math.max(
+        0,
+        t,
+      ),
+    );
+
+  if (
+    loopMode ===
+    "LoopOnce"
+  ) {
+    return point > a &&
+      point <= b
+      ? 1
+      : 0;
+  }
+
+  let count =
+    0;
+
+  if (
+    loopMode ===
+    "LoopPingPong"
+  ) {
+    // Fase p em [0, 2): posição = p <= 1 ? p : 2 - p.
+    // Cruzamentos em 2k + t (ida) e 2k + 2 - t (volta).
+    let k =
+      Math.max(
+        0,
+        Math.floor(
+          (a - point) /
+            2,
+        ),
+      );
+
+    while (
+      count <
+      MAX_CROSSINGS_PER_UPDATE
+    ) {
+      const forward =
+        2 * k +
+        point;
+
+      if (forward > b) {
+        break;
+      }
+
+      if (forward > a) {
+        count += 1;
+      }
+
+      if (
+        point > 0 &&
+        point < 1
+      ) {
+        const backward =
+          2 * k +
+          2 -
+          point;
+
+        if (
+          backward > a &&
+          backward <= b
+        ) {
+          count += 1;
+        }
+      }
+
+      k += 1;
+    }
+
+    return count;
+  }
+
+  // LoopRepeat: cruzamentos em k + t, k >= 0.
+  let k =
+    Math.max(
+      0,
+      Math.floor(
+        a - point,
+      ) +
+        1,
+    );
+
+  while (
+    count <
+      MAX_CROSSINGS_PER_UPDATE &&
+    k + point <= b
+  ) {
+    if (k + point > a) {
+      count += 1;
+    }
+
+    k += 1;
+  }
+
+  return count;
+}
+
+interface PendingTransition {
+  readonly transition:
+    AnimationTransition;
 }
 
 export class AnimationStateMachine {
@@ -31,6 +186,13 @@ export class AnimationStateMachine {
 
   private readonly transitions:
     AnimationTransition[] = [];
+
+  /**
+   * Transições registradas antes dos estados (G76): ficam aqui até os
+   * estados existirem.
+   */
+  private readonly pendingTransitions:
+    PendingTransition[] = [];
 
   private readonly params =
     new Map<
@@ -47,6 +209,13 @@ export class AnimationStateMachine {
   private currentStateElapsedSeconds =
     0;
 
+  private targetStateElapsedSeconds =
+    0;
+
+  /** Posição (ciclos) até onde triggers/exit-time já foram avaliados. */
+  private cursorCycles =
+    BEFORE_START_CYCLES;
+
   private isCrossFading =
     false;
 
@@ -55,6 +224,17 @@ export class AnimationStateMachine {
 
   private crossFadeProgress =
     0;
+
+  /** O estado atual foi escolhido automaticamente e o clip ainda não tocou. */
+  private visualStartPending =
+    false;
+
+  /** O jogo já pediu um estado explicitamente (playAnimation/crossFade). */
+  private explicitlyStarted =
+    false;
+
+  private enteredDuringUpdate =
+    false;
 
   private readonly updateResult:
     AnimationStateMachineUpdateResult = {
@@ -72,6 +252,21 @@ export class AnimationStateMachine {
 
       crossFadeDurationSeconds:
         0,
+
+      windowStartCycles:
+        BEFORE_START_CYCLES,
+
+      windowEndCycles:
+        0,
+
+      exitedState:
+        null,
+
+      exitedWindowStartCycles:
+        0,
+
+      exitedWindowEndCycles:
+        0,
     };
 
   public addState(
@@ -84,26 +279,60 @@ export class AnimationStateMachine {
       return false;
     }
 
-    const isFirstState =
-      this.states.size ===
-      0;
+    const existing =
+      this.states.get(
+        state.name,
+      );
 
     this.states.set(
       state.name,
       state,
     );
 
+    /*
+     * Estado inicial: o primeiro estado registrado. Um estado explícito
+     * (registerState) substitui um estado automático (criado por clip do
+     * register3DSkeleton) que ainda não foi pedido pelo jogo.
+     */
+    const current =
+      this.getCurrentState();
+
+    const replaceAutoInitial =
+      !state.auto &&
+      current !== null &&
+      current.auto &&
+      !this.explicitlyStarted &&
+      this.targetStateName ===
+        null;
+
     if (
-      isFirstState ||
       this.currentStateName ===
-        null
+        null ||
+      replaceAutoInitial
     ) {
       this.currentStateName =
         state.name;
 
       this.currentStateElapsedSeconds =
         0;
+
+      this.cursorCycles =
+        BEFORE_START_CYCLES;
+
+      this.visualStartPending =
+        true;
+    } else if (
+      existing !==
+        undefined &&
+      this.currentStateName ===
+        state.name
+    ) {
+      // Re-registro do estado atual: o novo clip precisa tocar.
+      this.visualStartPending =
+        true;
     }
+
+    this.resolvePendingTransitions();
 
     return true;
   }
@@ -112,7 +341,9 @@ export class AnimationStateMachine {
     stateName: string,
   ): boolean {
     return this.states.has(
-      stateName,
+      normalizeName(
+        stateName,
+      ),
     );
   }
 
@@ -121,10 +352,27 @@ export class AnimationStateMachine {
   ): AnimationState | null {
     return (
       this.states.get(
-        stateName,
+        normalizeName(
+          stateName,
+        ),
       ) ??
       null
     );
+  }
+
+  public forEachState(
+    visitor: (
+      state: AnimationState,
+    ) => void,
+  ): void {
+    for (
+      const state of
+      this.states.values()
+    ) {
+      visitor(
+        state,
+      );
+    }
   }
 
   public getCurrentState():
@@ -144,33 +392,85 @@ export class AnimationStateMachine {
     );
   }
 
+  /**
+   * Registro estrito: falha se os estados não existem (comportamento
+   * histórico da FSM). O serviço usa `addTransitionDeferred`.
+   */
   public addTransition(
     transition:
       AnimationTransition,
   ): boolean {
+    const normalized =
+      normalizeTransition(
+        transition,
+      );
+
     if (
       !this.states.has(
-        transition.toState,
+        normalized.toState,
       )
     ) {
       return false;
     }
 
     if (
-      transition.fromState !==
+      normalized.fromState !==
         "*" &&
       !this.states.has(
-        transition.fromState,
+        normalized.fromState,
       )
     ) {
       return false;
     }
 
     this.transitions.push(
-      transition,
+      normalized,
     );
 
     return true;
+  }
+
+  /**
+   * Registro independente de ordem (G76): se os estados ainda não existem,
+   * a transição fica pendente e entra em vigor quando forem registrados.
+   */
+  public addTransitionDeferred(
+    transition:
+      AnimationTransition,
+  ): boolean {
+    const normalized =
+      normalizeTransition(
+        transition,
+      );
+
+    if (
+      normalized.toState.length ===
+        0 ||
+      normalized.fromState.length ===
+        0
+    ) {
+      return false;
+    }
+
+    if (
+      this.addTransition(
+        normalized,
+      )
+    ) {
+      return true;
+    }
+
+    this.pendingTransitions.push({
+      transition:
+        normalized,
+    });
+
+    return true;
+  }
+
+  public getPendingTransitionCount():
+    number {
+    return this.pendingTransitions.length;
   }
 
   public setParam(
@@ -202,6 +502,74 @@ export class AnimationStateMachine {
     return this.targetStateName;
   }
 
+  public isInCrossFade():
+    boolean {
+    return this.isCrossFading;
+  }
+
+  public getCurrentElapsedSeconds():
+    number {
+    return this.currentStateElapsedSeconds;
+  }
+
+  /** Estado que está na tela (destino do crossfade, se houver). */
+  public getVisualStateName():
+    string | null {
+    return (
+      this.targetStateName ??
+      this.currentStateName
+    );
+  }
+
+  public getVisualElapsedSeconds():
+    number {
+    return this.targetStateName !==
+      null
+      ? this.targetStateElapsedSeconds
+      : this.currentStateElapsedSeconds;
+  }
+
+  /** Ciclos decorridos do estado atual (LoopOnce limitado a 1). */
+  public getCurrentCycles():
+    number {
+    const state =
+      this.getCurrentState();
+
+    if (!state) {
+      return 0;
+    }
+
+    const cycles =
+      this.currentStateElapsedSeconds /
+      state.durationSeconds;
+
+    if (
+      state.loopMode ===
+      "LoopOnce"
+    ) {
+      return Math.min(
+        1,
+        cycles,
+      );
+    }
+
+    return cycles;
+  }
+
+  public isCurrentStateFinished():
+    boolean {
+    const state =
+      this.getCurrentState();
+
+    return (
+      state !== null &&
+      state.loopMode ===
+        "LoopOnce" &&
+      this.currentStateElapsedSeconds >=
+        state.durationSeconds
+    );
+  }
+
   public getCurrentNormalizedTime():
     number {
     const state =
@@ -211,93 +579,95 @@ export class AnimationStateMachine {
       return 0;
     }
 
-    const duration =
-      state.durationSeconds;
-
-    if (
-      !Number.isFinite(
-        duration,
-      ) ||
-      duration <= 0
-    ) {
-      return 0;
-    }
-
-    const rawNormalized =
+    return normalizedFromCycles(
       this.currentStateElapsedSeconds /
-      duration;
+        state.durationSeconds,
+      state.loopMode,
+    );
+  }
 
-    switch (
-      state.loopMode
+  /**
+   * Consome o pedido de "tocar o clip do estado inicial" (G76). Retorna o
+   * nome do estado a tocar, ou null.
+   */
+  public consumeVisualStart():
+    string | null {
+    if (
+      !this.visualStartPending
     ) {
-      case "LoopOnce": {
-        return Math.min(
-          1,
-          Math.max(
-            0,
-            rawNormalized,
-          ),
-        );
-      }
-
-      case "LoopPingPong": {
-        const wrapped =
-          this.positiveModulo(
-            rawNormalized,
-            2,
-          );
-
-        return wrapped <= 1
-          ? wrapped
-          : 2 - wrapped;
-      }
-
-      case "LoopRepeat":
-      default: {
-        return this.positiveModulo(
-          rawNormalized,
-          1,
-        );
-      }
+      return null;
     }
+
+    this.visualStartPending =
+      false;
+
+    return this.getVisualStateName();
+  }
+
+  public hasVisualStartPending():
+    boolean {
+    return this.visualStartPending;
   }
 
   public setState(
     stateName: string,
   ): boolean {
+    const name =
+      normalizeName(
+        stateName,
+      );
+
     if (
       !this.states.has(
-        stateName,
+        name,
       )
     ) {
       return false;
     }
 
-    this.currentStateName =
-      stateName;
+    this.enterState(
+      name,
+      0,
+    );
 
-    this.targetStateName =
-      null;
+    this.explicitlyStarted =
+      true;
 
-    this.currentStateElapsedSeconds =
-      0;
+    return true;
+  }
 
-    this.isCrossFading =
-      false;
+  /**
+   * Reinicia o estado atual do começo (G74): tempo 0, triggers de novo.
+   */
+  public restartCurrentState():
+    boolean {
+    if (
+      this.currentStateName ===
+      null
+    ) {
+      return false;
+    }
 
-    this.crossFadeDuration =
-      0;
+    this.enterState(
+      this.currentStateName,
+      0,
+    );
 
-    this.crossFadeProgress =
-      0;
+    this.explicitlyStarted =
+      true;
 
     return true;
   }
 
   public startCrossFade(
-    toStateName: string,
+    toStateNameRaw: string,
     durationSeconds: number,
   ): boolean {
+    const toStateName =
+      normalizeName(
+        toStateNameRaw,
+      );
+
     if (
       !this.states.has(
         toStateName,
@@ -306,12 +676,21 @@ export class AnimationStateMachine {
       return false;
     }
 
+    this.explicitlyStarted =
+      true;
+
+    this.visualStartPending =
+      false;
+
     if (
       this.currentStateName ===
       toStateName
     ) {
       this.targetStateName =
         null;
+
+      this.targetStateElapsedSeconds =
+        0;
 
       this.isCrossFading =
         false;
@@ -342,29 +721,19 @@ export class AnimationStateMachine {
       safeDuration ===
       0
     ) {
-      this.currentStateName =
-        toStateName;
-
-      this.targetStateName =
-        null;
-
-      this.currentStateElapsedSeconds =
-        0;
-
-      this.isCrossFading =
-        false;
-
-      this.crossFadeDuration =
-        0;
-
-      this.crossFadeProgress =
-        0;
+      this.enterState(
+        toStateName,
+        0,
+      );
 
       return true;
     }
 
     this.targetStateName =
       toStateName;
+
+    this.targetStateElapsedSeconds =
+      0;
 
     this.crossFadeDuration =
       safeDuration;
@@ -394,26 +763,78 @@ export class AnimationStateMachine {
           )
         : 0;
 
+    const windowStart =
+      this.cursorCycles;
+
+    this.enteredDuringUpdate =
+      false;
+
+    this.advanceTime(
+      safeDelta,
+    );
+
+    let windowEnd =
+      this.getCurrentCycles();
+
+    const stateBeforeTransitions =
+      this.currentStateName;
+
+    this.updateResult.exitedState =
+      null;
+
     /*
-     * Primeiro avaliamos a FSM.
-     *
-     * Se uma condição iniciar uma transição neste tick,
-     * ela já deve aparecer no resultado deste mesmo update.
+     * Transições avaliadas DEPOIS de avançar o tempo, para que o tempo de
+     * saída (exitTime) veja a janela percorrida neste tick. Uma transição
+     * iniciada aqui já progride neste mesmo update.
      */
     if (
       !this.isCrossFading
     ) {
-      this.evaluateTransitions();
+      this.evaluateTransitions(
+        windowStart,
+        windowEnd,
+      );
     }
 
-    this.advanceCurrentStateTime(
-      safeDelta,
-    );
+    // Uma transição com duração 0 trocou o estado agora: janela nova.
+    if (
+      this.enteredDuringUpdate
+    ) {
+      this.markExited(
+        stateBeforeTransitions,
+        windowStart,
+        windowEnd,
+      );
+
+      this.cursorCycles =
+        this.getCurrentCycles();
+
+      return this.writeUpdateResult(
+        1,
+        BEFORE_START_CYCLES,
+        this.cursorCycles,
+      );
+    }
+
+    this.cursorCycles =
+      windowEnd;
 
     if (
       this.isCrossFading &&
       this.targetStateName
     ) {
+      // Um fade iniciado neste update ainda não avançou o destino.
+      if (
+        this.crossFadeProgress ===
+        0
+      ) {
+        this.targetStateElapsedSeconds +=
+          safeDelta *
+          this.getTimeScale(
+            this.targetStateName,
+          );
+      }
+
       this.crossFadeProgress +=
         safeDelta;
 
@@ -427,43 +848,182 @@ export class AnimationStateMachine {
       if (
         weight >= 1
       ) {
-        this.currentStateName =
-          this.targetStateName;
+        const carried =
+          this.targetStateElapsedSeconds;
 
-        this.targetStateName =
-          null;
+        this.markExited(
+          this.currentStateName,
+          windowStart,
+          windowEnd,
+        );
 
-        this.currentStateElapsedSeconds =
-          0;
+        this.enterState(
+          this.targetStateName,
+          carried,
+        );
 
-        this.isCrossFading =
-          false;
+        windowEnd =
+          this.getCurrentCycles();
 
-        this.crossFadeProgress =
-          0;
-
-        this.crossFadeDuration =
-          0;
+        this.cursorCycles =
+          windowEnd;
 
         return this.writeUpdateResult(
           1,
+          BEFORE_START_CYCLES,
+          windowEnd,
         );
       }
 
       return this.writeUpdateResult(
         weight,
+        windowStart,
+        windowEnd,
       );
     }
 
     return this.writeUpdateResult(
       1,
+      windowStart,
+      windowEnd,
     );
   }
 
-  private evaluateTransitions():
+  private markExited(
+    stateName: string | null,
+    windowStart: number,
+    windowEnd: number,
+  ): void {
+    this.updateResult.exitedState =
+      stateName;
+
+    this.updateResult.exitedWindowStartCycles =
+      windowStart;
+
+    this.updateResult.exitedWindowEndCycles =
+      windowEnd;
+  }
+
+  private enterState(
+    stateName: string,
+    elapsedSeconds: number,
+  ): void {
+    this.currentStateName =
+      stateName;
+
+    this.targetStateName =
+      null;
+
+    this.currentStateElapsedSeconds =
+      elapsedSeconds;
+
+    this.targetStateElapsedSeconds =
+      0;
+
+    this.cursorCycles =
+      BEFORE_START_CYCLES;
+
+    this.isCrossFading =
+      false;
+
+    this.crossFadeDuration =
+      0;
+
+    this.crossFadeProgress =
+      0;
+
+    this.visualStartPending =
+      false;
+
+    this.enteredDuringUpdate =
+      true;
+  }
+
+  private advanceTime(
+    deltaSeconds: number,
+  ): void {
+    if (
+      this.currentStateName !==
+      null
+    ) {
+      this.currentStateElapsedSeconds +=
+        deltaSeconds *
+        this.getTimeScale(
+          this.currentStateName,
+        );
+    }
+
+    if (
+      this.isCrossFading &&
+      this.targetStateName !==
+        null &&
+      this.crossFadeProgress >
+        0
+    ) {
+      this.targetStateElapsedSeconds +=
+        deltaSeconds *
+        this.getTimeScale(
+          this.targetStateName,
+        );
+    }
+  }
+
+  private getTimeScale(
+    stateName: string,
+  ): number {
+    const state =
+      this.states.get(
+        stateName,
+      );
+
+    if (!state) {
+      return 0;
+    }
+
+    return Number.isFinite(
+      state.timeScale,
+    )
+      ? Math.max(
+          0,
+          state.timeScale,
+        )
+      : 1;
+  }
+
+  private resolvePendingTransitions():
     void {
+    for (
+      let index =
+        this.pendingTransitions.length -
+        1;
+      index >= 0;
+      index -= 1
+    ) {
+      const pending =
+        this.pendingTransitions[
+          index
+        ];
+
+      if (
+        pending &&
+        this.addTransition(
+          pending.transition,
+        )
+      ) {
+        this.pendingTransitions.splice(
+          index,
+          1,
+        );
+      }
+    }
+  }
+
+  private evaluateTransitions(
+    windowStart: number,
+    windowEnd: number,
+  ): void {
     const currentState =
-      this.currentStateName;
+      this.getCurrentState();
 
     if (!currentState) {
       return;
@@ -486,7 +1046,7 @@ export class AnimationStateMachine {
 
       if (
         transition.fromState !==
-          currentState &&
+          currentState.name &&
         transition.fromState !==
           "*"
       ) {
@@ -495,7 +1055,18 @@ export class AnimationStateMachine {
 
       if (
         transition.toState ===
-        currentState
+        currentState.name
+      ) {
+        continue;
+      }
+
+      if (
+        !this.checkExitTime(
+          transition,
+          currentState,
+          windowStart,
+          windowEnd,
+        )
       ) {
         continue;
       }
@@ -517,6 +1088,55 @@ export class AnimationStateMachine {
         return;
       }
     }
+  }
+
+  private checkExitTime(
+    transition:
+      AnimationTransition,
+    state: AnimationState,
+    windowStart: number,
+    windowEnd: number,
+  ): boolean {
+    const exitTime =
+      resolveExitTime(
+        transition,
+      );
+
+    if (
+      exitTime ===
+      null
+    ) {
+      return true;
+    }
+
+    if (
+      state.loopMode ===
+      "LoopOnce"
+    ) {
+      // Clip parado no fim continua elegível (a condição pode virar depois).
+      return windowEnd >=
+        Math.min(
+          1,
+          exitTime,
+        );
+    }
+
+    if (
+      exitTime >= 1
+    ) {
+      return windowEnd >=
+        exitTime;
+    }
+
+    return (
+      countCrossings(
+        exitTime,
+        windowStart,
+        windowEnd,
+        "LoopRepeat",
+      ) >
+      0
+    );
   }
 
   private checkCondition(
@@ -606,33 +1226,10 @@ export class AnimationStateMachine {
     }
   }
 
-  private advanceCurrentStateTime(
-    deltaSeconds: number,
-  ): void {
-    const state =
-      this.getCurrentState();
-
-    if (!state) {
-      return;
-    }
-
-    const timeScale =
-      Number.isFinite(
-        state.timeScale,
-      )
-        ? Math.max(
-            0,
-            state.timeScale,
-          )
-        : 1;
-
-    this.currentStateElapsedSeconds +=
-      deltaSeconds *
-      timeScale;
-  }
-
   private writeUpdateResult(
     weight: number,
+    windowStart: number,
+    windowEnd: number,
   ): Readonly<AnimationStateMachineUpdateResult> {
     this.updateResult.currentState =
       this.currentStateName;
@@ -651,20 +1248,133 @@ export class AnimationStateMachine {
         ? this.crossFadeDuration
         : 0;
 
+    this.updateResult.windowStartCycles =
+      windowStart;
+
+    this.updateResult.windowEndCycles =
+      windowEnd;
+
     return this.updateResult;
   }
+}
 
-  private positiveModulo(
-    value: number,
-    divisor: number,
-  ): number {
-    return (
-      (
-        value %
-        divisor
-      ) +
-      divisor
-    ) %
-      divisor;
+function normalizeName(
+  name: string,
+): string {
+  return typeof name ===
+    "string"
+    ? name.trim()
+    : "";
+}
+
+function normalizeTransition(
+  transition:
+    AnimationTransition,
+): AnimationTransition {
+  const fromState =
+    normalizeName(
+      transition.fromState,
+    );
+
+  const toState =
+    normalizeName(
+      transition.toState,
+    );
+
+  if (
+    fromState ===
+      transition.fromState &&
+    toState ===
+      transition.toState
+  ) {
+    return transition;
+  }
+
+  return {
+    ...transition,
+    fromState,
+    toState,
+  };
+}
+
+function resolveExitTime(
+  transition:
+    AnimationTransition,
+): number | null {
+  if (
+    transition.hasExitTime ===
+    false
+  ) {
+    return null;
+  }
+
+  if (
+    typeof transition.exitTime ===
+      "number" &&
+    Number.isFinite(
+      transition.exitTime,
+    ) &&
+    transition.exitTime >=
+      0
+  ) {
+    return transition.exitTime;
+  }
+
+  if (
+    transition.hasExitTime ===
+      true ||
+    !transition.conditionParam
+  ) {
+    return 1;
+  }
+
+  return null;
+}
+
+export function normalizedFromCycles(
+  cycles: number,
+  loopMode:
+    AnimationLoopMode,
+): number {
+  if (
+    !Number.isFinite(
+      cycles,
+    )
+  ) {
+    return 0;
+  }
+
+  switch (
+    loopMode
+  ) {
+    case "LoopOnce":
+      return Math.min(
+        1,
+        Math.max(
+          0,
+          cycles,
+        ),
+      );
+
+    case "LoopPingPong": {
+      const wrapped =
+        (
+          (cycles % 2) +
+          2
+        ) %
+        2;
+
+      return wrapped <= 1
+        ? wrapped
+        : 2 - wrapped;
+    }
+
+    case "LoopRepeat":
+    default:
+      return (
+        (cycles % 1) +
+        1
+      ) %
+        1;
   }
 }
