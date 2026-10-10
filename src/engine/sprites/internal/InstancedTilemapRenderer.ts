@@ -39,11 +39,59 @@ function positiveInteger(
   return value;
 }
 
+/**
+ * G93: UV por instância calculado no VERTEX shader e escrito em `vMapUv`
+ * (o varying que o `map_fragment` do three r170 amostra). Antes o código
+ * substituía uma linha do fragment que não existe no r170 e cada tile
+ * mostrava o atlas inteiro.
+ *
+ * aUvA = (origem.u, origem.v, eixoS.u, eixoS.v); aUvB = (eixoT.u, eixoT.v)
+ * uv_tile = origem + uv.x * eixoS + uv.y * eixoT (suporta frames girados).
+ */
+export const TILEMAP_UV_VERTEX_CHUNK = `
+  #include <uv_vertex>
+  #ifdef USE_MAP
+    vec2 engineTileUv = aUvA.xy + uv.x * aUvA.zw + uv.y * aUvB;
+    vMapUv = ( mapTransform * vec3( engineTileUv, 1.0 ) ).xy;
+  #endif
+`;
+
+function patchTilemapShader(
+  shader:
+    THREE.WebGLProgramParametersWithUniforms,
+): void {
+  if (
+    !shader.vertexShader.includes(
+      "#include <uv_vertex>",
+    )
+  ) {
+    throw new Error(
+      "Tilemap: chunk <uv_vertex> ausente no shader do three.",
+    );
+  }
+
+  shader.vertexShader =
+    "attribute vec4 aUvA;\nattribute vec2 aUvB;\n" +
+    shader.vertexShader.replace(
+      "#include <uv_vertex>",
+      TILEMAP_UV_VERTEX_CHUNK,
+    );
+}
+
+const TILEMAP_PROGRAM_KEY =
+  "engine-instanced-tilemap-v2";
+
+interface TilemapLayerState {
+  readonly mesh: THREE.InstancedMesh;
+  readonly descriptor: TilemapLayerDescriptor;
+  readonly missingFrames: number;
+}
+
 export class InstancedTilemapRenderer {
   private readonly tilemapMeshes =
     new Map<
       string,
-      THREE.InstancedMesh
+      TilemapLayerState
     >();
 
   public constructor(
@@ -51,11 +99,16 @@ export class InstancedTilemapRenderer {
       TextureAtlasParser,
   ) {}
 
+  /**
+   * Cria a camada. `texture` deve ser a textura PRÓPRIA do atlas
+   * (`TextureAtlasParser.getAtlasTexture`); não é alterada nem descartada
+   * aqui (G95). null = camada invisível até `rebindAtlas`.
+   */
   public renderTilemap(
     descriptor:
       TilemapLayerDescriptor,
     texture:
-      THREE.Texture,
+      THREE.Texture | null,
   ): THREE.InstancedMesh {
     const normalizedLayerId =
       descriptor.layerId.trim();
@@ -134,10 +187,16 @@ export class InstancedTilemapRenderer {
       0,
     );
 
-    const uvOffsets =
+    const uvA =
       new Float32Array(
         totalTiles *
         4,
+      );
+
+    const uvB =
+      new Float32Array(
+        totalTiles *
+        2,
       );
 
     const material =
@@ -150,46 +209,17 @@ export class InstancedTilemapRenderer {
           0.05,
         side:
           THREE.DoubleSide,
+        visible:
+          texture !==
+          null,
       });
 
-    texture.magFilter =
-      THREE.NearestFilter;
-
-    texture.minFilter =
-      THREE.NearestFilter;
-
     material.onBeforeCompile =
-      (
-        shader,
-      ): void => {
-        shader.vertexShader = `
-          attribute vec4 aUvOffset;
-          varying vec2 vInstancedUv;
-          ${shader.vertexShader}
-        `;
+      patchTilemapShader;
 
-        shader.vertexShader =
-          shader.vertexShader
-            .replace(
-              "#include <uv_vertex>",
-              `
-              #include <uv_vertex>
-              vInstancedUv = uv * aUvOffset.zw + aUvOffset.xy;
-              `,
-            );
-
-        shader.fragmentShader = `
-          varying vec2 vInstancedUv;
-          ${shader.fragmentShader}
-        `;
-
-        shader.fragmentShader =
-          shader.fragmentShader
-            .replace(
-              "vec4 texelColor = texture2D( map, vUv );",
-              "vec4 texelColor = texture2D( map, vInstancedUv );",
-            );
-      };
+    material.customProgramCacheKey =
+      (): string =>
+        TILEMAP_PROGRAM_KEY;
 
     const instancedMesh =
       new THREE.InstancedMesh(
@@ -197,6 +227,9 @@ export class InstancedTilemapRenderer {
         material,
         totalTiles,
       );
+
+    instancedMesh.name =
+      `tilemap_${normalizedLayerId}`;
 
     instancedMesh.renderOrder =
       Number.isFinite(
@@ -206,6 +239,10 @@ export class InstancedTilemapRenderer {
           0
         : 0;
 
+    // O raio de culling padrão da InstancedMesh não cobre o mapa todo.
+    instancedMesh.frustumCulled =
+      false;
+
     const dummy =
       new THREE.Object3D();
 
@@ -214,6 +251,9 @@ export class InstancedTilemapRenderer {
       DEFAULT_POSITION;
 
     let instanceIndex =
+      0;
+
+    let missingFrames =
       0;
 
     for (
@@ -248,6 +288,23 @@ export class InstancedTilemapRenderer {
           continue;
         }
 
+        const frame =
+          this.atlasParser
+            .getFrame(
+              descriptor.atlasUrl,
+              `tile_${String(tileId)}`,
+            );
+
+        if (
+          frame ===
+          null
+        ) {
+          // G94/G93: sem frame o tile não aparece (nunca o atlas inteiro).
+          missingFrames +=
+            1;
+          continue;
+        }
+
         dummy.position.set(
           position.x +
             column *
@@ -265,67 +322,27 @@ export class InstancedTilemapRenderer {
           dummy.matrix,
         );
 
-        const frameUV =
-          this.atlasParser
-            .getFrameUV(
-              descriptor.atlasUrl,
-              `tile_${String(tileId)}`,
-            );
-
-        const offsetIndex =
+        const a =
           instanceIndex *
           4;
 
-        if (
-          frameUV !==
-          null
-        ) {
-          uvOffsets[
-            offsetIndex
-          ] =
-            frameUV.u;
+        uvA[a] =
+          frame.originU;
+        uvA[a + 1] =
+          frame.originV;
+        uvA[a + 2] =
+          frame.axisUx;
+        uvA[a + 3] =
+          frame.axisUy;
 
-          uvOffsets[
-            offsetIndex +
-              1
-          ] =
-            frameUV.v;
+        const b =
+          instanceIndex *
+          2;
 
-          uvOffsets[
-            offsetIndex +
-              2
-          ] =
-            frameUV.w;
-
-          uvOffsets[
-            offsetIndex +
-              3
-          ] =
-            frameUV.h;
-        } else {
-          uvOffsets[
-            offsetIndex
-          ] =
-            0;
-
-          uvOffsets[
-            offsetIndex +
-              1
-          ] =
-            0;
-
-          uvOffsets[
-            offsetIndex +
-              2
-          ] =
-            1;
-
-          uvOffsets[
-            offsetIndex +
-              3
-          ] =
-            1;
-        }
+        uvB[b] =
+          frame.axisVx;
+        uvB[b + 1] =
+          frame.axisVy;
 
         instanceIndex +=
           1;
@@ -341,16 +358,29 @@ export class InstancedTilemapRenderer {
         true;
 
     geometry.setAttribute(
-      "aUvOffset",
+      "aUvA",
       new THREE.InstancedBufferAttribute(
-        uvOffsets,
+        uvA,
         4,
+      ),
+    );
+
+    geometry.setAttribute(
+      "aUvB",
+      new THREE.InstancedBufferAttribute(
+        uvB,
+        2,
       ),
     );
 
     this.tilemapMeshes.set(
       normalizedLayerId,
-      instancedMesh,
+      {
+        mesh:
+          instancedMesh,
+        descriptor,
+        missingFrames,
+      },
     );
 
     return instancedMesh;
@@ -365,27 +395,79 @@ export class InstancedTilemapRenderer {
     );
   }
 
+  public getTilemap(
+    layerId:
+      string,
+  ): THREE.InstancedMesh | null {
+    return this.tilemapMeshes.get(
+      layerId,
+    )?.mesh ??
+      null;
+  }
+
+  public getMissingFrameCount(
+    layerId:
+      string,
+  ): number {
+    return this.tilemapMeshes.get(
+      layerId,
+    )?.missingFrames ??
+      0;
+  }
+
+  /** Descritores das camadas que usam o atlas (para reconstruir após parseAtlas). */
+  public getDescriptorsForAtlas(
+    atlasKey:
+      string,
+  ): TilemapLayerDescriptor[] {
+    const result:
+      TilemapLayerDescriptor[] =
+        [];
+
+    for (
+      const state of
+      this.tilemapMeshes.values()
+    ) {
+      if (
+        state.descriptor.atlasUrl ===
+        atlasKey
+      ) {
+        result.push(
+          state.descriptor,
+        );
+      }
+    }
+
+    return result;
+  }
+
   public removeTilemap(
     layerId:
       string,
     disposeResources =
       true,
   ): boolean {
-    const mesh =
+    const state =
       this.tilemapMeshes.get(
         layerId,
       );
 
     if (
-      mesh ===
+      state ===
       undefined
     ) {
       return false;
     }
 
+    const mesh =
+      state.mesh;
+
+    mesh.removeFromParent();
+
     if (
       disposeResources
     ) {
+      // A textura pertence ao atlas: não é descartada aqui.
       mesh.geometry
         .dispose();
 
@@ -404,6 +486,8 @@ export class InstancedTilemapRenderer {
         mesh.material
           .dispose();
       }
+
+      mesh.dispose();
     }
 
     this.tilemapMeshes.delete(
@@ -419,7 +503,7 @@ export class InstancedTilemapRenderer {
   ): void {
     for (
       const layerId of
-      this.tilemapMeshes.keys()
+      [...this.tilemapMeshes.keys()]
     ) {
       this.removeTilemap(
         layerId,

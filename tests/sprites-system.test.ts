@@ -60,8 +60,14 @@ describe("Camada de Sprites 2D, Tilemaps & Pixel Art (game.sprites)", () => {
 
     parallaxController.update(100, 50);
 
-    expect(layerMesh.position.x).toBeCloseTo(50, 1);
+    // G94: X com repeat (padrão) — o quad segue a câmera e só a textura rola;
+    // o conteúdo anda câmera·(1−fator) = 50 (antes rolava em dobro).
+    const map = (layerMesh.material as THREE.MeshBasicMaterial).map as THREE.Texture;
+    expect(layerMesh.position.x).toBeCloseTo(100, 1);
+    expect(layerMesh.position.x - map.offset.x * 100).toBeCloseTo(50, 1);
+    // Y sem repeat: o quad se move câmera·(1−fator).
     expect(layerMesh.position.y).toBeCloseTo(40, 1);
+    expect(map).not.toBe(mockTexture); // clone próprio (G95)
 
     parallaxController.clear();
   });

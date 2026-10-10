@@ -8,6 +8,18 @@ import {
 } from "../../tokens/sprites";
 
 import {
+  AssetsToken,
+} from "../../tokens/assets";
+
+import {
+  RenderToken,
+} from "../../tokens/render";
+
+import type {
+  GameRenderPayload,
+} from "../../contracts/game-loop/types";
+
+import {
   LoadTilemapCommand,
   ParallaxScrolledEvent,
   SetParallaxSpeedCommand,
@@ -43,9 +55,34 @@ export const spritesManifest:
     authority:
       "game",
 
+    // Ordem de boot/shutdown: sprites depois de render/assets (opcionais).
+    dependsOn: [
+      {
+        id:
+          "game.render",
+        range:
+          "^1.0.0",
+        optional:
+          true,
+      },
+      {
+        id:
+          "game.assets",
+        range:
+          "^1.0.0",
+        optional:
+          true,
+      },
+    ],
+
+    // G92: o plugin usa render (cena) e assets (texturas); sem declarar
+    // `consumes`/permissão, `ctx.caps.get` lançava em toda operação de cena.
+    // Ambos opcionais: sem eles atlas/UV continuam funcionando (headless).
     permissions: {
       capabilities: [
         SpritesToken.id,
+        RenderToken.id,
+        AssetsToken.id,
       ],
 
       events: [
@@ -53,6 +90,7 @@ export const spritesManifest:
         SpriteAnimationEndedEvent.type,
         ParallaxScrolledEvent.type,
         "game.loop.tick",
+        "game.loop.render",
       ],
     },
 
@@ -63,6 +101,25 @@ export const spritesManifest:
             SpritesToken.id,
           version:
             "1.0.0",
+        },
+      ],
+
+      consumes: [
+        {
+          id:
+            RenderToken.id,
+          range:
+            "^1.0.0",
+          optional:
+            true,
+        },
+        {
+          id:
+            AssetsToken.id,
+          range:
+            "^1.0.0",
+          optional:
+            true,
         },
       ],
 
@@ -114,6 +171,23 @@ export function createSpritesPlugin():
       ctx.commands.define(
         SetParallaxSpeedCommand,
       );
+
+      // G94: animações de sprite avançam com o delta do frame (0 pausado).
+      const unbindRender =
+        ctx.events.on(
+          "game.loop.render",
+          (
+            envelope,
+          ): void => {
+            const payload =
+              envelope.payload as
+                GameRenderPayload;
+
+            spritesService.update(
+              payload.deltaSeconds,
+            );
+          },
+        );
 
       const unbindLoad =
         ctx.commands.handle(
@@ -170,6 +244,7 @@ export function createSpritesPlugin():
 
       ctx.lifecycle.onDispose(
         (): void => {
+          unbindRender();
           unbindLoad();
           unbindSpawn();
           unbindParallax();

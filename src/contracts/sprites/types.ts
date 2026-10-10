@@ -25,11 +25,16 @@ export interface TextureAtlasJSON {
   };
 }
 
+/**
+ * Retângulo do frame no atlas em UV (origem embaixo à esquerda). Para
+ * frames `rotated` é a região GIRADA ocupada no atlas (w/h trocados).
+ */
 export interface UVRect {
   readonly u: number;
   readonly v: number;
   readonly w: number;
   readonly h: number;
+  readonly rotated?: boolean;
 }
 
 export interface TileDataMatrix {
@@ -39,6 +44,12 @@ export interface TileDataMatrix {
   readonly tiles: ReadonlyArray<number>;
 }
 
+/**
+ * Camada de tilemap (uma `InstancedMesh`, 1 draw call). O número N em
+ * `tiles` usa o frame `tile_N` do atlas `atlasUrl` (chave do `parseAtlas`);
+ * −1 = vazio. Cada tile mostra só o seu frame (G93); tile sem frame fica
+ * invisível. Mesmo `layerId` substitui a camada.
+ */
 export interface TilemapLayerDescriptor {
   readonly layerId: string;
   readonly atlasUrl: string;
@@ -47,6 +58,13 @@ export interface TilemapLayerDescriptor {
   readonly renderOrder?: number;
 }
 
+/**
+ * Camada de parallax (G94). `factor` 0 = presa à câmera (infinitamente
+ * longe), 1 = anda junto com o mundo. Em eixos com repeat (padrão: X sim,
+ * Y não) o quad acompanha a câmera e a rolagem é feita só pelo offset da
+ * textura (fundo infinito); sem repeat o quad se move `câmera·(1−factor)`.
+ * `width`/`height` em unidades de mundo (padrão 100×50).
+ */
 export interface ParallaxLayerConfig {
   readonly layerId: string;
   readonly textureUrl: string;
@@ -55,6 +73,8 @@ export interface ParallaxLayerConfig {
   readonly depthZ?: number;
   readonly repeatX?: boolean;
   readonly repeatY?: boolean;
+  readonly width?: number;
+  readonly height?: number;
 }
 
 export interface PixelArtCameraConfig {
@@ -63,6 +83,14 @@ export interface PixelArtCameraConfig {
   readonly pixelRatio?: number;
 }
 
+/**
+ * Sprite 2D (quad). `atlasUrl` é a CHAVE usada em `parseAtlas`.
+ * Tamanho (G94): com `pixelsPerUnit` o quad tem o tamanho do frame original
+ * em unidades de mundo (px / pixelsPerUnit); sem ele, altura 1 e largura
+ * pela proporção do frame. `scale` multiplica. Frames recortados (`trimmed`)
+ * mantêm o pivô no centro do tamanho original; frames girados são
+ * desvirados. Frame inexistente deixa o sprite invisível (com aviso).
+ */
 export interface Sprite2DOptions {
   readonly spriteId: string;
   readonly atlasUrl: string;
@@ -73,6 +101,20 @@ export interface Sprite2DOptions {
   readonly flipX?: boolean;
   readonly flipY?: boolean;
   readonly renderOrder?: number;
+  readonly pixelsPerUnit?: number;
+}
+
+/**
+ * Animação por frames (G94). Atualizada pela engine no `game.loop.render`
+ * com o delta do frame (congela com o jogo pausado). Sem `loop`, para no
+ * último frame e emite `game.sprites.animation-ended`.
+ */
+export interface SpriteAnimationDescriptor {
+  readonly name: string;
+  readonly frames: ReadonlyArray<string>;
+  /** Frames por segundo (> 0). */
+  readonly frameRate: number;
+  readonly loop?: boolean;
 }
 
 // ── EVENTOS DE SPRITES 2D ──────────────────────────────────────────────────

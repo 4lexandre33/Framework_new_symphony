@@ -9,10 +9,22 @@ interface ActiveParallaxLayer {
     ParallaxLayerConfig;
 
   readonly mesh:
-    THREE.Mesh;
+    THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
 
   readonly initialPosition:
     THREE.Vector3;
+
+  readonly width:
+    number;
+
+  readonly height:
+    number;
+
+  readonly repeatX:
+    boolean;
+
+  readonly repeatY:
+    boolean;
 
   factorX:
     number;
@@ -20,6 +32,12 @@ interface ActiveParallaxLayer {
   factorY:
     number;
 }
+
+const DEFAULT_LAYER_WIDTH =
+  100;
+
+const DEFAULT_LAYER_HEIGHT =
+  50;
 
 function finiteOrZero(
   value:
@@ -32,6 +50,29 @@ function finiteOrZero(
     : 0;
 }
 
+function positiveOr(
+  value:
+    number | undefined,
+  fallback:
+    number,
+): number {
+  return value !==
+    undefined &&
+    Number.isFinite(
+      value,
+    ) &&
+    value >
+      0
+    ? value
+    : fallback;
+}
+
+/**
+ * Parallax 2D (G94). Fator 0 = camada presa à câmera, 1 = presa ao mundo.
+ * Eixos com repeat: o quad segue a câmera e só o offset da textura rola
+ * (fundo infinito). Eixos sem repeat: o quad se move câmera·(1−fator).
+ * A textura usada é um CLONE próprio (wrap/filtro não afetam o cache, G95).
+ */
 export class ParallaxController {
   private readonly layers =
     new Map<
@@ -39,70 +80,72 @@ export class ParallaxController {
       ActiveParallaxLayer
     >();
 
+  private lastCameraX =
+    0;
+
+  private lastCameraY =
+    0;
+
   public createLayer(
     config:
       ParallaxLayerConfig,
     texture:
-      THREE.Texture,
-    width =
-      100,
-    height =
-      50,
+      THREE.Texture | null,
+    width?:
+      number,
+    height?:
+      number,
   ): THREE.Mesh {
     this.removeLayer(
       config.layerId,
     );
 
-    texture.wrapS =
+    const repeatX =
       config.repeatX !==
-      false
-        ? THREE.RepeatWrapping
-        : THREE.ClampToEdgeWrapping;
+      false;
 
-    texture.wrapT =
+    const repeatY =
       config.repeatY ===
-      true
-        ? THREE.RepeatWrapping
-        : THREE.ClampToEdgeWrapping;
+      true;
 
-    texture.magFilter =
-      THREE.NearestFilter;
+    const layerWidth =
+      positiveOr(
+        width ??
+          config.width,
+        DEFAULT_LAYER_WIDTH,
+      );
 
-    texture.minFilter =
-      THREE.NearestFilter;
-
-    const safeWidth =
-      Number.isFinite(
-        width,
-      ) &&
-      width >
-        0
-        ? width
-        : 100;
-
-    const safeHeight =
-      Number.isFinite(
-        height,
-      ) &&
-      height >
-        0
-        ? height
-        : 50;
+    const layerHeight =
+      positiveOr(
+        height ??
+          config.height,
+        DEFAULT_LAYER_HEIGHT,
+      );
 
     const geometry =
       new THREE.PlaneGeometry(
-        safeWidth,
-        safeHeight,
+        layerWidth,
+        layerHeight,
       );
 
     const material =
       new THREE.MeshBasicMaterial({
         map:
-          texture,
+          texture ===
+          null
+            ? null
+            : this.createOwnedTexture(
+                texture,
+                repeatX,
+                repeatY,
+              ),
         transparent:
           true,
         depthWrite:
           false,
+        visible:
+          texture !==
+          null,
       });
 
     const mesh =
@@ -110,6 +153,9 @@ export class ParallaxController {
         geometry,
         material,
       );
+
+    mesh.name =
+      `parallax_${config.layerId}`;
 
     const depthZ =
       finiteOrZero(
@@ -123,29 +169,89 @@ export class ParallaxController {
       depthZ,
     );
 
+    const layer: ActiveParallaxLayer = {
+      config,
+      mesh,
+      initialPosition:
+        new THREE.Vector3(
+          0,
+          0,
+          depthZ,
+        ),
+      width:
+        layerWidth,
+      height:
+        layerHeight,
+      repeatX,
+      repeatY,
+      factorX:
+        finiteOrZero(
+          config.factorX,
+        ),
+      factorY:
+        finiteOrZero(
+          config.factorY,
+        ),
+    };
+
     this.layers.set(
       config.layerId,
-      {
-        config,
-        mesh,
-        initialPosition:
-          new THREE.Vector3(
-            0,
-            0,
-            depthZ,
-          ),
-        factorX:
-          finiteOrZero(
-            config.factorX,
-          ),
-        factorY:
-          finiteOrZero(
-            config.factorY,
-          ),
-      },
+      layer,
+    );
+
+    this.applyLayer(
+      layer,
+      this.lastCameraX,
+      this.lastCameraY,
     );
 
     return mesh;
+  }
+
+  /** Aplica (ou troca) a textura de uma camada criada sem textura. */
+  public setLayerTexture(
+    layerId:
+      string,
+    texture:
+      THREE.Texture,
+  ): boolean {
+    const layer =
+      this.layers.get(
+        layerId,
+      );
+
+    if (
+      layer ===
+      undefined
+    ) {
+      return false;
+    }
+
+    const material =
+      layer.mesh.material;
+
+    this.disposeOwnedMap(
+      material,
+    );
+
+    material.map =
+      this.createOwnedTexture(
+        texture,
+        layer.repeatX,
+        layer.repeatY,
+      );
+    material.visible =
+      true;
+    material.needsUpdate =
+      true;
+
+    this.applyLayer(
+      layer,
+      this.lastCameraX,
+      this.lastCameraY,
+    );
+
+    return true;
   }
 
   public setLayerFactors(
@@ -197,44 +303,21 @@ export class ParallaxController {
         cameraY,
       );
 
+    this.lastCameraX =
+      safeCameraX;
+
+    this.lastCameraY =
+      safeCameraY;
+
     for (
       const layer of
       this.layers.values()
     ) {
-      const offsetX =
-        safeCameraX *
-        layer.factorX;
-
-      const offsetY =
-        safeCameraY *
-        layer.factorY;
-
-      layer.mesh.position.x =
-        layer.initialPosition.x +
-        safeCameraX -
-        offsetX;
-
-      layer.mesh.position.y =
-        layer.initialPosition.y +
-        safeCameraY -
-        offsetY;
-
-      const material =
-        layer.mesh.material;
-
-      if (
-        material instanceof
-          THREE.MeshBasicMaterial &&
-        material.map !==
-          null
-      ) {
-        material.map.offset.x =
-          (
-            safeCameraX *
-            layer.factorX
-          ) /
-          100;
-      }
+      this.applyLayer(
+        layer,
+        safeCameraX,
+        safeCameraY,
+      );
     }
   }
 
@@ -245,6 +328,16 @@ export class ParallaxController {
     return this.layers.has(
       layerId,
     );
+  }
+
+  public getLayerMesh(
+    layerId:
+      string,
+  ): THREE.Mesh | null {
+    return this.layers.get(
+      layerId,
+    )?.mesh ??
+      null;
   }
 
   public removeLayer(
@@ -265,19 +358,20 @@ export class ParallaxController {
       return false;
     }
 
+    layer.mesh.removeFromParent();
+
     if (
       disposeResources
     ) {
       layer.mesh.geometry
         .dispose();
 
-      if (
-        layer.mesh.material instanceof
-        THREE.Material
-      ) {
-        layer.mesh.material
-          .dispose();
-      }
+      this.disposeOwnedMap(
+        layer.mesh.material,
+      );
+
+      layer.mesh.material
+        .dispose();
     }
 
     this.layers.delete(
@@ -293,12 +387,151 @@ export class ParallaxController {
   ): void {
     for (
       const layerId of
-      this.layers.keys()
+      [...this.layers.keys()]
     ) {
       this.removeLayer(
         layerId,
         disposeResources,
       );
+    }
+  }
+
+  private applyLayer(
+    layer:
+      ActiveParallaxLayer,
+    cameraX:
+      number,
+    cameraY:
+      number,
+  ): void {
+    const map =
+      layer.mesh.material.map;
+
+    // Deslocamento do conteúdo em relação ao mundo: câmera·(1−fator).
+    if (
+      layer.repeatX
+    ) {
+      layer.mesh.position.x =
+        layer.initialPosition.x +
+        cameraX;
+
+      if (
+        map !==
+        null
+      ) {
+        map.offset.x =
+          (
+            cameraX *
+            layer.factorX
+          ) /
+          layer.width;
+      }
+    } else {
+      layer.mesh.position.x =
+        layer.initialPosition.x +
+        cameraX *
+          (
+            1 -
+            layer.factorX
+          );
+
+      if (
+        map !==
+        null
+      ) {
+        map.offset.x =
+          0;
+      }
+    }
+
+    if (
+      layer.repeatY
+    ) {
+      layer.mesh.position.y =
+        layer.initialPosition.y +
+        cameraY;
+
+      if (
+        map !==
+        null
+      ) {
+        map.offset.y =
+          (
+            cameraY *
+            layer.factorY
+          ) /
+          layer.height;
+      }
+    } else {
+      layer.mesh.position.y =
+        layer.initialPosition.y +
+        cameraY *
+          (
+            1 -
+            layer.factorY
+          );
+
+      if (
+        map !==
+        null
+      ) {
+        map.offset.y =
+          0;
+      }
+    }
+  }
+
+  private createOwnedTexture(
+    source:
+      THREE.Texture,
+    repeatX:
+      boolean,
+    repeatY:
+      boolean,
+  ): THREE.Texture {
+    const owned =
+      source.clone();
+
+    owned.wrapS =
+      repeatX
+        ? THREE.RepeatWrapping
+        : THREE.ClampToEdgeWrapping;
+
+    owned.wrapT =
+      repeatY
+        ? THREE.RepeatWrapping
+        : THREE.ClampToEdgeWrapping;
+
+    owned.magFilter =
+      THREE.NearestFilter;
+
+    owned.minFilter =
+      THREE.NearestFilter;
+
+    owned.userData.presentationOwned =
+      true;
+
+    owned.needsUpdate =
+      true;
+
+    return owned;
+  }
+
+  private disposeOwnedMap(
+    material:
+      THREE.MeshBasicMaterial,
+  ): void {
+    const map =
+      material.map;
+
+    if (
+      map !==
+        null &&
+      map.userData
+        .presentationOwned ===
+        true
+    ) {
+      map.dispose();
     }
   }
 }

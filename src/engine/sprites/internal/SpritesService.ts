@@ -27,6 +27,7 @@ import type {
 import type {
   ParallaxLayerConfig,
   Sprite2DOptions,
+  SpriteAnimationDescriptor,
   TextureAtlasJSON,
   TilemapLayerDescriptor,
   UVRect,
@@ -51,6 +52,16 @@ import {
 import {
   TextureAtlasParser,
 } from "./TextureAtlasParser";
+
+/**
+ * Os objetos de sprites são DESTE serviço: o render só os coloca/tira da
+ * cena (`removeMeshFromScene(key, { disposeResources: false })`) e o
+ * descarte (`disposeLocally`) acontece aqui, sem tocar texturas do cache.
+ */
+const SCENE_ONLY = Object.freeze({
+  disposeResources:
+    false,
+});
 
 export class SpritesService
   implements SpritesApi {
@@ -79,8 +90,33 @@ export class SpritesService
   private readonly spriteRenderKeys =
     new Set<string>();
 
+  private readonly pendingParallaxLoads =
+    new Map<
+      string,
+      number
+    >();
+
+  private loadGeneration =
+    0;
+
   private disposed =
     false;
+
+  private readonly onAnimationEnded =
+    (
+      spriteId:
+        string,
+      animationName:
+        string,
+    ): void => {
+      this.ctx.events.emit(
+        "game.sprites.animation-ended",
+        {
+          spriteId,
+          animationName,
+        },
+      );
+    };
 
   public constructor(
     private readonly ctx:
@@ -105,8 +141,34 @@ export class SpritesService
       .parseAtlas(
         atlasKey,
         json,
-        texture,
+        texture ??
+          null,
       );
+
+    // Sprites/tilemaps criados antes do atlas aparecem agora.
+    const ownedTexture =
+      this.atlasParser
+        .getAtlasTexture(
+          atlasKey,
+        );
+
+    this.spriteRenderer
+      .rebindAtlas(
+        atlasKey,
+        ownedTexture,
+      );
+
+    for (
+      const descriptor of
+      this.tilemapRenderer
+        .getDescriptorsForAtlas(
+          atlasKey,
+        )
+    ) {
+      this.renderTilemap(
+        descriptor,
+      );
+    }
   }
 
   public getFrameUV(
@@ -128,6 +190,16 @@ export class SpritesService
       );
   }
 
+  public getAtlasTexture(
+    atlasKey:
+      string,
+  ): THREE.Texture | null {
+    return this.atlasParser
+      .getAtlasTexture(
+        atlasKey,
+      );
+  }
+
   public renderTilemap(
     descriptor:
       TilemapLayerDescriptor,
@@ -137,32 +209,25 @@ export class SpritesService
     const key =
       `tilemap_${descriptor.layerId}`;
 
-    const render =
-      this.getRender();
-
-    const ownsSceneResource =
-      render !==
-      null;
-
-    if (
-      ownsSceneResource
-    ) {
-      render
-        ?.removeMeshFromScene(
-          key,
-        );
-
-      this.tilemapRenderer
-        .removeTilemap(
-          descriptor.layerId,
-          false,
-        );
-    }
+    this.detachFromScene(
+      key,
+      this.tilemapRenderKeys,
+    );
 
     const texture =
-      this.getTextureOrFallback(
-        descriptor.atlasUrl,
+      this.atlasParser
+        .getAtlasTexture(
+          descriptor.atlasUrl,
+        );
+
+    if (
+      texture ===
+      null
+    ) {
+      this.ctx.log.warn(
+        `sprites: atlas "${descriptor.atlasUrl}" sem textura/parse; camada "${descriptor.layerId}" fica invisível até parseAtlas.`,
       );
+    }
 
     const mesh =
       this.tilemapRenderer
@@ -171,19 +236,28 @@ export class SpritesService
           texture,
         );
 
-    if (
-      render !==
-      null
-    ) {
-      render.addMeshToScene(
-        key,
-        mesh,
-      );
+    const missing =
+      this.tilemapRenderer
+        .getMissingFrameCount(
+          descriptor.layerId.trim(),
+        );
 
-      this.tilemapRenderKeys.add(
-        key,
+    if (
+      missing >
+        0 &&
+      texture !==
+        null
+    ) {
+      this.ctx.log.warn(
+        `sprites: ${String(missing)} tile(s) sem frame "tile_N" no atlas "${descriptor.atlasUrl}" (camada "${descriptor.layerId}").`,
       );
     }
+
+    this.attachToScene(
+      key,
+      mesh,
+      this.tilemapRenderKeys,
+    );
 
     this.ctx.events.emit(
       "game.sprites.tilemap-loaded",
@@ -202,6 +276,28 @@ export class SpritesService
     return mesh;
   }
 
+  public removeTilemap(
+    layerId:
+      string,
+  ): boolean {
+    if (
+      this.disposed
+    ) {
+      return false;
+    }
+
+    this.detachFromScene(
+      `tilemap_${layerId}`,
+      this.tilemapRenderKeys,
+    );
+
+    return this.tilemapRenderer
+      .removeTilemap(
+        layerId,
+        true,
+      );
+  }
+
   public createParallaxBackground(
     layers:
       ReadonlyArray<
@@ -217,26 +313,17 @@ export class SpritesService
       const key =
         `parallax_${config.layerId}`;
 
-      const render =
-        this.getRender();
+      this.detachFromScene(
+        key,
+        this.parallaxRenderKeys,
+      );
 
-      if (
-        render !==
-        null
-      ) {
-        render.removeMeshFromScene(
-          key,
-        );
+      this.pendingParallaxLoads.delete(
+        config.layerId,
+      );
 
-        this.parallaxController
-          .removeLayer(
-            config.layerId,
-            false,
-          );
-      }
-
-      const texture =
-        this.getTextureOrFallback(
+      const cached =
+        this.getCachedTexture(
           config.textureUrl,
         );
 
@@ -244,23 +331,52 @@ export class SpritesService
         this.parallaxController
           .createLayer(
             config,
-            texture,
+            cached,
           );
 
+      this.attachToScene(
+        key,
+        mesh,
+        this.parallaxRenderKeys,
+      );
+
       if (
-        render !==
+        cached ===
         null
       ) {
-        render.addMeshToScene(
-          key,
+        this.loadParallaxTexture(
+          config.layerId,
+          config.textureUrl,
           mesh,
-        );
-
-        this.parallaxRenderKeys.add(
-          key,
         );
       }
     }
+  }
+
+  public removeParallaxLayer(
+    layerId:
+      string,
+  ): boolean {
+    if (
+      this.disposed
+    ) {
+      return false;
+    }
+
+    this.pendingParallaxLoads.delete(
+      layerId,
+    );
+
+    this.detachFromScene(
+      `parallax_${layerId}`,
+      this.parallaxRenderKeys,
+    );
+
+    return this.parallaxController
+      .removeLayer(
+        layerId,
+        true,
+      );
   }
 
   public setParallaxSpeed(
@@ -332,30 +448,18 @@ export class SpritesService
     this.assertActive();
 
     const key =
-      `sprite_${options.spriteId}`;
+      `sprite_${options.spriteId.trim()}`;
 
-    const render =
-      this.getRender();
-
-    if (
-      render !==
-      null
-    ) {
-      render.removeMeshFromScene(
-        key,
-      );
-
-      this.spriteRenderer
-        .despawnSprite(
-          options.spriteId,
-          false,
-        );
-    }
+    this.detachFromScene(
+      key,
+      this.spriteRenderKeys,
+    );
 
     const texture =
-      this.getTextureOrFallback(
-        options.atlasUrl,
-      );
+      this.atlasParser
+        .getAtlasTexture(
+          options.atlasUrl,
+        );
 
     const mesh =
       this.spriteRenderer
@@ -365,18 +469,30 @@ export class SpritesService
         );
 
     if (
-      render !==
+      texture ===
       null
     ) {
-      render.addMeshToScene(
-        key,
-        mesh,
+      this.ctx.log.warn(
+        `sprites: atlas "${options.atlasUrl}" sem textura/parse; sprite "${options.spriteId}" fica invisível até parseAtlas.`,
       );
-
-      this.spriteRenderKeys.add(
-        key,
+    } else if (
+      this.atlasParser
+        .getFrame(
+          options.atlasUrl,
+          options.frameName,
+        ) ===
+      null
+    ) {
+      this.ctx.log.warn(
+        `sprites: frame "${options.frameName}" não existe no atlas "${options.atlasUrl}"; sprite invisível.`,
       );
     }
+
+    this.attachToScene(
+      key,
+      mesh,
+      this.spriteRenderKeys,
+    );
 
     return mesh;
   }
@@ -391,35 +507,90 @@ export class SpritesService
       return false;
     }
 
-    const key =
-      `sprite_${spriteId}`;
-
-    const render =
-      this.getRender();
-
-    if (
-      render !==
-      null
-    ) {
-      render.removeMeshFromScene(
-        key,
-      );
-
-      this.spriteRenderKeys.delete(
-        key,
-      );
-
-      return this.spriteRenderer
-        .despawnSprite(
-          spriteId,
-          false,
-        );
-    }
+    this.detachFromScene(
+      `sprite_${spriteId}`,
+      this.spriteRenderKeys,
+    );
 
     return this.spriteRenderer
       .despawnSprite(
         spriteId,
         true,
+      );
+  }
+
+  public getSprite(
+    spriteId:
+      string,
+  ): THREE.Mesh | null {
+    return this.spriteRenderer
+      .getSprite(
+        spriteId,
+      );
+  }
+
+  public setSpriteFrame(
+    spriteId:
+      string,
+    frameName:
+      string,
+  ): boolean {
+    if (
+      this.disposed
+    ) {
+      return false;
+    }
+
+    return this.spriteRenderer
+      .setSpriteFrame(
+        spriteId,
+        frameName,
+      );
+  }
+
+  public playSpriteAnimation(
+    spriteId:
+      string,
+    animation:
+      SpriteAnimationDescriptor,
+  ): boolean {
+    if (
+      this.disposed
+    ) {
+      return false;
+    }
+
+    return this.spriteRenderer
+      .playAnimation(
+        spriteId,
+        animation,
+      );
+  }
+
+  public stopSpriteAnimation(
+    spriteId:
+      string,
+  ): boolean {
+    return this.spriteRenderer
+      .stopAnimation(
+        spriteId,
+      );
+  }
+
+  public update(
+    deltaSeconds:
+      number,
+  ): void {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
+    this.spriteRenderer
+      .update(
+        deltaSeconds,
+        this.onAnimationEnded,
       );
   }
 
@@ -465,6 +636,7 @@ export class SpritesService
       ) {
         render.removeMeshFromScene(
           key,
+          SCENE_ONLY,
         );
       }
 
@@ -474,6 +646,7 @@ export class SpritesService
       ) {
         render.removeMeshFromScene(
           key,
+          SCENE_ONLY,
         );
       }
 
@@ -483,13 +656,14 @@ export class SpritesService
       ) {
         render.removeMeshFromScene(
           key,
+          SCENE_ONLY,
         );
       }
     }
 
+    // Sempre descartado aqui (o render não é dono destes recursos).
     const disposeLocally =
-      render ===
-      null;
+      true;
 
     this.tilemapRenderer
       .clear(
@@ -515,6 +689,9 @@ export class SpritesService
     this.spriteRenderKeys
       .clear();
 
+    this.pendingParallaxLoads
+      .clear();
+
     this.atlasParser
       .clear();
   }
@@ -530,6 +707,169 @@ export class SpritesService
 
     this.disposed =
       true;
+  }
+
+  private attachToScene(
+    key:
+      string,
+    object:
+      THREE.Object3D,
+    keys:
+      Set<string>,
+  ): void {
+    const render =
+      this.getRender();
+
+    if (
+      render ===
+      null
+    ) {
+      return;
+    }
+
+    render.addMeshToScene(
+      key,
+      object,
+    );
+
+    keys.add(
+      key,
+    );
+  }
+
+  private detachFromScene(
+    key:
+      string,
+    keys:
+      Set<string>,
+  ): void {
+    if (
+      !keys.has(
+        key,
+      )
+    ) {
+      return;
+    }
+
+    this.getRender()
+      ?.removeMeshFromScene(
+        key,
+        SCENE_ONLY,
+      );
+
+    keys.delete(
+      key,
+    );
+  }
+
+  private getCachedTexture(
+    url:
+      string,
+  ): THREE.Texture | null {
+    const texture =
+      this.getAssets()
+        ?.getAsset<
+          THREE.Texture
+        >(
+          url,
+        );
+
+    return texture instanceof
+      THREE.Texture
+      ? texture
+      : null;
+  }
+
+  private loadParallaxTexture(
+    layerId:
+      string,
+    url:
+      string,
+    mesh:
+      THREE.Mesh,
+  ): void {
+    const assets =
+      this.getAssets();
+
+    if (
+      assets ===
+        null ||
+      typeof assets.loadTexture !==
+        "function"
+    ) {
+      this.ctx.log.warn(
+        `sprites: textura "${url}" não está no cache e game.assets não está disponível; camada "${layerId}" invisível.`,
+      );
+      return;
+    }
+
+    this.loadGeneration +=
+      1;
+
+    const generation =
+      this.loadGeneration;
+
+    this.pendingParallaxLoads.set(
+      layerId,
+      generation,
+    );
+
+    void assets
+      .loadTexture(
+        url,
+      )
+      .then(
+        (
+          loaded:
+            unknown,
+        ): void => {
+          if (
+            !this.disposed &&
+            this.pendingParallaxLoads.get(
+              layerId,
+            ) ===
+              generation &&
+            this.parallaxController
+              .getLayerMesh(
+                layerId,
+              ) ===
+              mesh &&
+            loaded instanceof
+              THREE.Texture
+          ) {
+            this.pendingParallaxLoads.delete(
+              layerId,
+            );
+
+            // O controller clona: a referência do cache pode ser liberada.
+            this.parallaxController
+              .setLayerTexture(
+                layerId,
+                loaded,
+              );
+          }
+
+          assets.releaseAsset(
+            url,
+          );
+        },
+      )
+      .catch(
+        (
+          error:
+            unknown,
+        ): void => {
+          this.ctx.log.warn(
+            `sprites: falha ao carregar "${url}".`,
+            {
+              error:
+                String(
+                  error,
+                ),
+            },
+          );
+        },
+      );
   }
 
   private getAssets():
@@ -549,24 +889,6 @@ export class SpritesService
         RenderToken,
       ) ??
       null
-    );
-  }
-
-  private getTextureOrFallback(
-    url:
-      string,
-  ): THREE.Texture {
-    const texture =
-      this.getAssets()
-        ?.getAsset<
-          THREE.Texture
-        >(
-          url,
-        );
-
-    return (
-      texture ??
-      new THREE.Texture()
     );
   }
 
