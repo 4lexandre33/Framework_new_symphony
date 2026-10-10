@@ -219,24 +219,56 @@ export async function unlock(ctx: PluginContext, achievementId: string): Promise
 
 ## 10-camera.ts
 ```ts
-// Câmera virtual: registre, ative com blend, siga um alvo.
+// Câmera: `game.camera` controla a câmera do render a cada frame (RenderApi.setCameraMode não tem efeito).
+// Isométrica que segue um alvo: spring-arm + setFollowTarget a cada tick; zoom = configureSpringArm (mantém o shake).
 import type { CameraApi } from "../../../tokens/camera";
 
-export function setupCamera(camera: CameraApi): () => void {
+const ID = "main";
+
+/** Quaternion de yaw (em torno de Y) seguido de pitch (em torno de X), em graus. Sem alocar Three.js. */
+export function yawPitchQuaternion(yawDeg: number, pitchDeg: number): { x: number; y: number; z: number; w: number } {
+  const hy = (yawDeg * Math.PI) / 360;
+  const hp = (pitchDeg * Math.PI) / 360;
+  const cy = Math.cos(hy), sy = Math.sin(hy), cp = Math.cos(hp), sp = Math.sin(hp);
+  // q = qYaw * qPitch
+  return { x: cy * sp, y: sy * cp, z: -sy * sp, w: cy * cp };
+}
+
+export function setupIsometricCamera(camera: CameraApi, yawDeg = 45, armLength = 40): () => void {
   camera.registerVirtualCamera({
-    id: "main",
-    priority: 1,
-    fov: 60,
-    position: { x: 0, y: 5, z: 10 },
-    rotation: { x: 0, y: 0, z: 0, w: 1 },
+    id: ID,
+    priority: 10,
+    fov: 35,
+    position: { x: 0, y: 30, z: 30 },
+    rotation: yawPitchQuaternion(yawDeg, -35),
+    springArmConfig: {
+      targetArmLength: armLength,
+      probeRadius: 0.2,
+      socketOffset: { x: 0, y: 0, z: 0 },
+      targetOffset: { x: 0, y: 1, z: 0 },
+      enableCollision: false,
+    },
+    shakeConfig: { maxTrauma: 1, traumaDecayRate: 1.5 },
   });
-  camera.setActiveCamera("main", 0.5);
+  camera.setActiveCamera(ID, 0);
   return (): void => {
-    camera.unregisterVirtualCamera("main");
+    camera.unregisterVirtualCamera(ID);
   };
 }
+
+/** Chame no tick com a posição atual do alvo. */
 export function follow(camera: CameraApi, x: number, y: number, z: number): void {
-  camera.setFollowTarget("main", { x, y, z });
+  camera.setFollowTarget(ID, { x, y, z });
+}
+
+/** Zoom contínuo (ex.: roda do mouse via listener DOM no adapter). */
+export function zoom(camera: CameraApi, armLength: number): void {
+  camera.configureSpringArm(ID, { targetArmLength: Math.min(80, Math.max(15, armLength)) });
+}
+
+/** Girar 90°: re-registra (zera o shake, por isso só em giros discretos). */
+export function rotateTo(camera: CameraApi, yawDeg: number, armLength: number): () => void {
+  return setupIsometricCamera(camera, yawDeg, armLength);
 }
 ```
 
@@ -267,5 +299,122 @@ export function makeFakePhysics(): PhysicsApi & { bodies: string[] } {
 
 // Passe o fake onde o plugin faria ctx.caps.require(PhysicsToken): extraia a lógica do jogo em funções que recebem PhysicsApi.
 export type GameLogic = (ctx: PluginContext, physics: PhysicsApi) => () => void;
+```
+
+## 12-input-edge-events.ts
+```ts
+// Ações de toque único: o input é bombeado por requestAnimationFrame, não pelo tick.
+// Use o evento game.input.action para bordas; eixos/held leia no tick.
+import type { PluginContext } from "@core";
+import { InputActionEvent } from "../../../contracts/input/types";
+import type { InputActionPayload, InputBindingMap } from "../../../contracts/input/types";
+import type { InputApi } from "../../../tokens/input";
+
+// setBindingMap SUBSTITUI tudo: inclua os eixos MoveForward/MoveRight.
+export const BINDINGS: InputBindingMap = {
+  actions: {
+    Interact: ["KeyE", "GamepadButton2"],
+    Jump: ["Space", "GamepadButton0"],
+    Sprint: ["ShiftLeft", "GamepadButton4"],
+    UseTool: ["Mouse0", "GamepadButton1"],
+    Drop: ["KeyG", "GamepadButton3"],
+  },
+  axes: {
+    MoveForward: { positive: "KeyW", negative: "KeyS" },
+    MoveRight: { positive: "KeyD", negative: "KeyA" },
+  },
+};
+
+export function bindEdges(ctx: PluginContext, onPressed: (action: string) => void): () => void {
+  return ctx.events.on<"game.input.action", InputActionPayload>(InputActionEvent.type, (env): void => {
+    if (env.payload.state === "pressed") onPressed(env.payload.action);
+  });
+}
+
+/** Leitura contínua no tick (sem alocar: escreve no objeto recebido). */
+export function readMove(input: InputApi, out: { x: number; z: number; sprint: boolean }): void {
+  out.x = input.getAxis("MoveRight");
+  out.z = input.getAxis("MoveForward");
+  out.sprint = input.isActionHeld("Sprint");
+}
+```
+
+## 13-terrain-chunks.ts
+```ts
+// Terreno: update() da engine é no-op. O jogo pede/descarrega chunks (16x128x16) ao redor de um ponto.
+import type { PluginContext } from "@core";
+import { ChunkGeneratedEvent } from "../../../contracts/terrain/types";
+import type { ChunkGeneratedPayload } from "../../../contracts/terrain/types";
+import type { TerrainApi } from "../../../tokens/terrain";
+
+export class ChunkWindow {
+  private readonly loaded = new Set<string>();
+  public constructor(private readonly terrain: TerrainApi, private readonly radiusChunks: number) {}
+
+  /** Chame quando o centro mudar de chunk (não a cada tick). */
+  public recenter(worldX: number, worldZ: number): void {
+    const cx = Math.floor(worldX / 16), cz = Math.floor(worldZ / 16);
+    const wanted = new Set<string>();
+    for (let dx = -this.radiusChunks; dx <= this.radiusChunks; dx += 1) {
+      for (let dz = -this.radiusChunks; dz <= this.radiusChunks; dz += 1) {
+        const key = `${cx + dx}:${cz + dz}`;
+        wanted.add(key);
+        if (!this.loaded.has(key)) this.terrain.requestChunk({ x: cx + dx, y: 0, z: cz + dz });
+      }
+    }
+    for (const key of this.loaded) {
+      if (!wanted.has(key)) {
+        const [x, z] = key.split(":").map(Number);
+        this.terrain.unloadChunk({ x, y: 0, z });
+      }
+    }
+    this.loaded.clear();
+    for (const key of wanted) this.loaded.add(key);
+  }
+
+  public dispose(): void {
+    this.terrain.clear();
+    this.loaded.clear();
+  }
+}
+
+/** Altura da superfície numa coluna (use após chunk-generated; não por tick). */
+export function surfaceHeight(terrain: TerrainApi, x: number, z: number): number {
+  for (let y = 127; y >= 0; y -= 1) {
+    if (terrain.getVoxelBlock({ x, y, z }).id !== 0) return y + 1;
+  }
+  return 0;
+}
+
+export function onChunkReady(ctx: PluginContext, fn: (p: ChunkGeneratedPayload) => void): () => void {
+  return ctx.events.on<"game.terrain.chunk-generated", ChunkGeneratedPayload>(ChunkGeneratedEvent.type, (env): void => {
+    fn(env.payload);
+  });
+}
+```
+
+## 14-local-frame.ts
+```ts
+// Referencial local (contorno da lacuna G1): física de quem está "dentro" de algo móvel roda num espaço parado.
+// Ex.: o trem fica físico numa ILHA longe da rota; para desenhar, aplique a pose do trem no mundo.
+// A ilha fica longe também em X/Z porque `world.querySpatialGrid` é 2D (x,z): evita misturar entidades da ilha com as do mundo.
+export interface Pose { x: number; y: number; z: number; yaw: number }
+
+export const ISLAND = { x: -5000, y: -500, z: -5000 } as const;
+
+/** Local (ilha) -> mundo. Escreve em `out` (sem alocar no tick). */
+export function islandToWorld(local: { x: number; y: number; z: number }, pose: Pose, out: { x: number; y: number; z: number }): void {
+  const lx = local.x - ISLAND.x, ly = local.y - ISLAND.y, lz = local.z - ISLAND.z;
+  const c = Math.cos(pose.yaw), s = Math.sin(pose.yaw);
+  out.x = pose.x + lx * c + lz * s;
+  out.y = pose.y + ly;
+  out.z = pose.z - lx * s + lz * c;
+}
+
+/** Força fictícia de curva/frenagem: aceleração do trem no referencial local (aplique com applyForce/applyImpulse). */
+export function inertialAcceleration(prevSpeed: number, speed: number, yawRate: number, dt: number): { ax: number; az: number } {
+  const along = dt > 0 ? (speed - prevSpeed) / dt : 0; // frenagem empurra para frente (+z local se o trem anda em +z)
+  return { ax: -speed * yawRate, az: -along };
+}
 ```
 

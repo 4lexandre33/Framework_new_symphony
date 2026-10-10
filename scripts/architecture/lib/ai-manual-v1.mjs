@@ -213,7 +213,7 @@ export async function buildAiManual({ projectRoot = process.cwd() } = {}) {
       lines.push("```");
     }
     const notesPath = `${AI_MANUAL_DIR}/notes/${mod.key}.md`;
-    if (fs.existsSync(path.join(root, notesPath))) lines.push(read(root, notesPath).trim(), "");
+    if (fs.existsSync(path.join(root, notesPath))) lines.push(read(root, notesPath).trim());
     const body = `${lines.join("\n")}\n`;
     files.set(`${AI_MANUAL_DIR}/modules/${mod.key}.md`, body);
     rows.push({ key: mod.key, capability: mod.capabilityId, deps: deps.dependsOn.join(", ") || "-", name: mod.displayName, tokens: approxTokens(body) });
@@ -251,7 +251,8 @@ export async function buildAiManual({ projectRoot = process.cwd() } = {}) {
     "2. Leia `docs/ai/CORE.md` (contrato do plugin: manifest, ctx.caps/events/commands, lifecycle).",
     "3. Leia SÓ os módulos que o jogo usa, em `docs/ai/modules/<chave>.md`, pela tabela abaixo.",
     "4. Copie a estrutura de `src/projects/_template/` e consulte `docs/ai/RECIPES.md`.",
-    "5. Não leia `src/engine/**`: o digest já é a API pública.",
+    "5. Leia `docs/ai/GAPS.md` (o que a engine não faz e como contornar) antes de planejar.",
+    "6. Não leia `src/engine/**`: o digest + notas verificadas já são a API pública.",
     "",
     "## Preciso de … → módulo",
     "| preciso de | módulo (chave) | capability / id do plugin (use em dependsOn) | plugin depende de | ~tokens |",

@@ -196,8 +196,11 @@ describe(
     it(
       "o composition root cria somente o plugin consumidor",
       () => {
+        // Explícito: com mais de um jogo em src/projects, a seleção exige o id.
         const plugins =
-          createProjectPlugins();
+          createProjectPlugins(
+            "physics-sandbox",
+          );
 
         expect(
           plugins,

@@ -106,10 +106,13 @@ interface CastRayRequest {
 command CastRayCommand = "game.physics.cast-ray" request CastRayRequest
 ```
 ## notas verificadas (comportamento)
+- A engine já avança a física no `game.loop.tick` (`stepForGameLoop`). NÃO chame `step()` no jogo. A ordem entre o seu listener de tick e o step não é garantida: não dependa dela.
+- Gravidade padrão: (0, −9,81, 0). `applyImpulse` acorda o corpo.
 - Só corpos `dynamic` recebem `applyImpulse`/`applyForce`; nos outros retorna false.
 - `applyForce` é persistente (não há reset automático): aplique a cada tick só enquanto quiser a força.
+- LACUNA: não há como MOVER um corpo `fixed`/`kinematic*` depois de criado (sem setTranslation/setNextKinematic*) nem ler/definir velocidade. Para plataformas móveis, simule num referencial local parado (ver `docs/ai/GAPS.md`). Velocidade: estime pela diferença de `getBodyTransform` entre ticks.
+- LACUNA: não há trava de rotação. Personagem como cápsula/caixa `dynamic` tomba. Use esfera `dynamic` e desenhe o modelo em pé usando só a posição.
 - Eventos de colisão trazem o par `entityIdA`/`entityIdB` (ordem não garantida); `isTrigger` true apenas com collider `isSensor`.
 - `castRay` parte de `origin`: se o raio nascer dentro do próprio corpo ele o acerta. Comece abaixo/além da base do corpo.
 - `syncMeshTransform(id, mesh)` MUTA `mesh.position` e `mesh.quaternion` (copia do corpo para a malha).
-- Avance a física só pelo tick fixo do game-loop (`step(dt)`); não chame `step` no render.
-
+- O terreno voxel (`game.terrain`) NÃO cria colisores: o chão físico é responsabilidade do jogo.
