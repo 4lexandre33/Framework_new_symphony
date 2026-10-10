@@ -34,19 +34,19 @@
   "files": [
     {
       "path": "src/engine/game-loop/internal/DeterministicGameLoop.ts",
-      "fingerprint": "496eaca517b3dd72fe185028a2cf2f11d8eb515c76b66cc9b45977c701a598fe"
+      "fingerprint": "c3b6e6a3bfe4e3063f1116ec212880877570ce891587d2e57e70454c38417aa2"
     },
     {
       "path": "src/plugins/game-loop/plugin.ts",
-      "fingerprint": "37a8956da4cf8b490cdd11f758e9b1560a28c2cb3d713e019be49d4480647004"
+      "fingerprint": "5ab53d3d73f4f02e4da0d410ca91dab3006803e5382ff7a8d651a338bf3d2839"
     },
     {
       "path": "src/contracts/game-loop/types.ts",
-      "fingerprint": "4542c0aa9d90ebd8018e13ce33d757abfe8d25825503a715aae7a1bef659b8c4"
+      "fingerprint": "b7cacf635f0c608838f71f3523d21e697b3336eb37545f0343d9cc31da7ee24c"
     },
     {
       "path": "src/tokens/game-loop.ts",
-      "fingerprint": "e1d07effa5fe7495a8b9ef4705df058daf21eab24bdb251a19ce6b15733e4dd7"
+      "fingerprint": "ff1d88c0bba41e285d9b7fe395001c78cc8d7eb110ab0bde4828442a946babf4"
     }
   ],
   "capturedHotPathAllocations": {

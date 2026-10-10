@@ -670,7 +670,7 @@ export async function auditLayer1Physics({
     [
       "PhysicsWorld",
       worldSource,
-      /transformCache/u,
+      /getBodyTransformInto/u,
     ],
     [
       "CollisionEventManager",

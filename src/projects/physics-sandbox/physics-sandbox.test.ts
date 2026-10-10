@@ -49,13 +49,14 @@ function createFixtures(): {
     string[] =
       [];
 
-  const physics:
-    PhysicsApi = {
+  // Fake parcial: só o que o jogo usa (a API do token cresce sem quebrar o teste).
+  const physics =
+    {
       step():
         void {},
 
       createBody(
-        id,
+        id: string,
       ): boolean {
         createdBodies.push(
           id,
@@ -65,7 +66,7 @@ function createFixtures(): {
       },
 
       removeBody(
-        id,
+        id: string,
       ): boolean {
         removedBodies.push(
           id,
@@ -152,7 +153,7 @@ function createFixtures(): {
               true,
           }),
         ),
-    };
+    } as unknown as PhysicsApi;
 
   const view:
     PhysicsSandboxViewPort = {

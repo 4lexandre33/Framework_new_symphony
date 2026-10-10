@@ -8,35 +8,42 @@ use (from src/projects/<jogo>/**):
 ```ts
 interface GameLoopStats {
   readonly fps: number;
-  readonly targetFps: number;
+  readonly targetFps: number; // Limite de FPS de render configurado (0 = sem limite, segue o display).
   readonly tickRate: number;
   readonly isPaused: boolean;
+  readonly isHidden: boolean; // true enquanto a página/janela está oculta (simulação suspensa).
   readonly runningTimeSeconds: number;
 }
 interface GameLoopApi {
   start(): void;
   stop(): void;
-  pause(): void;
-  resume(): void;
-  setTickRate(ticksPerSecond: number): void;
-  getStats(): GameLoopStats;
+  pause(options?: PauseOptions): void; // Congela a simulação (sem `game.loop.tick`).
+  resume(): void; // Retoma sem "catch-up" do tempo passado em pausa.
+  setTickRate(ticksPerSecond: number): boolean; // Define ticks por segundo (inteiro ou fracionário em [1, 240]).
+  setTargetFps(framesPerSecond: number): boolean; // Limita a taxa de frames de render.
+  getStats(): GameLoopStats; // Retorna um objeto novo a cada chamada.
 }
 capability GameLoopToken = "game.loop"@1.0.0 api GameLoopApi
 ```
 ## contract src/contracts/game-loop/types.ts
 ```ts
-interface GameTickPayload {
+interface GameTickPayload { // Payload de `game.loop.tick`.
   readonly deltaSeconds: number;
   readonly totalTimeSeconds: number;
   readonly tickCount: number;
 }
 event GameTickEvent = "game.loop.tick" payload GameTickPayload
-interface GameRenderPayload {
+interface GameRenderPayload { // Payload de `game.loop.render` (também reutilizado entre frames).
   readonly alphaInterpolation: number;
-  readonly deltaSeconds: number;
+  readonly deltaSeconds: number; // Delta de simulação visual do frame.
+  readonly realDeltaSeconds: number; // Delta de relógio de parede do frame (limitado a 0,25 s), mesmo pausado.
+  readonly isPaused: boolean;
 }
 event GameRenderEvent = "game.loop.render" payload GameRenderPayload
-command PauseGameCommand = "game.loop.pause" request Record<string, never>
+interface PauseOptions {
+  readonly freezeRender?: boolean; // true = também para de emitir `game.loop.render` (imagem congelada, sem custo de GPU).
+}
+command PauseGameCommand = "game.loop.pause" request PauseOptions
 command ResumeGameCommand = "game.loop.resume" request Record<string, never>
 ```
 ## notas verificadas (comportamento)

@@ -38,27 +38,27 @@
   "files": [
     {
       "path": "src/engine/physics/internal/PhysicsWorld.ts",
-      "fingerprint": "472816447058cf5ac8573740aee0bc8f997a05f85d6e2c3ef846bc037589ada5"
+      "fingerprint": "4e02d9c5b822e0dd0927a636e6cf42a68fc2ba9d0fbe2831a2ab66448e04d21c"
     },
     {
       "path": "src/engine/physics/internal/PhysicsService.ts",
-      "fingerprint": "9642c79a46f4c5f6531070d4e67b56d2c6625387c10af62ed4a968d363067ca2"
+      "fingerprint": "fc192c5d3c3d0f2908e1db6155c682bcb84dc0c39da78ccc8d7e26d6cd198443"
     },
     {
       "path": "src/engine/physics/internal/RigidBodyFactory.ts",
-      "fingerprint": "8aefc23472da334475346b7e4711b83b911d2ab0526a20891736f26c3763cdaf"
+      "fingerprint": "194fbb8681ddc749c7f850eb2f70920d2d557d916ad9f6c820720737698f42e2"
     },
     {
       "path": "src/engine/physics/internal/RaycasterQueries.ts",
-      "fingerprint": "4b3293ca21b56312a92950e329b327d696b3212e34c3501ee5c7e359491ec66c"
+      "fingerprint": "003bb356928b7dcafaf946491f8fd8352e30be18ca21cee39c9bedc9d49c7952"
     },
     {
       "path": "src/engine/physics/internal/CollisionEventManager.ts",
-      "fingerprint": "8d9cbe76fb8cf6871ee24e9239cba8c4369f9147ce3b1febed5e0a3219be4480"
+      "fingerprint": "553df9f947b52bcf7eda7adeab95a02ca43b12ac5ec9de5526323d7484340636"
     },
     {
       "path": "src/plugins/physics/plugin.ts",
-      "fingerprint": "e941d61a4f544185596cfe3ef7dad4af403aff9bb5da6882568482383531d55c"
+      "fingerprint": "4886d91f2b1c4abdf13eb85f1ee72f742ff8b9cf8b4b6afaa32e2b913a9cbc5d"
     }
   ]
 }

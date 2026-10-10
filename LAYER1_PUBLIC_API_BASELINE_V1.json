@@ -137,7 +137,7 @@
       "contracts": [
         {
           "path": "src/contracts/physics/types.ts",
-          "fingerprint": "43098a09ad0a09c19f9c584c38787412a3f5c8bff5ce529b7173108349668a7a"
+          "fingerprint": "51a7192bc5f723c61567604d2733d90cdf3976072f342fd4a79250bf607ce3c3"
         }
       ],
       "tokens": [
@@ -146,7 +146,7 @@
           "capabilityId": "game.physics",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "bb3fc9f84959387619085ea74d6264bbaadf75bcf003f95a03c5de842ee1e8e1"
+          "fingerprint": "aa69a47af925dbad22d8395111df5e0df67fc1d848add88ea958944fd1dcde69"
         }
       ]
     },
@@ -193,7 +193,7 @@
       "contracts": [
         {
           "path": "src/contracts/world/types.ts",
-          "fingerprint": "aee633e340ff5d03d55722bd26833705b613722b6b5bf98bb63e4fc9c09bf436"
+          "fingerprint": "2830186c20d64284a155bc531b7155065e2ffabee535fbce64d3cba52a68edb2"
         }
       ],
       "tokens": [
@@ -202,7 +202,7 @@
           "capabilityId": "game.world",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "0cca90c5fe6c86029a5252fc330fd78eb3f14fd461a291ddbaddd1a8b0a6e864"
+          "fingerprint": "ffad7faa887705d95d77005e2c906bb6c00882313607e5b16af5ead75f1c6bda"
         }
       ]
     },
@@ -613,7 +613,7 @@
       "contracts": [
         {
           "path": "src/contracts/game-loop/types.ts",
-          "fingerprint": "4542c0aa9d90ebd8018e13ce33d757abfe8d25825503a715aae7a1bef659b8c4"
+          "fingerprint": "b7cacf635f0c608838f71f3523d21e697b3336eb37545f0343d9cc31da7ee24c"
         }
       ],
       "tokens": [
@@ -622,7 +622,7 @@
           "capabilityId": "game.loop",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "e1d07effa5fe7495a8b9ef4705df058daf21eab24bdb251a19ce6b15733e4dd7"
+          "fingerprint": "ff1d88c0bba41e285d9b7fe395001c78cc8d7eb110ab0bde4828442a946babf4"
         }
       ]
     },
