@@ -29,6 +29,12 @@
   opacity: 1;
 }
 
+/* O HUD não captura o ponteiro: cliques/roda atravessam até o canvas.
+   Elementos interativos do HUD do jogo usam pointer-events: auto. */
+#screen-hud {
+  pointer-events: none;
+}
+
 .hud-overlay {
   position: absolute;
   top: 0;

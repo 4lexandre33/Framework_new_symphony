@@ -12,11 +12,53 @@ export type UIScreenId =
 export interface ModalConfig {
   readonly id: string;
   readonly title: string;
+  /**
+   * Template registrado (`registerTemplate`). O corpo do modal é o template
+   * com `{{chave}}` trocado pelos valores de `templateData` (ESCAPADOS como
+   * texto). O HTML do template é do jogo (confiável).
+   */
   readonly templateId?: string;
+  readonly templateData?: Readonly<Record<string, string | number>>;
+  /**
+   * HTML do corpo. É SANITIZADO por padrão (remove script, iframe, atributos on* e URLs javascript:);
+   * use `trustedHtml: true` só para HTML 100% do próprio jogo.
+   */
   readonly contentHtml?: string;
+  /** Corpo como texto puro (seguro para nomes de jogadores, chat etc.). */
+  readonly contentText?: string;
+  readonly trustedHtml?: boolean;
+  /**
+   * Camada do modal: maior fica por cima (empate: o mais recente). Padrão 0.
+   */
   readonly depth?: number;
   readonly closable?: boolean;
   readonly customData?: Record<string, unknown>;
+}
+
+/** Conteúdo de uma tela embutida (`setScreenContent`). */
+export interface ScreenContent {
+  readonly templateId?: string;
+  readonly templateData?: Readonly<Record<string, string | number>>;
+  /** Sanitizado por padrão (ver `trustedHtml`). */
+  readonly html?: string;
+  readonly text?: string;
+  readonly trustedHtml?: boolean;
+}
+
+export interface UIPluginBehaviorOptions {
+  /**
+   * ESC alterna `hud` ⇄ `pause_menu`. Padrão false (G96): a engine não
+   * captura ESC; o jogo decide a pausa.
+   */
+  readonly escapeTogglesPauseMenu?: boolean;
+  /** ESC fecha o modal do topo se `closable !== false` (padrão true). */
+  readonly escapeClosesModals?: boolean;
+  /**
+   * Comportamento legado de `[data-action]` (start-game carrega "level_01",
+   * open-settings, close-modal). Padrão false: só `[data-ui-action]` é tratado
+   * e ações desconhecidas viram o evento `game.ui.action`.
+   */
+  readonly legacyDataActions?: boolean;
 }
 
 /** Valor exibível no HUD. As chaves são definidas pelo projeto, não pela engine. */
@@ -48,6 +90,37 @@ export interface ModalPushedPayload {
 
 export const ModalPushedEvent = defineEvent<"game.ui.modal-pushed", ModalPushedPayload>(
   "game.ui.modal-pushed"
+);
+
+export type ModalCloseReason = "pop" | "escape" | "close-button" | "replaced" | "unmount";
+
+export interface ModalClosedPayload {
+  readonly modalId: string;
+  /** Modais ainda abertos depois deste fechar. */
+  readonly remaining: number;
+  readonly reason: ModalCloseReason;
+}
+
+export const ModalClosedEvent = defineEvent<"game.ui.modal-closed", ModalClosedPayload>(
+  "game.ui.modal-closed"
+);
+
+export interface UIActionPayload {
+  /** Valor de `data-ui-action` (ou do `data-action` legado). */
+  readonly action: string;
+  /** `data-ui-value` do elemento, se houver. */
+  readonly value: string | null;
+  /** Modal que contém o elemento, se houver. */
+  readonly modalId: string | null;
+  readonly screen: UIScreenId;
+}
+
+/**
+ * Clique em `[data-ui-action]` dentro de `#ui-root` que a engine não trata
+ * (ela só trata `close-modal` e `open-screen` com `data-ui-value`).
+ */
+export const UIActionEvent = defineEvent<"game.ui.action", UIActionPayload>(
+  "game.ui.action"
 );
 
 export interface LocaleChangedPayload {

@@ -121,6 +121,34 @@ export class UITemplateRegistry {
     return html;
   }
 
+  /**
+   * Como `instantiate`, mas com os valores ESCAPADOS como texto (seguro
+   * para dados de jogador/rede). Template ausente → null.
+   */
+  public instantiateSafe(
+    templateId: string,
+    data?: UITemplateData,
+    escape: (value: unknown) => string = defaultEscape,
+  ): string | null {
+    const template = this.templates.get(templateId);
+
+    if (template === undefined) {
+      return null;
+    }
+
+    if (!data) {
+      return template;
+    }
+
+    let html = template;
+
+    for (const key of Object.keys(data)) {
+      html = html.split(`{{${key}}}`).join(escape(data[key]));
+    }
+
+    return html;
+  }
+
   public removeTemplate(
     templateId: string,
   ): boolean {
@@ -155,4 +183,12 @@ export class UITemplateRegistry {
       ].join("\n"),
     );
   }
+}
+function defaultEscape(value: unknown): string {
+  return String(value)
+    .replace(/&/gu, "&amp;")
+    .replace(/</gu, "&lt;")
+    .replace(/>/gu, "&gt;")
+    .replace(/"/gu, "&quot;")
+    .replace(/'/gu, "&#39;");
 }

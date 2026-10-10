@@ -1,7 +1,18 @@
 import type { Plugin, PluginContext } from "@core";
 import { UIToken } from "../../tokens/ui";
-import { ScreenChangedEvent, ModalPushedEvent, LocaleChangedEvent, HUDUpdatedEvent, OpenScreenCommand, PushModalCommand, PopModalCommand, SetLocaleCommand, BindHUDValueCommand, type OpenScreenRequest, type PushModalRequest, type SetLocaleRequest, type BindHUDValueRequest } from "../../contracts/ui/types";
+import { ScreenChangedEvent, ModalPushedEvent, ModalClosedEvent, UIActionEvent, LocaleChangedEvent, HUDUpdatedEvent, type PopModalRequest, type UIPluginBehaviorOptions, OpenScreenCommand, PushModalCommand, PopModalCommand, SetLocaleCommand, BindHUDValueCommand, type OpenScreenRequest, type PushModalRequest, type SetLocaleRequest, type BindHUDValueRequest } from "../../contracts/ui/types";
 import { UIService } from "../../engine/ui/internal/UIService";
+
+/**
+ * Opções do plugin de UI. Por padrão (G96) a engine NÃO sequestra
+ * `[data-action]` nem ESC: use `legacyDataActions`/`escapeTogglesPauseMenu`
+ * para o comportamento antigo. Sem DOM (node) o plugin sobe em modo
+ * headless (estado mantido, nada renderizado).
+ */
+export interface UIPluginOptions extends UIPluginBehaviorOptions {
+  /** Documento injetado (testes); `null` força o modo sem DOM. */
+  readonly document?: Document | null;
+}
 
 export const uiManifest:
   Plugin["manifest"] = {
@@ -27,7 +38,7 @@ export const uiManifest:
 
       events: [
         "game.ui.screen-changed",
-        "game.ui.modal-pushed",
+        "game.ui.modal-pushed", "game.ui.modal-closed", "game.ui.action",
         "game.ui.locale-changed",
         "game.ui.hud-updated",
       ],
@@ -47,7 +58,9 @@ export const uiManifest:
     },
   };
 
-export function createUIPlugin():
+export function createUIPlugin(
+  options: UIPluginOptions = {},
+):
   Plugin {
   return {
     manifest:
@@ -59,6 +72,7 @@ export function createUIPlugin():
       const uiService =
         new UIService(
           ctx,
+          options,
         );
 
       ctx.caps.provide(
@@ -72,6 +86,14 @@ export function createUIPlugin():
 
       ctx.events.define(
         ModalPushedEvent,
+      );
+
+      ctx.events.define(
+        ModalClosedEvent,
+      );
+
+      ctx.events.define(
+        UIActionEvent,
       );
 
       ctx.events.define(
@@ -137,9 +159,19 @@ export function createUIPlugin():
       const unbindPop =
         ctx.commands.handle(
           "game.ui.pop-modal",
-          () => {
+          (
+            envelope,
+          ) => {
+            // G98: fecha o modal pedido (antes ignorava modalId e fechava o do topo).
+            const payload =
+              envelope.payload as
+                PopModalRequest |
+                undefined;
+
             return uiService
-              .popModal();
+              .popModal(
+                payload?.modalId,
+              );
           },
         );
 
