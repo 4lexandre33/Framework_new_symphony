@@ -28,3 +28,7 @@ Regra: um jogo NÃO altera a engine. Quando faltar API, use o contorno abaixo e 
 | G22 | render | Luz direcional única com alvo fixo na origem (sombra some longe da origem) | Luz do jogo via `addMeshToScene` seguindo o foco; luz da engine com intensidade 0. |
 | G23 | game-loop | `pause()` também congela o render | Pausa visual só para menu de pausa; estados de lobby/cutscene são do jogo. |
 | G24 | host | Com 2+ jogos em `src/projects`, o app sem `VITE_PROJECT` lança erro no boot (afeta `dev`, `tauri` e smokes de release do CI que não definem a variável) | Sempre `VITE_PROJECT=<id>`. Ajustar workflows de CI é decisão do dono do repositório, fora do escopo do jogo. |
+| G25 | ai | Não há como reposicionar um agente (sem setPosition) | "Atordoar" com `setAgentTarget` na própria posição; teleporte = `unregisterAgent` + `registerAgent` com `initialPosition`. |
+| G26 | steam.net | Sem busca/convite de lobby e sem getter do dono do lobby | Host grava `setLobbyData(id,"host",steamId)`; o cliente entra digitando o lobbyId. |
+| G27 | audio | `PositionalAudioOptions` não tem canal (volume "sfx" pode não valer para sons posicionais) | Verificar e registrar; controlar o volume pelo campo `volume` da chamada. |
+| G28 | vfx | Emissor não tem duração | O jogo agenda `stopParticleEmitter` pelo tempo de jogo; ids em rodízio. |
