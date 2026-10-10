@@ -380,6 +380,29 @@ export class VirtualCameraStack {
       this.activeCameraId ===
       cameraId
     ) {
+      // Já ativa (ex.: ativada pela prioridade no registro): uma duração
+      // explícita redefine o blend em andamento (0 = corte imediato).
+      if (
+        this.isBlending &&
+        blendDurationSeconds !==
+          undefined
+      ) {
+        const explicit =
+          this.sanitizeNonNegative(
+            blendDurationSeconds,
+          );
+
+        if (
+          explicit <=
+          this.blendProgress
+        ) {
+          this.finishBlend();
+        } else {
+          this.blendDuration =
+            explicit;
+        }
+      }
+
       return true;
     }
 

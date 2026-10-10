@@ -209,4 +209,14 @@ describe("camera gaps (G4, G45–G48)", () => {
     service.render(0); // delta 0: shake congelado (offset do trauma atual)
     expect(Math.abs(camera.position.x - 1)).toBeLessThan(1);
   });
+
+  it("setActiveCamera(id, 0) numa câmera já ativada pela prioridade corta o blend", () => {
+    const { service, camera } = setup();
+    service.registerVirtualCamera(cam("base", { position: { x: 0, y: 0, z: 0 } }));
+    service.render(1 / 60);
+    service.registerVirtualCamera(cam("orbit", { priority: 100, position: { x: 10, y: 0, z: 0 } }));
+    expect(service.setActiveCamera("orbit", 0)).toBe(true);
+    service.render(1 / 60);
+    expect(camera.position.x).toBe(10);
+  });
 });
