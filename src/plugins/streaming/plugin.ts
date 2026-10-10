@@ -98,7 +98,7 @@ export function createStreamingPlugin(): Plugin {
         }
 
         streamingService.bindDependencies({
-          camera: getOptional<CameraApi>(() => ctx.caps.get(CameraToken)),
+          camera: getOptional<CameraApi>(() => ctx.caps.require(CameraToken)),
           render: getOptional<Render3DApi>(() => ctx.caps.get(RenderToken)),
           assets: getOptional<AssetsApi>(() => ctx.caps.get(AssetsToken)),
         });
