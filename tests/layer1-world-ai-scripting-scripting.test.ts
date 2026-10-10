@@ -315,6 +315,11 @@ describe(
           },
           triggerOnce:
             true,
+
+          // G127: o padrão agora é uma vez POR ENTIDADE; este teste certifica
+          // o escopo por zona (a 1ª entidade consome a zona) e o reset no clear.
+          triggerOnceScope:
+            "zone" as const,
         };
 
         manager.registerZone(

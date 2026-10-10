@@ -3,20 +3,61 @@ import type {
   QuestState,
   QuestStatus,
   QuestStep,
+  RegisterQuestOptions,
+  StartQuestOptions,
 } from "../../../contracts/scripting/types";
+
+/** Resultado de uma mudança de quest (para o serviço emitir eventos). */
+export interface QuestChange {
+  readonly state: QuestState;
+  /** A quest passou para "completed" nesta chamada. */
+  readonly completedNow: boolean;
+  /** A quest passou para "failed" nesta chamada. */
+  readonly failedNow: boolean;
+}
 
 export class QuestManager {
   private readonly questDescriptors = new Map<string, QuestDescriptor>();
   private readonly questStates = new Map<string, QuestState>();
+  private lastChange: QuestChange | null = null;
 
-  public registerQuest(descriptor: QuestDescriptor): void {
+  /**
+   * Registra (ou atualiza) uma quest. O estado existente é PRESERVADO
+   * (G126); `resetState: true` o descarta.
+   */
+  public registerQuest(descriptor: QuestDescriptor, options?: RegisterQuestOptions): boolean {
+    if (!descriptor || typeof descriptor.questId !== "string" || descriptor.questId.length === 0 || !Array.isArray(descriptor.steps)) {
+      return false;
+    }
+
     this.questDescriptors.set(descriptor.questId, descriptor);
-    this.questStates.delete(descriptor.questId);
+    if (options?.resetState === true) {
+      this.questStates.delete(descriptor.questId);
+    }
+    return true;
   }
 
-  public startQuest(questId: string): boolean {
+  public hasQuest(questId: string): boolean {
+    return this.questDescriptors.has(questId);
+  }
+
+  public getDescriptor(questId: string): QuestDescriptor | null {
+    return this.questDescriptors.get(questId) ?? null;
+  }
+
+  /**
+   * Inicia a quest. Idempotente (G126): uma quest já ativa, concluída ou
+   * falhada NÃO é reiniciada (retorna false) a menos que `restart: true`.
+   */
+  public startQuest(questId: string, options?: StartQuestOptions): boolean {
     const descriptor = this.questDescriptors.get(questId);
     if (!descriptor) return false;
+
+    const existing = this.questStates.get(questId);
+    if (existing && existing.status !== "not_started" && options?.restart !== true) {
+      this.lastChange = null;
+      return false;
+    }
 
     const initialSteps: QuestStep[] = descriptor.steps.map((step) => {
       const targetCount = this.normalizeTargetCount(step.targetCount);
@@ -47,68 +88,126 @@ export class QuestManager {
     };
 
     this.questStates.set(questId, state);
+    this.lastChange = { state, completedNow: status === "completed", failedNow: false };
     return true;
   }
 
+  /**
+   * Avança o progresso. A sobra de uma etapa concluída passa para as
+   * próximas (G126).
+   */
   public advanceQuestProgress(questId: string, amount = 1): QuestState | null {
+    this.lastChange = null;
     const state = this.questStates.get(questId);
     if (!state || state.status !== "active") return null;
 
-    const safeAmount = this.normalizeProgressAmount(amount);
-    if (safeAmount <= 0) return state;
-
-    const stepIndex = this.findNextIncompleteStep(state.steps, state.currentStepIndex);
-
-    if (stepIndex < 0) {
-      const completedState: QuestState = {
-        ...state,
-        status: "completed",
-        updatedAtTimestamp: Date.now(),
-      };
-
-      this.questStates.set(questId, completedState);
-      return completedState;
-    }
-
-    const currentStep = state.steps[stepIndex];
-    if (!currentStep) return state;
-
-    const targetCount = this.normalizeTargetCount(currentStep.targetCount);
-    const currentCount = this.normalizeCurrentCount(currentStep.currentCount, targetCount);
-    const newCount = Math.min(targetCount, currentCount + safeAmount);
-    const isStepCompleted = newCount >= targetCount;
+    let remaining = this.normalizeProgressAmount(amount);
+    if (remaining <= 0) return state;
 
     const updatedSteps = state.steps.slice();
-    updatedSteps[stepIndex] = {
-      ...currentStep,
-      targetCount,
-      currentCount: newCount,
-      isCompleted: isStepCompleted,
-    };
+    let stepIndex = this.findNextIncompleteStep(updatedSteps, state.currentStepIndex);
+    let lastTouched = Math.max(0, Math.min(state.currentStepIndex, Math.max(0, updatedSteps.length - 1)));
 
-    let nextStepIndex = stepIndex;
-    let status: QuestStatus = "active";
+    while (stepIndex >= 0 && remaining > 0) {
+      const currentStep = updatedSteps[stepIndex];
+      if (!currentStep) break;
 
-    if (isStepCompleted) {
-      const nextIncompleteStep = this.findNextIncompleteStep(updatedSteps, stepIndex + 1);
+      const targetCount = this.normalizeTargetCount(currentStep.targetCount);
+      const currentCount = this.normalizeCurrentCount(currentStep.currentCount, targetCount);
+      const needed = targetCount - currentCount;
+      const applied = Math.min(needed, remaining);
+      const newCount = currentCount + applied;
+      remaining -= applied;
 
-      if (nextIncompleteStep < 0) {
-        status = "completed";
-      } else {
-        nextStepIndex = nextIncompleteStep;
-      }
+      updatedSteps[stepIndex] = {
+        ...currentStep,
+        targetCount,
+        currentCount: newCount,
+        isCompleted: newCount >= targetCount,
+      };
+
+      lastTouched = stepIndex;
+      if (newCount < targetCount) break;
+      stepIndex = this.findNextIncompleteStep(updatedSteps, stepIndex + 1);
     }
+
+    const nextIncomplete = this.findNextIncompleteStep(updatedSteps, 0);
+    let status: QuestStatus = "active";
+    if (nextIncomplete < 0) status = "completed";
 
     const updatedState: QuestState = {
       ...state,
       status,
-      currentStepIndex: nextStepIndex,
+      currentStepIndex: nextIncomplete >= 0 ? nextIncomplete : lastTouched,
       steps: updatedSteps,
       updatedAtTimestamp: Date.now(),
     };
 
     this.questStates.set(questId, updatedState);
+    this.lastChange = { state: updatedState, completedNow: status === "completed", failedNow: false };
     return updatedState;
+  }
+
+  /** Conclui uma quest ativa (todas as etapas completas). */
+  public completeQuest(questId: string): QuestState | null {
+    this.lastChange = null;
+    const state = this.questStates.get(questId);
+    if (!state || state.status !== "active") return null;
+
+    const steps = state.steps.map((step) => {
+      const targetCount = this.normalizeTargetCount(step.targetCount);
+      return { ...step, targetCount, currentCount: targetCount, isCompleted: true };
+    });
+
+    const completed: QuestState = {
+      ...state,
+      status: "completed",
+      currentStepIndex: steps.length > 0 ? steps.length - 1 : 0,
+      steps,
+      updatedAtTimestamp: Date.now(),
+    };
+
+    this.questStates.set(questId, completed);
+    this.lastChange = { state: completed, completedNow: true, failedNow: false };
+    return completed;
+  }
+
+  /** Marca uma quest ativa como "failed". */
+  public failQuest(questId: string, reason?: string): QuestState | null {
+    this.lastChange = null;
+    const state = this.questStates.get(questId);
+    if (!state || state.status !== "active") return null;
+
+    const failed: QuestState = {
+      ...state,
+      status: "failed",
+      updatedAtTimestamp: Date.now(),
+      ...(typeof reason === "string" ? { failureReason: reason } : {}),
+    };
+
+    this.questStates.set(questId, failed);
+    this.lastChange = { state: failed, completedNow: false, failedNow: true };
+    return failed;
+  }
+
+  /** Ids das quests ativas cuja etapa atual mira `entityId`. */
+  public findActiveQuestsTargeting(entityId: string): string[] {
+    const result: string[] = [];
+    for (const state of this.questStates.values()) {
+      if (state.status !== "active") continue;
+      const step = state.steps[state.currentStepIndex];
+      if (step && !step.isCompleted && step.targetEntityId === entityId) {
+        result.push(state.questId);
+      }
+    }
+    return result;
+  }
+
+  /** Última mudança feita por start/advance/complete/fail (ou null). */
+  public consumeLastChange(): QuestChange | null {
+    const change = this.lastChange;
+    this.lastChange = null;
+    return change;
   }
 
   public getQuestState(questId: string): QuestState | null {
@@ -118,6 +217,7 @@ export class QuestManager {
   public clear(): void {
     this.questDescriptors.clear();
     this.questStates.clear();
+    this.lastChange = null;
   }
 
   private findNextIncompleteStep(

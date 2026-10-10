@@ -5,8 +5,9 @@ import { CameraToken } from "../../tokens/camera";
 import { AudioToken } from "../../tokens/audio";
 import { AnimationToken } from "../../tokens/anim";
 import { UIToken } from "../../tokens/ui";
+import { VfxToken } from "../../tokens/vfx";
 import type { GameTickPayload } from "../../contracts/game-loop/types";
-import { AdvanceDialogueCommand, CutsceneFinishedEvent, CutsceneStartedEvent, DialogueNodeChangedEvent, PlayCutsceneCommand, QuestStepUpdatedEvent, StartQuestCommand, TriggerZoneEnteredEvent, TriggerZoneExitedEvent, type AdvanceDialoguePayload, type DialogueNode, type PlayCutscenePayload, type StartQuestPayload } from "../../contracts/scripting/types";
+import { AdvanceDialogueCommand, CutsceneFinishedEvent, CutsceneKeyframeEvent, CutscenePausedEvent, CutsceneStartedEvent, DialogueEndedEvent, DialogueNodeChangedEvent, PlayCutsceneCommand, QuestCompletedEvent, QuestFailedEvent, QuestStepUpdatedEvent, StartQuestCommand, TriggerZoneEnteredEvent, TriggerZoneExitedEvent, type AdvanceDialoguePayload, type DialogueNode, type PlayCutscenePayload, type StartQuestPayload } from "../../contracts/scripting/types";
 import { ScriptingService } from "../../engine/scripting/internal/ScriptingService";
 
 export const scriptingManifest: Plugin["manifest"] = {
@@ -29,15 +30,23 @@ export const scriptingManifest: Plugin["manifest"] = {
       AudioToken.id,
       AnimationToken.id,
       UIToken.id,
+      VfxToken.id,
     ],
     events: [
       CutsceneStartedEvent.type,
       CutsceneFinishedEvent.type,
+      CutsceneKeyframeEvent.type,
+      CutscenePausedEvent.type,
       DialogueNodeChangedEvent.type,
+      DialogueEndedEvent.type,
       QuestStepUpdatedEvent.type,
+      QuestCompletedEvent.type,
+      QuestFailedEvent.type,
       TriggerZoneEnteredEvent.type,
       TriggerZoneExitedEvent.type,
       "game.loop.tick",
+      "game.world.entity-spawned",
+      "game.world.entity-despawned",
     ],
   },
   capabilities: {
@@ -53,6 +62,11 @@ export const scriptingManifest: Plugin["manifest"] = {
         range: "^1.0.0",
         optional: false,
       },
+      // Opcionais: trilhas de cutscene e falas/animação de diálogo (G10/G125).
+      { id: CameraToken.id, range: "^1.0.0", optional: true },
+      { id: AudioToken.id, range: "^1.0.0", optional: true },
+      { id: AnimationToken.id, range: "^1.0.0", optional: true },
+      { id: VfxToken.id, range: "^1.0.0", optional: true },
     ],
     conflicts: [],
   },
@@ -73,6 +87,11 @@ export function createScriptingPlugin(): Plugin {
       ctx.events.define(QuestStepUpdatedEvent);
       ctx.events.define(TriggerZoneEnteredEvent);
       ctx.events.define(TriggerZoneExitedEvent);
+      ctx.events.define(CutsceneKeyframeEvent);
+      ctx.events.define(CutscenePausedEvent);
+      ctx.events.define(DialogueEndedEvent);
+      ctx.events.define(QuestCompletedEvent);
+      ctx.events.define(QuestFailedEvent);
 
       ctx.commands.define(PlayCutsceneCommand);
       ctx.commands.define(AdvanceDialogueCommand);
@@ -83,10 +102,28 @@ export function createScriptingPlugin(): Plugin {
         scriptingService.update(payload.deltaSeconds);
       });
 
+      // Despawn no mundo: a entidade sai das zonas (G127); spawn com tags
+      // que casam `targetTags` passa a ser verificado sozinho (G10).
+      const unbindSpawned = ctx.events.on("game.world.entity-spawned", (env): void => {
+        const payload = env.payload as { entityId?: unknown } | undefined;
+        if (payload && typeof payload.entityId === "string") {
+          scriptingService.handleWorldEntitySpawned(payload.entityId);
+        }
+      });
+
+      const unbindDespawned = ctx.events.on("game.world.entity-despawned", (env): void => {
+        const payload = env.payload as { entityId?: unknown } | undefined;
+        if (payload && typeof payload.entityId === "string") {
+          scriptingService.removeEntityFromZones(payload.entityId);
+        }
+      });
+
+      // Comandos tolerantes a payload ausente/inválido (G129).
       const unbindPlayCutscene = ctx.commands.handle(
         PlayCutsceneCommand.type,
         (env): boolean => {
-          const payload = env.payload as PlayCutscenePayload;
+          const payload = env.payload as Partial<PlayCutscenePayload> | undefined;
+          if (!payload || typeof payload.cutsceneId !== "string") return false;
           return scriptingService.playCutscene(payload.cutsceneId);
         },
       );
@@ -94,16 +131,21 @@ export function createScriptingPlugin(): Plugin {
       const unbindAdvanceDialogue = ctx.commands.handle(
         AdvanceDialogueCommand.type,
         (env): DialogueNode | null => {
-          const payload = env.payload as AdvanceDialoguePayload;
-          return scriptingService.advanceDialogue(payload.choiceIndex);
+          const payload = env.payload as Partial<AdvanceDialoguePayload> | undefined;
+          const choiceIndex = typeof payload?.choiceIndex === "number" ? payload.choiceIndex : undefined;
+          return scriptingService.advanceDialogue(choiceIndex);
         },
       );
 
       const unbindStartQuest = ctx.commands.handle(
         StartQuestCommand.type,
         (env): boolean => {
-          const payload = env.payload as StartQuestPayload;
-          return scriptingService.startQuest(payload.questId);
+          const payload = env.payload as Partial<StartQuestPayload> | undefined;
+          if (!payload || typeof payload.questId !== "string") return false;
+          return scriptingService.startQuest(
+            payload.questId,
+            payload.restart === true ? { restart: true } : undefined,
+          );
         },
       );
 
@@ -112,7 +154,9 @@ export function createScriptingPlugin(): Plugin {
         unbindPlayCutscene();
         unbindAdvanceDialogue();
         unbindStartQuest();
-        scriptingService.clear();
+        unbindSpawned();
+        unbindDespawned();
+        scriptingService.dispose();
       });
 
       ctx.lifecycle.ready();

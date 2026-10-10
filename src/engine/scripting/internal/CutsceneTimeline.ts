@@ -1,18 +1,30 @@
 import type {
   CutsceneDescriptor,
   TimelineKeyframe,
+  TrackType,
 } from "../../../contracts/scripting/types";
 
 export interface TimelineEventCallback {
-  (actionType: string, targetId: string, payload: Record<string, unknown>): void;
+  (
+    actionType: string,
+    targetId: string,
+    payload: Record<string, unknown>,
+    trackId: string,
+    trackType: TrackType,
+    timeSeconds: number,
+  ): void;
 }
 
 interface ScheduledKeyframe {
   readonly timeSeconds: number;
   readonly trackIndex: number;
   readonly keyframeIndex: number;
+  readonly trackId: string;
+  readonly trackType: TrackType;
   readonly keyframe: TimelineKeyframe;
 }
+
+const EMPTY_PAYLOAD: Record<string, unknown> = Object.freeze({}) as Record<string, unknown>;
 
 interface RegisteredCutscene {
   readonly descriptor: CutsceneDescriptor;
@@ -25,13 +37,17 @@ export class CutsceneTimeline {
   private currentTime = 0;
   private nextKeyframeIndex = 0;
   private isPlaying = false;
+  /** Incrementado em play/stop: detecta troca de cutscene dentro de um keyframe. */
+  private generation = 0;
 
   public registerCutscene(descriptor: CutsceneDescriptor): void {
     const scheduledKeyframes: ScheduledKeyframe[] = [];
 
-    for (let trackIndex = 0; trackIndex < descriptor.tracks.length; trackIndex += 1) {
-      const track = descriptor.tracks[trackIndex];
-      if (!track) continue;
+    const tracks = Array.isArray(descriptor.tracks) ? descriptor.tracks : [];
+
+    for (let trackIndex = 0; trackIndex < tracks.length; trackIndex += 1) {
+      const track = tracks[trackIndex];
+      if (!track || !Array.isArray(track.keyframes)) continue;
 
       for (let keyframeIndex = 0; keyframeIndex < track.keyframes.length; keyframeIndex += 1) {
         const keyframe = track.keyframes[keyframeIndex];
@@ -41,7 +57,9 @@ export class CutsceneTimeline {
           timeSeconds: this.sanitizeTime(keyframe.timeSeconds),
           trackIndex,
           keyframeIndex,
-          keyframe,
+          trackId: String(track.trackId ?? ""),
+          trackType: track.trackType,
+          keyframe: keyframe.payload ? keyframe : { ...keyframe, payload: EMPTY_PAYLOAD },
         });
       }
     }
@@ -66,6 +84,7 @@ export class CutsceneTimeline {
     const cutscene = this.cutscenes.get(cutsceneId);
     if (!cutscene) return false;
 
+    this.generation += 1;
     this.activeCutscene = cutscene;
     this.currentTime = 0;
     this.nextKeyframeIndex = 0;
@@ -73,11 +92,63 @@ export class CutsceneTimeline {
     return true;
   }
 
-  public pause(): void {
+  public pause(): boolean {
+    if (!this.activeCutscene || !this.isPlaying) return false;
     this.isPlaying = false;
+    return true;
   }
 
+  /** Retoma uma cutscene pausada de onde parou (G128). */
+  public resume(): boolean {
+    if (!this.activeCutscene || this.isPlaying) return false;
+    this.isPlaying = true;
+    return true;
+  }
+
+  public get paused(): boolean {
+    return this.activeCutscene !== null && !this.isPlaying;
+  }
+
+  public hasCutscene(cutsceneId: string): boolean {
+    return this.cutscenes.has(cutsceneId);
+  }
+
+  /**
+   * Pula para o fim. Com callback, executa os keyframes que faltavam
+   * (estado final consistente). Retorna o id da cutscene pulada.
+   */
+  public skipToEnd(onKeyframeTrigger?: TimelineEventCallback): string | null {
+    const active = this.activeCutscene;
+    if (!active) return null;
+
+    if (onKeyframeTrigger) {
+      while (this.nextKeyframeIndex < active.scheduledKeyframes.length) {
+        const scheduled = active.scheduledKeyframes[this.nextKeyframeIndex];
+        this.nextKeyframeIndex += 1;
+        if (!scheduled) continue;
+        onKeyframeTrigger(
+          scheduled.keyframe.actionType,
+          scheduled.keyframe.targetId,
+          scheduled.keyframe.payload,
+          scheduled.trackId,
+          scheduled.trackType,
+          scheduled.timeSeconds,
+        );
+      }
+    }
+
+    const cutsceneId = active.descriptor.cutsceneId;
+    this.currentTime = this.sanitizeDuration(active.descriptor.durationSeconds);
+    this.stop();
+    return cutsceneId;
+  }
+
+  /** Tempo decorrido quando a última cutscene terminou/parou. */
+  public lastElapsedSeconds = 0;
+
   public stop(): void {
+    if (this.activeCutscene) this.lastElapsedSeconds = this.currentTime;
+    this.generation += 1;
     this.isPlaying = false;
     this.activeCutscene = null;
     this.currentTime = 0;
@@ -108,6 +179,7 @@ export class CutsceneTimeline {
     if (!this.isPlaying || !this.activeCutscene) return null;
 
     const active = this.activeCutscene;
+    const generation = this.generation;
     const duration = this.sanitizeDuration(active.descriptor.durationSeconds);
     const safeDelta = this.sanitizeDelta(deltaSeconds);
     const targetTime = Math.min(duration, this.currentTime + safeDelta);
@@ -121,7 +193,19 @@ export class CutsceneTimeline {
         scheduled.keyframe.actionType,
         scheduled.keyframe.targetId,
         scheduled.keyframe.payload,
+        scheduled.trackId,
+        scheduled.trackType,
+        scheduled.timeSeconds,
       );
+
+      // Um keyframe pode ter parado/trocado a cutscene.
+      if (this.generation !== generation) return null;
+
+      // Pausada por um keyframe: congela no tempo dele.
+      if (!this.isPlaying) {
+        this.currentTime = scheduled.timeSeconds;
+        return null;
+      }
     }
 
     this.currentTime = targetTime;
