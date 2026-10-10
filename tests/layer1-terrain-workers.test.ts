@@ -169,7 +169,7 @@ describe(
           chunk.blocks.length,
         ).toBe(
           16 *
-          128 *
+          256 * // G54/G59: chunk real tem 256 de altura
           16,
         );
 

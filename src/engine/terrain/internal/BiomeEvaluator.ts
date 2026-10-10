@@ -124,145 +124,113 @@ export const DEFAULT_BIOMES:
       MOUNTAINS_BIOME,
     ]);
 
+/** Ajuste interno: estica temperatura/umidade (sem isso ~61% era floresta) e largura da mistura gaussiana entre biomas (G57). */
+export const BIOME_BLEND_TUNING = { climateStretch: 2.6, blendSigma: 0.3 };
+
 export class BiomeEvaluator {
-  private static readonly NOISE_SCALE =
-    0.005;
+  private static readonly NOISE_SCALE = 0.005;
 
-  private readonly tempNoise:
-    PerlinNoiseService;
+  private readonly tempNoise: PerlinNoiseService;
+  private readonly moistNoise: PerlinNoiseService;
 
-  private readonly moistNoise:
-    PerlinNoiseService;
-
-  public constructor(
-    seed = 1337,
-  ) {
-    this.tempNoise =
-      new PerlinNoiseService(
-        seed +
-          101,
-      );
-
-    this.moistNoise =
-      new PerlinNoiseService(
-        seed +
-          202,
-      );
+  public constructor(seed = 1337) {
+    this.tempNoise = new PerlinNoiseService(seed + 101);
+    this.moistNoise = new PerlinNoiseService(seed + 202);
   }
 
-  public reseed(
-    seed: number,
-  ): void {
-    this.tempNoise.reseed(
-      seed +
-        101,
-    );
-
-    this.moistNoise.reseed(
-      seed +
-        202,
-    );
+  public reseed(seed: number): void {
+    this.tempNoise.reseed(seed + 101);
+    this.moistNoise.reseed(seed + 202);
   }
 
-  public evaluateBiome(
-    worldPos:
-      Vector3Chunk,
-  ): BiomeDescriptor {
-    const temperature =
-      this.normalizeNoise(
-        this.tempNoise
-          .noise2D(
-            worldPos.x *
-              BiomeEvaluator
-                .NOISE_SCALE,
+  /** Bioma dominante (maior peso) na coluna. */
+  public evaluateBiome(worldPos: Vector3Chunk): BiomeDescriptor {
+    return this.dominantBiome(worldPos.x, worldPos.z);
+  }
 
-            worldPos.z *
-              BiomeEvaluator
-                .NOISE_SCALE,
-          ),
-      );
+  public dominantBiome(worldX: number, worldZ: number): BiomeDescriptor {
+    const temperature = this.sampleTemperature(worldX, worldZ);
+    const moisture = this.sampleMoisture(worldX, worldZ);
+    let bestBiome: BiomeDescriptor = FOREST_BIOME;
+    let minimumDifference = Number.POSITIVE_INFINITY;
 
-    const moisture =
-      this.normalizeNoise(
-        this.moistNoise
-          .noise2D(
-            worldPos.x *
-              BiomeEvaluator
-                .NOISE_SCALE,
-
-            worldPos.z *
-              BiomeEvaluator
-                .NOISE_SCALE,
-          ),
-      );
-
-    let bestBiome:
-      BiomeDescriptor =
-        FOREST_BIOME;
-
-    let minimumDifference =
-      Number.POSITIVE_INFINITY;
-
-    for (
-      let index = 0;
-      index <
-      DEFAULT_BIOMES.length;
-      index += 1
-    ) {
-      const biome =
-        DEFAULT_BIOMES[
-          index
-        ];
+    for (let index = 0; index < DEFAULT_BIOMES.length; index += 1) {
+      const biome = DEFAULT_BIOMES[index];
 
       if (!biome) {
         continue;
       }
 
-      const temperatureDifference =
-        biome.temperature -
-        temperature;
+      const dt = biome.temperature - temperature;
+      const dm = biome.moisture - moisture;
+      const differenceSquared = dt * dt + dm * dm;
 
-      const moistureDifference =
-        biome.moisture -
-        moisture;
-
-      const differenceSquared =
-        temperatureDifference *
-          temperatureDifference +
-        moistureDifference *
-          moistureDifference;
-
-      if (
-        differenceSquared <
-        minimumDifference
-      ) {
-        minimumDifference =
-          differenceSquared;
-
-        bestBiome =
-          biome;
+      if (differenceSquared < minimumDifference) {
+        minimumDifference = differenceSquared;
+        bestBiome = biome;
       }
     }
 
     return bestBiome;
   }
 
-  private normalizeNoise(
-    noise: number,
-  ): number {
-    const normalized =
-      (
-        noise +
-        1
-      ) *
-      0.5;
+  /**
+   * Pesos normalizados (soma 1) de cada bioma de `DEFAULT_BIOMES` na coluna,
+   * escritos em `out` (comprimento >= DEFAULT_BIOMES.length). Retorna o índice
+   * do bioma dominante. Contínuo no espaço => alturas sem paredes (G57).
+   */
+  public evaluateWeights(worldX: number, worldZ: number, out: Float64Array): number {
+    const temperature = this.sampleTemperature(worldX, worldZ);
+    const moisture = this.sampleMoisture(worldX, worldZ);
+    const inverseSigmaSquared = 1 / (BIOME_BLEND_TUNING.blendSigma * BIOME_BLEND_TUNING.blendSigma);
+    let minimumDistance = Number.POSITIVE_INFINITY;
+    let dominant = 0;
 
-    return Math.min(
-      1,
-      Math.max(
-        0,
-        normalized,
-      ),
+    for (let index = 0; index < DEFAULT_BIOMES.length; index += 1) {
+      const biome = DEFAULT_BIOMES[index] as BiomeDescriptor;
+      const dt = biome.temperature - temperature;
+      const dm = biome.moisture - moisture;
+      const distanceSquared = dt * dt + dm * dm;
+      out[index] = distanceSquared;
+
+      if (distanceSquared < minimumDistance) {
+        minimumDistance = distanceSquared;
+        dominant = index;
+      }
+    }
+
+    let total = 0;
+
+    for (let index = 0; index < DEFAULT_BIOMES.length; index += 1) {
+      // Subtrai o mínimo antes do exp para estabilidade numérica.
+      const weight = Math.exp(-((out[index] as number) - minimumDistance) * inverseSigmaSquared);
+      out[index] = weight;
+      total += weight;
+    }
+
+    const inverseTotal = total > 0 ? 1 / total : 0;
+
+    for (let index = 0; index < DEFAULT_BIOMES.length; index += 1) {
+      out[index] = (out[index] as number) * inverseTotal;
+    }
+
+    return dominant;
+  }
+
+  private sampleTemperature(worldX: number, worldZ: number): number {
+    return this.normalizeNoise(
+      this.tempNoise.noise2D(worldX * BiomeEvaluator.NOISE_SCALE, worldZ * BiomeEvaluator.NOISE_SCALE),
     );
+  }
+
+  private sampleMoisture(worldX: number, worldZ: number): number {
+    return this.normalizeNoise(
+      this.moistNoise.noise2D(worldX * BiomeEvaluator.NOISE_SCALE, worldZ * BiomeEvaluator.NOISE_SCALE),
+    );
+  }
+
+  private normalizeNoise(noise: number): number {
+    const normalized = 0.5 + noise * 0.5 * BIOME_BLEND_TUNING.climateStretch;
+    return Math.min(1, Math.max(0, normalized));
   }
 }

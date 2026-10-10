@@ -1,867 +1,483 @@
 import type {
-  BiomeDescriptor,
   ChunkDataMatrix,
   Vector3Chunk,
 } from "../../../contracts/terrain/types";
 
 import {
-  BiomeEvaluator,
-} from "./BiomeEvaluator";
-
-import {
-  PerlinNoiseService,
-} from "./PerlinNoiseService";
+  DEFAULT_GENERATION_CONFIG,
+  TerrainGenerator,
+  normalizeTerrainSeed,
+  type ResolvedGenerationConfig,
+} from "./TerrainGenerator";
 
 interface TerrainWorkerRequest {
-  readonly jobId:
-    number;
-
-  readonly coord:
-    Vector3Chunk;
-
-  readonly seed:
-    number;
+  readonly jobId: number;
+  readonly coord: Vector3Chunk;
+  readonly seed: number;
+  readonly config: ResolvedGenerationConfig;
 }
 
 interface TerrainWorkerResponse {
-  readonly jobId:
-    number;
-
-  readonly chunk?:
-    ChunkDataMatrix;
-
-  readonly error?:
-    string;
+  readonly jobId: number;
+  readonly chunk?: ChunkDataMatrix;
+  readonly error?: string;
 }
 
 interface PendingTerrainJob {
-  readonly jobId:
-    number;
-
-  readonly coord:
-    Vector3Chunk;
-
-  readonly seed:
-    number;
-
-  readonly resolve:
-    (
-      chunk:
-        ChunkDataMatrix,
-    ) => void;
-
-  readonly reject:
-    (
-      reason?:
-        unknown,
-    ) => void;
+  readonly jobId: number;
+  readonly coord: Vector3Chunk;
+  readonly seed: number;
+  readonly config: ResolvedGenerationConfig;
+  readonly resolve: (chunk: ChunkDataMatrix) => void;
+  readonly reject: (reason?: unknown) => void;
 }
 
 interface WorkerSlot {
-  readonly worker:
-    Worker;
-
-  busy:
-    boolean;
-
-  jobId:
-    number |
-    null;
+  worker: Worker;
+  busy: boolean;
+  jobId: number | null;
+  timer: ReturnType<typeof setTimeout> | null;
+  restarts: number;
 }
 
 export interface TerrainChunkWorkerPool {
   requestChunkGenerationAsync(
-    coord:
-      Vector3Chunk,
-    seed:
-      number,
-  ): Promise<
-    ChunkDataMatrix
-  >;
+    coord: Vector3Chunk,
+    seed: number,
+    config?: ResolvedGenerationConfig,
+  ): Promise<ChunkDataMatrix>;
+
+  /** Cancela um job ainda na FILA (rejeita com `TerrainGenerationCancelledError`). */
+  cancelChunkGeneration?(coord: Vector3Chunk, seed: number): boolean;
 
   clear(): void;
 }
 
-export type ProceduralWorkerFactory =
-  () => Worker;
-
-const DEFAULT_MAX_WORKERS =
-  2;
-
-function defaultWorkerFactory():
-  Worker {
-  return new Worker(
-    new URL(
-      "./terrain.worker.ts",
-      import.meta.url,
-    ),
-    {
-      type:
-        "module",
-    },
-  );
+export class TerrainGenerationCancelledError extends Error {
+  public constructor() {
+    super("Geração de chunk cancelada.");
+    this.name = "TerrainGenerationCancelledError";
+  }
 }
 
-function cloneCoord(
-  coord:
-    Vector3Chunk,
-): Vector3Chunk {
+export type ProceduralWorkerFactory = () => Worker;
+
+export interface ProceduralWorkerPoolOptions {
+  /** Tempo máximo de um job no Worker antes de gerar localmente e reiniciar o Worker. Padrão 15000 ms. */
+  readonly jobTimeoutMs?: number;
+  /** Reinícios por slot antes de desistir dele (os jobs passam ao fallback local). Padrão 2. */
+  readonly maxWorkerRestarts?: number;
+}
+
+const DEFAULT_MAX_WORKERS = 2;
+const DEFAULT_JOB_TIMEOUT_MS = 15000;
+const DEFAULT_MAX_RESTARTS = 2;
+
+function defaultWorkerFactory(): Worker {
+  return new Worker(new URL("./terrain.worker.ts", import.meta.url), { type: "module" });
+}
+
+function cloneCoord(coord: Vector3Chunk): Vector3Chunk {
   return {
-    x:
-      Number.isFinite(
-        coord.x,
-      )
-        ? Math.trunc(
-            coord.x,
-          )
-        : 0,
-
-    y:
-      Number.isFinite(
-        coord.y,
-      )
-        ? Math.trunc(
-            coord.y,
-          )
-        : 0,
-
-    z:
-      Number.isFinite(
-        coord.z,
-      )
-        ? Math.trunc(
-            coord.z,
-          )
-        : 0,
+    x: Number.isFinite(coord.x) ? Math.trunc(coord.x) : 0,
+    y: Number.isFinite(coord.y) ? Math.trunc(coord.y) : 0,
+    z: Number.isFinite(coord.z) ? Math.trunc(coord.z) : 0,
   };
 }
 
-function normalizeSeed(
-  seed:
-    number,
-): number {
-  return Number.isFinite(
-    seed,
-  )
-    ? Math.trunc(
-        seed,
-      )
-    : 1337;
-}
-
-export class ProceduralWorkerPool
-  implements TerrainChunkWorkerPool {
-  private readonly maxWorkers:
-    number;
-
-  private readonly workerFactory:
-    ProceduralWorkerFactory;
-
-  private readonly workerSlots:
-    WorkerSlot[] =
-      [];
-
-  private readonly queuedJobs:
-    PendingTerrainJob[] =
-      [];
-
-  private readonly pendingJobs =
-    new Map<
-      number,
-      PendingTerrainJob
-    >();
-
-  private nextJobId =
-    1;
-
-  private disposed =
-    false;
+/**
+ * Pool de Workers de geração (G58):
+ * - fila cancelável (`cancelChunkGeneration`);
+ * - timeout por job: gera localmente e reinicia o Worker travado;
+ * - Worker que falha ao carregar (erro sem job) é reiniciado; sem Workers
+ *   vivos, os jobs caem no gerador local (mesmo código).
+ */
+export class ProceduralWorkerPool implements TerrainChunkWorkerPool {
+  private readonly maxWorkers: number;
+  private readonly workerFactory: ProceduralWorkerFactory;
+  private readonly jobTimeoutMs: number;
+  private readonly maxWorkerRestarts: number;
+  private readonly workerSlots: WorkerSlot[] = [];
+  private readonly queuedJobs: PendingTerrainJob[] = [];
+  private readonly pendingJobs = new Map<number, PendingTerrainJob>();
+  private fallbackGenerator: TerrainGenerator | null = null;
+  private nextJobId = 1;
+  private disposed = false;
+  private fallbacks = 0;
+  private restarts = 0;
+  private timeouts = 0;
 
   public constructor(
-    maxWorkers =
-      DEFAULT_MAX_WORKERS,
-    workerFactory:
-      ProceduralWorkerFactory =
-        defaultWorkerFactory,
+    maxWorkers = DEFAULT_MAX_WORKERS,
+    workerFactory: ProceduralWorkerFactory = defaultWorkerFactory,
+    options: ProceduralWorkerPoolOptions = {},
   ) {
-    this.maxWorkers =
-      Math.max(
-        0,
-        Math.floor(
-          Number.isFinite(
-            maxWorkers,
-          )
-            ? maxWorkers
-            : DEFAULT_MAX_WORKERS,
-        ),
-      );
-
-    this.workerFactory =
-      workerFactory;
-
+    this.maxWorkers = Math.max(
+      0,
+      Math.floor(Number.isFinite(maxWorkers) ? maxWorkers : DEFAULT_MAX_WORKERS),
+    );
+    this.workerFactory = workerFactory;
+    this.jobTimeoutMs =
+      typeof options.jobTimeoutMs === "number" && options.jobTimeoutMs > 0
+        ? options.jobTimeoutMs
+        : DEFAULT_JOB_TIMEOUT_MS;
+    this.maxWorkerRestarts =
+      typeof options.maxWorkerRestarts === "number" && options.maxWorkerRestarts >= 0
+        ? Math.floor(options.maxWorkerRestarts)
+        : DEFAULT_MAX_RESTARTS;
     this.initializeWorkers();
   }
 
   public requestChunkGenerationAsync(
-    coord:
-      Vector3Chunk,
-    seed:
-      number,
-  ): Promise<
-    ChunkDataMatrix
-  > {
-    if (
-      this.disposed
-    ) {
-      return Promise.reject(
-        new Error(
-          "ProceduralWorkerPool já foi encerrado.",
-        ),
-      );
+    coord: Vector3Chunk,
+    seed: number,
+    config: ResolvedGenerationConfig = DEFAULT_GENERATION_CONFIG,
+  ): Promise<ChunkDataMatrix> {
+    if (this.disposed) {
+      return Promise.reject(new Error("ProceduralWorkerPool já foi encerrado."));
     }
 
-    const coordSnapshot =
-      cloneCoord(
-        coord,
-      );
+    const coordSnapshot = cloneCoord(coord);
+    const safeSeed = normalizeTerrainSeed(seed);
 
-    const safeSeed =
-      normalizeSeed(
-        seed,
-      );
-
-    if (
-      this.workerSlots
-        .length ===
-      0
-    ) {
-      return Promise.resolve(
-        this.generateChunkFallback(
-          coordSnapshot,
-          safeSeed,
-        ),
-      );
+    if (this.workerSlots.length === 0) {
+      try {
+        return Promise.resolve(this.generateChunkFallback(coordSnapshot, safeSeed, config));
+      } catch (error: unknown) {
+        return Promise.reject(error);
+      }
     }
 
-    const jobId =
-      this.allocateJobId();
+    const jobId = this.allocateJobId();
 
-    return new Promise<
-      ChunkDataMatrix
-    >(
-      (
-        resolve,
-        reject,
-      ): void => {
-        this.queuedJobs.push({
-          jobId,
-          coord:
-            coordSnapshot,
-          seed:
-            safeSeed,
-          resolve,
-          reject,
-        });
-
-        this.pumpQueue();
-      },
-    );
+    return new Promise<ChunkDataMatrix>((resolve, reject): void => {
+      this.queuedJobs.push({ jobId, coord: coordSnapshot, seed: safeSeed, config, resolve, reject });
+      this.pumpQueue();
+    });
   }
 
-  public get activeWorkerCount():
-    number {
-    let active =
-      0;
+  public cancelChunkGeneration(coord: Vector3Chunk, seed: number): boolean {
+    const target = cloneCoord(coord);
+    const safeSeed = normalizeTerrainSeed(seed);
 
-    for (
-      let index =
-        0;
-      index <
-      this.workerSlots.length;
-      index +=
-        1
-    ) {
+    for (let index = 0; index < this.queuedJobs.length; index += 1) {
+      const job = this.queuedJobs[index] as PendingTerrainJob;
+
       if (
-        this.workerSlots[
-          index
-        ]?.busy
+        job.seed === safeSeed &&
+        job.coord.x === target.x &&
+        job.coord.y === target.y &&
+        job.coord.z === target.z
       ) {
-        active +=
-          1;
+        this.queuedJobs.splice(index, 1);
+        job.reject(new TerrainGenerationCancelledError());
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  public get activeWorkerCount(): number {
+    let active = 0;
+
+    for (const slot of this.workerSlots) {
+      if (slot.busy) {
+        active += 1;
       }
     }
 
     return active;
   }
 
-  public get queuedJobCount():
-    number {
-    return this.queuedJobs
-      .length;
+  public get queuedJobCount(): number {
+    return this.queuedJobs.length;
   }
 
-  public get pendingJobCount():
-    number {
-    return this.pendingJobs
-      .size;
+  public get pendingJobCount(): number {
+    return this.pendingJobs.size;
   }
 
-  public get workerCount():
-    number {
-    return this.workerSlots
-      .length;
+  public get workerCount(): number {
+    return this.workerSlots.length;
+  }
+
+  /** Jobs resolvidos pelo gerador local (erro/timeout/sem Worker). */
+  public get fallbackCount(): number {
+    return this.fallbacks;
+  }
+
+  public get restartCount(): number {
+    return this.restarts;
+  }
+
+  public get timeoutCount(): number {
+    return this.timeouts;
   }
 
   public clear(): void {
-    if (
-      this.disposed
-    ) {
+    if (this.disposed) {
       return;
     }
 
-    this.disposed =
-      true;
+    this.disposed = true;
 
-    while (
-      this.queuedJobs.length >
-      0
-    ) {
-      const job =
-        this.queuedJobs.shift();
-
-      job?.reject(
-        new Error(
-          "ProceduralWorkerPool foi limpo antes da execução do job.",
-        ),
+    while (this.queuedJobs.length > 0) {
+      this.queuedJobs.shift()?.reject(
+        new Error("ProceduralWorkerPool foi limpo antes da execução do job (encerrado)."),
       );
     }
 
-    for (
-      const job of
-      this.pendingJobs.values()
-    ) {
-      job.reject(
-        new Error(
-          "ProceduralWorkerPool foi encerrado durante a execução do job.",
-        ),
-      );
+    for (const job of this.pendingJobs.values()) {
+      job.reject(new Error("ProceduralWorkerPool foi encerrado durante a execução do job."));
     }
 
     this.pendingJobs.clear();
 
-    for (
-      let index =
-        0;
-      index <
-      this.workerSlots.length;
-      index +=
-        1
-    ) {
-      const slot =
-        this.workerSlots[
-          index
-        ];
-
-      if (
-        slot ===
-        undefined
-      ) {
-        continue;
-      }
-
-      slot.worker
-        .terminate();
-
-      slot.busy =
-        false;
-
-      slot.jobId =
-        null;
+    for (const slot of this.workerSlots) {
+      this.clearSlotTimer(slot);
+      slot.worker.terminate();
+      slot.busy = false;
+      slot.jobId = null;
     }
 
-    this.workerSlots.length =
-      0;
+    this.workerSlots.length = 0;
+    this.fallbackGenerator = null;
   }
 
   private initializeWorkers(): void {
-    if (
-      this.maxWorkers ===
-        0
-    ) {
-      return;
-    }
+    for (let index = 0; index < this.maxWorkers; index += 1) {
+      const worker = this.spawnWorker();
 
-    for (
-      let index =
-        0;
-      index <
-      this.maxWorkers;
-      index +=
-        1
-    ) {
-      try {
-        const worker =
-          this.workerFactory();
-
-        const slot:
-          WorkerSlot = {
-            worker,
-            busy:
-              false,
-            jobId:
-              null,
-          };
-
-        worker.addEventListener(
-          "message",
-          (
-            event:
-              MessageEvent<
-                TerrainWorkerResponse
-              >,
-          ): void => {
-            this.handleWorkerMessage(
-              slot,
-              event.data,
-            );
-          },
-        );
-
-        worker.addEventListener(
-          "error",
-          (
-            event:
-              ErrorEvent,
-          ): void => {
-            this.handleWorkerError(
-              slot,
-              event.message,
-            );
-          },
-        );
-
-        worker.addEventListener(
-          "messageerror",
-          (): void => {
-            this.handleWorkerError(
-              slot,
-              "Falha ao desserializar resposta do Worker de terreno.",
-            );
-          },
-        );
-
-        this.workerSlots.push(
-          slot,
-        );
-      } catch {
+      if (worker === null) {
         break;
       }
+
+      const slot: WorkerSlot = { worker, busy: false, jobId: null, timer: null, restarts: 0 };
+      this.attachListeners(slot, worker);
+      this.workerSlots.push(slot);
     }
+  }
+
+  private spawnWorker(): Worker | null {
+    try {
+      return this.workerFactory();
+    } catch {
+      return null;
+    }
+  }
+
+  private attachListeners(slot: WorkerSlot, worker: Worker): void {
+    worker.addEventListener("message", (event: MessageEvent<TerrainWorkerResponse>): void => {
+      if (slot.worker === worker) {
+        this.handleWorkerMessage(slot, event.data);
+      }
+    });
+
+    worker.addEventListener("error", (event: ErrorEvent): void => {
+      if (slot.worker === worker) {
+        this.handleWorkerError(slot, event.message);
+      }
+    });
+
+    worker.addEventListener("messageerror", (): void => {
+      if (slot.worker === worker && slot.jobId !== null) {
+        this.finishJobWithFallback(slot, slot.jobId);
+      }
+    });
   }
 
   private pumpQueue(): void {
-    if (
-      this.disposed
-    ) {
+    if (this.disposed) {
       return;
     }
 
-    for (
-      let index =
-        0;
-      index <
-      this.workerSlots.length;
-      index +=
-        1
-    ) {
-      const slot =
-        this.workerSlots[
-          index
-        ];
+    if (this.workerSlots.length === 0) {
+      // Nenhum Worker vivo: esvazia a fila no gerador local.
+      while (this.queuedJobs.length > 0) {
+        const job = this.queuedJobs.shift() as PendingTerrainJob;
+        this.resolveWithFallback(job);
+      }
 
-      if (
-        slot ===
-          undefined ||
-        slot.busy
-      ) {
+      return;
+    }
+
+    for (const slot of this.workerSlots) {
+      if (slot.busy) {
         continue;
       }
 
-      const job =
-        this.queuedJobs.shift();
+      const job = this.queuedJobs.shift();
 
-      if (
-        job ===
-        undefined
-      ) {
+      if (job === undefined) {
         return;
       }
 
-      slot.busy =
-        true;
-
-      slot.jobId =
-        job.jobId;
-
-      this.pendingJobs.set(
-        job.jobId,
-        job,
-      );
-
-      const request:
-        TerrainWorkerRequest = {
-          jobId:
-            job.jobId,
-          coord:
-            job.coord,
-          seed:
-            job.seed,
-        };
+      slot.busy = true;
+      slot.jobId = job.jobId;
+      this.pendingJobs.set(job.jobId, job);
+      const request: TerrainWorkerRequest = {
+        jobId: job.jobId,
+        coord: job.coord,
+        seed: job.seed,
+        config: job.config,
+      };
 
       try {
-        slot.worker
-          .postMessage(
-            request,
-          );
+        slot.worker.postMessage(request);
+        slot.timer = setTimeout((): void => {
+          this.handleJobTimeout(slot, job.jobId);
+        }, this.jobTimeoutMs);
       } catch {
-        this.finishJobWithFallback(
-          slot,
-          job.jobId,
-        );
+        this.finishJobWithFallback(slot, job.jobId);
       }
     }
   }
 
-  private handleWorkerMessage(
-    slot:
-      WorkerSlot,
-    response:
-      TerrainWorkerResponse,
-  ): void {
-    if (
-      this.disposed ||
-      slot.jobId !==
-        response.jobId
-    ) {
+  private handleWorkerMessage(slot: WorkerSlot, response: TerrainWorkerResponse): void {
+    if (this.disposed || slot.jobId !== response.jobId) {
       return;
     }
 
-    const job =
-      this.pendingJobs.get(
-        response.jobId,
-      );
+    this.clearSlotTimer(slot);
+    const job = this.pendingJobs.get(response.jobId);
+    this.pendingJobs.delete(response.jobId);
+    slot.busy = false;
+    slot.jobId = null;
 
-    this.pendingJobs.delete(
-      response.jobId,
-    );
-
-    slot.busy =
-      false;
-
-    slot.jobId =
-      null;
-
-    if (
-      job !==
-      undefined
-    ) {
-      if (
-        response.chunk !==
-          undefined &&
-        response.error ===
-          undefined
-      ) {
-        job.resolve(
-          response.chunk,
-        );
+    if (job !== undefined) {
+      if (response.chunk !== undefined && response.error === undefined) {
+        job.resolve(response.chunk);
       } else {
-        job.resolve(
-          this.generateChunkFallback(
-            job.coord,
-            job.seed,
-          ),
-        );
+        this.resolveWithFallback(job);
       }
     }
 
     this.pumpQueue();
   }
 
-  private handleWorkerError(
-    slot:
-      WorkerSlot,
-    _message:
-      string,
-  ): void {
-    const jobId =
-      slot.jobId;
-
-    if (
-      jobId ===
-      null
-    ) {
+  /** Erro do Worker (inclusive falha ao carregar o módulo, sem job): reinicia o slot. */
+  private handleWorkerError(slot: WorkerSlot, _message: string): void {
+    if (this.disposed) {
       return;
     }
 
-    this.finishJobWithFallback(
-      slot,
-      jobId,
-    );
-  }
+    const jobId = slot.jobId;
+    this.replaceWorker(slot);
 
-  private finishJobWithFallback(
-    slot:
-      WorkerSlot,
-    jobId:
-      number,
-  ): void {
-    const job =
-      this.pendingJobs.get(
-        jobId,
-      );
-
-    this.pendingJobs.delete(
-      jobId,
-    );
-
-    slot.busy =
-      false;
-
-    slot.jobId =
-      null;
-
-    if (
-      job !==
-      undefined
-    ) {
-      job.resolve(
-        this.generateChunkFallback(
-          job.coord,
-          job.seed,
-        ),
-      );
+    if (jobId !== null) {
+      this.finishJobWithFallback(slot, jobId);
+      return;
     }
 
     this.pumpQueue();
   }
 
-  private allocateJobId():
-    number {
-    for (
-      let attempts =
-        0;
-      attempts <
-      Number.MAX_SAFE_INTEGER;
-      attempts +=
-        1
-    ) {
-      const jobId =
-        this.nextJobId;
+  private handleJobTimeout(slot: WorkerSlot, jobId: number): void {
+    slot.timer = null;
 
-      this.nextJobId +=
-        1;
+    if (this.disposed || slot.jobId !== jobId) {
+      return;
+    }
 
-      if (
-        this.nextJobId >=
-        Number.MAX_SAFE_INTEGER
-      ) {
-        this.nextJobId =
-          1;
+    this.timeouts += 1;
+    this.replaceWorker(slot);
+    this.finishJobWithFallback(slot, jobId);
+  }
+
+  private replaceWorker(slot: WorkerSlot): void {
+    this.clearSlotTimer(slot);
+    slot.worker.terminate();
+
+    if (slot.restarts >= this.maxWorkerRestarts) {
+      this.removeSlot(slot);
+      return;
+    }
+
+    const worker = this.spawnWorker();
+
+    if (worker === null) {
+      this.removeSlot(slot);
+      return;
+    }
+
+    slot.restarts += 1;
+    this.restarts += 1;
+    slot.worker = worker;
+    this.attachListeners(slot, worker);
+  }
+
+  private removeSlot(slot: WorkerSlot): void {
+    const index = this.workerSlots.indexOf(slot);
+
+    if (index >= 0) {
+      this.workerSlots.splice(index, 1);
+    }
+  }
+
+  private finishJobWithFallback(slot: WorkerSlot, jobId: number): void {
+    this.clearSlotTimer(slot);
+    const job = this.pendingJobs.get(jobId);
+    this.pendingJobs.delete(jobId);
+    slot.busy = false;
+    slot.jobId = null;
+
+    if (job !== undefined) {
+      this.resolveWithFallback(job);
+    }
+
+    this.pumpQueue();
+  }
+
+  private resolveWithFallback(job: PendingTerrainJob): void {
+    try {
+      job.resolve(this.generateChunkFallback(job.coord, job.seed, job.config));
+    } catch (error: unknown) {
+      job.reject(error);
+    }
+  }
+
+  private clearSlotTimer(slot: WorkerSlot): void {
+    if (slot.timer !== null) {
+      clearTimeout(slot.timer);
+      slot.timer = null;
+    }
+  }
+
+  private allocateJobId(): number {
+    for (let attempts = 0; attempts < Number.MAX_SAFE_INTEGER; attempts += 1) {
+      const jobId = this.nextJobId;
+      this.nextJobId += 1;
+
+      if (this.nextJobId >= Number.MAX_SAFE_INTEGER) {
+        this.nextJobId = 1;
       }
 
-      if (
-        !this.pendingJobs.has(
-          jobId,
-        )
-      ) {
+      if (!this.pendingJobs.has(jobId)) {
         return jobId;
       }
     }
 
-    throw new Error(
-      "ProceduralWorkerPool esgotou IDs de job disponíveis.",
-    );
+    throw new Error("ProceduralWorkerPool esgotou IDs de job disponíveis.");
   }
 
   private generateChunkFallback(
-    coord:
-      Vector3Chunk,
-    seed:
-      number,
+    coord: Vector3Chunk,
+    seed: number,
+    config: ResolvedGenerationConfig,
   ): ChunkDataMatrix {
-    const sizeX =
-      16;
+    this.fallbacks += 1;
 
-    const sizeY =
-      128;
-
-    const sizeZ =
-      16;
-
-    const blocks =
-      new Uint8Array(
-        sizeX *
-        sizeY *
-        sizeZ,
-      );
-
-    const noise =
-      new PerlinNoiseService(
-        seed,
-      );
-
-    const biomeEvaluator =
-      new BiomeEvaluator(
-        seed,
-      );
-
-    const worldOffsetX =
-      coord.x *
-      sizeX;
-
-    const worldOffsetY =
-      coord.y *
-      sizeY;
-
-    const worldOffsetZ =
-      coord.z *
-      sizeZ;
-
-    for (
-      let localX =
-        0;
-      localX <
-      sizeX;
-      localX +=
-        1
-    ) {
-      for (
-        let localZ =
-          0;
-        localZ <
-        sizeZ;
-        localZ +=
-          1
-      ) {
-        const worldX =
-          worldOffsetX +
-          localX;
-
-        const worldZ =
-          worldOffsetZ +
-          localZ;
-
-        const biome:
-          BiomeDescriptor =
-            biomeEvaluator
-              .evaluateBiome({
-                x:
-                  worldX,
-                y:
-                  0,
-                z:
-                  worldZ,
-              });
-
-        const heightNoise =
-          Math.min(
-            1,
-            Math.max(
-              0,
-              (
-                noise
-                  .fractalNoise2D(
-                    worldX *
-                      0.01,
-                    worldZ *
-                      0.01,
-                    4,
-                    0.5,
-                    2,
-                  ) +
-                1
-              ) *
-                0.5,
-            ),
-          );
-
-        const terrainHeight =
-          Math.floor(
-            biome.minHeight +
-            heightNoise *
-              (
-                biome.maxHeight -
-                biome.minHeight
-              ),
-          );
-
-        for (
-          let localY =
-            0;
-          localY <
-          sizeY;
-          localY +=
-            1
-        ) {
-          const worldY =
-            worldOffsetY +
-            localY;
-
-          const blockIndex =
-            localX +
-            sizeX *
-              (
-                localZ +
-                sizeZ *
-                  localY
-              );
-
-          if (
-            worldY ===
-            terrainHeight
-          ) {
-            blocks[
-              blockIndex
-            ] =
-              biome.surfaceBlockId;
-          } else if (
-            worldY <
-              terrainHeight &&
-            worldY >=
-              terrainHeight -
-                3
-          ) {
-            blocks[
-              blockIndex
-            ] =
-              biome.subSurfaceBlockId;
-          } else if (
-            worldY <
-            terrainHeight -
-              3
-          ) {
-            blocks[
-              blockIndex
-            ] =
-              2;
-          }
-        }
+    if (this.fallbackGenerator === null) {
+      this.fallbackGenerator = new TerrainGenerator(seed, config);
+    } else {
+      if (this.fallbackGenerator.getSeed() !== seed) {
+        this.fallbackGenerator.reseed(seed);
       }
+
+      this.fallbackGenerator.setConfig(config);
     }
 
-    return {
-      coord: {
-        x:
-          coord.x,
-        y:
-          coord.y,
-        z:
-          coord.z,
-      },
-      sizeX,
-      sizeY,
-      sizeZ,
-      blocks,
-    };
+    return this.fallbackGenerator.generateChunk(coord);
   }
 }

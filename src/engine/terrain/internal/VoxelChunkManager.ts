@@ -3,694 +3,364 @@ import * as THREE from "three";
 import type {
   BiomeDescriptor,
   ChunkDataMatrix,
+  CompiledChunkMeshBuffers,
   Vector3Chunk,
   VoxelBlockData,
   VoxelModificationRequest,
 } from "../../../contracts/terrain/types";
 
 import {
-  BiomeEvaluator,
-} from "./BiomeEvaluator";
-
-import {
   GreedyMesher,
+  type GreedyMeshOptions,
 } from "./GreedyMesher";
 
 import {
-  PerlinNoiseService,
-} from "./PerlinNoiseService";
+  CHUNK_SIZE_X,
+  CHUNK_SIZE_Y,
+  CHUNK_SIZE_Z,
+  DEFAULT_GENERATION_CONFIG,
+  TerrainGenerator,
+  normalizeTerrainSeed,
+  type ResolvedGenerationConfig,
+} from "./TerrainGenerator";
 
-interface VoxelAddress {
-  readonly chunkCoord:
-    Vector3Chunk;
+export interface VoxelAddress {
+  chunkX: number;
+  chunkY: number;
+  chunkZ: number;
+  localX: number;
+  localY: number;
+  localZ: number;
+  /** Índice local = x + sizeX * (z + sizeZ * y). */
+  index: number;
+}
 
-  readonly localX:
-    number;
+export function createVoxelAddress(): VoxelAddress {
+  return { chunkX: 0, chunkY: 0, chunkZ: 0, localX: 0, localY: 0, localZ: 0, index: 0 };
+}
 
-  readonly localY:
-    number;
-
-  readonly localZ:
-    number;
+/** Materiais compartilhados entre chunks (retidos pelo render, liberados no dispose do terreno). */
+export interface TerrainMaterials {
+  readonly opaque: THREE.Material;
+  readonly transparent: THREE.Material;
 }
 
 export class VoxelChunkManager {
-  private seed =
-    1337;
+  private seed = 1337;
+  private readonly sizeX = CHUNK_SIZE_X;
+  private readonly sizeY = CHUNK_SIZE_Y;
+  private readonly sizeZ = CHUNK_SIZE_Z;
+  private readonly loadedChunks = new Map<string, ChunkDataMatrix>();
+  /** Metadata por voxel, alocada só para chunks que a usam. */
+  private readonly metadata = new Map<string, Uint8Array>();
+  private readonly generator: TerrainGenerator;
+  private readonly scratchAddress = createVoxelAddress();
 
-  private readonly sizeX =
-    16;
+  public constructor(config: ResolvedGenerationConfig = DEFAULT_GENERATION_CONFIG) {
+    this.generator = new TerrainGenerator(this.seed, config);
+  }
 
-  private readonly sizeY =
-    128;
+  public getGenerator(): TerrainGenerator {
+    return this.generator;
+  }
 
-  private readonly sizeZ =
-    16;
+  public getSizes(): { readonly sizeX: number; readonly sizeY: number; readonly sizeZ: number } {
+    return { sizeX: this.sizeX, sizeY: this.sizeY, sizeZ: this.sizeZ };
+  }
 
-  private readonly loadedChunks =
-    new Map<
-      string,
-      ChunkDataMatrix
-    >();
+  public setSeed(seed: number): void {
+    const normalizedSeed = normalizeTerrainSeed(seed);
 
-  private readonly noiseService =
-    new PerlinNoiseService(
-      this.seed,
-    );
-
-  private readonly biomeEvaluator =
-    new BiomeEvaluator(
-      this.seed,
-    );
-
-  public setSeed(
-    seed: number,
-  ): void {
-    const normalizedSeed =
-      Number.isFinite(
-        seed,
-      )
-        ? Math.trunc(
-            seed,
-          )
-        : 1337;
-
-    if (
-      this.seed ===
-      normalizedSeed
-    ) {
+    if (this.seed === normalizedSeed) {
       return;
     }
 
-    /*
-     * Chunks de seeds diferentes nunca devem
-     * coexistir dentro do mesmo manager.
-     */
+    // Chunks de seeds diferentes nunca devem coexistir dentro do mesmo manager.
     this.loadedChunks.clear();
-
-    this.seed =
-      normalizedSeed;
-
-    this.noiseService.reseed(
-      normalizedSeed,
-    );
-
-    this.biomeEvaluator.reseed(
-      normalizedSeed,
-    );
+    this.metadata.clear();
+    this.seed = normalizedSeed;
+    this.generator.reseed(normalizedSeed);
   }
 
-  public getSeed():
-    number {
+  public getSeed(): number {
     return this.seed;
   }
 
-  public getChunkKey(
-    coord:
-      Vector3Chunk,
-  ): string {
+  public getChunkKey(coord: Vector3Chunk): string {
     return `${coord.x}:${coord.y}:${coord.z}`;
   }
 
-  public getChunkCoordFromWorldPosition(
-    worldPosition:
-      Vector3Chunk,
-  ): Vector3Chunk {
-    const voxelX =
-      Math.floor(
-        worldPosition.x,
-      );
+  public getChunkKeyXYZ(x: number, y: number, z: number): string {
+    return `${x}:${y}:${z}`;
+  }
 
-    const voxelY =
-      Math.floor(
-        worldPosition.y,
-      );
-
-    const voxelZ =
-      Math.floor(
-        worldPosition.z,
-      );
-
+  public getChunkCoordFromWorldPosition(worldPosition: Vector3Chunk): Vector3Chunk {
+    this.resolveAddress(worldPosition.x, worldPosition.y, worldPosition.z, this.scratchAddress);
     return {
-      x:
-        Math.floor(
-          voxelX /
-          this.sizeX,
-        ),
-
-      y:
-        Math.floor(
-          voxelY /
-          this.sizeY,
-        ),
-
-      z:
-        Math.floor(
-          voxelZ /
-          this.sizeZ,
-        ),
+      x: this.scratchAddress.chunkX,
+      y: this.scratchAddress.chunkY,
+      z: this.scratchAddress.chunkZ,
     };
   }
 
-  public getChunkData(
-    coord:
-      Vector3Chunk,
-  ): ChunkDataMatrix | null {
-    return (
-      this.loadedChunks.get(
-        this.getChunkKey(
-          coord,
-        ),
-      ) ??
-      null
-    );
+  public getChunkData(coord: Vector3Chunk): ChunkDataMatrix | null {
+    return this.loadedChunks.get(this.getChunkKey(coord)) ?? null;
   }
 
-  public getChunkDataByWorldPosition(
-    worldPosition:
-      Vector3Chunk,
-  ): ChunkDataMatrix | null {
-    return this.getChunkData(
-      this.getChunkCoordFromWorldPosition(
-        worldPosition,
-      ),
-    );
+  public getChunkDataByKey(key: string): ChunkDataMatrix | null {
+    return this.loadedChunks.get(key) ?? null;
   }
 
-  public getBiomeAt(
-    worldPosition:
-      Vector3Chunk,
-  ): BiomeDescriptor {
-    return this.biomeEvaluator
-      .evaluateBiome(
-        worldPosition,
-      );
+  public getChunkDataByWorldPosition(worldPosition: Vector3Chunk): ChunkDataMatrix | null {
+    return this.getChunkData(this.getChunkCoordFromWorldPosition(worldPosition));
   }
 
-  public generateChunkData(
-    coord:
-      Vector3Chunk,
-  ): ChunkDataMatrix {
-    const totalBlocks =
-      this.sizeX *
-      this.sizeY *
-      this.sizeZ;
+  public getMetadataArray(key: string, create: boolean): Uint8Array | null {
+    let array = this.metadata.get(key) ?? null;
 
-    const blocks =
-      new Uint8Array(
-        totalBlocks,
-      );
-
-    const worldOffsetX =
-      coord.x *
-      this.sizeX;
-
-    const worldOffsetY =
-      coord.y *
-      this.sizeY;
-
-    const worldOffsetZ =
-      coord.z *
-      this.sizeZ;
-
-    for (
-      let localX = 0;
-      localX <
-      this.sizeX;
-      localX += 1
-    ) {
-      for (
-        let localZ = 0;
-        localZ <
-        this.sizeZ;
-        localZ += 1
-      ) {
-        const worldX =
-          worldOffsetX +
-          localX;
-
-        const worldZ =
-          worldOffsetZ +
-          localZ;
-
-        const biome =
-          this.biomeEvaluator
-            .evaluateBiome({
-              x:
-                worldX,
-
-              y:
-                0,
-
-              z:
-                worldZ,
-            });
-
-        const rawHeightNoise =
-          this.noiseService
-            .fractalNoise2D(
-              worldX *
-                0.01,
-
-              worldZ *
-                0.01,
-
-              4,
-              0.5,
-              2,
-            );
-
-        const normalizedHeightNoise =
-          Math.min(
-            1,
-            Math.max(
-              0,
-              (
-                rawHeightNoise +
-                1
-              ) *
-                0.5,
-            ),
-          );
-
-        const terrainHeight =
-          Math.floor(
-            biome.minHeight +
-            normalizedHeightNoise *
-              (
-                biome.maxHeight -
-                biome.minHeight
-              ),
-          );
-
-        for (
-          let localY = 0;
-          localY <
-          this.sizeY;
-          localY += 1
-        ) {
-          const worldY =
-            worldOffsetY +
-            localY;
-
-          const index =
-            localX +
-            this.sizeX *
-              (
-                localZ +
-                this.sizeZ *
-                  localY
-              );
-
-          if (
-            worldY ===
-            terrainHeight
-          ) {
-            blocks[index] =
-              biome.surfaceBlockId;
-
-            continue;
-          }
-
-          if (
-            worldY <
-              terrainHeight &&
-            worldY >=
-              terrainHeight -
-                3
-          ) {
-            blocks[index] =
-              biome.subSurfaceBlockId;
-
-            continue;
-          }
-
-          if (
-            worldY <
-            terrainHeight -
-              3
-          ) {
-            blocks[index] =
-              2;
-
-            continue;
-          }
-
-          blocks[index] =
-            0;
-        }
-      }
+    if (array === null && create) {
+      array = new Uint8Array(this.sizeX * this.sizeY * this.sizeZ);
+      this.metadata.set(key, array);
     }
 
-    const chunkData:
-      ChunkDataMatrix = {
-        coord: {
-          x:
-            coord.x,
+    return array;
+  }
 
-          y:
-            coord.y,
+  public getBiomeAt(worldPosition: Vector3Chunk): BiomeDescriptor {
+    return this.generator.getBiomeAt(worldPosition.x, worldPosition.z);
+  }
 
-          z:
-            coord.z,
-        },
-
-        sizeX:
-          this.sizeX,
-
-        sizeY:
-          this.sizeY,
-
-        sizeZ:
-          this.sizeZ,
-
-        blocks,
-      };
-
-    this.loadedChunks.set(
-      this.getChunkKey(
-        coord,
-      ),
-      chunkData,
-    );
-
+  /** Gera de forma síncrona e instala (fallback/headless/testes). */
+  public generateChunkData(coord: Vector3Chunk): ChunkDataMatrix {
+    const chunkData = this.generator.generateChunk(coord);
+    this.loadedChunks.set(this.getChunkKey(coord), chunkData);
     return chunkData;
   }
 
-  public installChunkData(
-    chunkData:
-      ChunkDataMatrix,
-  ): void {
+  public installChunkData(chunkData: ChunkDataMatrix): void {
     if (
-      !Number.isInteger(
-        chunkData.sizeX,
-      ) ||
-      !Number.isInteger(
-        chunkData.sizeY,
-      ) ||
-      !Number.isInteger(
-        chunkData.sizeZ,
-      ) ||
-      chunkData.sizeX !==
-        this.sizeX ||
-      chunkData.sizeY !==
-        this.sizeY ||
-      chunkData.sizeZ !==
-        this.sizeZ
+      !Number.isInteger(chunkData.sizeX) ||
+      !Number.isInteger(chunkData.sizeY) ||
+      !Number.isInteger(chunkData.sizeZ) ||
+      chunkData.sizeX !== this.sizeX ||
+      chunkData.sizeY !== this.sizeY ||
+      chunkData.sizeZ !== this.sizeZ
     ) {
-      throw new RangeError(
-        "ChunkDataMatrix possui dimensões incompatíveis com VoxelChunkManager.",
-      );
+      throw new RangeError("ChunkDataMatrix possui dimensões incompatíveis com VoxelChunkManager.");
     }
 
-    const expectedLength =
-      this.sizeX *
-      this.sizeY *
-      this.sizeZ;
-
-    if (
-      chunkData.blocks.length !==
-      expectedLength
-    ) {
-      throw new RangeError(
-        "ChunkDataMatrix possui quantidade de blocos inválida.",
-      );
+    if (chunkData.blocks.length !== this.sizeX * this.sizeY * this.sizeZ) {
+      throw new RangeError("ChunkDataMatrix possui quantidade de blocos inválida.");
     }
 
-    this.loadedChunks.set(
-      this.getChunkKey(
-        chunkData.coord,
-      ),
-      chunkData,
-    );
+    this.loadedChunks.set(this.getChunkKey(chunkData.coord), chunkData);
   }
 
-  public buildChunkMesh(
-    chunkData:
-      ChunkDataMatrix,
-  ): THREE.Mesh {
-    const compiled =
-      GreedyMesher
-        .compileChunkMesh(
-          chunkData,
-        );
+  public compileChunkMesh(chunkData: ChunkDataMatrix, options?: GreedyMeshOptions): CompiledChunkMeshBuffers {
+    return GreedyMesher.compileChunkMesh(chunkData, options);
+  }
 
-    const geometry =
-      new THREE.BufferGeometry();
+  /**
+   * Monta o objeto 3D do chunk: grupo com malha opaca (cores por vértice) e,
+   * se houver, malha transparente (água/vidro). Sem `materials` usa material
+   * próprio (legado).
+   */
+  public buildChunkObject(
+    chunkData: ChunkDataMatrix,
+    compiled: CompiledChunkMeshBuffers,
+    materials?: TerrainMaterials,
+  ): THREE.Object3D {
+    const group = new THREE.Group();
+    group.name = `terrain_chunk_${this.getChunkKey(chunkData.coord)}`;
+    group.position.set(
+      chunkData.coord.x * this.sizeX,
+      chunkData.coord.y * this.sizeY,
+      chunkData.coord.z * this.sizeZ,
+    );
 
-    geometry.setAttribute(
-      "position",
-      new THREE.BufferAttribute(
+    if (compiled.positions.length > 0) {
+      const geometry = this.createGeometry(
         compiled.positions,
-        3,
-      ),
-    );
-
-    geometry.setAttribute(
-      "normal",
-      new THREE.BufferAttribute(
         compiled.normals,
-        3,
-      ),
-    );
-
-    geometry.setAttribute(
-      "uv",
-      new THREE.BufferAttribute(
         compiled.uvs,
-        2,
-      ),
-    );
-
-    geometry.setIndex(
-      new THREE.BufferAttribute(
         compiled.indices,
-        1,
-      ),
-    );
-
-    geometry.computeBoundingBox();
-    geometry.computeBoundingSphere();
-
-    const material =
-      new THREE.MeshLambertMaterial({
-        color:
-          0x88cc44,
-
-        side:
-          THREE.FrontSide,
-      });
-
-    const mesh =
-      new THREE.Mesh(
-        geometry,
-        material,
+        compiled.colors,
+        3,
       );
+      const material =
+        materials?.opaque ??
+        new THREE.MeshLambertMaterial({
+          color: 0x88cc44,
+          side: THREE.FrontSide,
+        });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.name = `${group.name}_opaque`;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.matrixAutoUpdate = false;
+      mesh.updateMatrix();
+      group.add(mesh);
+    }
 
-    mesh.name =
-      `terrain_chunk_${this.getChunkKey(
-        chunkData.coord,
-      )}`;
+    if (
+      compiled.transparentPositions &&
+      compiled.transparentNormals &&
+      compiled.transparentUvs &&
+      compiled.transparentIndices &&
+      compiled.transparentPositions.length > 0 &&
+      materials
+    ) {
+      const geometry = this.createGeometry(
+        compiled.transparentPositions,
+        compiled.transparentNormals,
+        compiled.transparentUvs,
+        compiled.transparentIndices,
+        compiled.transparentColors,
+        4,
+      );
+      const mesh = new THREE.Mesh(geometry, materials.transparent);
+      mesh.name = `${group.name}_transparent`;
+      mesh.renderOrder = 1;
+      mesh.castShadow = false;
+      mesh.receiveShadow = true;
+      mesh.matrixAutoUpdate = false;
+      mesh.updateMatrix();
+      group.add(mesh);
+    }
 
-    mesh.position.set(
-      chunkData.coord.x *
-        this.sizeX,
+    group.updateMatrix();
+    group.matrixAutoUpdate = false;
+    return group;
+  }
 
-      chunkData.coord.y *
-        this.sizeY,
-
-      chunkData.coord.z *
-        this.sizeZ,
-    );
-
-    mesh.castShadow =
-      true;
-
-    mesh.receiveShadow =
-      true;
-
+  /** Legado: malha única do chunk (material próprio). */
+  public buildChunkMesh(chunkData: ChunkDataMatrix): THREE.Mesh {
+    const compiled = GreedyMesher.compileChunkMesh(chunkData);
+    const geometry = this.createGeometry(compiled.positions, compiled.normals, compiled.uvs, compiled.indices, undefined, 3);
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: 0x88cc44, side: THREE.FrontSide }));
+    mesh.name = `terrain_chunk_${this.getChunkKey(chunkData.coord)}`;
+    mesh.position.set(chunkData.coord.x * this.sizeX, chunkData.coord.y * this.sizeY, chunkData.coord.z * this.sizeZ);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
     mesh.updateMatrix();
-
-    mesh.matrixAutoUpdate =
-      false;
-
+    mesh.matrixAutoUpdate = false;
     return mesh;
   }
 
-  public unloadChunk(
-    coord:
-      Vector3Chunk,
-  ): boolean {
-    return this.loadedChunks
-      .delete(
-        this.getChunkKey(
-          coord,
-        ),
-      );
+  public unloadChunk(coord: Vector3Chunk): boolean {
+    const key = this.getChunkKey(coord);
+    this.metadata.delete(key);
+    return this.loadedChunks.delete(key);
   }
 
-  public getVoxelBlock(
-    worldPosition:
-      Vector3Chunk,
-  ): VoxelBlockData {
-    const address =
-      this.resolveVoxelAddress(
-        worldPosition,
-      );
-
-    const chunk =
-      this.loadedChunks.get(
-        this.getChunkKey(
-          address.chunkCoord,
-        ),
-      );
+  public getVoxelBlock(worldPosition: Vector3Chunk): VoxelBlockData {
+    const address = this.resolveAddress(worldPosition.x, worldPosition.y, worldPosition.z, this.scratchAddress);
+    const key = this.getChunkKeyXYZ(address.chunkX, address.chunkY, address.chunkZ);
+    const chunk = this.loadedChunks.get(key);
 
     if (!chunk) {
-      return {
-        id: 0,
-      };
+      return { id: 0 };
     }
 
-    const index =
-      address.localX +
-      chunk.sizeX *
-        (
-          address.localZ +
-          chunk.sizeZ *
-            address.localY
-        );
-
-    return {
-      id:
-        chunk.blocks[
-          index
-        ] ??
-        0,
-    };
+    const id = chunk.blocks[address.index] ?? 0;
+    const metadata = this.metadata.get(key)?.[address.index] ?? 0;
+    return metadata !== 0 ? { id, metadata } : { id };
   }
 
-  public modifyVoxelBlock(
-    request:
-      VoxelModificationRequest,
-  ): boolean {
+  public modifyVoxelBlock(request: VoxelModificationRequest): boolean {
+    return this.setVoxel(request, this.scratchAddress) !== -1;
+  }
+
+  /**
+   * Escreve o voxel. Retorna o id anterior, ou -1 se inválido/chunk ausente.
+   * `address` recebe o endereço resolvido.
+   */
+  public setVoxel(request: VoxelModificationRequest, address: VoxelAddress): number {
+    const newBlockId = request.newBlockId;
+    const newMetadata = request.newMetadata ?? 0;
+
     if (
-      !Number.isInteger(
-        request.newBlockId,
-      ) ||
-      request.newBlockId <
-        0 ||
-      request.newBlockId >
-        255
+      !Number.isInteger(newBlockId) || newBlockId < 0 || newBlockId > 255 ||
+      !Number.isInteger(newMetadata) || newMetadata < 0 || newMetadata > 255
     ) {
-      return false;
+      return -1;
     }
 
-    const address =
-      this.resolveVoxelAddress(
-        request.worldPosition,
-      );
+    const position = request.worldPosition;
 
-    const chunk =
-      this.loadedChunks.get(
-        this.getChunkKey(
-          address.chunkCoord,
-        ),
-      );
+    if (!Number.isFinite(position.x) || !Number.isFinite(position.y) || !Number.isFinite(position.z)) {
+      return -1;
+    }
+
+    this.resolveAddress(position.x, position.y, position.z, address);
+    const key = this.getChunkKeyXYZ(address.chunkX, address.chunkY, address.chunkZ);
+    const chunk = this.loadedChunks.get(key);
 
     if (!chunk) {
-      return false;
+      return -1;
     }
 
-    const index =
-      address.localX +
-      chunk.sizeX *
-        (
-          address.localZ +
-          chunk.sizeZ *
-            address.localY
-        );
+    const previous = chunk.blocks[address.index] ?? 0;
+    chunk.blocks[address.index] = newBlockId;
+    const metadataArray = this.getMetadataArray(key, newMetadata !== 0);
 
-    chunk.blocks[
-      index
-    ] =
-      request.newBlockId;
+    if (metadataArray) {
+      metadataArray[address.index] = newMetadata;
+    }
 
-    return true;
+    return previous;
   }
 
-  public getActiveChunkCount():
-    number {
-    return this.loadedChunks
-      .size;
+  public getActiveChunkCount(): number {
+    return this.loadedChunks.size;
+  }
+
+  public getLoadedKeys(): IterableIterator<string> {
+    return this.loadedChunks.keys();
   }
 
   public clear(): void {
     this.loadedChunks.clear();
+    this.metadata.clear();
   }
 
-  private resolveVoxelAddress(
-    worldPosition:
-      Vector3Chunk,
-  ): VoxelAddress {
-    const voxelX =
-      Math.floor(
-        worldPosition.x,
-      );
+  public resolveAddress(worldX: number, worldY: number, worldZ: number, out: VoxelAddress): VoxelAddress {
+    const voxelX = Math.floor(worldX);
+    const voxelY = Math.floor(worldY);
+    const voxelZ = Math.floor(worldZ);
+    const chunkX = Math.floor(voxelX / this.sizeX);
+    const chunkY = Math.floor(voxelY / this.sizeY);
+    const chunkZ = Math.floor(voxelZ / this.sizeZ);
+    out.chunkX = chunkX;
+    out.chunkY = chunkY;
+    out.chunkZ = chunkZ;
+    out.localX = voxelX - chunkX * this.sizeX;
+    out.localY = voxelY - chunkY * this.sizeY;
+    out.localZ = voxelZ - chunkZ * this.sizeZ;
+    out.index = out.localX + this.sizeX * (out.localZ + this.sizeZ * out.localY);
+    return out;
+  }
 
-    const voxelY =
-      Math.floor(
-        worldPosition.y,
-      );
+  private createGeometry(
+    positions: Float32Array,
+    normals: Float32Array,
+    uvs: Float32Array,
+    indices: Uint32Array,
+    colors: Float32Array | undefined,
+    colorSize: 3 | 4,
+  ): THREE.BufferGeometry {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
+    geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
 
-    const voxelZ =
-      Math.floor(
-        worldPosition.z,
-      );
+    if (colors && colors.length > 0) {
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, colorSize));
+    }
 
-    const chunkX =
-      Math.floor(
-        voxelX /
-        this.sizeX,
-      );
-
-    const chunkY =
-      Math.floor(
-        voxelY /
-        this.sizeY,
-      );
-
-    const chunkZ =
-      Math.floor(
-        voxelZ /
-        this.sizeZ,
-      );
-
-    return {
-      chunkCoord: {
-        x:
-          chunkX,
-
-        y:
-          chunkY,
-
-        z:
-          chunkZ,
-      },
-
-      localX:
-        voxelX -
-        chunkX *
-          this.sizeX,
-
-      localY:
-        voxelY -
-        chunkY *
-          this.sizeY,
-
-      localZ:
-        voxelZ -
-        chunkZ *
-          this.sizeZ,
-    };
+    geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+    geometry.computeBoundingBox();
+    geometry.computeBoundingSphere();
+    return geometry;
   }
 }

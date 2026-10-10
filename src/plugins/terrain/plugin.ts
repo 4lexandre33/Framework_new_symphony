@@ -1,8 +1,10 @@
 import type { Plugin, PluginContext } from "@core";
 import { TerrainToken } from "../../tokens/terrain";
 import { RenderToken } from "../../tokens/render";
-import type { GameTickPayload } from "../../contracts/game-loop/types";
-import { BlockModifiedEvent, ChunkGeneratedEvent, ModifyVoxelBlockCommand, RequestChunkLoadCommand, type ModifyVoxelBlockPayload, type RequestChunkLoadPayload } from "../../contracts/terrain/types";
+import { PhysicsToken, type PhysicsApi } from "../../tokens/physics";
+import { CameraToken, type CameraApi } from "../../tokens/camera";
+import type { GameRenderPayload, GameTickPayload } from "../../contracts/game-loop/types";
+import { BlockModifiedEvent, ChunkGeneratedEvent, ChunkUnloadedEvent, ModifyVoxelBlockCommand, RequestChunkLoadCommand, TerrainResetEvent, type ModifyVoxelBlockPayload, type RequestChunkLoadPayload } from "../../contracts/terrain/types";
 import { TerrainService } from "../../engine/terrain/internal/TerrainService";
 
 export const terrainManifest:
@@ -38,18 +40,46 @@ export const terrainManifest:
         range:
           "^1.0.0",
       },
+
+      // Opcionais: colliders por chunk (G3) e centro do streaming pela câmera.
+      {
+        id:
+          "game.physics",
+
+        range:
+          "^1.0.0",
+
+        optional:
+          true,
+      },
+
+      {
+        id:
+          "game.camera",
+
+        range:
+          "^1.0.0",
+
+        optional:
+          true,
+      },
     ],
 
     permissions: {
       capabilities: [
         TerrainToken.id,
         RenderToken.id,
+        PhysicsToken.id,
+        CameraToken.id,
       ],
 
       events: [
         ChunkGeneratedEvent.type,
         BlockModifiedEvent.type,
+        ChunkUnloadedEvent.type,
+        TerrainResetEvent.type,
         "game.loop.tick",
+        "game.loop.render",
       ],
     },
 
@@ -73,10 +103,36 @@ export const terrainManifest:
             "^1.0.0",
           optional: false,
         },
+
+        {
+          id:
+            PhysicsToken.id,
+
+          range:
+            "^1.0.0",
+          optional: true,
+        },
+
+        {
+          id:
+            CameraToken.id,
+
+          range:
+            "^1.0.0",
+          optional: true,
+        },
       ],
       conflicts: [],
     },
   };
+
+function getOptional<T>(read: () => T | undefined): T | null {
+  try {
+    return read() ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export function createTerrainPlugin():
   Plugin {
@@ -106,9 +162,21 @@ export function createTerrainPlugin():
               RenderToken,
             );
 
+          const physics =
+            getOptional<PhysicsApi>(
+              () => ctx.caps.get(PhysicsToken),
+            );
+
+          const camera =
+            getOptional<CameraApi>(
+              () => ctx.caps.get(CameraToken),
+            );
+
           terrainService
             .bindDependencies(
               render,
+              physics,
+              camera,
             );
         },
       },
@@ -142,6 +210,14 @@ export function createTerrainPlugin():
         BlockModifiedEvent,
       );
 
+      ctx.events.define(
+        ChunkUnloadedEvent,
+      );
+
+      ctx.events.define(
+        TerrainResetEvent,
+      );
+
       ctx.commands.define(
         RequestChunkLoadCommand,
       );
@@ -166,28 +242,65 @@ export function createTerrainPlugin():
           },
         );
 
-      const unbindRequestChunk =
-        ctx.commands.handle(
-          RequestChunkLoadCommand.type,
+      // Pausado não há tick: as malhas pendentes continuam sendo montadas por frame.
+      const unbindRender =
+        ctx.events.on(
+          "game.loop.render",
           (
             envelope,
           ): void => {
             const payload =
               envelope.payload as
+                GameRenderPayload;
+
+            if (payload.isPaused) {
+              service.processMeshQueue();
+            }
+          },
+        );
+
+      const unbindRequestChunk =
+        ctx.commands.handle(
+          RequestChunkLoadCommand.type,
+          (
+            envelope,
+          ): boolean => {
+            const payload =
+              envelope.payload as
                 RequestChunkLoadPayload;
 
+            const seed =
+              payload.seed;
+
             if (
-              payload.seed !==
-              service.getSeed()
+              typeof seed === "number" &&
+              Number.isFinite(seed) &&
+              Math.trunc(seed) !==
+                service.getSeed()
             ) {
+              // G55: seed divergente nunca apaga o mundo em silêncio.
+              if (service.hasWorldContent()) {
+                ctx.log.warn(
+                  "game.terrain.request-chunk recusado: seed difere da do mundo atual (use setSeed para trocar de mundo).",
+                  {
+                    requestedSeed: seed,
+                    currentSeed: service.getSeed(),
+                  },
+                );
+
+                return false;
+              }
+
               service.setSeed(
-                payload.seed,
+                seed,
               );
             }
 
             service.requestChunk(
               payload.chunkCoord,
             );
+
+            return true;
           },
         );
 
@@ -201,6 +314,21 @@ export function createTerrainPlugin():
               envelope.payload as
                 ModifyVoxelBlockPayload;
 
+            if (
+              Array.isArray(
+                payload.requests,
+              )
+            ) {
+              return service
+                .modifyVoxelBlocks(
+                  payload.requests,
+                ) > 0;
+            }
+
+            if (!payload.request) {
+              return false;
+            }
+
             return service
               .modifyVoxelBlock(
                 payload.request,
@@ -211,6 +339,7 @@ export function createTerrainPlugin():
       ctx.lifecycle.onDispose(
         (): void => {
           unbindTick();
+          unbindRender();
           unbindRequestChunk();
           unbindModifyBlock();
 
