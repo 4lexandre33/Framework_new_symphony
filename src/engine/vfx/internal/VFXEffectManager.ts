@@ -66,7 +66,9 @@ export class VFXEffectManager {
         .pulseBloom(
           preset
             .postFXPulseBloomStrength,
-          0.3,
+          preset
+            .postFXPulseDurationSeconds ??
+            0.3,
         );
     }
 

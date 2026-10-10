@@ -3,6 +3,12 @@ import type {
 } from "../../../contracts/vfx/types";
 
 interface MutablePostProcessingConfig {
+  enabled?:
+    boolean;
+
+  colorGradingIntensity?:
+    number;
+
   enableBloom?:
     boolean;
 
@@ -37,6 +43,13 @@ interface MutablePostProcessingConfig {
 export class PostProcessingPipeline {
   private readonly config:
     MutablePostProcessingConfig = {
+      // G9: desligado até a primeira configuração explícita.
+      enabled:
+        false,
+
+      colorGradingIntensity:
+        1,
+
       enableBloom:
         true,
 
@@ -75,6 +88,21 @@ export class PostProcessingPipeline {
     newConfig:
       Partial<PostProcessingConfig>,
   ): void {
+    // Configurar liga o pipeline, salvo `enabled: false` explícito.
+    this.config.enabled =
+      newConfig.enabled !==
+      false;
+
+    if (
+      newConfig.colorGradingIntensity !==
+      undefined
+    ) {
+      this.config.colorGradingIntensity =
+        this.sanitizeUnitInterval(
+          newConfig.colorGradingIntensity,
+        );
+    }
+
     if (
       newConfig.enableBloom !==
       undefined
@@ -257,7 +285,87 @@ export class PostProcessingPipeline {
     return this.config;
   }
 
+  public get isEnabled():
+    boolean {
+    return this.config.enabled ===
+      true;
+  }
+
+  public get isBloomPulseActive():
+    boolean {
+    return this.bloomPulseTimer >
+      0;
+  }
+
+  /** Bloom deve ser desenhado agora (configurado ou pulso em andamento). */
+  public get isBloomEffective():
+    boolean {
+    return (
+      this.isBloomPulseActive ||
+      (
+        this.isEnabled &&
+        this.config.enableBloom ===
+          true &&
+        (this.config.bloomStrength ?? 0) >
+          0
+      )
+    );
+  }
+
+  public get isSSAOEffective():
+    boolean {
+    return this.isEnabled &&
+      this.config.enableSSAO ===
+        true;
+  }
+
+  /** Color grading pedido (o desenho ainda depende do LUT carregado). */
+  public get isColorGradingRequested():
+    boolean {
+    return (
+      this.isEnabled &&
+      this.config.enableColorGrading ===
+        true &&
+      this.config.lutTextureUrl !==
+        undefined &&
+      (this.config.colorGradingIntensity ?? 1) >
+        0
+    );
+  }
+
+  public get isVignetteEffective():
+    boolean {
+    return this.isEnabled &&
+      (this.config.vignetteIntensity ?? 0) >
+        0;
+  }
+
+  public get isChromaticAberrationEffective():
+    boolean {
+    return this.isEnabled &&
+      (this.config.chromaticAberrationOffset ?? 0) >
+        0;
+  }
+
+  /** Algum passe precisa ser desenhado neste frame. */
+  public get isActive():
+    boolean {
+    return (
+      this.isBloomEffective ||
+      this.isSSAOEffective ||
+      this.isColorGradingRequested ||
+      this.isVignetteEffective ||
+      this.isChromaticAberrationEffective
+    );
+  }
+
   public reset(): void {
+    this.config.enabled =
+      false;
+
+    this.config.colorGradingIntensity =
+      1;
+
     this.config.enableBloom =
       true;
 

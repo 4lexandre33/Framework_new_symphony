@@ -4,86 +4,69 @@ import type {
   GPUParticleEmitterConfig,
 } from "../../../contracts/vfx/types";
 
-const VERTEX_SHADER_GLSL = `
+/** Aceleração da gravidade (m/s²) multiplicada por `gravityScale` (G91). */
+export const VFX_STANDARD_GRAVITY =
+  9.81;
+
+/**
+ * Vertex shader das partículas (G88).
+ *
+ * Usado com `THREE.ShaderMaterial`, que injeta `position`,
+ * `modelViewMatrix` e `projectionMatrix` (o `RawShaderMaterial` antigo usava
+ * esses nomes sem declarar e não compilava no navegador).
+ *
+ * `position` é a posição de NASCIMENTO da partícula em espaço de mundo (o
+ * objeto Points fica na identidade), por isso o emissor pode se mover sem
+ * arrastar partículas já emitidas (G19).
+ */
+export const PARTICLE_VERTEX_SHADER = `
   attribute vec3 aVelocity;
   attribute float aStartTime;
-  attribute float aLifeTime;
-  attribute vec4 aStartColor;
-  attribute vec4 aEndColor;
-  attribute float aStartSize;
-  attribute float aEndSize;
 
   uniform float uTime;
+  uniform float uLifeTime;
   uniform float uGravity;
+  uniform float uStartSize;
+  uniform float uEndSize;
+  uniform vec4 uStartColor;
+  uniform vec4 uEndColor;
+  uniform float uPointScale;
 
   varying vec4 vColor;
 
   void main() {
     float age = uTime - aStartTime;
 
-    if (age < 0.0 || age > aLifeTime) {
+    if (age < 0.0 || age > uLifeTime) {
       gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
       gl_PointSize = 0.0;
       vColor = vec4(0.0);
       return;
     }
 
-    float normalizedAge = clamp(
-      age / max(aLifeTime, 0.0001),
-      0.0,
-      1.0
-    );
+    float normalizedAge = clamp(age / max(uLifeTime, 0.0001), 0.0, 1.0);
 
-    vColor = mix(
-      aStartColor,
-      aEndColor,
-      normalizedAge
-    );
+    vColor = mix(uStartColor, uEndColor, normalizedAge);
 
-    vec3 currentPos =
-      position +
-      (aVelocity * age);
+    vec3 currentPos = position + aVelocity * age;
+    currentPos.y -= 0.5 * uGravity * age * age;
 
-    currentPos.y -=
-      0.5 *
-      uGravity *
-      age *
-      age;
+    float currentSize = mix(uStartSize, uEndSize, normalizedAge);
 
-    float currentSize = mix(
-      aStartSize,
-      aEndSize,
-      normalizedAge
-    );
+    vec4 mvPosition = modelViewMatrix * vec4(currentPos, 1.0);
+    gl_Position = projectionMatrix * mvPosition;
 
-    vec4 mvPosition =
-      modelViewMatrix *
-      vec4(
-        currentPos,
-        1.0
-      );
+    // Tamanho em unidades de mundo: perspectiva divide pela profundidade.
+    bool isPerspective = projectionMatrix[2][3] == -1.0;
+    float projected = isPerspective
+      ? uPointScale / max(-mvPosition.z, 0.0001)
+      : uPointScale;
 
-    gl_Position =
-      projectionMatrix *
-      mvPosition;
-
-    float perspectiveScale =
-      300.0 /
-      max(
-        -mvPosition.z,
-        0.0001
-      );
-
-    gl_PointSize =
-      max(
-        0.0,
-        currentSize *
-        perspectiveScale
-      );
+    gl_PointSize = max(0.0, currentSize * projected);
   }
 `;
 
-const FRAGMENT_SHADER_GLSL = `
+export const PARTICLE_FRAGMENT_SHADER = `
   uniform sampler2D uTexture;
   uniform bool uHasTexture;
 
@@ -94,53 +77,58 @@ const FRAGMENT_SHADER_GLSL = `
       discard;
     }
 
-    vec4 texColor =
-      vec4(1.0);
+    vec4 texColor = vec4(1.0);
 
     if (uHasTexture) {
-      texColor =
-        texture2D(
-          uTexture,
-          gl_PointCoord
-        );
+      texColor = texture2D(uTexture, gl_PointCoord);
     } else {
-      vec2 coord =
-        gl_PointCoord -
-        vec2(0.5);
-
-      float distSq =
-        dot(
-          coord,
-          coord
-        );
+      vec2 coord = gl_PointCoord - vec2(0.5);
+      float distSq = dot(coord, coord);
 
       if (distSq > 0.25) {
         discard;
       }
 
-      texColor.a =
-        smoothstep(
-          0.25,
-          0.0,
-          distSq
-        );
+      texColor.a = smoothstep(0.25, 0.0, distSq);
     }
 
-    gl_FragColor =
-      vColor *
-      texColor;
+    gl_FragColor = vColor * texColor;
   }
 `;
 
+const DEAD_START_TIME =
+  -1e9;
+
+function finiteOr(
+  value:
+    number | undefined,
+  fallback:
+    number,
+): number {
+  return value !==
+    undefined &&
+    Number.isFinite(
+      value,
+    )
+    ? value
+    : fallback;
+}
+
+export type ParticleRandom =
+  () => number;
+
 export class GPUParticleEmitter {
   private readonly geometry:
-    THREE.InstancedBufferGeometry;
+    THREE.BufferGeometry;
 
   private readonly material:
-    THREE.RawShaderMaterial;
+    THREE.ShaderMaterial;
 
   private readonly pointsMesh:
     THREE.Points;
+
+  private readonly spawnPositions:
+    Float32Array;
 
   private readonly velocities:
     Float32Array;
@@ -148,23 +136,29 @@ export class GPUParticleEmitter {
   private readonly startTimes:
     Float32Array;
 
-  private readonly lifeTimes:
-    Float32Array;
+  private readonly positionAttribute:
+    THREE.BufferAttribute;
 
-  private readonly startColors:
-    Float32Array;
-
-  private readonly endColors:
-    Float32Array;
-
-  private readonly startSizes:
-    Float32Array;
-
-  private readonly endSizes:
-    Float32Array;
+  private readonly velocityAttribute:
+    THREE.BufferAttribute;
 
   private readonly startTimeAttribute:
-    THREE.InstancedBufferAttribute;
+    THREE.BufferAttribute;
+
+  private readonly dirtyAttributes:
+    readonly THREE.BufferAttribute[];
+
+  private readonly emitterPosition =
+    new THREE.Vector3();
+
+  private readonly drawingBufferSize =
+    new THREE.Vector2();
+
+  private readonly lifetime:
+    number;
+
+  private readonly duration:
+    number;
 
   private elapsedTime =
     0;
@@ -175,42 +169,91 @@ export class GPUParticleEmitter {
   private spawnAccumulator =
     0;
 
+  private pendingBurst:
+    number;
+
+  private emitting =
+    true;
+
+  private lastSpawnTime =
+    DEAD_START_TIME;
+
+  private disposed =
+    false;
+
   public constructor(
     public readonly config:
       GPUParticleEmitterConfig,
 
     texture?:
       THREE.Texture | null,
+
+    private readonly random:
+      ParticleRandom =
+      Math.random,
   ) {
     const particleCount =
       Math.max(
         1,
         Math.floor(
-          Number.isFinite(
+          finiteOr(
             config.maxParticles,
-          )
-            ? config.maxParticles
-            : 1,
+            1,
+          ),
         ),
       );
 
-    this.geometry =
-      new THREE.InstancedBufferGeometry();
+    this.lifetime =
+      Math.max(
+        0.0001,
+        finiteOr(
+          config.particleLifetimeSeconds,
+          1,
+        ),
+      );
 
-    const basePosition =
-      new Float32Array([
+    this.duration =
+      config.durationSeconds !==
+        undefined &&
+      Number.isFinite(
+        config.durationSeconds,
+      ) &&
+      config.durationSeconds >
+        0
+        ? config.durationSeconds
+        : Number.POSITIVE_INFINITY;
+
+    this.pendingBurst =
+      Math.max(
+        0,
+        Math.floor(
+          finiteOr(
+            config.burstCount,
+            0,
+          ),
+        ),
+      );
+
+    this.emitterPosition.set(
+      finiteOr(
         config.position.x,
+        0,
+      ),
+      finiteOr(
         config.position.y,
+        0,
+      ),
+      finiteOr(
         config.position.z,
-      ]);
-
-    this.geometry.setAttribute(
-      "position",
-      new THREE.BufferAttribute(
-        basePosition,
-        3,
+        0,
       ),
     );
+
+    this.spawnPositions =
+      new Float32Array(
+        particleCount *
+        3,
+      );
 
     this.velocities =
       new Float32Array(
@@ -221,230 +264,71 @@ export class GPUParticleEmitter {
     this.startTimes =
       new Float32Array(
         particleCount,
+      ).fill(
+        DEAD_START_TIME,
       );
 
-    this.lifeTimes =
-      new Float32Array(
-        particleCount,
+    this.geometry =
+      new THREE.BufferGeometry();
+
+    this.positionAttribute =
+      new THREE.BufferAttribute(
+        this.spawnPositions,
+        3,
+      ).setUsage(
+        THREE.DynamicDrawUsage,
       );
 
-    this.startColors =
-      new Float32Array(
-        particleCount *
-        4,
+    this.velocityAttribute =
+      new THREE.BufferAttribute(
+        this.velocities,
+        3,
+      ).setUsage(
+        THREE.DynamicDrawUsage,
       );
 
-    this.endColors =
-      new Float32Array(
-        particleCount *
-        4,
+    this.startTimeAttribute =
+      new THREE.BufferAttribute(
+        this.startTimes,
+        1,
+      ).setUsage(
+        THREE.DynamicDrawUsage,
       );
 
-    this.startSizes =
-      new Float32Array(
-        particleCount,
-      );
-
-    this.endSizes =
-      new Float32Array(
-        particleCount,
-      );
-
-    const particleLifetime =
-      Math.max(
-        0.0001,
-        Number.isFinite(
-          config
-            .particleLifetimeSeconds,
-        )
-          ? config
-              .particleLifetimeSeconds
-          : 1,
-      );
-
-    for (
-      let index = 0;
-      index <
-      particleCount;
-      index += 1
-    ) {
-      this.startTimes[index] =
-        -9999;
-
-      this.lifeTimes[index] =
-        particleLifetime;
-
-      const velocityOffset =
-        index *
-        3;
-
-      this.velocities[
-        velocityOffset
-      ] =
-        config.velocityBase.x +
-        (
-          Math.random() -
-          0.5
-        ) *
-        config
-          .velocityVariance
-          .x;
-
-      this.velocities[
-        velocityOffset +
-        1
-      ] =
-        config.velocityBase.y +
-        (
-          Math.random() -
-          0.5
-        ) *
-        config
-          .velocityVariance
-          .y;
-
-      this.velocities[
-        velocityOffset +
-        2
-      ] =
-        config.velocityBase.z +
-        (
-          Math.random() -
-          0.5
-        ) *
-        config
-          .velocityVariance
-          .z;
-
-      const colorOffset =
-        index *
-        4;
-
-      this.startColors[
-        colorOffset
-      ] =
-        config.startColor.r;
-
-      this.startColors[
-        colorOffset +
-        1
-      ] =
-        config.startColor.g;
-
-      this.startColors[
-        colorOffset +
-        2
-      ] =
-        config.startColor.b;
-
-      this.startColors[
-        colorOffset +
-        3
-      ] =
-        config.startColor.a ??
-        1;
-
-      this.endColors[
-        colorOffset
-      ] =
-        config.endColor.r;
-
-      this.endColors[
-        colorOffset +
-        1
-      ] =
-        config.endColor.g;
-
-      this.endColors[
-        colorOffset +
-        2
-      ] =
-        config.endColor.b;
-
-      this.endColors[
-        colorOffset +
-        3
-      ] =
-        config.endColor.a ??
-        0;
-
-      this.startSizes[
-        index
-      ] =
-        config.startSize;
-
-      this.endSizes[
-        index
-      ] =
-        config.endSize;
-    }
+    this.geometry.setAttribute(
+      "position",
+      this.positionAttribute,
+    );
 
     this.geometry.setAttribute(
       "aVelocity",
-      new THREE.InstancedBufferAttribute(
-        this.velocities,
-        3,
-      ),
+      this.velocityAttribute,
     );
-
-    this.startTimeAttribute =
-      new THREE.InstancedBufferAttribute(
-        this.startTimes,
-        1,
-      );
 
     this.geometry.setAttribute(
       "aStartTime",
       this.startTimeAttribute,
     );
 
-    this.geometry.setAttribute(
-      "aLifeTime",
-      new THREE.InstancedBufferAttribute(
-        this.lifeTimes,
-        1,
-      ),
-    );
+    this.dirtyAttributes = [
+      this.positionAttribute,
+      this.velocityAttribute,
+      this.startTimeAttribute,
+    ];
 
-    this.geometry.setAttribute(
-      "aStartColor",
-      new THREE.InstancedBufferAttribute(
-        this.startColors,
-        4,
-      ),
-    );
-
-    this.geometry.setAttribute(
-      "aEndColor",
-      new THREE.InstancedBufferAttribute(
-        this.endColors,
-        4,
-      ),
-    );
-
-    this.geometry.setAttribute(
-      "aStartSize",
-      new THREE.InstancedBufferAttribute(
-        this.startSizes,
-        1,
-      ),
-    );
-
-    this.geometry.setAttribute(
-      "aEndSize",
-      new THREE.InstancedBufferAttribute(
-        this.endSizes,
-        1,
-      ),
-    );
+    const hasTexture =
+      texture !==
+        null &&
+      texture !==
+        undefined;
 
     this.material =
-      new THREE.RawShaderMaterial({
+      new THREE.ShaderMaterial({
         vertexShader:
-          VERTEX_SHADER_GLSL,
+          PARTICLE_VERTEX_SHADER,
 
         fragmentShader:
-          FRAGMENT_SHADER_GLSL,
+          PARTICLE_FRAGMENT_SHADER,
 
         uniforms: {
           uTime: {
@@ -452,10 +336,62 @@ export class GPUParticleEmitter {
               0,
           },
 
+          uLifeTime: {
+            value:
+              this.lifetime,
+          },
+
+          // G91: escala da gravidade padrão (1 = 9,81 m/s²).
           uGravity: {
             value:
-              config.gravityScale ??
-              9.81,
+              VFX_STANDARD_GRAVITY *
+              finiteOr(
+                config.gravityScale,
+                1,
+              ),
+          },
+
+          uStartSize: {
+            value:
+              finiteOr(
+                config.startSize,
+                1,
+              ),
+          },
+
+          uEndSize: {
+            value:
+              finiteOr(
+                config.endSize,
+                0,
+              ),
+          },
+
+          uStartColor: {
+            value:
+              new THREE.Vector4(
+                config.startColor.r,
+                config.startColor.g,
+                config.startColor.b,
+                config.startColor.a ??
+                  1,
+              ),
+          },
+
+          uEndColor: {
+            value:
+              new THREE.Vector4(
+                config.endColor.r,
+                config.endColor.g,
+                config.endColor.b,
+                config.endColor.a ??
+                  0,
+              ),
+          },
+
+          uPointScale: {
+            value:
+              300,
           },
 
           uTexture: {
@@ -466,10 +402,7 @@ export class GPUParticleEmitter {
 
           uHasTexture: {
             value:
-              texture !==
-              null &&
-              texture !==
-              undefined,
+              hasTexture,
           },
         },
 
@@ -493,17 +426,174 @@ export class GPUParticleEmitter {
       );
 
     /*
-     * O shader movimenta partículas na GPU.
-     * A bounding sphere do BufferGeometry não
-     * acompanha essas posições dinamicamente.
+     * O shader movimenta partículas na GPU; a bounding sphere não
+     * acompanha essas posições.
      */
     this.pointsMesh.frustumCulled =
       false;
+
+    this.pointsMesh.name =
+      `vfx_emitter_${config.emitterId}`;
+
+    // Escala de tamanho por câmera/viewport, calculada antes de cada desenho.
+    this.pointsMesh.onBeforeRender =
+      this.handleBeforeRender;
   }
 
   public get mesh():
     THREE.Points {
     return this.pointsMesh;
+  }
+
+  public get isEmitting():
+    boolean {
+    return this.emitting;
+  }
+
+  /** Tempo de simulação acumulado do emissor (segundos). */
+  public get age():
+    number {
+    return this.elapsedTime;
+  }
+
+  /**
+   * true quando o emissor parou de emitir e a última partícula morreu
+   * (pode ser descartado).
+   */
+  public get isFinished():
+    boolean {
+    return (
+      !this.emitting &&
+      this.pendingBurst ===
+        0 &&
+      this.elapsedTime -
+        this.lastSpawnTime >
+        this.lifetime
+    );
+  }
+
+  public get texture():
+    THREE.Texture | null {
+    const value =
+      this.material
+        .uniforms
+        .uTexture
+        ?.value as unknown;
+
+    return value instanceof
+      THREE.Texture
+      ? value
+      : null;
+  }
+
+  /** Troca a textura (ex.: carregada depois). Não descarta a anterior. */
+  public setTexture(
+    texture:
+      THREE.Texture | null,
+  ): void {
+    const uniforms =
+      this.material.uniforms;
+
+    if (
+      uniforms.uTexture !==
+        undefined &&
+      uniforms.uHasTexture !==
+        undefined
+    ) {
+      uniforms.uTexture.value =
+        texture;
+      uniforms.uHasTexture.value =
+        texture !==
+        null;
+    }
+  }
+
+  /** Move o ponto de nascimento das PRÓXIMAS partículas (G19). */
+  public setPosition(
+    x: number,
+    y: number,
+    z: number,
+  ): void {
+    if (
+      !Number.isFinite(
+        x,
+      ) ||
+      !Number.isFinite(
+        y,
+      ) ||
+      !Number.isFinite(
+        z,
+      )
+    ) {
+      return;
+    }
+
+    this.emitterPosition.set(
+      x,
+      y,
+      z,
+    );
+  }
+
+  public getPosition():
+    Readonly<THREE.Vector3> {
+    return this.emitterPosition;
+  }
+
+  /** Para de emitir; partículas vivas terminam a vida. */
+  public stopEmitting(): void {
+    this.emitting =
+      false;
+    this.pendingBurst =
+      0;
+  }
+
+  /** Emite `count` partículas no próximo update. */
+  public burst(
+    count: number,
+  ): void {
+    if (
+      Number.isFinite(
+        count,
+      ) &&
+      count >
+        0
+    ) {
+      this.pendingBurst +=
+        Math.floor(
+          count,
+        );
+    }
+  }
+
+  /** Partículas vivas agora (contagem em CPU, O(maxParticles)). */
+  public getLiveParticleCount():
+    number {
+    let live =
+      0;
+
+    for (
+      let index = 0;
+      index <
+      this.startTimes.length;
+      index += 1
+    ) {
+      const age =
+        this.elapsedTime -
+        (this.startTimes[index] ?? DEAD_START_TIME);
+
+      if (
+        age >=
+          0 &&
+        age <=
+          this.lifetime
+      ) {
+        live +=
+          1;
+      }
+    }
+
+    return live;
   }
 
   public update(
@@ -514,9 +604,11 @@ export class GPUParticleEmitter {
         deltaSeconds,
       );
 
+    // Pausado (delta 0): partículas congelam (G28/pausa).
     if (
       safeDelta <=
-      0
+        0 ||
+      this.disposed
     ) {
       return;
     }
@@ -524,32 +616,61 @@ export class GPUParticleEmitter {
     this.elapsedTime +=
       safeDelta;
 
-    this.material
-      .uniforms
-      .uTime
-      .value =
+    const uniforms =
+      this.material.uniforms;
+
+    if (
+      uniforms.uTime !==
+      undefined
+    ) {
+      uniforms.uTime.value =
         this.elapsedTime;
+    }
 
-    const spawnRate =
-      Math.max(
-        0,
-        Number.isFinite(
-          this.config
-            .spawnRatePerSecond,
-        )
-          ? this.config
-              .spawnRatePerSecond
-          : 0,
-      );
-
-    this.spawnAccumulator +=
-      spawnRate *
-      safeDelta;
+    if (
+      this.emitting &&
+      this.elapsedTime >=
+        this.duration
+    ) {
+      // G28: duração esgotada.
+      this.emitting =
+        false;
+    }
 
     let particlesToSpawn =
-      Math.floor(
-        this.spawnAccumulator,
-      );
+      this.pendingBurst;
+
+    this.pendingBurst =
+      0;
+
+    if (
+      this.emitting
+    ) {
+      const spawnRate =
+        Math.max(
+          0,
+          finiteOr(
+            this.config
+              .spawnRatePerSecond,
+            0,
+          ),
+        );
+
+      this.spawnAccumulator +=
+        spawnRate *
+        safeDelta;
+
+      const continuous =
+        Math.floor(
+          this.spawnAccumulator,
+        );
+
+      this.spawnAccumulator -=
+        continuous;
+
+      particlesToSpawn +=
+        continuous;
+    }
 
     if (
       particlesToSpawn <=
@@ -558,17 +679,12 @@ export class GPUParticleEmitter {
       return;
     }
 
-    this.spawnAccumulator -=
-      particlesToSpawn;
-
     const particleCapacity =
       this.startTimes.length;
 
     /*
-     * Um stall muito grande não precisa escrever
-     * centenas de ciclos no mesmo buffer.
-     *
-     * No máximo todos os slots são reiniciados.
+     * Um stall muito grande não precisa escrever centenas de ciclos no
+     * mesmo buffer: no máximo todos os slots são reiniciados.
      */
     particlesToSpawn =
       Math.min(
@@ -576,16 +692,18 @@ export class GPUParticleEmitter {
         particleCapacity,
       );
 
+    const firstIndex =
+      this.nextParticleIndex;
+
     for (
       let index = 0;
       index <
       particlesToSpawn;
       index += 1
     ) {
-      this.startTimes[
-        this.nextParticleIndex
-      ] =
-        this.elapsedTime;
+      this.spawnParticle(
+        this.nextParticleIndex,
+      );
 
       this.nextParticleIndex =
         (
@@ -595,25 +713,41 @@ export class GPUParticleEmitter {
         particleCapacity;
     }
 
-    this.startTimeAttribute
-      .needsUpdate =
-        true;
+    this.lastSpawnTime =
+      this.elapsedTime;
+
+    this.markRangeDirty(
+      firstIndex,
+      particlesToSpawn,
+      particleCapacity,
+    );
   }
 
   public dispose(): void {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
+    this.disposed =
+      true;
+
     const texture =
-      this.material
-        .uniforms
-        .uTexture
-        .value;
+      this.texture;
+
+    this.pointsMesh.onBeforeRender =
+      NOOP_BEFORE_RENDER;
+
+    this.pointsMesh.removeFromParent();
 
     this.geometry.dispose();
 
     this.material.dispose();
 
     if (
-      texture instanceof
-        THREE.Texture &&
+      texture !==
+        null &&
       texture.userData
         .presentationOwned ===
         true
@@ -621,6 +755,131 @@ export class GPUParticleEmitter {
       texture.dispose();
     }
   }
+
+  private spawnParticle(
+    slot: number,
+  ): void {
+    const offset =
+      slot *
+      3;
+
+    const variance =
+      this.config
+        .velocityVariance;
+
+    const base =
+      this.config
+        .velocityBase;
+
+    this.spawnPositions[offset] =
+      this.emitterPosition.x;
+    this.spawnPositions[offset + 1] =
+      this.emitterPosition.y;
+    this.spawnPositions[offset + 2] =
+      this.emitterPosition.z;
+
+    this.velocities[offset] =
+      base.x +
+      (this.random() - 0.5) *
+        variance.x;
+    this.velocities[offset + 1] =
+      base.y +
+      (this.random() - 0.5) *
+        variance.y;
+    this.velocities[offset + 2] =
+      base.z +
+      (this.random() - 0.5) *
+        variance.z;
+
+    this.startTimes[slot] =
+      this.elapsedTime;
+  }
+
+  private markRangeDirty(
+    firstIndex: number,
+    count: number,
+    capacity: number,
+  ): void {
+    const attributes =
+      this.dirtyAttributes;
+
+    for (
+      let attributeIndex = 0;
+      attributeIndex <
+      attributes.length;
+      attributeIndex += 1
+    ) {
+      const attribute =
+        attributes[attributeIndex] as THREE.BufferAttribute;
+
+      const itemSize =
+        attribute.itemSize;
+
+      attribute.clearUpdateRanges();
+
+      const firstRun =
+        Math.min(
+          count,
+          capacity -
+            firstIndex,
+        );
+
+      attribute.addUpdateRange(
+        firstIndex *
+          itemSize,
+        firstRun *
+          itemSize,
+      );
+
+      if (
+        count >
+        firstRun
+      ) {
+        attribute.addUpdateRange(
+          0,
+          (count - firstRun) *
+            itemSize,
+        );
+      }
+
+      attribute.needsUpdate =
+        true;
+    }
+  }
+
+  private readonly handleBeforeRender =
+    (
+      renderer:
+        THREE.WebGLRenderer,
+      _scene:
+        THREE.Scene,
+      camera:
+        THREE.Camera,
+    ): void => {
+      const uniform =
+        this.material
+          .uniforms
+          .uPointScale;
+
+      if (
+        uniform ===
+        undefined
+      ) {
+        return;
+      }
+
+      renderer.getDrawingBufferSize(
+        this.drawingBufferSize,
+      );
+
+      // projectionMatrix[1][1] = 1/tan(fov/2) (perspectiva) ou 2/(top-bottom) (orto):
+      // pixels por unidade de mundo = altura/2 * esse termo.
+      uniform.value =
+        this.drawingBufferSize.y *
+        0.5 *
+        camera.projectionMatrix
+          .elements[5]!;
+    };
 
   private sanitizeDelta(
     deltaSeconds: number,
@@ -636,8 +895,7 @@ export class GPUParticleEmitter {
     }
 
     /*
-     * Evita explosões de partículas após
-     * breakpoint, alt-tab longo ou stall.
+     * Evita explosões de partículas após breakpoint, alt-tab longo ou stall.
      */
     return Math.min(
       deltaSeconds,
@@ -646,12 +904,21 @@ export class GPUParticleEmitter {
   }
 }
 
+const NOOP_BEFORE_RENDER =
+  (): void => {};
+
 export class GPUParticleSystem {
   private readonly emitters =
     new Map<
       string,
       GPUParticleEmitter
     >();
+
+  public constructor(
+    private readonly random:
+      ParticleRandom =
+      Math.random,
+  ) {}
 
   public spawnEmitter(
     config:
@@ -668,6 +935,7 @@ export class GPUParticleSystem {
       new GPUParticleEmitter(
         config,
         texture,
+        this.random,
       );
 
     this.emitters.set(
@@ -678,6 +946,29 @@ export class GPUParticleSystem {
     return emitter.mesh;
   }
 
+  public getEmitter(
+    emitterId: string,
+  ): GPUParticleEmitter | null {
+    return (
+      this.emitters.get(
+        emitterId,
+      ) ??
+      null
+    );
+  }
+
+  public hasEmitter(
+    emitterId: string,
+  ): boolean {
+    return this.emitters.has(
+      emitterId,
+    );
+  }
+
+  /**
+   * Remove o emissor. `disposeResources` (padrão) libera geometria,
+   * material e textura própria (G89); false só esquece a referência.
+   */
   public stopEmitter(
     emitterId: string,
     disposeResources =
@@ -728,6 +1019,36 @@ export class GPUParticleSystem {
     }
   }
 
+  /**
+   * Coleta ids dos emissores terminados em `out` (reutilizado pelo
+   * chamador; sem alocação).
+   */
+  public collectFinished(
+    out: string[],
+  ): number {
+    out.length =
+      0;
+
+    for (
+      const [
+        emitterId,
+        emitter,
+      ] of
+      this.emitters
+    ) {
+      if (
+        emitter.isFinished
+      ) {
+        out.push(
+          emitterId,
+        );
+      }
+    }
+
+    return out.length;
+  }
+
+  /** Capacidade (slots) somada de todos os emissores. */
   public getTotalActiveParticles():
     number {
     let total =
@@ -748,6 +1069,11 @@ export class GPUParticleSystem {
     }
 
     return total;
+  }
+
+  public getEmitterCount():
+    number {
+    return this.emitters.size;
   }
 
   public clear(

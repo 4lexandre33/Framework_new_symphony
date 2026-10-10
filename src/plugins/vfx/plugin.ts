@@ -26,6 +26,7 @@ import {
   SetPostFXConfigCommand,
   SpawnParticleEmitterCommand,
   TriggerVFXPresetCommand,
+  VFXEmitterFinishedEvent,
   VFXSpawnedEvent,
 } from "../../contracts/vfx/types";
 
@@ -68,6 +69,7 @@ export const vfxManifest:
         VFXSpawnedEvent.type,
         DecalProjectedEvent.type,
         PostFXStateChangedEvent.type,
+        VFXEmitterFinishedEvent.type,
         "game.loop.render",
       ],
     },
@@ -136,6 +138,10 @@ export function createVFXPlugin():
 
       ctx.events.define(
         PostFXStateChangedEvent,
+      );
+
+      ctx.events.define(
+        VFXEmitterFinishedEvent,
       );
 
       ctx.commands.define(

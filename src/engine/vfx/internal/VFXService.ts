@@ -32,7 +32,11 @@ import type {
   DecalConfig,
   GPUParticleEmitterConfig,
   PostProcessingConfig,
+  StopParticleEmitterOptions,
+  Vector3VFX,
   VFXPresetDescriptor,
+  VFXPresetInstance,
+  VFXPresetTriggerOptions,
 } from "../../../contracts/vfx/types";
 
 import {
@@ -42,6 +46,10 @@ import {
 import {
   GPUParticleSystem,
 } from "./GPUParticleSystem";
+
+import {
+  PostFXComposer,
+} from "./PostFXComposer";
 
 import {
   PostProcessingPipeline,
@@ -57,6 +65,9 @@ import type {
 
 const PRESENTATION_OWNED_TEXTURE_FLAG =
   "presentationOwned";
+
+const EMITTER_KEY_PREFIX =
+  "vfx_emitter_";
 
 export class VFXService
   implements
@@ -80,6 +91,44 @@ export class VFXService
       string
     >();
 
+  private readonly presets =
+    new Map<
+      string,
+      VFXPresetDescriptor
+    >();
+
+  // Tokens de carga assíncrona: resultado só é aplicado se o dono ainda for o mesmo.
+  private readonly pendingTextureLoads =
+    new Map<
+      string,
+      number
+    >();
+
+  private loadGeneration =
+    0;
+
+  private presetInstanceCounter =
+    0;
+
+  private readonly finishedEmitters:
+    string[] =
+      [];
+
+  private postFxComposer:
+    PostFXComposer | null =
+      null;
+
+  private frameRendererInstalled =
+    false;
+
+  private lutTexture:
+    THREE.Texture | null =
+      null;
+
+  private lutUrl:
+    string | null =
+      null;
+
   private disposed =
     false;
 
@@ -93,6 +142,8 @@ export class VFXService
       );
   }
 
+  // ── PARTÍCULAS (G88, G89, G19, G28) ─────────────────────────────────────
+
   public spawnParticleEmitter(
     config:
       GPUParticleEmitterConfig,
@@ -103,6 +154,7 @@ export class VFXService
       return;
     }
 
+    // G89: o anterior com o mesmo id é liberado por inteiro.
     this.stopParticleEmitter(
       config.emitterId,
     );
@@ -130,7 +182,7 @@ export class VFXService
       null
     ) {
       const key =
-        `vfx_emitter_${config.emitterId}`;
+        `${EMITTER_KEY_PREFIX}${config.emitterId}`;
 
       render.addMeshToScene(
         key,
@@ -142,6 +194,45 @@ export class VFXService
           config.emitterId,
           key,
         );
+    }
+
+    if (
+      config.textureUrl !==
+        undefined &&
+      texture ===
+        null
+    ) {
+      const emitter =
+        this.particleSystem
+          .getEmitter(
+            config.emitterId,
+          );
+
+      this.loadOwnedTextureLater(
+        `emitter:${config.emitterId}`,
+        config.textureUrl,
+        (
+          loaded:
+            THREE.Texture,
+        ): boolean => {
+          if (
+            emitter ===
+              null ||
+            this.particleSystem
+              .getEmitter(
+                config.emitterId,
+              ) !==
+              emitter
+          ) {
+            return false;
+          }
+
+          emitter.setTexture(
+            loaded,
+          );
+          return true;
+        },
+      );
     }
 
     this.ctx.events.emit(
@@ -169,6 +260,8 @@ export class VFXService
   public stopParticleEmitter(
     emitterId:
       string,
+    options?:
+      StopParticleEmitterOptions,
   ): boolean {
     if (
       this.disposed
@@ -176,48 +269,97 @@ export class VFXService
       return false;
     }
 
-    const key =
-      this.emitterRenderKeys
-        .get(
-          emitterId,
-        );
-
-    const render =
-      this.getRender();
-
     if (
-      key !==
-        undefined &&
-      render !==
-        null
+      options?.graceful ===
+      true
     ) {
-      render.removeMeshFromScene(
-        key,
-      );
+      const emitter =
+        this.particleSystem
+          .getEmitter(
+            emitterId,
+          );
 
-      this.emitterRenderKeys
-        .delete(
-          emitterId,
-        );
+      if (
+        emitter ===
+        null
+      ) {
+        return false;
+      }
 
-      return this.particleSystem
-        .stopEmitter(
-          emitterId,
-          false,
-        );
+      emitter.stopEmitting();
+      return true;
     }
 
-    this.emitterRenderKeys
-      .delete(
-        emitterId,
-      );
+    return this.removeEmitter(
+      emitterId,
+    );
+  }
 
+  public setEmitterPosition(
+    emitterId:
+      string,
+    position:
+      Vector3VFX,
+  ): boolean {
+    const emitter =
+      this.particleSystem
+        .getEmitter(
+          emitterId,
+        );
+
+    if (
+      emitter ===
+      null
+    ) {
+      return false;
+    }
+
+    emitter.setPosition(
+      position.x,
+      position.y,
+      position.z,
+    );
+
+    return true;
+  }
+
+  public burstParticles(
+    emitterId:
+      string,
+    count:
+      number,
+  ): boolean {
+    const emitter =
+      this.particleSystem
+        .getEmitter(
+          emitterId,
+        );
+
+    if (
+      emitter ===
+      null
+    ) {
+      return false;
+    }
+
+    emitter.burst(
+      count,
+    );
+
+    return true;
+  }
+
+  public hasParticleEmitter(
+    emitterId:
+      string,
+  ): boolean {
     return this.particleSystem
-      .stopEmitter(
+      .hasEmitter(
         emitterId,
-        true,
       );
   }
+
+  // ── DECALS (G90) ────────────────────────────────────────────────────────
 
   public projectDecal(
     config:
@@ -242,8 +384,7 @@ export class VFXService
     const texture =
       this.cloneOwnedTexture(
         config.textureUrl,
-      ) ??
-      this.createOwnedFallbackTexture();
+      );
 
     this.decalManager
       .projectDecal(
@@ -251,6 +392,41 @@ export class VFXService
         texture,
         render.getScene(),
       );
+
+    if (
+      texture ===
+      null
+    ) {
+      const mesh =
+        this.decalManager
+          .getDecal(
+            config.decalId,
+          )
+          ?.mesh ??
+        null;
+
+      this.loadOwnedTextureLater(
+        `decal:${config.decalId}`,
+        config.textureUrl,
+        (
+          loaded:
+            THREE.Texture,
+        ): boolean =>
+          mesh !==
+            null &&
+          this.decalManager
+            .getDecal(
+              config.decalId,
+            )
+            ?.mesh ===
+            mesh &&
+          this.decalManager
+            .setDecalTexture(
+              config.decalId,
+              loaded,
+            ),
+      );
+    }
 
     this.ctx.events.emit(
       "game.vfx.decal-projected",
@@ -270,6 +446,34 @@ export class VFXService
     );
   }
 
+  public removeDecal(
+    decalId:
+      string,
+  ): boolean {
+    this.pendingTextureLoads.delete(
+      `decal:${decalId}`,
+    );
+
+    return this.decalManager
+      .removeDecal(
+        decalId,
+        this.getRender()
+          ?.getScene(),
+      );
+  }
+
+  public setMaxDecals(
+    maxDecals:
+      number,
+  ): void {
+    this.decalManager
+      .setMaxDecals(
+        maxDecals,
+        this.getRender()
+          ?.getScene(),
+      );
+  }
+
   public clearDecals(): void {
     this.decalManager
       .clear(
@@ -277,6 +481,8 @@ export class VFXService
           ?.getScene(),
       );
   }
+
+  // ── PÓS-PROCESSAMENTO (G9) ──────────────────────────────────────────────
 
   public configurePostProcessing(
     config:
@@ -297,13 +503,19 @@ export class VFXService
       this.postProcessing
         .getConfig();
 
+    this.syncLutTexture(
+      state.lutTextureUrl,
+    );
+
+    this.syncFrameRenderer();
+
     const activePasses:
       string[] =
         [];
 
     if (
-      state.enableBloom ===
-      true
+      this.postProcessing
+        .isBloomEffective
     ) {
       activePasses.push(
         "bloom",
@@ -311,8 +523,8 @@ export class VFXService
     }
 
     if (
-      state.enableSSAO ===
-      true
+      this.postProcessing
+        .isSSAOEffective
     ) {
       activePasses.push(
         "ssao",
@@ -320,11 +532,29 @@ export class VFXService
     }
 
     if (
-      state.enableColorGrading ===
-      true
+      this.postProcessing
+        .isColorGradingRequested
     ) {
       activePasses.push(
         "color-grading",
+      );
+    }
+
+    if (
+      this.postProcessing
+        .isVignetteEffective
+    ) {
+      activePasses.push(
+        "vignette",
+      );
+    }
+
+    if (
+      this.postProcessing
+        .isChromaticAberrationEffective
+    ) {
+      activePasses.push(
+        "chromatic-aberration",
       );
     }
 
@@ -334,30 +564,25 @@ export class VFXService
         activePasses,
 
         isBloomActive:
-          state.enableBloom ===
-          true,
+          this.postProcessing
+            .isBloomEffective,
 
         isSSAOActive:
-          state.enableSSAO ===
-          true,
+          this.postProcessing
+            .isSSAOEffective,
       },
     );
   }
 
-  public triggerVFXPreset(
-    preset:
-      VFXPresetDescriptor,
-  ): void {
-    if (
-      this.disposed
-    ) {
-      return;
-    }
+  public isPostProcessingActive():
+    boolean {
+    return this.frameRendererInstalled;
+  }
 
-    this.effectManager
-      .triggerPreset(
-        preset,
-      );
+  /** Composer interno (diagnóstico/testes). */
+  public getPostFXComposer():
+    PostFXComposer | null {
+    return this.postFxComposer;
   }
 
   public pulseBloom(
@@ -377,6 +602,155 @@ export class VFXService
         strength,
         durationSeconds,
       );
+
+    this.syncFrameRenderer();
+  }
+
+  // ── PRESETS (G91) ───────────────────────────────────────────────────────
+
+  public triggerVFXPreset(
+    preset:
+      VFXPresetDescriptor,
+  ): void {
+    if (
+      this.disposed
+    ) {
+      return;
+    }
+
+    const isReference =
+      preset.particleEmitter ===
+        undefined &&
+      preset.decal ===
+        undefined &&
+      preset.screenShakeTrauma ===
+        undefined &&
+      preset.postFXPulseBloomStrength ===
+        undefined;
+
+    const registered =
+      isReference
+        ? this.presets.get(
+            preset.presetId,
+          )
+        : undefined;
+
+    this.effectManager
+      .triggerPreset(
+        registered ??
+          preset,
+      );
+  }
+
+  public registerVFXPreset(
+    preset:
+      VFXPresetDescriptor,
+  ): void {
+    if (
+      preset.presetId.trim()
+        .length ===
+      0
+    ) {
+      throw new RangeError(
+        "presetId não pode ser vazio.",
+      );
+    }
+
+    this.presets.set(
+      preset.presetId,
+      preset,
+    );
+  }
+
+  public unregisterVFXPreset(
+    presetId:
+      string,
+  ): boolean {
+    return this.presets.delete(
+      presetId,
+    );
+  }
+
+  public triggerVFXPresetById(
+    presetId:
+      string,
+    options?:
+      VFXPresetTriggerOptions,
+  ): VFXPresetInstance | null {
+    if (
+      this.disposed
+    ) {
+      return null;
+    }
+
+    const preset =
+      this.presets.get(
+        presetId,
+      );
+
+    if (
+      preset ===
+      undefined
+    ) {
+      return null;
+    }
+
+    this.presetInstanceCounter +=
+      1;
+
+    const suffix =
+      options?.instanceId ??
+      String(
+        this.presetInstanceCounter,
+      );
+
+    const position =
+      options?.position;
+
+    const emitter =
+      preset.particleEmitter ===
+      undefined
+        ? undefined
+        : {
+            ...preset.particleEmitter,
+            emitterId:
+              `${preset.particleEmitter.emitterId}@${suffix}`,
+            position:
+              position ??
+              preset.particleEmitter
+                .position,
+          };
+
+    const decal =
+      preset.decal ===
+      undefined
+        ? undefined
+        : {
+            ...preset.decal,
+            decalId:
+              `${preset.decal.decalId}@${suffix}`,
+            position:
+              position ??
+              preset.decal.position,
+          };
+
+    this.effectManager
+      .triggerPreset({
+        ...preset,
+        particleEmitter:
+          emitter,
+        decal,
+      });
+
+    return {
+      presetId,
+      emitterId:
+        emitter?.emitterId ??
+        null,
+      decalId:
+        decal?.decalId ??
+        null,
+    };
   }
 
   public triggerCameraTrauma(
@@ -435,6 +809,16 @@ export class VFXService
         safeDelta,
       );
 
+    if (
+      this.particleSystem
+        .collectFinished(
+          this.finishedEmitters,
+        ) >
+      0
+    ) {
+      this.reapFinishedEmitters();
+    }
+
     this.decalManager
       .update(
         safeDelta,
@@ -446,6 +830,14 @@ export class VFXService
       .update(
         safeDelta,
       );
+
+    // Pulso de bloom terminou → desinstala o composer se nada mais pede.
+    if (
+      this.frameRendererInstalled !==
+      this.postProcessing.isActive
+    ) {
+      this.syncFrameRenderer();
+    }
   }
 
   public clear(): void {
@@ -458,38 +850,38 @@ export class VFXService
     const render =
       this.getRender();
 
-    if (
-      render !==
-      null
+    for (
+      const key of
+      this.emitterRenderKeys
+        .values()
     ) {
-      for (
-        const key of
-        this.emitterRenderKeys
-          .values()
-      ) {
-        render.removeMeshFromScene(
-          key,
-        );
-      }
-
-      this.particleSystem
-        .clear(
-          false,
-        );
-    } else {
-      this.particleSystem
-        .clear(
-          true,
-        );
+      // A VFX é dona dos recursos: o render só tira da cena.
+      render?.removeMeshFromScene(
+        key,
+        {
+          disposeResources:
+            false,
+        },
+      );
     }
 
+    this.particleSystem
+      .clear(
+        true,
+      );
+
     this.emitterRenderKeys
+      .clear();
+
+    this.pendingTextureLoads
       .clear();
 
     this.clearDecals();
 
     this.postProcessing
       .reset();
+
+    this.syncFrameRenderer();
   }
 
   public dispose(): void {
@@ -501,8 +893,249 @@ export class VFXService
 
     this.clear();
 
+    if (
+      this.frameRendererInstalled
+    ) {
+      this.getRender()
+        ?.setFrameRenderer(
+          null,
+        );
+      this.frameRendererInstalled =
+        false;
+    }
+
+    this.postFxComposer
+      ?.dispose();
+
+    this.postFxComposer =
+      null;
+
+    this.lutTexture
+      ?.dispose();
+
+    this.lutTexture =
+      null;
+
+    this.lutUrl =
+      null;
+
+    this.presets.clear();
+
     this.disposed =
       true;
+  }
+
+  private removeEmitter(
+    emitterId:
+      string,
+  ): boolean {
+    const key =
+      this.emitterRenderKeys
+        .get(
+          emitterId,
+        );
+
+    if (
+      key !==
+      undefined
+    ) {
+      this.getRender()
+        ?.removeMeshFromScene(
+          key,
+          {
+            disposeResources:
+              false,
+          },
+        );
+
+      this.emitterRenderKeys
+        .delete(
+          emitterId,
+        );
+    }
+
+    this.pendingTextureLoads.delete(
+      `emitter:${emitterId}`,
+    );
+
+    // G89: geometria, material e textura própria sempre liberados aqui.
+    return this.particleSystem
+      .stopEmitter(
+        emitterId,
+        true,
+      );
+  }
+
+  private reapFinishedEmitters(): void {
+    for (
+      const emitterId of
+      this.finishedEmitters
+    ) {
+      this.removeEmitter(
+        emitterId,
+      );
+
+      this.ctx.events.emit(
+        "game.vfx.emitter-finished",
+        {
+          emitterId,
+        },
+      );
+    }
+
+    this.finishedEmitters.length =
+      0;
+  }
+
+  /** Instala/remove o composer no render conforme o pipeline (G9). */
+  private syncFrameRenderer(): void {
+    const render =
+      this.getRender();
+
+    if (
+      render ===
+        null ||
+      typeof render.setFrameRenderer !==
+        "function"
+    ) {
+      return;
+    }
+
+    const shouldBeActive =
+      !this.disposed &&
+      this.postProcessing.isActive;
+
+    if (
+      shouldBeActive ===
+      this.frameRendererInstalled
+    ) {
+      return;
+    }
+
+    if (
+      shouldBeActive
+    ) {
+      render.setFrameRenderer(
+        this.ensurePostFxComposer(),
+      );
+    } else {
+      render.setFrameRenderer(
+        null,
+      );
+    }
+
+    this.frameRendererInstalled =
+      shouldBeActive;
+  }
+
+  private ensurePostFxComposer():
+    PostFXComposer {
+    if (
+      this.postFxComposer ===
+      null
+    ) {
+      this.postFxComposer =
+        new PostFXComposer(
+          this.postProcessing,
+          (): THREE.Texture | null =>
+            this.lutTexture,
+        );
+    }
+
+    return this.postFxComposer;
+  }
+
+  private syncLutTexture(
+    url:
+      string | undefined,
+  ): void {
+    const nextUrl =
+      url ??
+      null;
+
+    if (
+      nextUrl ===
+      this.lutUrl
+    ) {
+      return;
+    }
+
+    this.lutTexture
+      ?.dispose();
+
+    this.lutTexture =
+      null;
+
+    this.lutUrl =
+      nextUrl;
+
+    if (
+      nextUrl ===
+      null
+    ) {
+      return;
+    }
+
+    const prepare =
+      (
+        texture:
+          THREE.Texture,
+      ): THREE.Texture => {
+        // Cópia própria: filtro do LUT não altera a textura do cache.
+        texture.magFilter =
+          THREE.LinearFilter;
+        texture.minFilter =
+          THREE.LinearFilter;
+        texture.generateMipmaps =
+          false;
+        texture.wrapS =
+          THREE.ClampToEdgeWrapping;
+        texture.wrapT =
+          THREE.ClampToEdgeWrapping;
+        texture.colorSpace =
+          THREE.NoColorSpace;
+        texture.needsUpdate =
+          true;
+        return texture;
+      };
+
+    const cached =
+      this.cloneOwnedTexture(
+        nextUrl,
+      );
+
+    if (
+      cached !==
+      null
+    ) {
+      this.lutTexture =
+        prepare(
+          cached,
+        );
+      return;
+    }
+
+    this.loadOwnedTextureLater(
+      "lut",
+      nextUrl,
+      (
+        loaded:
+          THREE.Texture,
+      ): boolean => {
+        if (
+          this.lutUrl !==
+          nextUrl
+        ) {
+          return false;
+        }
+
+        this.lutTexture =
+          prepare(
+            loaded,
+          );
+        return true;
+      },
+    );
   }
 
   private getAssets():
@@ -525,6 +1158,10 @@ export class VFXService
     );
   }
 
+  /**
+   * Clona a textura do cache de assets: a VFX é dona do clone
+   * (`presentationOwned`) e nunca altera/descarta a textura compartilhada.
+   */
   private cloneOwnedTexture(
     url:
       string,
@@ -541,36 +1178,131 @@ export class VFXService
       source ===
         null ||
       source ===
-        undefined
+        undefined ||
+      !(source instanceof THREE.Texture)
     ) {
       return null;
     }
 
-    const clone =
-      source.clone();
-
-    clone.userData[
-      PRESENTATION_OWNED_TEXTURE_FLAG
-    ] =
-      true;
-
-    clone.needsUpdate =
-      true;
-
-    return clone;
+    return this.markOwned(
+      source.clone(),
+    );
   }
 
-  private createOwnedFallbackTexture():
-    THREE.Texture {
-    const texture =
-      new THREE.Texture();
-
+  private markOwned(
+    texture:
+      THREE.Texture,
+  ): THREE.Texture {
     texture.userData[
       PRESENTATION_OWNED_TEXTURE_FLAG
     ] =
       true;
 
+    texture.needsUpdate =
+      true;
+
     return texture;
+  }
+
+  /**
+   * Carrega pelo `game.assets` uma textura ausente do cache, clona e libera
+   * a referência obtida (o clone compartilha a imagem). `apply` devolve
+   * false se o dono não existe mais (o clone é descartado).
+   */
+  private loadOwnedTextureLater(
+    ownerKey:
+      string,
+    url:
+      string,
+    apply:
+      (
+        texture:
+          THREE.Texture,
+      ) => boolean,
+  ): void {
+    const assets =
+      this.getAssets();
+
+    if (
+      assets ===
+        null ||
+      typeof assets.loadTexture !==
+        "function"
+    ) {
+      return;
+    }
+
+    this.loadGeneration +=
+      1;
+
+    const generation =
+      this.loadGeneration;
+
+    this.pendingTextureLoads.set(
+      ownerKey,
+      generation,
+    );
+
+    void assets
+      .loadTexture(
+        url,
+      )
+      .then(
+        (
+          loaded:
+            unknown,
+        ): void => {
+          const stillWanted =
+            !this.disposed &&
+            this.pendingTextureLoads.get(
+              ownerKey,
+            ) ===
+              generation;
+
+          if (
+            stillWanted &&
+            loaded instanceof
+              THREE.Texture
+          ) {
+            this.pendingTextureLoads.delete(
+              ownerKey,
+            );
+
+            const owned =
+              this.markOwned(
+                loaded.clone(),
+              );
+
+            if (
+              !apply(
+                owned,
+              )
+            ) {
+              owned.dispose();
+            }
+          }
+
+          assets.releaseAsset(
+            url,
+          );
+        },
+      )
+      .catch(
+        (
+          error:
+            unknown,
+        ): void => {
+          this.ctx.log.warn(
+            `VFX: falha ao carregar textura "${url}".`,
+            {
+              error:
+                String(
+                  error,
+                ),
+            },
+          );
+        },
+      );
   }
 
   private sanitizeDelta(
