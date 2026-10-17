@@ -90,15 +90,17 @@ export function createContext(
   };
 
   const events: EventBusApi = {
-    emit: (type, payload) => {
+    emit: (type, payload, opts) => {
       assertCanEmit(manifest, type);
-      state.emitQueue.push(buildEventEnvelope(state, type, payload, pluginId));
+      const p = opts?.copy === true ? structuredClone(payload) : payload;
+      state.emitQueue.push(buildEventEnvelope(state, type, p, pluginId));
     },
-    emitAsync: (type, payload) => {
+    emitAsync: (type, payload, opts) => {
       assertCanEmit(manifest, type);
+      const p = opts?.copy === true ? structuredClone(payload) : payload;
       return emitThroughPipeline(
         state,
-        buildEventEnvelope(state, type, payload, pluginId),
+        buildEventEnvelope(state, type, p, pluginId),
       );
     },
     on: (type, handler) => state.events.on(pluginId, type, handler),
@@ -107,12 +109,19 @@ export function createContext(
   };
 
   const commands: CommandApi = {
-    send: (type, payload) =>
-      sendThroughPipeline(
+    send: <T extends string, P, R = unknown>(type: T, payload: P) =>
+      sendThroughPipeline<R>(
         state,
         buildCommandEnvelope(state, type, payload, pluginId),
         signal,
-      ),
+      ) as Promise<R>,
+    request: <R = unknown, P = unknown>(type: string, payload: P) =>
+      sendThroughPipeline<R>(
+        state,
+        buildCommandEnvelope(state, type, payload, pluginId),
+        signal,
+        true,
+      ) as Promise<R>,
     handle: (type, handler) =>
       state.dispatcher.handleCommand(type, pluginId, handler),
     define: (def) => state.commandRegistry.define(pluginId, def),

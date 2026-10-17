@@ -21,7 +21,7 @@ export function createGamePlugin(): Plugin {
       // todo token usado precisa estar aqui E em permissions.capabilities
       permissions: {
         capabilities: [RenderToken.id, PhysicsToken.id],
-        events: [], // eventos que ESTE plugin emite
+        events: [], // allow-list EXATA do que ESTE plugin emite; [] = nenhum (adicione os tipos antes de ctx.events.emit)
       },
       capabilities: {
         consumes: [

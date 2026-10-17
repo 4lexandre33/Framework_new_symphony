@@ -32,7 +32,11 @@ export interface SlotContribution {
 export interface PluginPermissions {
   readonly storage?: "read" | "write" | "none";
   readonly network?: "read" | "write" | "none";
-  /** Tipos de evento que o plugin pode EMITIR. */
+  /**
+   * Tipos de evento que o plugin pode EMITIR (allow-list exata).
+   * `[]` = não emite nenhum evento (em QUALQUER kind; não equivale a omitir).
+   * internal/preloaded: omitir = sem restrição. external: omitir = nenhum.
+   */
   readonly events?: readonly string[];
   /** Ids de capability que o plugin pode consumir/fornecer. */
   readonly capabilities?: readonly string[];

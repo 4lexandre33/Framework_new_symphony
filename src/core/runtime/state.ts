@@ -234,10 +234,11 @@ export class KernelState {
     if (env.type === HANDLER_ERROR_EVENT) return;
     if (this.status === "stopped") return;
     try {
-      const evt = buildEventEnvelope(this, HANDLER_ERROR_EVENT, base, "kernel");
-      this.events.emitAsync(evt).catch(() => {
-        /* strict: falha de reporter não se propaga */
-      });
+      // Pela fila canônica (middleware/devtools/testSubscribers veem; os
+      // handlers rodam depois, nunca reentrando no handler que falhou).
+      this.emitQueue.push(
+        buildEventEnvelope(this, HANDLER_ERROR_EVENT, base, "kernel"),
+      );
     } catch {
       /* nunca derruba o chamador */
     }

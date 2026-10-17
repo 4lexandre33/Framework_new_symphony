@@ -20,7 +20,7 @@ export function createTemplatePlugin(): Plugin {
       dependsOn: [{ id: "game.render", range: "^1.0.0" }],
       permissions: {
         capabilities: [RenderToken.id],
-        events: [],
+        events: [], // [] = não emite nada; liste os tipos emitidos (G21)
       },
       capabilities: {
         consumes: [{ id: RenderToken.id, range: "^1.0.0", optional: false }],

@@ -48,9 +48,39 @@ export interface HandlerCtx {
 
 // ── Events ──────────────────────────────────────────────────────────────
 
+/**
+ * Semântica de entrega (G122):
+ *
+ * - `emit` é FIRE-AND-FORGET por uma fila FIFO de concorrência limitada
+ *   (`KernelOptions.emitConcurrency`). Se há vaga na fila, a entrega começa
+ *   DENTRO da chamada (a parte síncrona dos handlers pode já ter rodado
+ *   quando `emit` retorna); se a fila está cheia (handlers assíncronos em
+ *   voo) ou um middleware faz `await` antes de `next()`, os handlers rodam
+ *   DEPOIS. Não dependa de nenhum dos dois: trate `emit` como "algum
+ *   momento, na ordem de emissão". Exceções de handler NUNCA voltam ao
+ *   chamador; são reportadas via `kernel.handler.error` (G30).
+ * - `emitAsync` é a opção IMEDIATA: atravessa o pipeline AGORA, sem fila.
+ *   Sem middleware que faça `await` antes de `next()`, a parte síncrona de
+ *   cada handler roda DENTRO da chamada (antes de `emitAsync` retornar a
+ *   Promise), na ordem de inscrição; a Promise resolve quando todos
+ *   (inclusive as partes assíncronas) terminam. Para "efeito do handler
+ *   antes da próxima linha" use `await ctx.events.emitAsync(...)`. Em
+ *   `strict` rejeita se um handler lançar; fora dele nunca rejeita por erro
+ *   de handler (só por validação/permissão).
+ * - O payload é entregue POR REFERÊNCIA e NÃO é congelado (só o envelope e
+ *   `meta` são). Não reutilize/mute o objeto depois de `emit`: handlers
+ *   enfileirados o leem depois. Para emitir um snapshot de um objeto que
+ *   você vai mutar, use `{ copy: true }` (`structuredClone`, aloca por
+ *   chamada — fora de hot paths; lança `DataCloneError` com funções).
+ */
+export interface EmitOptions {
+  /** Clona o payload (`structuredClone`) antes de enfileirar/entregar. */
+  readonly copy?: boolean;
+}
+
 export interface EventBusApi {
-  emit<T extends string, P>(type: T, payload: P): void;
-  emitAsync<T extends string, P>(type: T, payload: P): Promise<void>;
+  emit<T extends string, P>(type: T, payload: P, opts?: EmitOptions): void;
+  emitAsync<T extends string, P>(type: T, payload: P, opts?: EmitOptions): Promise<void>;
   on<T extends string, P>(
     type: T,
     handler: (env: EventEnvelope<T, P>) => void | Promise<void>,
@@ -62,7 +92,23 @@ export interface EventBusApi {
 // ── Commands ────────────────────────────────────────────────────────────
 
 export interface CommandApi {
-  send<T extends string, P>(type: T, payload: P): Promise<void>;
+  /**
+   * Envia um command à sua autoridade única (G29).
+   *
+   * - Resolve com o VALOR RETORNADO pelo handler (aguardado se for Promise).
+   *   Sem handler registrado (ou envelope parado por middleware) resolve
+   *   `undefined`.
+   * - REJEITA quando o handler lança (erro original; `PluginError` com
+   *   `cause` em `strict`), além de reportar via `kernel.handler.error`.
+   * - `R` é só uma anotação do chamador (não há validação de runtime).
+   */
+  send<T extends string, P, R = unknown>(type: T, payload: P): Promise<R>;
+  /**
+   * Request/response explícito: como `send`, mas REJEITA com
+   * `KernelError("DISPATCH_NO_HANDLER")` se não houver handler, e o tipo do
+   * resultado vem primeiro: `ctx.commands.request<LobbyDetails | null>(...)`.
+   */
+  request<R = unknown, P = unknown>(type: string, payload: P): Promise<R>;
   handle<T extends string, P>(
     type: T,
     handler: (env: CommandEnvelope<T, P>, ctx: HandlerCtx) => unknown | Promise<unknown>,
