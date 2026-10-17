@@ -1,23 +1,54 @@
 import type { PluginContext } from "@core";
 import { type MonetizationApi } from "../../../tokens/monetization";
-import { type MonetizationItemDTO, type TransactionReceiptDTO, type SteamInventoryItemDTO, type VirtualWalletDTO } from "../../../contracts/monetization/types";
-import { StoreCatalogRegistry } from "./StoreCatalogRegistry";
+import {
+  ItemGrantedEvent,
+  type MonetizationItemDTO,
+  type PurchaseGrants,
+  type PurchaseProvider,
+  type RegisterCatalogOptions,
+  type SteamInventoryItemDTO,
+  type TransactionReceiptDTO,
+  type VirtualWalletDTO,
+} from "../../../contracts/monetization/types";
+import { StoreCatalogRegistry, validateCatalogItem } from "./StoreCatalogRegistry";
 import { InventoryReceiptValidator } from "./InventoryReceiptValidator";
-import { VirtualCurrencyWallet } from "./VirtualCurrencyWallet";
+import { VirtualCurrencyWallet, isValidAmount, isValidCurrencyId } from "./VirtualCurrencyWallet";
 import { SteamMicroTxnBridge } from "./SteamMicroTxnBridge";
 import { TauriMonetizationDriver } from "./TauriMonetizationDriver";
+
+const DEFAULT_CURRENCY_ID = "gold";
+const ORDER_ID_PATTERN = /^[A-Za-z0-9_.:-]{1,128}$/u;
+
+export interface MonetizationServiceOptions {
+  readonly tauriDriver?: TauriMonetizationDriver;
+  /** Semeia os 2 SKUs de exemplo (padrão true, por compatibilidade). */
+  readonly seedDefaultCatalog?: boolean;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 export class MonetizationService implements MonetizationApi {
   private readonly catalog = new StoreCatalogRegistry();
   private readonly validator = new InventoryReceiptValidator();
   private readonly wallet = new VirtualCurrencyWallet();
   private readonly bridge = new SteamMicroTxnBridge();
-  private readonly tauriDriver = new TauriMonetizationDriver();
+  private readonly tauriDriver: TauriMonetizationDriver;
+  private readonly entitlements = new Map<string, number>();
+  private readonly finalizing = new Set<string>();
   private cachedInventory: SteamInventoryItemDTO[] = [];
+  private provider: PurchaseProvider | null = null;
+  private steamIdResolver: (() => Promise<string | null>) | null = null;
 
-  public constructor(private readonly ctx: PluginContext) {
-    this.seedDefaultCatalog();
+  public constructor(private readonly ctx: PluginContext, options: MonetizationServiceOptions = {}) {
+    this.tauriDriver = options.tauriDriver ?? new TauriMonetizationDriver();
+    if (options.seedDefaultCatalog !== false) {
+      this.seedDefaultCatalog();
+    }
   }
+
+  // ── catálogo (G13) ────────────────────────────────────────────────────────
 
   public getCatalog(): ReadonlyArray<MonetizationItemDTO> {
     return this.catalog.getCatalog();
@@ -26,6 +57,29 @@ export class MonetizationService implements MonetizationApi {
   public getItemBySku(sku: string): MonetizationItemDTO | null {
     return this.catalog.getItem(sku);
   }
+
+  public registerCatalogItem(item: MonetizationItemDTO): void {
+    this.catalog.registerItem(item);
+  }
+
+  public registerCatalog(items: ReadonlyArray<MonetizationItemDTO>, options: RegisterCatalogOptions = {}): void {
+    if (!Array.isArray(items)) throw new Error("registerCatalog espera um array.");
+    // valida tudo antes de alterar (tudo ou nada)
+    const valid = items.map((item) => validateCatalogItem(item));
+    const skus = new Set<string>();
+    for (const item of valid) {
+      if (skus.has(item.sku)) throw new Error(`SKU duplicado no catálogo: ${item.sku}`);
+      skus.add(item.sku);
+    }
+    if (options.replace === true) this.catalog.clear();
+    for (const item of valid) this.catalog.registerItem(item);
+  }
+
+  public removeCatalogItem(sku: string): boolean {
+    return typeof sku === "string" && this.catalog.removeItem(sku);
+  }
+
+  // ── carteira (G120) ───────────────────────────────────────────────────────
 
   public getWalletBalance(currencyId: string): number {
     return this.wallet.getBalance(currencyId);
@@ -36,14 +90,18 @@ export class MonetizationService implements MonetizationApi {
   }
 
   public creditCurrency(currencyId: string, amount: number, reason = "credit"): number {
-    const newBal = this.wallet.credit(currencyId, amount, reason);
+    if (!this.wallet.tryCredit(currencyId, amount, reason)) {
+      // no-op (entrada inválida/estouro): sem evento enganoso.
+      return isValidCurrencyId(currencyId) ? this.wallet.getBalance(currencyId) : 0;
+    }
+    const newBalance = this.wallet.getBalance(currencyId);
     this.ctx.events.emit("game.monetization.wallet-updated", {
       currencyId,
-      newBalance: newBal,
+      newBalance,
       delta: amount,
       reason,
     });
-    return newBal;
+    return newBalance;
   }
 
   public debitCurrency(currencyId: string, amount: number, reason = "debit"): boolean {
@@ -59,61 +117,246 @@ export class MonetizationService implements MonetizationApi {
     return success;
   }
 
+  // ── compra real plugável (G119) ───────────────────────────────────────────
+
+  public setPurchaseProvider(provider: PurchaseProvider | null): void {
+    if (
+      provider !== null &&
+      (typeof provider !== "object" ||
+        typeof provider.initPurchase !== "function" ||
+        typeof provider.finalizePurchase !== "function")
+    ) {
+      throw new Error("PurchaseProvider inválido: initPurchase/finalizePurchase são obrigatórios.");
+    }
+    this.provider = provider;
+  }
+
+  public isPurchaseSupported(): boolean {
+    return this.provider !== null;
+  }
+
+  /** Fonte do SteamID do jogador (o plugin liga ao `game.steam`). */
+  public setSteamIdResolver(resolver: (() => Promise<string | null>) | null): void {
+    this.steamIdResolver = resolver;
+  }
+
+  private emitFailed(orderId: string, sku: string, reason: string): void {
+    this.ctx.events.emit("game.monetization.purchase-failed", { orderId, sku, reason });
+  }
+
   public async initPurchase(sku: string): Promise<TransactionReceiptDTO | null> {
     const item = this.catalog.getItem(sku);
     if (!item) {
-      this.ctx.events.emit("game.monetization.purchase-failed", {
-        orderId: "none",
-        sku,
-        reason: "Item não encontrado no catálogo.",
-      });
+      this.emitFailed("none", String(sku), "Item não encontrado no catálogo.");
       return null;
     }
 
-    const receipt = this.bridge.createOrder(sku, item, "76561198000000000");
+    const provider = this.provider;
+    if (!provider) {
+      // Nenhuma compra fabricada: sem servidor não há compra real.
+      this.emitFailed("none", item.sku, "unsupported");
+      return null;
+    }
+
+    let steamId: string | null = null;
+    try {
+      steamId = this.steamIdResolver ? await this.steamIdResolver() : null;
+    } catch {
+      steamId = null;
+    }
+
+    let result: Awaited<ReturnType<PurchaseProvider["initPurchase"]>>;
+    try {
+      result = await provider.initPurchase({ sku: item.sku, item, steamId });
+    } catch (error: unknown) {
+      this.emitFailed("none", item.sku, `provider_error: ${errorMessage(error)}`);
+      return null;
+    }
+
+    if (
+      !result ||
+      typeof result.orderId !== "string" ||
+      !ORDER_ID_PATTERN.test(result.orderId) ||
+      !Number.isSafeInteger(result.amountCents) ||
+      result.amountCents < 0
+    ) {
+      this.emitFailed("none", item.sku, "provider_invalid_response");
+      return null;
+    }
+
+    const receipt: TransactionReceiptDTO = {
+      orderId: result.orderId,
+      transId: typeof result.transId === "string" ? result.transId : "",
+      steamId: steamId ?? "",
+      sku: item.sku,
+      amountCents: result.amountCents,
+      status: "pending",
+      timestamp: Date.now(),
+      signature: "",
+    };
+
+    if (!this.bridge.addPending(receipt)) {
+      this.emitFailed(receipt.orderId, item.sku, "too_many_pending_orders");
+      return null;
+    }
+
     this.ctx.events.emit("game.monetization.purchase-initiated", {
       orderId: receipt.orderId,
-      sku,
+      sku: item.sku,
       amountCents: receipt.amountCents,
     });
 
     return receipt;
   }
 
+  /**
+   * Resposta do usuário ao diálogo da Steam (`game.steam.microtxn-authorization`):
+   * autorizado → finaliza pelo provedor; recusado → falha.
+   */
+  public async handleMicroTxnAuthorization(orderId: string, authorized: boolean): Promise<boolean> {
+    const pending = this.bridge.getPending(orderId);
+    if (!pending) return false;
+    if (!authorized) {
+      this.bridge.take(orderId);
+      this.emitFailed(orderId, pending.sku, "user_cancelled");
+      return false;
+    }
+    return this.finalizePurchase(orderId);
+  }
+
   public async finalizePurchase(orderId: string): Promise<boolean> {
-    const approved = this.bridge.confirmOrder(orderId);
-    if (!approved) {
-      this.ctx.events.emit("game.monetization.purchase-failed", {
-        orderId,
-        sku: "unknown",
-        reason: "Ordem pendente não encontrada.",
-      });
+    const pending = typeof orderId === "string" ? this.bridge.getPending(orderId) : null;
+    if (!pending) {
+      this.emitFailed(String(orderId), "unknown", "Ordem pendente não encontrada.");
       return false;
     }
 
-    const isValid = this.validator.validateReceipt(approved);
-    if (!isValid) {
-      this.ctx.events.emit("game.monetization.purchase-failed", {
-        orderId,
-        sku: approved.sku,
-        reason: "Assinatura do recibo inválida.",
-      });
+    const provider = this.provider;
+    if (!provider) {
+      this.emitFailed(orderId, pending.sku, "unsupported");
       return false;
     }
 
-    const item = this.catalog.getItem(approved.sku);
-    if (item && item.itemType === "currency" && item.grantedCurrencyAmount) {
-      this.creditCurrency("gold", item.grantedCurrencyAmount, `purchase_${orderId}`);
+    if (this.finalizing.has(orderId)) return false;
+    this.finalizing.add(orderId);
+
+    try {
+      let verified: Awaited<ReturnType<PurchaseProvider["finalizePurchase"]>>;
+      try {
+        verified = await provider.finalizePurchase(orderId);
+      } catch (error: unknown) {
+        // ordem continua pendente: pode ser finalizada de novo
+        this.emitFailed(orderId, pending.sku, `provider_error: ${errorMessage(error)}`);
+        return false;
+      }
+
+      const receipt = verified?.receipt;
+      if (
+        !verified ||
+        !this.validator.isWellFormed(receipt) ||
+        receipt.orderId !== orderId ||
+        receipt.sku !== pending.sku
+      ) {
+        this.emitFailed(orderId, pending.sku, "provider_invalid_receipt");
+        return false;
+      }
+
+      if (verified.status === "pending" || receipt.status === "pending") {
+        return false; // ainda aguardando o servidor
+      }
+
+      this.bridge.take(orderId);
+
+      if (verified.status !== "approved" || receipt.status !== "approved") {
+        this.emitFailed(orderId, pending.sku, verified.reason ?? receipt.status);
+        return false;
+      }
+
+      this.validator.markVerified(receipt);
+      this.applyGrants(orderId, pending.sku, verified.grants);
+
+      this.ctx.events.emit("game.monetization.purchase-completed", {
+        orderId,
+        transId: receipt.transId,
+        sku: receipt.sku,
+        receipt,
+      });
+
+      return true;
+    } finally {
+      this.finalizing.delete(orderId);
+    }
+  }
+
+  /** Concede EXATAMENTE o que o servidor autorizou, ou o que o item do catálogo concede. */
+  private applyGrants(orderId: string, sku: string, grants: PurchaseGrants | undefined): void {
+    const item = this.catalog.getItem(sku);
+    const currencies: Record<string, number> = {};
+    const items: Record<string, number> = {};
+
+    if (grants) {
+      for (const [currencyId, amount] of Object.entries(grants.currencies ?? {})) {
+        if (isValidCurrencyId(currencyId) && isValidAmount(amount)) currencies[currencyId] = amount;
+      }
+      for (const [grantedSku, quantity] of Object.entries(grants.items ?? {})) {
+        if (ORDER_ID_PATTERN.test(grantedSku) && isValidAmount(quantity)) items[grantedSku] = quantity;
+      }
+    } else if (item) {
+      if (item.grantedCurrencyAmount !== undefined && isValidAmount(item.grantedCurrencyAmount)) {
+        currencies[item.grantedCurrencyId ?? DEFAULT_CURRENCY_ID] = item.grantedCurrencyAmount;
+      }
+      for (const grantedSku of item.grantedItemSkus ?? []) {
+        items[grantedSku] = (items[grantedSku] ?? 0) + 1;
+      }
+      if (item.itemType === "durable" || item.itemType === "consumable") {
+        items[item.sku] = (items[item.sku] ?? 0) + 1;
+      }
     }
 
-    this.ctx.events.emit("game.monetization.purchase-completed", {
-      orderId,
-      transId: approved.transId,
-      sku: approved.sku,
-      receipt: approved,
-    });
+    for (const [currencyId, amount] of Object.entries(currencies)) {
+      this.creditCurrency(currencyId, amount, `purchase_${orderId}`);
+    }
+    for (const [grantedSku, quantity] of Object.entries(items)) {
+      const next = (this.entitlements.get(grantedSku) ?? 0) + quantity;
+      if (!Number.isSafeInteger(next)) continue;
+      this.entitlements.set(grantedSku, next);
+      this.ctx.events.emit(ItemGrantedEvent.type, { sku: grantedSku, quantity, orderId });
+    }
+  }
 
-    return true;
+  public getEntitlements(): Readonly<Record<string, number>> {
+    return Object.fromEntries(this.entitlements);
+  }
+
+  public validateReceipt(receipt: TransactionReceiptDTO): boolean {
+    return this.validator.validateReceipt(receipt);
+  }
+
+  public async verifyReceipt(receipt: TransactionReceiptDTO): Promise<boolean> {
+    if (!this.validator.isWellFormed(receipt)) return false;
+    const verify = this.provider?.verifyReceipt;
+    if (!verify) return false;
+    try {
+      const ok = (await verify.call(this.provider, receipt)) === true;
+      if (ok) this.validator.markVerified(receipt);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+
+  // ── Steam Inventory ──────────────────────────────────────────────────────
+
+  public async startInventoryPurchase(sku: string, quantity = 1): Promise<boolean> {
+    const item = this.catalog.getItem(sku);
+    if (!item || item.steamItemDefId === undefined) {
+      this.emitFailed("none", String(sku), "sku sem steamItemDefId");
+      return false;
+    }
+    if (!Number.isSafeInteger(quantity) || quantity <= 0 || quantity > 100) return false;
+    const started = await this.tauriDriver.startInventoryPurchase(item.steamItemDefId, quantity);
+    if (!started) this.emitFailed("none", item.sku, "steam_inventory_unavailable");
+    return started;
   }
 
   public getSteamInventory(): ReadonlyArray<SteamInventoryItemDTO> {
@@ -122,15 +365,19 @@ export class MonetizationService implements MonetizationApi {
 
   public async fetchSteamInventory(): Promise<ReadonlyArray<SteamInventoryItemDTO>> {
     const items = await this.tauriDriver.fetchSteamInventory();
-    this.cachedInventory = [...items];
+    this.cachedInventory = items.map((entry) => {
+      const mapped = this.catalog.getItemBySteamDef(entry.definitionId);
+      return mapped ? { ...entry, sku: mapped.sku } : { ...entry };
+    });
     this.ctx.events.emit("game.monetization.inventory-refreshed", {
-      itemCount: items.length,
+      itemCount: this.cachedInventory.length,
       timestamp: Date.now(),
     });
     return this.cachedInventory;
   }
 
   public async consumeInventoryItem(itemId: string, quantity = 1): Promise<boolean> {
+    if (!Number.isSafeInteger(quantity) || quantity <= 0) return false;
     const success = await this.tauriDriver.consumeSteamItem(itemId, quantity);
     if (success) {
       await this.fetchSteamInventory();
@@ -138,14 +385,12 @@ export class MonetizationService implements MonetizationApi {
     return success;
   }
 
-  public validateReceipt(receipt: TransactionReceiptDTO): boolean {
-    return this.validator.validateReceipt(receipt);
-  }
-
   public clear(): void {
-    this.catalog.clear();
     this.wallet.clear();
     this.bridge.clear();
+    this.validator.clear();
+    this.entitlements.clear();
+    this.finalizing.clear();
     this.cachedInventory = [];
   }
 

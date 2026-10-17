@@ -1,44 +1,65 @@
 import type { TransactionReceiptDTO } from "../../../contracts/monetization/types";
 
+const IDENTIFIER_PATTERN = /^[A-Za-z0-9_.:-]{1,128}$/u;
+
+function fingerprint(receipt: TransactionReceiptDTO): string {
+  return JSON.stringify([
+    receipt.orderId,
+    receipt.transId,
+    receipt.steamId,
+    receipt.sku,
+    receipt.amountCents,
+    receipt.status,
+    receipt.signature,
+  ]);
+}
+
+/**
+ * G119: o cliente NÃO valida recibos por conta própria (nada de sal
+ * embutido). Um recibo só é "válido" se foi devolvido como aprovado pelo
+ * `PurchaseProvider` (servidor) nesta sessão; aqui só registramos isso e
+ * checamos a forma.
+ */
 export class InventoryReceiptValidator {
-  public validateReceipt(receipt: TransactionReceiptDTO): boolean {
-    if (!receipt.orderId || !receipt.transId || !receipt.signature) {
-      return false;
-    }
+  private readonly verified = new Map<string, string>();
 
-    if (receipt.amountCents <= 0) {
-      return false;
-    }
-
-    if (receipt.status !== "approved") {
-      return false;
-    }
-
-    const expectedSignature = this.calculateSignature(
-      receipt.orderId,
-      receipt.transId,
-      receipt.steamId,
-      receipt.sku,
-      receipt.amountCents
+  public isWellFormed(receipt: unknown): receipt is TransactionReceiptDTO {
+    if (typeof receipt !== "object" || receipt === null) return false;
+    const value = receipt as Partial<TransactionReceiptDTO>;
+    return (
+      typeof value.orderId === "string" &&
+      IDENTIFIER_PATTERN.test(value.orderId) &&
+      typeof value.transId === "string" &&
+      value.transId.length <= 128 &&
+      typeof value.steamId === "string" &&
+      value.steamId.length <= 32 &&
+      typeof value.sku === "string" &&
+      IDENTIFIER_PATTERN.test(value.sku) &&
+      typeof value.amountCents === "number" &&
+      Number.isSafeInteger(value.amountCents) &&
+      value.amountCents >= 0 &&
+      (value.status === "pending" || value.status === "approved" || value.status === "failed" || value.status === "refunded") &&
+      typeof value.timestamp === "number" &&
+      Number.isFinite(value.timestamp) &&
+      typeof value.signature === "string" &&
+      value.signature.length <= 4096
     );
-
-    return receipt.signature === expectedSignature;
   }
 
-  public calculateSignature(
-    orderId: string,
-    transId: string,
-    steamId: string,
-    sku: string,
-    amountCents: number
-  ): string {
-    const raw = `${orderId}:${transId}:${steamId}:${sku}:${amountCents}:STEAM_SECRET_SALT`;
-    let hash = 5381;
-    for (let i = 0; i < raw.length; i++) {
-      const char = raw.charCodeAt(i);
-      hash = (hash << 5) + hash + char;
-      hash |= 0;
+  /** Registra um recibo aprovado pelo provedor/servidor. */
+  public markVerified(receipt: TransactionReceiptDTO): void {
+    if (this.isWellFormed(receipt) && receipt.status === "approved") {
+      this.verified.set(receipt.orderId, fingerprint(receipt));
     }
-    return `sig_${Math.abs(hash).toString(16)}`;
+  }
+
+  /** `true` só para recibo idêntico a um aprovado pelo provedor nesta sessão. */
+  public validateReceipt(receipt: TransactionReceiptDTO): boolean {
+    if (!this.isWellFormed(receipt) || receipt.status !== "approved") return false;
+    return this.verified.get(receipt.orderId) === fingerprint(receipt);
+  }
+
+  public clear(): void {
+    this.verified.clear();
   }
 }

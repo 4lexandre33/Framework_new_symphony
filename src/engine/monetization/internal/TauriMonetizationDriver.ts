@@ -176,6 +176,48 @@ export class TauriMonetizationDriver {
     }
   }
 
+  /** Abre o checkout da Steam (Steam Inventory StartPurchase). */
+  public async startInventoryPurchase(
+    itemDefId:
+      number,
+    quantity:
+      number,
+  ): Promise<boolean> {
+    if (
+      !Number.isSafeInteger(itemDefId) ||
+      itemDefId <= 0 ||
+      itemDefId > 2_147_483_647 ||
+      !Number.isSafeInteger(quantity) ||
+      quantity <= 0 ||
+      quantity > 100 ||
+      !isTauriRuntime()
+    ) {
+      return false;
+    }
+
+    try {
+      return (
+        (await invoke<boolean>(
+          "monetization_start_inventory_purchase",
+          {
+            itemDefs: [itemDefId],
+            quantities: [quantity],
+          },
+        )) === true
+      );
+    } catch (
+      error:
+        unknown
+    ) {
+      console.error(
+        "[TauriMonetizationDriver] startInventoryPurchase recusada:",
+        error,
+      );
+
+      return false;
+    }
+  }
+
   public async consumeSteamItem(
     itemId:
       string,
