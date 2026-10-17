@@ -2,6 +2,12 @@ import type {
   AssetOverrideDescriptor,
 } from "../../../contracts/modding/types";
 
+import { normalizeVirtualPath } from "./ModManifestValidator";
+
+/**
+ * Overrides por caminho virtual NORMALIZADO (G118): `textures/a.png`,
+ * `/textures/a.png`, `./textures//a.png` e `textures\a.png` são a mesma chave.
+ */
 export class AssetOverrideRegistry {
   private readonly overridesByVirtualPath =
     new Map<string, AssetOverrideDescriptor[]>();
@@ -9,31 +15,42 @@ export class AssetOverrideRegistry {
   public registerOverride(
     descriptor: AssetOverrideDescriptor,
   ): void {
-    this.validateDescriptor(descriptor);
+    const virtualPath = this.validateDescriptor(descriptor);
+    const normalized: AssetOverrideDescriptor = {
+      virtualPath,
+      realPath: descriptor.realPath.trim(),
+      modId: descriptor.modId.trim(),
+      priority: descriptor.priority,
+    };
 
     const existing =
-      this.overridesByVirtualPath.get(descriptor.virtualPath) ?? [];
+      this.overridesByVirtualPath.get(virtualPath) ?? [];
 
     const updated = existing
-      .filter((item): boolean => item.modId !== descriptor.modId);
+      .filter((item): boolean => item.modId !== normalized.modId);
 
-    updated.push(descriptor);
+    updated.push(normalized);
     updated.sort(this.compareOverrides);
 
     this.overridesByVirtualPath.set(
-      descriptor.virtualPath,
+      virtualPath,
       updated,
     );
+  }
+
+  /** Descritor vencedor (maior prioridade) ou `null`. */
+  public resolveDescriptor(
+    virtualPath: string,
+  ): AssetOverrideDescriptor | null {
+    const normalizedPath = normalizeVirtualPath(virtualPath);
+    if (normalizedPath === null) return null;
+    return this.overridesByVirtualPath.get(normalizedPath)?.[0] ?? null;
   }
 
   public resolveOverride(
     virtualPath: string,
   ): string | null {
-    const normalizedPath = virtualPath.trim();
-    if (normalizedPath.length === 0) return null;
-
-    const list = this.overridesByVirtualPath.get(normalizedPath);
-    return list?.[0]?.realPath ?? null;
+    return this.resolveDescriptor(virtualPath)?.realPath ?? null;
   }
 
   public removeOverridesForMod(
@@ -81,21 +98,28 @@ export class AssetOverrideRegistry {
 
   private validateDescriptor(
     descriptor: AssetOverrideDescriptor,
-  ): void {
-    if (descriptor.virtualPath.trim().length === 0) {
+  ): string {
+    if (typeof descriptor.virtualPath !== "string" || descriptor.virtualPath.trim().length === 0) {
       throw new Error("Asset override inválido: virtualPath é obrigatório.");
     }
 
-    if (descriptor.realPath.trim().length === 0) {
+    const virtualPath = normalizeVirtualPath(descriptor.virtualPath);
+    if (virtualPath === null) {
+      throw new Error("Asset override inválido: virtualPath não pode conter '..', NUL ou drive.");
+    }
+
+    if (typeof descriptor.realPath !== "string" || descriptor.realPath.trim().length === 0) {
       throw new Error("Asset override inválido: realPath é obrigatório.");
     }
 
-    if (descriptor.modId.trim().length === 0) {
+    if (typeof descriptor.modId !== "string" || descriptor.modId.trim().length === 0) {
       throw new Error("Asset override inválido: modId é obrigatório.");
     }
 
-    if (!Number.isFinite(descriptor.priority)) {
+    if (typeof descriptor.priority !== "number" || !Number.isFinite(descriptor.priority)) {
       throw new Error("Asset override inválido: priority deve ser finito.");
     }
+
+    return virtualPath;
   }
 }

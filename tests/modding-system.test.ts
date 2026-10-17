@@ -126,7 +126,7 @@ describe("Camada de Modding & Oficina da Steam (game.modding)", (): void => {
     it("deve resolver a ordem de carregamento baseada em dependências", (): void => {
       loader.registerMod({
         ...createManifest("mod_b"),
-        dependencies: [{ modId: "mod_a", minVersion: "1.0" }],
+        dependencies: [{ modId: "mod_a", minVersion: "1.0.0" }],
       });
       loader.registerMod(createManifest("mod_a"));
 

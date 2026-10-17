@@ -1,14 +1,9 @@
-import type {
-  AssetOverrideDescriptor,
-  ModDependencyDescriptor,
-  ModManifestDescriptor,
+import {
+  MODDING_API_VERSION,
+  type ModManifestDescriptor,
 } from "../../../contracts/modding/types";
-import { KERNEL_API_VERSION } from "@core";
 import { satisfies } from "@core";
-
-interface UnknownRecord {
-  readonly [key: string]: unknown;
-}
+import { validateModManifest } from "./ModManifestValidator";
 
 export class DynamicPluginLoader {
   private readonly manifests =
@@ -34,9 +29,13 @@ export class DynamicPluginLoader {
     }
   }
 
+  /**
+   * `minEngineVersion` é comparado com `MODDING_API_VERSION` (versão da API
+   * de modding/`game.modding`), não com a API do kernel (G118). Vazio = qualquer.
+   */
   public validateEngineCompatibility(
     manifest: ModManifestDescriptor,
-    currentEngineVersion: string = KERNEL_API_VERSION,
+    currentEngineVersion: string = MODDING_API_VERSION,
   ): boolean {
     const minimumVersion = manifest.minEngineVersion.trim();
     if (minimumVersion.length === 0) return true;
@@ -190,149 +189,12 @@ export class DynamicPluginLoader {
   private normalizeManifest(
     value: unknown,
   ): ModManifestDescriptor {
-    if (!this.isRecord(value)) {
-      throw new Error("Manifesto inválido: o conteúdo deve ser um objeto JSON.");
+    // G118: mesma regra do Rust (ModManifestValidator ↔ modding.rs).
+    const result = validateModManifest(value);
+    if (result.manifest === null) {
+      throw new Error(`Manifesto inválido: ${result.error ?? "desconhecido"}`);
     }
-
-    const modId = this.requireNonEmptyString(value, "modId");
-    const name = this.requireNonEmptyString(value, "name");
-    const version = this.requireNonEmptyString(value, "version");
-    const author = this.requireString(value, "author");
-    const description = this.requireString(value, "description");
-    const minEngineVersion = this.requireString(value, "minEngineVersion");
-
-    const entryScript = this.optionalNonEmptyString(value, "entryScript");
-    const dependencies = this.normalizeDependencies(value.dependencies, modId);
-    const overrides = this.normalizeOverrides(value.overrides, modId);
-
-    return {
-      modId,
-      name,
-      version,
-      author,
-      description,
-      minEngineVersion,
-      ...(entryScript ? { entryScript } : {}),
-      ...(overrides ? { overrides } : {}),
-      ...(dependencies ? { dependencies } : {}),
-    };
-  }
-
-  private normalizeDependencies(
-    value: unknown,
-    ownerModId: string,
-  ): ReadonlyArray<ModDependencyDescriptor> | undefined {
-    if (value === undefined) return undefined;
-    if (!Array.isArray(value)) {
-      throw new Error("Manifesto inválido: dependencies deve ser um array.");
-    }
-
-    const dependencies: ModDependencyDescriptor[] = [];
-    const seen = new Set<string>();
-
-    for (const rawDependency of value) {
-      if (!this.isRecord(rawDependency)) {
-        throw new Error("Manifesto inválido: dependência deve ser um objeto.");
-      }
-
-      const modId = this.requireNonEmptyString(rawDependency, "modId");
-      const minVersion = this.requireNonEmptyString(rawDependency, "minVersion");
-
-      if (modId === ownerModId) {
-        throw new Error(`Manifesto inválido: ${ownerModId} não pode depender de si mesmo.`);
-      }
-
-      if (seen.has(modId)) {
-        throw new Error(`Manifesto inválido: dependência duplicada ${modId}.`);
-      }
-
-      seen.add(modId);
-      dependencies.push({ modId, minVersion });
-    }
-
-    return dependencies;
-  }
-
-  private normalizeOverrides(
-    value: unknown,
-    ownerModId: string,
-  ): ReadonlyArray<AssetOverrideDescriptor> | undefined {
-    if (value === undefined) return undefined;
-    if (!Array.isArray(value)) {
-      throw new Error("Manifesto inválido: overrides deve ser um array.");
-    }
-
-    const overrides: AssetOverrideDescriptor[] = [];
-
-    for (const rawOverride of value) {
-      if (!this.isRecord(rawOverride)) {
-        throw new Error("Manifesto inválido: asset override deve ser um objeto.");
-      }
-
-      const virtualPath = this.requireNonEmptyString(rawOverride, "virtualPath");
-      const realPath = this.requireNonEmptyString(rawOverride, "realPath");
-      const modId = this.requireNonEmptyString(rawOverride, "modId");
-      const priority = rawOverride.priority;
-
-      if (modId !== ownerModId) {
-        throw new Error(
-          `Manifesto inválido: override ${virtualPath} declara modId ${modId}, esperado ${ownerModId}.`,
-        );
-      }
-
-      if (typeof priority !== "number" || !Number.isFinite(priority)) {
-        throw new Error(
-          `Manifesto inválido: priority do override ${virtualPath} deve ser finito.`,
-        );
-      }
-
-      overrides.push({
-        virtualPath,
-        realPath,
-        modId,
-        priority,
-      });
-    }
-
-    return overrides;
-  }
-
-  private requireNonEmptyString(
-    record: UnknownRecord,
-    key: string,
-  ): string {
-    const value = this.requireString(record, key).trim();
-    if (value.length === 0) {
-      throw new Error(`Manifesto inválido: ${key} é obrigatório.`);
-    }
-    return value;
-  }
-
-  private requireString(
-    record: UnknownRecord,
-    key: string,
-  ): string {
-    const value = record[key];
-    if (typeof value !== "string") {
-      throw new Error(`Manifesto inválido: ${key} deve ser string.`);
-    }
-    return value;
-  }
-
-  private optionalNonEmptyString(
-    record: UnknownRecord,
-    key: string,
-  ): string | undefined {
-    const value = record[key];
-    if (value === undefined) return undefined;
-    if (typeof value !== "string" || value.trim().length === 0) {
-      throw new Error(`Manifesto inválido: ${key} deve ser string não vazia.`);
-    }
-    return value.trim();
-  }
-
-  private isRecord(value: unknown): value is UnknownRecord {
-    return typeof value === "object" && value !== null && !Array.isArray(value);
+    return result.manifest;
   }
 
   private getErrorMessage(error: unknown): string {

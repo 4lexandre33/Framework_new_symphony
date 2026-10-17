@@ -119,6 +119,81 @@ export interface PublishModToWorkshopPayload {
   readonly description: string;
 }
 
+// ── API ADICIONAL (G14, G116–G118) ──────────────────────────────────────────
+
+/**
+ * Versão da API de modding. `minEngineVersion` do manifesto é comparado com
+ * ela (semver `>=`); vazio = qualquer versão.
+ */
+export const MODDING_API_VERSION = "1.0.0";
+
+/** `local`: pasta `<app_data>/mods`; `workshop`: item Steam instalado; `game`: registrado pelo jogo (`installMod`). */
+export type ModSource = "local" | "workshop" | "game";
+
+export interface InstalledModInfo {
+  /** `null` quando o manifesto é inválido. */
+  readonly modId: string | null;
+  readonly manifest: ModManifestDescriptor | null;
+  readonly source: ModSource;
+  /** Pasta canônica em disco (`null` para mods do jogo). */
+  readonly rootPath: string | null;
+  readonly workshopItemId: string | null;
+  readonly enabled: boolean;
+  /** Motivo da rejeição (manifesto inválido) — o mod não some sem aviso. */
+  readonly error: string | null;
+}
+
+/**
+ * Capacidades do script de mod (sandbox em Worker):
+ * - `log`: `mod.log(...)` vai para o log do plugin;
+ * - `messages`: `mod.send(type, data)` vira `game.modding.script-message`;
+ * - `assets`: `mod.registerAssetOverride(virtualPath, realPath, priority)`.
+ */
+export type ModScriptCapability = "log" | "messages" | "assets";
+
+export interface InstallModOptions {
+  /** Código do `entryScript` (mods empacotados/baixados pelo jogo). */
+  readonly scriptSource?: string;
+  /** Base para resolver `realPath` relativos dos overrides (ex.: `/mods/hd/`). */
+  readonly baseUrl?: string;
+  /** Substitui um mod já instalado com o mesmo `modId` (padrão false). */
+  readonly replace?: boolean;
+}
+
+export interface WorkshopItemState {
+  readonly itemId: string;
+  readonly subscribed: boolean;
+  readonly installed: boolean;
+  readonly downloading: boolean;
+  readonly downloadPending: boolean;
+  readonly needsUpdate: boolean;
+  readonly bytesDownloaded: number;
+  readonly bytesTotal: number;
+}
+
+export interface ModScriptMessagePayload {
+  readonly modId: string;
+  readonly type: string;
+  readonly data: unknown;
+}
+
+/** Mensagem enviada por um script de mod (`mod.send`) com capacidade `messages`. */
+export const ModScriptMessageEvent = defineEvent<
+  "game.modding.script-message",
+  ModScriptMessagePayload
+>("game.modding.script-message");
+
+export interface ModErrorPayload {
+  readonly modId: string;
+  readonly error: string;
+}
+
+/** Falha de script/instalação/ativação de um mod. */
+export const ModErrorEvent = defineEvent<
+  "game.modding.mod-error",
+  ModErrorPayload
+>("game.modding.mod-error");
+
 export const PublishModToWorkshopCommand = defineCommand<
   "game.modding.publish-workshop",
   PublishModToWorkshopPayload
