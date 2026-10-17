@@ -65,10 +65,13 @@ export class TauriSecurityDriver {
 
     let referenceDeltaMs: number;
     let source: ClockValidationResult["source"];
+    let isBaseline: boolean;
     const native = await this.nativeDelta(callerId);
     if (native !== null) {
       referenceDeltaMs = native;
       source = "native";
+      // O nativo devolve exatamente 0 só na 1ª chamada do chamador.
+      isBaseline = native === 0;
     } else {
       const now = this.wallNow();
       const previous = this.wallBaselines.get(callerId);
@@ -79,9 +82,10 @@ export class TauriSecurityDriver {
       }
       referenceDeltaMs = previous === undefined ? 0 : Math.max(0, now - previous);
       source = "wall-clock";
+      isBaseline = previous === undefined;
     }
 
-    if (referenceDeltaMs === 0) {
+    if (isBaseline) {
       return { valid: true, referenceDeltaMs, browserDeltaMs, source: "baseline" };
     }
 
