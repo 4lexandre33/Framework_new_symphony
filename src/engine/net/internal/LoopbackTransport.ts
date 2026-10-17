@@ -114,14 +114,14 @@ export class LoopbackTransport extends QueuedTransport {
     if (this.role === "host") {
       if (this.room !== null && rooms.get(this.room) === this) rooms.delete(this.room);
       for (const client of Array.from(this.clients.values())) {
-        client.remoteClosed(this.endpointId);
+        client.enqueueClose(this.endpointId);
       }
       this.clients.clear();
     } else if (this.role === "client" && this.room !== null) {
       const host = rooms.get(this.room);
       if (host && this.hostId === host.endpointId) {
         host.clients.delete(this.endpointId);
-        host.remoteClosed(this.endpointId);
+        host.enqueueClose(this.endpointId);
       }
     }
 
@@ -132,8 +132,8 @@ export class LoopbackTransport extends QueuedTransport {
     this.hostId = null;
   }
 
-  /** Lado remoto fechou o link (desconexão limpa, não silenciosa). */
-  private remoteClosed(peerId: string): void {
+  /** Lado remoto fechou o link (desconexão limpa, entregue em ordem). */
+  protected override onRemoteClosed(peerId: string): void {
     if (!this.linkPeers.delete(peerId)) return;
     this.clients.delete(peerId);
     if (this.role === "client" && this.hostId === peerId) {
@@ -149,7 +149,7 @@ export class LoopbackTransport extends QueuedTransport {
     if (!client) return;
     this.clients.delete(peerId);
     this.linkPeers.delete(peerId);
-    client.remoteClosed(this.endpointId);
+    client.enqueueClose(this.endpointId);
   }
 
   private resolveTarget(targetId: string): LoopbackTransport | null {

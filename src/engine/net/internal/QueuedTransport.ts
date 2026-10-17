@@ -23,7 +23,11 @@ interface InboundPacket {
   readonly from: string;
   readonly channel: number;
   readonly data: Uint8Array;
+  /** Marcador de fechamento do link (entregue em ordem, após os pacotes). */
+  readonly close?: boolean;
 }
+
+const EMPTY = new Uint8Array(0);
 
 /**
  * Base de transportes que recebem de forma assíncrona e entregam os pacotes
@@ -63,12 +67,27 @@ export abstract class QueuedTransport extends NetworkTransport {
     this.inbound.push({ from, channel, data });
   }
 
+  /** Enfileira o fechamento do link vindo de `from` (processado em ordem). */
+  protected enqueueClose(from: string): void {
+    if (this.disposed) return;
+    this.inbound.push({ from, channel: 0, data: EMPTY, close: true });
+  }
+
+  /** Chamado no `pollPackets()` quando um marcador de fechamento é alcançado. */
+  protected onRemoteClosed(_from: string): void {
+    // padrão: nada
+  }
+
   public async pollPackets(): Promise<void> {
     let delivered = 0;
     while (delivered < MAX_PACKETS_PER_POLL && this.inbound.length > 0 && !this.disposed) {
       const packet = this.inbound.shift();
       if (!packet) break;
       delivered += 1;
+      if (packet.close === true) {
+        this.onRemoteClosed(packet.from);
+        continue;
+      }
       this.receivedMeter.add(packet.data.byteLength);
       this.notifyPacket(packet.from, packet.channel, packet.data);
     }
