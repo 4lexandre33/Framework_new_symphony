@@ -27,6 +27,22 @@ export interface EntitySnapshot {
   readonly timestamp: number;
 }
 
+/**
+ * G31: `getInterpolatedState()` devolve um objeto REUTILIZADO por entidade
+ * (ou o snapshot interno do histórico). Copie antes de guardar.
+ */
+export function copyEntitySnapshot(src: EntitySnapshot): EntitySnapshot {
+  return {
+    entityId: src.entityId,
+    type: src.type,
+    position: { ...src.position },
+    rotation: { ...src.rotation },
+    velocity: { ...src.velocity },
+    sequence: src.sequence,
+    timestamp: src.timestamp,
+  };
+}
+
 export interface WorldStateSnapshot {
   readonly sequence: number;
   readonly timestamp: number;

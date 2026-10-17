@@ -68,6 +68,10 @@ export interface NetworkApi {
       Partial<EntitySnapshot>,
   ): void;
 
+  /**
+   * Estado interpolado. Objeto REUTILIZADO (por entidade) — leia na hora e
+   * use `copyEntitySnapshot` (contracts/net/types) para guardar (G31).
+   */
   getInterpolatedState(
     entityId: string,
     renderAlpha: number,

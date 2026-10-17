@@ -31,6 +31,21 @@ export interface ViewportDimensions {
   pixelRatio: number;
 }
 
+/**
+ * G31: `getViewportDimensions()` devolve o objeto INTERNO reutilizado.
+ * Copie com este helper (com `out` não aloca).
+ */
+export function copyViewportDimensions(
+  src: Readonly<ViewportDimensions>,
+  out: ViewportDimensions = { width: 0, height: 0, aspectRatio: 1, pixelRatio: 1 },
+): ViewportDimensions {
+  out.width = src.width;
+  out.height = src.height;
+  out.aspectRatio = src.aspectRatio;
+  out.pixelRatio = src.pixelRatio;
+  return out;
+}
+
 export interface AmbientLightConfig {
   color: number | string;
   intensity: number;

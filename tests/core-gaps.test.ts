@@ -204,3 +204,52 @@ describe("G21 permissions.events: [] é deny-all explícito com erro acionável"
     await k.stop();
   });
 });
+
+describe("G31 payload reutilizado: helpers de cópia + detecção de mutação em DEV", () => {
+  it("copyTickPayload/copyRenderPayload/copyViewportDimensions copiam sem alocar com out", async () => {
+    const { copyTickPayload, copyRenderPayload } = await import("../src/contracts/game-loop/types");
+    const { copyViewportDimensions } = await import("../src/contracts/render/types");
+    const out = { deltaSeconds: 0, totalTimeSeconds: 0, tickCount: 0 };
+    expect(copyTickPayload({ deltaSeconds: 1 / 60, totalTimeSeconds: 2, tickCount: 3 }, out)).toBe(out);
+    expect(out.tickCount).toBe(3);
+    expect(copyRenderPayload({ alphaInterpolation: 0.5, deltaSeconds: 0.01, realDeltaSeconds: 0.01, isPaused: false }).alphaInterpolation).toBe(0.5);
+    expect(copyViewportDimensions({ width: 10, height: 5, aspectRatio: 2, pixelRatio: 1 }).width).toBe(10);
+  });
+
+  it("um handler que muta o payload do tick é detectado (log único) e revertido", async () => {
+    const { DeterministicGameLoop } = await import("../src/engine/game-loop/internal/DeterministicGameLoop");
+    const errors: string[] = [];
+    const seen: number[] = [];
+    let cb: ((t: number) => Promise<void>) | null = null;
+    let now = 0;
+    const timing = {
+      now: () => now,
+      requestFrame: (c: (t: number) => Promise<void>) => { cb = c; return 1; },
+      cancelFrame: () => { cb = null; },
+    };
+    const ctx = {
+      log: { error: (m: string) => errors.push(m) },
+      events: {
+        async emitAsync(type: string, payload: { tickCount?: number }) {
+          if (type === "game.loop.tick") {
+            seen.push(payload.tickCount!);
+            (payload as { tickCount: number }).tickCount = 999; // abuso
+          }
+        },
+      },
+    } as unknown as PluginContext;
+    const loop = new DeterministicGameLoop(ctx, timing, true);
+    loop.start();
+    for (let i = 0; i < 4; i++) {
+      const c = cb as ((t: number) => Promise<void>) | null;
+      if (!c) break;
+      cb = null;
+      now += 1000 / 60 + 0.1;
+      await c(now);
+    }
+    loop.stop();
+    expect(seen.length).toBeGreaterThanOrEqual(2);
+    expect(seen.every((n, i) => i === 0 || n === seen[i - 1]! + 1)).toBe(true);
+    expect(errors.filter((e) => e.includes("MUTOU"))).toHaveLength(1);
+  });
+});

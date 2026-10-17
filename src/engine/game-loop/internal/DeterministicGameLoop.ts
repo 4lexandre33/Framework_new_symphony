@@ -57,6 +57,23 @@ interface MutableGameRenderPayload {
   isPaused: boolean;
 }
 
+const IMPORT_META_ENV = (
+  import.meta as unknown as {
+    env?: Record<string, string | boolean>;
+  }
+).env;
+
+/**
+ * G31: em DEV (ou `VITE_PAYLOAD_GUARD=1`) o loop confere, depois de cada
+ * `emitAsync`, se algum handler MUTOU o payload reutilizado de tick/render
+ * (contrato readonly). Mutação = erro logado uma vez + valores restaurados.
+ * Custo: comparações numéricas, zero alocação. Em produção fica desligado.
+ */
+const PAYLOAD_GUARD_DEFAULT =
+  IMPORT_META_ENV?.DEV === true ||
+  IMPORT_META_ENV?.VITE_PAYLOAD_GUARD === "1" ||
+  IMPORT_META_ENV?.VITE_PAYLOAD_GUARD === "true";
+
 function readDocumentHidden(): boolean {
   return typeof document !==
       "undefined" &&
@@ -214,13 +231,30 @@ implements GameLoopApi {
       );
     };
 
+  private payloadMutationReported = false;
+
   public constructor(
     private readonly ctx:
       PluginContext,
     private readonly timing:
       GameLoopTimingDriver =
       BROWSER_TIMING_DRIVER,
+    private readonly payloadGuard: boolean =
+      PAYLOAD_GUARD_DEFAULT,
   ) {}
+
+  private reportPayloadMutation(
+    eventType: string,
+  ): void {
+    if (this.payloadMutationReported) {
+      return;
+    }
+    this.payloadMutationReported = true;
+    this.ctx.log.error(
+      `um handler de "${eventType}" MUTOU o payload reutilizado (readonly). Os valores foram restaurados. Copie com copyTickPayload/copyRenderPayload em vez de alterar ou guardar a referência (G31).`,
+      { eventType },
+    );
+  }
 
   public start(): void {
     if (
@@ -612,6 +646,28 @@ implements GameLoopApi {
         this.tickPayload,
       );
 
+      if (
+        this.payloadGuard &&
+        (
+          this.tickPayload.deltaSeconds !==
+            stepDeltaSeconds ||
+          this.tickPayload.totalTimeSeconds !==
+            this.totalRunningTimeSeconds ||
+          this.tickPayload.tickCount !==
+            this.tickCount
+        )
+      ) {
+        this.tickPayload.deltaSeconds =
+          stepDeltaSeconds;
+        this.tickPayload.totalTimeSeconds =
+          this.totalRunningTimeSeconds;
+        this.tickPayload.tickCount =
+          this.tickCount;
+        this.reportPayloadMutation(
+          "game.loop.tick",
+        );
+      }
+
       this.accumulatorSeconds -=
         stepDeltaSeconds;
 
@@ -683,10 +739,48 @@ implements GameLoopApi {
     this.renderPayload.isPaused =
       this.paused;
 
+    if (!this.payloadGuard) {
+      await this.ctx.events.emitAsync(
+        "game.loop.render",
+        this.renderPayload,
+      );
+      return;
+    }
+
+    const alpha =
+      this.renderPayload.alphaInterpolation;
+    const delta =
+      this.renderPayload.deltaSeconds;
+    const paused =
+      this.renderPayload.isPaused;
+
     await this.ctx.events.emitAsync(
       "game.loop.render",
       this.renderPayload,
     );
+
+    if (
+      this.renderPayload.alphaInterpolation !==
+        alpha ||
+      this.renderPayload.deltaSeconds !==
+        delta ||
+      this.renderPayload.realDeltaSeconds !==
+        frameDeltaSeconds ||
+      this.renderPayload.isPaused !==
+        paused
+    ) {
+      this.renderPayload.alphaInterpolation =
+        alpha;
+      this.renderPayload.deltaSeconds =
+        delta;
+      this.renderPayload.realDeltaSeconds =
+        frameDeltaSeconds;
+      this.renderPayload.isPaused =
+        paused;
+      this.reportPayloadMutation(
+        "game.loop.render",
+      );
+    }
   }
 
   private computeFrameDeltaSeconds(

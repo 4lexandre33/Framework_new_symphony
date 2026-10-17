@@ -51,8 +51,9 @@ export function createSteamPlugin(): Plugin {
       ctx.commands.handle<"game.steam.create-lobby", { lobbyType: SteamLobbyType; maxMembers: number }>(
         CreateLobbyCommand.type,
         async (env) => {
-          const res = await steamService.createLobby(env.payload.lobbyType, env.payload.maxMembers);
-          return !!res;
+          // G29: send/request entregam o retorno — devolve os detalhes do
+          // lobby (ou null), não um booleano.
+          return await steamService.createLobby(env.payload.lobbyType, env.payload.maxMembers);
         }
       );
 

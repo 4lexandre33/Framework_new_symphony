@@ -73,7 +73,8 @@ export interface Render3DApi {
   getScene(): THREE.Scene;
 
   /**
-   * Retorna as dimensões atuais do Viewport (objeto INTERNO reutilizado; copie os números).
+   * Retorna as dimensões atuais do Viewport (objeto INTERNO reutilizado; copie os números
+   * com `copyViewportDimensions` de contracts/render/types — G31).
    */
   getViewportDimensions(): ViewportDimensions;
 
