@@ -35,9 +35,11 @@ describe("Layer 1 Stage 88 — desktop production config", () => {
       width: 1280,
       height: 720,
       resizable: true,
-      transparent: true,
-      decorations: false,
-      alwaysOnTop: true
+      // G32: janela desktop comum por padrão; overlay é opt-in do projeto
+      // (src/projects/<id>/desktop.json + scripts/tauri-project-config.mjs).
+      transparent: false,
+      decorations: true,
+      alwaysOnTop: false
     });
   });
 
