@@ -32,6 +32,10 @@ interface MutableEntitySnapshot {
   timestamp: number;
 }
 
+/** Origem "local": entidade registrada/atualizada pelo próprio jogo. */
+export const LOCAL_ENTITY_OWNER = "@local";
+export const MAX_REPLICATED_ENTITIES = 8192;
+
 function cloneEntitySnapshot(
   source: EntitySnapshot,
 ): EntitySnapshot {
@@ -89,6 +93,66 @@ function createInterpolationScratch():
   };
 }
 
+/**
+ * Slerp com correção de sinal (G107): q e -q representam a mesma rotação;
+ * sem inverter quando dot < 0 a interpolação dá a volta longa. Escreve em
+ * `out` normalizado; sem alocação.
+ */
+export function slerpQuaternion(
+  ax: number,
+  ay: number,
+  az: number,
+  aw: number,
+  bx: number,
+  by: number,
+  bz: number,
+  bw: number,
+  t: number,
+  out: MutableQuaternion,
+): void {
+  let dot = ax * bx + ay * by + az * bz + aw * bw;
+
+  if (dot < 0) {
+    bx = -bx;
+    by = -by;
+    bz = -bz;
+    bw = -bw;
+    dot = -dot;
+  }
+
+  let scaleA: number;
+  let scaleB: number;
+
+  if (dot > 0.9995) {
+    // Ângulo muito pequeno: nlerp é estável e suficiente.
+    scaleA = 1 - t;
+    scaleB = t;
+  } else {
+    const theta = Math.acos(Math.min(1, dot));
+    const sinTheta = Math.sin(theta);
+    scaleA = Math.sin((1 - t) * theta) / sinTheta;
+    scaleB = Math.sin(t * theta) / sinTheta;
+  }
+
+  const x = ax * scaleA + bx * scaleB;
+  const y = ay * scaleA + by * scaleB;
+  const z = az * scaleA + bz * scaleB;
+  const w = aw * scaleA + bw * scaleB;
+  const length = Math.sqrt(x * x + y * y + z * z + w * w);
+
+  if (length > 0.000001) {
+    out.x = x / length;
+    out.y = y / length;
+    out.z = z / length;
+    out.w = w / length;
+  } else {
+    out.x = 0;
+    out.y = 0;
+    out.z = 0;
+    out.w = 1;
+  }
+}
+
 export class StateReplicator
   implements StateReplicationApi {
   private readonly entityHistory =
@@ -102,6 +166,14 @@ export class StateReplicator
       string,
       MutableEntitySnapshot
     >();
+
+  /** entityId → origem (`@local` ou peerId remoto). */
+  private readonly entityOwner =
+    new Map<string, string>();
+
+  /** Último `sequence` de snapshot de mundo aplicado por origem. */
+  private readonly lastWorldSequence =
+    new Map<string, number>();
 
   private readonly maxHistorySize =
     20;
@@ -119,7 +191,9 @@ export class StateReplicator
         initialSnapshot.entityId ||
       !isValidEntitySnapshot(
         initialSnapshot,
-      )
+      ) ||
+      this.entityHistory.size >=
+        MAX_REPLICATED_ENTITIES
     ) {
       return;
     }
@@ -131,6 +205,11 @@ export class StateReplicator
           initialSnapshot,
         ),
       ],
+    );
+
+    this.entityOwner.set(
+      entityId,
+      LOCAL_ENTITY_OWNER,
     );
 
     this.interpolationScratch.set(
@@ -149,17 +228,55 @@ export class StateReplicator
     this.interpolationScratch.delete(
       entityId,
     );
+
+    this.entityOwner.delete(
+      entityId,
+    );
+  }
+
+  /** Origem da entidade (`@local` ou peerId), ou `null` se não existe. */
+  public getEntityOwner(
+    entityId: string,
+  ): string | null {
+    return this.entityOwner.get(entityId) ?? null;
   }
 
   public pushEntitySnapshot(
     snapshot: EntitySnapshot,
   ): void {
+    this.pushOwned(
+      snapshot,
+      LOCAL_ENTITY_OWNER,
+    );
+  }
+
+  /**
+   * Insere snapshot de uma origem. Origem remota nunca sobrescreve entidade
+   * local (autoridade fica com quem a registrou).
+   */
+  public pushOwned(
+    snapshot: EntitySnapshot,
+    owner: string,
+  ): boolean {
     if (
       !isValidEntitySnapshot(
         snapshot,
       )
     ) {
-      return;
+      return false;
+    }
+
+    const currentOwner =
+      this.entityOwner.get(
+        snapshot.entityId,
+      );
+
+    if (
+      currentOwner !== undefined &&
+      currentOwner !== owner &&
+      currentOwner === LOCAL_ENTITY_OWNER
+    ) {
+      return false;
     }
 
     let history =
@@ -168,6 +285,13 @@ export class StateReplicator
       );
 
     if (!history) {
+      if (
+        this.entityHistory.size >=
+        MAX_REPLICATED_ENTITIES
+      ) {
+        return false;
+      }
+
       history = [];
 
       this.entityHistory.set(
@@ -181,6 +305,11 @@ export class StateReplicator
       );
     }
 
+    this.entityOwner.set(
+      snapshot.entityId,
+      owner,
+    );
+
     const latest =
       history[
         history.length - 1
@@ -193,7 +322,7 @@ export class StateReplicator
         latest.sequence,
       )
     ) {
-      return;
+      return false;
     }
 
     history.push(
@@ -208,12 +337,47 @@ export class StateReplicator
     ) {
       history.shift();
     }
+
+    return true;
   }
 
   public processWorldSnapshot(
     worldSnapshot:
       WorldStateSnapshot,
+    sourcePeerId?: string,
   ): void {
+    const source =
+      (sourcePeerId ?? worldSnapshot.hostSteamId ?? "").trim() ||
+      "@remote";
+
+    if (source === LOCAL_ENTITY_OWNER) {
+      return;
+    }
+
+    const previousSequence =
+      this.lastWorldSequence.get(
+        source,
+      );
+
+    if (
+      previousSequence !== undefined &&
+      !isNewerSequence(
+        worldSnapshot.sequence,
+        previousSequence,
+      )
+    ) {
+      // Snapshot atrasado/duplicado: aplicá-lo removeria entidades novas.
+      return;
+    }
+
+    this.lastWorldSequence.set(
+      source,
+      worldSnapshot.sequence,
+    );
+
+    const present =
+      new Set<string>();
+
     const entities =
       worldSnapshot.entities;
 
@@ -226,12 +390,65 @@ export class StateReplicator
       const snapshot =
         entities[index];
 
-      if (snapshot) {
-        this.pushEntitySnapshot(
-          snapshot,
+      if (!snapshot) {
+        continue;
+      }
+
+      present.add(
+        snapshot.entityId,
+      );
+
+      this.pushOwned(
+        snapshot,
+        source,
+      );
+    }
+
+    // G107: remove entidades desta origem que sumiram do snapshot.
+    for (
+      const [entityId, owner] of
+      Array.from(this.entityOwner)
+    ) {
+      if (
+        owner === source &&
+        !present.has(entityId)
+      ) {
+        this.unregisterEntity(
+          entityId,
         );
       }
     }
+  }
+
+  /** Remove todas as entidades de uma origem remota (par desconectado). */
+  public removeEntitiesFrom(
+    source: string,
+  ): number {
+    let removed = 0;
+    for (
+      const [entityId, owner] of
+      Array.from(this.entityOwner)
+    ) {
+      if (owner === source) {
+        this.unregisterEntity(entityId);
+        removed += 1;
+      }
+    }
+    this.lastWorldSequence.delete(source);
+    return removed;
+  }
+
+  /** Remove todas as entidades remotas; preserva as locais. */
+  public clearRemote(): void {
+    for (
+      const [entityId, owner] of
+      Array.from(this.entityOwner)
+    ) {
+      if (owner !== LOCAL_ENTITY_OWNER) {
+        this.unregisterEntity(entityId);
+      }
+    }
+    this.lastWorldSequence.clear();
   }
 
   public getInterpolatedState(
@@ -332,75 +549,18 @@ export class StateReplicator
       ) *
         interpolationAlpha;
 
-    const rotationX =
-      previous.rotation.x +
-      (
-        next.rotation.x -
-        previous.rotation.x
-      ) *
-        interpolationAlpha;
-
-    const rotationY =
-      previous.rotation.y +
-      (
-        next.rotation.y -
-        previous.rotation.y
-      ) *
-        interpolationAlpha;
-
-    const rotationZ =
-      previous.rotation.z +
-      (
-        next.rotation.z -
-        previous.rotation.z
-      ) *
-        interpolationAlpha;
-
-    const rotationW =
-      previous.rotation.w +
-      (
-        next.rotation.w -
-        previous.rotation.w
-      ) *
-        interpolationAlpha;
-
-    const quaternionLength =
-      Math.sqrt(
-        rotationX * rotationX +
-        rotationY * rotationY +
-        rotationZ * rotationZ +
-        rotationW * rotationW,
-      );
-
-    if (
-      quaternionLength >
-      0.000001
-    ) {
-      const inverseLength =
-        1 /
-        quaternionLength;
-
-      scratch.rotation.x =
-        rotationX *
-        inverseLength;
-
-      scratch.rotation.y =
-        rotationY *
-        inverseLength;
-
-      scratch.rotation.z =
-        rotationZ *
-        inverseLength;
-
-      scratch.rotation.w =
-        rotationW *
-        inverseLength;
-    } else {
-      scratch.rotation.x = 0;
-      scratch.rotation.y = 0;
-      scratch.rotation.z = 0;
-      scratch.rotation.w = 1;
-    }
+    slerpQuaternion(
+      previous.rotation.x,
+      previous.rotation.y,
+      previous.rotation.z,
+      previous.rotation.w,
+      next.rotation.x,
+      next.rotation.y,
+      next.rotation.z,
+      next.rotation.w,
+      interpolationAlpha,
+      scratch.rotation,
+    );
 
     scratch.velocity.x =
       previous.velocity.x +
@@ -495,5 +655,7 @@ export class StateReplicator
   public clear(): void {
     this.entityHistory.clear();
     this.interpolationScratch.clear();
+    this.entityOwner.clear();
+    this.lastWorldSequence.clear();
   }
 }

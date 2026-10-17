@@ -66,43 +66,30 @@ describe("Camada de Monetização & Microtransações (game.monetization)", () =
   });
 
   // ── 3. TESTES DO VALIDADOR DE RECIBOS ───────────────────────────────────────
+  // G119: a validação local por sal embutido foi removida. Um recibo só é
+  // válido se foi aprovado pelo PurchaseProvider (servidor) nesta sessão.
   describe("InventoryReceiptValidator", () => {
-    it("deve validar recibos com assinaturas criptográficas legítimas", () => {
-      const orderId = "ord_100";
-      const transId = "txn_555";
-      const steamId = "76561198000000000";
-      const sku = "gold_pack_small";
-      const amountCents = 199;
+    const receipt = {
+      orderId: "ord_100",
+      transId: "txn_555",
+      steamId: "76561198000000000",
+      sku: "gold_pack_small",
+      amountCents: 199,
+      status: "approved" as const,
+      timestamp: Date.now(),
+      signature: "server-signed",
+    };
 
-      const signature = validator.calculateSignature(orderId, transId, steamId, sku, amountCents);
-
-      const isValid = validator.validateReceipt({
-        orderId,
-        transId,
-        steamId,
-        sku,
-        amountCents,
-        status: "approved",
-        timestamp: Date.now(),
-        signature,
-      });
-
-      expect(isValid).toBe(true);
+    it("aceita apenas recibos aprovados pelo provedor nesta sessão", () => {
+      expect(validator.validateReceipt(receipt)).toBe(false);
+      validator.markVerified(receipt);
+      expect(validator.validateReceipt(receipt)).toBe(true);
     });
 
     it("deve rejeitar recibos adulterados ou com assinatura incompatível", () => {
-      const isValid = validator.validateReceipt({
-        orderId: "ord_fake",
-        transId: "txn_fake",
-        steamId: "76561198000000000",
-        sku: "gold_pack_small",
-        amountCents: 199,
-        status: "approved",
-        timestamp: Date.now(),
-        signature: "sig_invalid_hash",
-      });
-
-      expect(isValid).toBe(false);
+      validator.markVerified(receipt);
+      expect(validator.validateReceipt({ ...receipt, amountCents: 1 })).toBe(false);
+      expect(validator.validateReceipt({ ...receipt, signature: "sig_invalid_hash" })).toBe(false);
     });
   });
 });

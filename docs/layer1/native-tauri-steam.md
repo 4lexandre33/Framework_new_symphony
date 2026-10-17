@@ -10,15 +10,19 @@ precisa de payload validado, mínimo privilégio, erro serializável/mapeado e A
 TypeScript tipada. Não há shell arbitrário nem escape de caminho.
 
 Os comandos registrados em `src-tauri/src/lib.rs` (`generate_handler!`) somam
-**37**, por área:
+**53**, por área:
 
 | Área | Qtde | Arquivo |
 |---|---|---|
-| Steam (runtime, usuário, achievements, stats, lobby, P2P, cloud, overlay, workshop) | 24 | `src-tauri/src/steam.rs` |
+| Steam (runtime, usuário, achievements, stats int/float, eventos nativos, lobby/busca/membros/convites, P2P em lote, cloud, overlay, workshop) | 34 | `src-tauri/src/steam.rs` |
 | Overlay (janela, cursor, always-on-top, taskbar) | 4 | `src-tauri/src/overlay.rs` |
 | Security (relógio do sistema, crash dump) | 2 | `src-tauri/src/security.rs` |
-| Modding | 3 | `src-tauri/src/modding.rs` |
-| Monetization | 4 | `src-tauri/src/monetization.rs` |
+| Modding (scan, lista de instalados, leitura segura de arquivo, mods ativos, Workshop download/estado/publicação) | 8 | `src-tauri/src/modding.rs` |
+| Monetization (MicroTxn só via servidor, Steam Inventory fetch/consume/StartPurchase) | 5 | `src-tauri/src/monetization.rs` |
+
+Sem a feature `steam` (`--no-default-features`) os mesmos comandos Steam são
+servidos por `src-tauri/src/steam_offline.rs`, que responde "indisponível"
+sem fabricar dados.
 
 A Stage 85 adicionou auditoria executável (`scripts/architecture/lib/layer1-native-tauri-v1.mjs`) que exige
 paridade entre `#[tauri::command]`, `generate_handler!` e os `invoke()` do

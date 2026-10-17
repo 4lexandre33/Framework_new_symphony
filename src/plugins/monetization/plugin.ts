@@ -3,8 +3,8 @@ import { MonetizationToken } from "../../tokens/monetization";
 import { SteamToken } from "../../tokens/steam";
 import { StorageToken } from "../../tokens/storage";
 import { UIToken } from "../../tokens/ui";
-import { PurchaseInitiatedEvent, PurchaseCompletedEvent, PurchaseFailedEvent, WalletUpdatedEvent, InventoryRefreshedEvent, InitPurchaseCommand, FinalizePurchaseCommand, ConsumeItemCommand, FetchInventoryCommand } from "../../contracts/monetization/types";
-import { MonetizationService } from "../../engine/monetization/internal/MonetizationService";
+import { PurchaseInitiatedEvent, PurchaseCompletedEvent, PurchaseFailedEvent, WalletUpdatedEvent, InventoryRefreshedEvent, ItemGrantedEvent, InitPurchaseCommand, FinalizePurchaseCommand, ConsumeItemCommand, FetchInventoryCommand } from "../../contracts/monetization/types";
+import { MonetizationService, type MonetizationServiceOptions } from "../../engine/monetization/internal/MonetizationService";
 
 export const monetizationManifest: Plugin["manifest"] = {
   id: "game.monetization",
@@ -20,6 +20,7 @@ export const monetizationManifest: Plugin["manifest"] = {
       "game.monetization.purchase-failed",
       "game.monetization.wallet-updated",
       "game.monetization.inventory-refreshed",
+      "game.monetization.item-granted",
     ],
   },
   capabilities: {
@@ -29,16 +30,37 @@ export const monetizationManifest: Plugin["manifest"] = {
         version: "1.0.0",
       },
     ],
+    consumes: [
+      {
+        id: SteamToken.id,
+        range: "^1.0.0",
+        optional: true,
+      },
+    ],
     conflicts: [],
   },
 };
 
-export function createMonetizationPlugin(): Plugin {
+export function createMonetizationPlugin(options: MonetizationServiceOptions = {}): Plugin {
   return {
     manifest: monetizationManifest,
 
     setup(ctx: PluginContext) {
-      const service = new MonetizationService(ctx);
+      const service = new MonetizationService(ctx, options);
+
+      // SteamID do jogador só para o PurchaseProvider (resolvido na hora da compra).
+      service.setSteamIdResolver(async () => {
+        const steam = ctx.caps.get(SteamToken);
+        if (!steam || !steam.isAvailable) return null;
+        return (await steam.getUser())?.steamId ?? null;
+      });
+
+      const unbindAuthorization = ctx.events.on<
+        "game.steam.microtxn-authorization",
+        { orderId: string; authorized: boolean }
+      >("game.steam.microtxn-authorization", (envelope) => {
+        void service.handleMicroTxnAuthorization(envelope.payload.orderId, envelope.payload.authorized);
+      });
 
       ctx.caps.provide(MonetizationToken, service);
 
@@ -47,6 +69,7 @@ export function createMonetizationPlugin(): Plugin {
       ctx.events.define(PurchaseFailedEvent);
       ctx.events.define(WalletUpdatedEvent);
       ctx.events.define(InventoryRefreshedEvent);
+      ctx.events.define(ItemGrantedEvent);
 
       ctx.commands.define(InitPurchaseCommand);
       ctx.commands.define(FinalizePurchaseCommand);
@@ -77,6 +100,7 @@ export function createMonetizationPlugin(): Plugin {
         unbindFinalize();
         unbindConsume();
         unbindFetch();
+        unbindAuthorization();
         service.clear();
       });
 

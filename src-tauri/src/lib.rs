@@ -2,7 +2,12 @@ mod modding;
 mod monetization;
 mod overlay;
 mod security;
+#[cfg(feature = "steam")]
 mod steam;
+#[cfg(not(feature = "steam"))]
+#[path = "steam_offline.rs"]
+mod steam;
+mod steam_support;
 
 use steam::SteamState;
 use tauri::Manager;
@@ -39,6 +44,16 @@ pub fn run() {
             steam::steam_overlay_is_enabled,
             steam::steam_activate_overlay,
             steam::steam_workshop_download_item,
+            steam::steam_poll_events,
+            steam::steam_set_stat_float,
+            steam::steam_get_stat,
+            steam::steam_read_p2p_packets,
+            steam::steam_request_lobby_list,
+            steam::steam_get_lobby_details,
+            steam::steam_get_lobby_members,
+            steam::steam_invite_to_lobby,
+            steam::steam_activate_invite_dialog,
+            steam::steam_set_lobby_joinable,
             overlay::overlay_set_ignore_cursor_events,
             overlay::overlay_set_always_on_top,
             overlay::overlay_get_taskbar_bounds,
@@ -51,10 +66,16 @@ pub fn run() {
             modding::modding_scan_local_mods,
             modding::modding_download_workshop_item,
             modding::modding_publish_workshop_item,
+            modding::modding_list_installed_mods,
+            modding::modding_read_mod_file,
+            modding::modding_load_enabled_mods,
+            modding::modding_save_enabled_mods,
+            modding::modding_workshop_item_state,
             monetization::monetization_init_purchase,
             monetization::monetization_finalize_purchase,
             monetization::monetization_fetch_inventory,
-            monetization::monetization_consume_item
+            monetization::monetization_consume_item,
+            monetization::monetization_start_inventory_purchase
         ])
         .build(tauri::generate_context!())
         .expect("Erro ao construir o aplicativo Tauri");

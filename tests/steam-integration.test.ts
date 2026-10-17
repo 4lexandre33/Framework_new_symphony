@@ -70,11 +70,12 @@ describe("Layer 1 Stage 84 — Steamworks bridge", (): void => {
     vi.clearAllMocks();
   });
 
-  it("preserva game.steam como provider canônico e mantém game.steam.net dormente", (): void => {
+  // G109: game.steam.net deixou de ser dormente — é fornecido pelo mesmo bridge.
+  it("preserva game.steam como provider canônico e fornece game.steam.net", (): void => {
     const provided = steamManifest.capabilities?.provides?.map((entry) => entry.id) ?? [];
     expect(provided).toContain(SteamToken.id);
-    expect(provided).not.toContain(SteamNetworkToken.id);
-    expect(steamManifest.permissions?.capabilities).not.toContain(SteamNetworkToken.id);
+    expect(provided).toContain(SteamNetworkToken.id);
+    expect(steamManifest.permissions?.capabilities).toContain(SteamNetworkToken.id);
   });
 
   it("normaliza usuário, lobby, metadata e estado P2P", async (): Promise<void> => {

@@ -1,8 +1,10 @@
 import type { Plugin, PluginContext } from "@core";
 import { NetworkToken } from "../../tokens/net";
 import { SteamToken } from "../../tokens/steam";
-import { ConnectPeerCommand, DisconnectPeerCommand, NetPacketReceivedEvent, PeerConnectedEvent, PeerDisconnectedEvent, SendNetPacketCommand, WorldSnapshotEvent, type ConnectPeerRequest, type SendNetPacketRequest } from "../../contracts/net/types";
-import { NetworkService } from "../../engine/net/internal/NetworkService";
+import { SteamNetworkToken } from "../../tokens/steam-net";
+import { BroadcastSnapshotCommand, ConnectPeerCommand, DisconnectPeerCommand, NetPacketReceivedEvent, PeerConnectedEvent, PeerDisconnectedEvent, SendNetPacketCommand, WorldSnapshotEvent, type BroadcastSnapshotRequest, type ConnectPeerRequest, type SendNetPacketRequest } from "../../contracts/net/types";
+import type { GameTickPayload } from "../../contracts/game-loop/types";
+import { NetworkService, type NetworkServiceOptions } from "../../engine/net/internal/NetworkService";
 
 export const netManifest:
   Plugin["manifest"] = {
@@ -35,6 +37,7 @@ export const netManifest:
       capabilities: [
         NetworkToken.id,
         SteamToken.id,
+        SteamNetworkToken.id,
       ],
 
       events: [
@@ -69,12 +72,24 @@ export const netManifest:
           optional:
             true,
         },
+        {
+          id:
+            SteamNetworkToken.id,
+
+          range:
+            "^1.0.0",
+
+          optional:
+            true,
+        },
       ],
       conflicts: [],
     },
   };
 
-export function createNetworkPlugin():
+export function createNetworkPlugin(
+  serviceOptions: NetworkServiceOptions = {},
+):
   Plugin {
   let networkService:
     NetworkService | null =
@@ -111,6 +126,13 @@ export function createNetworkPlugin():
             .bindSteamCapability(
               steamApi,
             );
+
+          networkService
+            .bindSteamNetwork(
+              ctx.caps.get(
+                SteamNetworkToken,
+              ),
+            );
         },
       },
     };
@@ -125,6 +147,7 @@ export function createNetworkPlugin():
       const service =
         new NetworkService(
           ctx,
+          serviceOptions,
         );
 
       networkService =
@@ -163,12 +186,63 @@ export function createNetworkPlugin():
         DisconnectPeerCommand,
       );
 
+      ctx.commands.define(
+        BroadcastSnapshotCommand,
+      );
+
       const unbindTick =
-        ctx.events.on(
+        ctx.events.on<"game.loop.tick", GameTickPayload>(
           "game.loop.tick",
+          (envelope): void => {
+            service.onTick(
+              envelope.payload?.tickCount ?? 0,
+            );
+          },
+        );
+
+      // Render continua na pausa: mantém heartbeat/handshake vivos (sem timers).
+      const unbindRender =
+        ctx.events.on(
+          "game.loop.render",
           (): void => {
-            void service
-              .pollPackets();
+            service.onRenderFrame();
+          },
+        );
+
+      // Steam P2P: host aceita sessões de clientes; falha derruba o par.
+      const unbindSessionRequest =
+        ctx.events.on<"game.steam.p2p-session-request", { remoteSteamId: string }>(
+          "game.steam.p2p-session-request",
+          (envelope): void => {
+            void service.handleSteamSessionRequest(
+              envelope.payload.remoteSteamId,
+            );
+          },
+        );
+
+      const unbindSessionFailed =
+        ctx.events.on<"game.steam.p2p-session-failed", { remoteSteamId: string }>(
+          "game.steam.p2p-session-failed",
+          (envelope): void => {
+            service.handleSteamSessionFailed(
+              envelope.payload.remoteSteamId,
+            );
+          },
+        );
+
+      const unbindBroadcastSnapshot =
+        ctx.commands.handle(
+          BroadcastSnapshotCommand.type,
+          (
+            envelope,
+          ) => {
+            const payload =
+              envelope.payload as
+                BroadcastSnapshotRequest;
+
+            return service.broadcastSnapshot(
+              payload.snapshot,
+            );
           },
         );
 
@@ -221,6 +295,10 @@ export function createNetworkPlugin():
       ctx.lifecycle.onDispose(
         (): void => {
           unbindTick();
+          unbindRender();
+          unbindSessionRequest();
+          unbindSessionFailed();
+          unbindBroadcastSnapshot();
           unbindSend();
           unbindConnect();
           unbindDisconnect();

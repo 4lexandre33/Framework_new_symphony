@@ -86,6 +86,63 @@ class ServiceSteamApi
   }
 }
 
+
+/** Dois SteamApi ligados em memória (entrega na fila do outro lado). */
+class LinkedSteamApi
+  extends ServiceSteamApi {
+  private peer:
+    LinkedSteamApi | null =
+      null;
+
+  public readonly inbox:
+    SteamP2PPacket[] = [];
+
+  public constructor(
+    public readonly steamId: string,
+  ) {
+    super();
+  }
+
+  public link(
+    other: LinkedSteamApi,
+  ): void {
+    this.peer = other;
+    other.peer = this;
+  }
+
+  public override async getUser():
+    Promise<SteamUser | null> {
+    return {
+      steamId: this.steamId,
+      personaName: this.steamId,
+      isOverlayEnabled: false,
+    };
+  }
+
+  public override async sendP2PPacket(
+    targetSteamId: string,
+    data: Uint8Array,
+    _sendType?: P2PSendType,
+    channel = 0,
+  ): Promise<boolean> {
+    if (!this.peer || this.peer.steamId !== targetSteamId) {
+      return false;
+    }
+    this.peer.inbox.push({
+      sourceSteamId: this.steamId,
+      channel,
+      data: data.slice(),
+      bytesReceived: data.byteLength,
+    });
+    return true;
+  }
+
+  public async readP2PPackets():
+    Promise<ReadonlyArray<SteamP2PPacket>> {
+    return this.inbox.splice(0, this.inbox.length);
+  }
+}
+
 function entitySnapshot(
   sequence = 1,
 ): EntitySnapshot {
@@ -140,8 +197,10 @@ function createContext(
 describe(
   "Etapa 83 — NetworkService",
   () => {
+    // G105: "conectado" só depois do WELCOME do host (antes o connect Steam
+    // resolvia true sem contatar ninguém). O teste agora liga dois pares Steam.
     it(
-      "troca para Steam apenas offline, conecta e emite peer event",
+      "troca para Steam apenas offline, conecta com handshake e emite peer event",
       async () => {
         const emitted:
           Array<{
@@ -149,29 +208,47 @@ describe(
             payload: unknown;
           }> = [];
 
+        const hostSteam =
+          new LinkedSteamApi("76561198000000009");
+        const clientSteam =
+          new LinkedSteamApi("76561198000000001");
+        hostSteam.link(clientSteam);
+
+        const host =
+          new NetworkService(
+            createContext([]),
+            {},
+          );
         const service =
           new NetworkService(
             createContext(
               emitted,
             ),
+            {},
           );
 
-        const steam =
-          new ServiceSteamApi();
-
+        host.bindSteamCapability(hostSteam);
         service.bindSteamCapability(
-          steam,
+          clientSteam,
         );
 
         expect(
           service.transportType,
         ).toBe("steam_p2p");
 
-        await expect(
+        await expect(host.startHost()).resolves.toBe(true);
+
+        const connecting =
           service.connect(
-            "76561198000000001",
-          ),
-        ).resolves.toBe(true);
+            "76561198000000009",
+          );
+
+        for (let i = 0; i < 10; i += 1) {
+          await host.pollPackets();
+          await service.pollPackets();
+        }
+
+        await expect(connecting).resolves.toBe(true);
 
         expect(service.mode).toBe(
           "client",
@@ -187,12 +264,14 @@ describe(
       },
     );
 
+    // G107: disconnect preserva entidades locais (só as remotas saem).
     it(
-      "disconnect limpa replicação e retorna a offline",
+      "disconnect preserva entidades locais e retorna a offline",
       async () => {
         const service =
           new NetworkService(
             createContext([]),
+            {},
           );
 
         const steam =
@@ -202,21 +281,10 @@ describe(
           steam,
         );
 
-        await service.connect(
-          "76561198000000001",
-        );
-
         service.registerEntity(
           "entity-a",
           entitySnapshot(),
         );
-
-        expect(
-          service.getInterpolatedState(
-            "entity-a",
-            1,
-          ),
-        ).not.toBeNull();
 
         await service.disconnect();
 
@@ -229,7 +297,7 @@ describe(
             "entity-a",
             1,
           ),
-        ).toBeNull();
+        ).not.toBeNull();
 
         await expect(
           service.sendTo(

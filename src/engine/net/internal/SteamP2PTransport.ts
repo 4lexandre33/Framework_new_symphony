@@ -21,9 +21,18 @@ import {
   NetworkTransport,
 } from "./NetworkTransport";
 
+import {
+  RateMeter,
+} from "./RateMeter";
+
 function nowMs(): number {
   return performance.now();
 }
+
+/** Limites de frame da sessão sobre Steam P2P (ISteamNetworking). */
+export const STEAM_UNRELIABLE_FRAME_BYTES = 1_200;
+export const STEAM_RELIABLE_FRAME_BYTES = 256 * 1024;
+export const STEAM_MAX_PACKETS_PER_BATCH = 512;
 
 export class SteamP2PTransport
   extends NetworkTransport {
@@ -55,14 +64,37 @@ export class SteamP2PTransport
   private successfulSendCount =
     0;
 
-  private lastStatsReset =
-    nowMs();
+  private readonly sentMeter =
+    new RateMeter(nowMs);
+
+  private readonly receivedMeter =
+    new RateMeter(nowMs);
+
+  /** Canais usados em envios (fallback de leitura sem `readP2PPackets`). */
+  private readonly knownChannels =
+    new Set<number>([0, 1]);
 
   public constructor(
     private readonly steamApi:
       SteamApi,
   ) {
     super();
+  }
+
+  public override maxFrameBytes(
+    reliable: boolean,
+  ): number {
+    return reliable
+      ? STEAM_RELIABLE_FRAME_BYTES
+      : STEAM_UNRELIABLE_FRAME_BYTES;
+  }
+
+  public override closePeer(
+    peerId: string,
+  ): void {
+    this.activePeers.delete(
+      peerId,
+    );
   }
 
   public get isConnected():
@@ -213,6 +245,14 @@ export class SteamP2PTransport
     this.bytesSentCount +=
       data.byteLength;
 
+    this.sentMeter.add(
+      data.byteLength,
+    );
+
+    this.knownChannels.add(
+      channel,
+    );
+
     this.successfulSendCount +=
       1;
 
@@ -283,11 +323,62 @@ export class SteamP2PTransport
       return;
     }
 
+    // G104: leitura em lote de TODOS os canais 0..255 quando disponível.
+    if (
+      typeof this.steamApi.readP2PPackets ===
+      "function"
+    ) {
+      let packets:
+        ReadonlyArray<
+          Awaited<
+            ReturnType<
+              SteamApi["readP2PPacket"]
+            >
+          > & object
+        >;
+
+      try {
+        packets =
+          await this.steamApi.readP2PPackets(
+            STEAM_MAX_PACKETS_PER_BATCH,
+          );
+      } catch {
+        return;
+      }
+
+      for (
+        const packet of
+        packets
+      ) {
+        if (!this.isConnected) {
+          return;
+        }
+
+        this.acceptIncoming(
+          packet,
+        );
+      }
+
+      return;
+    }
+
+    // Fallback (SteamApi sem leitura em lote): canais 0..STEAM_POLL_CHANNEL_COUNT-1
+    // mais todo canal já usado em envios.
     for (
       let channel = 0;
-      channel <
-      STEAM_POLL_CHANNEL_COUNT;
+      channel < STEAM_POLL_CHANNEL_COUNT;
       channel += 1
+    ) {
+      this.knownChannels.add(
+        channel,
+      );
+    }
+
+    for (
+      const channel of
+      Array.from(
+        this.knownChannels,
+      )
     ) {
       for (
         let packetIndex = 0;
@@ -320,114 +411,106 @@ export class SteamP2PTransport
           break;
         }
 
-        if (
-          !isValidNetworkPeerId(
-            packet.sourceSteamId,
-          ) ||
-          !isValidNetworkChannel(
-            packet.channel,
-          ) ||
-          !isValidNetworkPayload(
-            packet.data,
-          ) ||
-          packet.bytesReceived <
-            0 ||
-          packet.bytesReceived >
-            packet.data.byteLength
-        ) {
-          continue;
-        }
-
-        this.bytesReceivedCount +=
-          packet.bytesReceived;
-
-        if (
-          !this.activePeers.has(
-            packet.sourceSteamId,
-          )
-        ) {
-          this.activePeers.add(
-            packet.sourceSteamId,
-          );
-
-          this.notifyPeerConnected(
-            packet.sourceSteamId,
-          );
-        }
-
-        this.notifyPacket(
-          packet.sourceSteamId,
-          packet.channel,
-          packet.data,
+        this.acceptIncoming(
+          packet,
         );
       }
     }
   }
 
-  public getStats():
-    NetworkStats {
-    const now =
-      nowMs();
-
-    const elapsedSeconds =
-      Math.max(
-        0.001,
-        (
-          now -
-          this.lastStatsReset
-        ) /
-          1000,
-      );
-
-    const attempts =
-      this.successfulSendCount +
-      this.rejectedSendCount;
-
-    const stats:
-      NetworkStats = {
-        rttMs: 0,
-        packetLossRate:
-          attempts > 0
-            ? this.rejectedSendCount /
-              attempts
-            : 0,
-        bytesSentPerSec:
-          Math.round(
-            this.bytesSentCount /
-              elapsedSeconds,
-          ),
-        bytesReceivedPerSec:
-          Math.round(
-            this.bytesReceivedCount /
-              elapsedSeconds,
-          ),
-        activeConnections:
-          this.activePeers.size,
-        transportType:
-          this.type,
-      };
-
+  private acceptIncoming(
+    packet: {
+      readonly sourceSteamId: string;
+      readonly channel: number;
+      readonly data: Uint8Array;
+      readonly bytesReceived: number;
+    },
+  ): void {
     if (
-      elapsedSeconds >=
-      1
+      !isValidNetworkPeerId(
+        packet.sourceSteamId,
+      ) ||
+      !isValidNetworkChannel(
+        packet.channel,
+      ) ||
+      !isValidNetworkPayload(
+        packet.data,
+      ) ||
+      packet.bytesReceived <
+        0 ||
+      packet.bytesReceived >
+        packet.data.byteLength
     ) {
-      this.bytesSentCount =
-        0;
-
-      this.bytesReceivedCount =
-        0;
-
-      this.successfulSendCount =
-        0;
-
-      this.rejectedSendCount =
-        0;
-
-      this.lastStatsReset =
-        now;
+      return;
     }
 
-    return stats;
+    this.bytesReceivedCount +=
+      packet.bytesReceived;
+
+    this.receivedMeter.add(
+      packet.bytesReceived,
+    );
+
+    if (
+      !this.activePeers.has(
+        packet.sourceSteamId,
+      )
+    ) {
+      this.activePeers.add(
+        packet.sourceSteamId,
+      );
+
+      this.notifyPeerConnected(
+        packet.sourceSteamId,
+      );
+    }
+
+    this.notifyPacket(
+      packet.sourceSteamId,
+      packet.channel,
+      packet.data,
+    );
+  }
+
+  /**
+   * Estatísticas do LINK (não destrutivo, G108). RTT e perda reais vêm da
+   * sessão (`NetworkService.getStats()`, via ping/pong); aqui ficam 0.
+   */
+  public getStats():
+    NetworkStats {
+    return {
+      rttMs: 0,
+      packetLossRate: 0,
+      bytesSentPerSec:
+        Math.round(
+          this.sentMeter.perSecond(),
+        ),
+      bytesReceivedPerSec:
+        Math.round(
+          this.receivedMeter.perSecond(),
+        ),
+      activeConnections:
+        this.activePeers.size,
+      transportType:
+        this.type,
+    };
+  }
+
+  /** Envios recusados (validação/backpressure/Steam) desde a criação. */
+  public get rejectedSends(): number {
+    return this.rejectedSendCount;
+  }
+
+  public get successfulSends(): number {
+    return this.successfulSendCount;
+  }
+
+  public get totalBytesSent(): number {
+    return this.bytesSentCount;
+  }
+
+  public get totalBytesReceived(): number {
+    return this.bytesReceivedCount;
   }
 
   public override dispose():

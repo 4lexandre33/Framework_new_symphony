@@ -13,7 +13,12 @@ import {
   NetworkTransport,
 } from "./NetworkTransport";
 
-const DEDICATED_SERVER_PEER_ID =
+import {
+  RateMeter,
+} from "./RateMeter";
+
+/** Id do par "servidor" no transporte WebSocket (topologia estrela). */
+export const DEDICATED_SERVER_PEER_ID =
   "dedicated_server";
 
 const WEB_SOCKET_OPEN = 1;
@@ -73,8 +78,20 @@ export class WebSocketTransport
   private successfulSendCount =
     0;
 
-  private lastStatsReset =
-    nowMs();
+  private readonly sentMeter =
+    new RateMeter(nowMs);
+
+  private readonly receivedMeter =
+    new RateMeter(nowMs);
+
+  /** WebSocket no navegador é só cliente: hospedar exige servidor externo. */
+  public override get canHost(): boolean {
+    return false;
+  }
+
+  public override async listen(): Promise<boolean> {
+    return false;
+  }
 
   public get isConnected():
     boolean {
@@ -216,6 +233,10 @@ export class WebSocketTransport
               this.bytesReceivedCount +=
                 data.byteLength;
 
+              this.receivedMeter.add(
+                data.byteLength,
+              );
+
               this.notifyPacket(
                 DEDICATED_SERVER_PEER_ID,
                 0,
@@ -234,13 +255,13 @@ export class WebSocketTransport
                 return;
               }
 
-              this.connected =
-                false;
-
               settle(false);
 
+              // G105: erro depois de conectado é queda do par
+              // (closeSocket notifica se estava conectado).
               this.closeSocket(
-                false,
+                true,
+                "erro_conexao",
               );
             };
 
@@ -306,6 +327,8 @@ export class WebSocketTransport
     if (
       !this.isConnected ||
       !this.socket ||
+      targetId !==
+        DEDICATED_SERVER_PEER_ID ||
       !this.canSendPacket(
         targetId,
         channel,
@@ -334,6 +357,10 @@ export class WebSocketTransport
 
       this.bytesSentCount +=
         data.byteLength;
+
+      this.sentMeter.add(
+        data.byteLength,
+      );
 
       this.successfulSendCount +=
         1;
@@ -379,72 +406,43 @@ export class WebSocketTransport
     // WebSocket entrega pacotes reativamente por onmessage.
   }
 
+  /** Estatísticas do link (não destrutivo). RTT/perda reais vêm da sessão. */
   public getStats():
     NetworkStats {
-    const now =
-      nowMs();
+    return {
+      rttMs: 0,
+      packetLossRate: 0,
+      bytesSentPerSec:
+        Math.round(
+          this.sentMeter.perSecond(),
+        ),
+      bytesReceivedPerSec:
+        Math.round(
+          this.receivedMeter.perSecond(),
+        ),
+      activeConnections:
+        this.isConnected
+          ? 1
+          : 0,
+      transportType:
+        this.type,
+    };
+  }
 
-    const elapsedSeconds =
-      Math.max(
-        0.001,
-        (
-          now -
-          this.lastStatsReset
-        ) /
-          1000,
-      );
+  public get rejectedSends(): number {
+    return this.rejectedSendCount;
+  }
 
-    const attempts =
-      this.successfulSendCount +
-      this.rejectedSendCount;
+  public get successfulSends(): number {
+    return this.successfulSendCount;
+  }
 
-    const stats:
-      NetworkStats = {
-        rttMs: 0,
-        packetLossRate:
-          attempts > 0
-            ? this.rejectedSendCount /
-              attempts
-            : 0,
-        bytesSentPerSec:
-          Math.round(
-            this.bytesSentCount /
-              elapsedSeconds,
-          ),
-        bytesReceivedPerSec:
-          Math.round(
-            this.bytesReceivedCount /
-              elapsedSeconds,
-          ),
-        activeConnections:
-          this.isConnected
-            ? 1
-            : 0,
-        transportType:
-          this.type,
-      };
+  public get totalBytesSent(): number {
+    return this.bytesSentCount;
+  }
 
-    if (
-      elapsedSeconds >=
-      1
-    ) {
-      this.bytesSentCount =
-        0;
-
-      this.bytesReceivedCount =
-        0;
-
-      this.successfulSendCount =
-        0;
-
-      this.rejectedSendCount =
-        0;
-
-      this.lastStatsReset =
-        now;
-    }
-
-    return stats;
+  public get totalBytesReceived(): number {
+    return this.bytesReceivedCount;
   }
 
   public override dispose():
@@ -465,6 +463,7 @@ export class WebSocketTransport
 
   private closeSocket(
     notifyDisconnect: boolean,
+    reason = "desconexao_local",
   ): void {
     const pendingConnectResolve =
       this.pendingConnectResolve;
@@ -509,7 +508,7 @@ export class WebSocketTransport
     ) {
       this.notifyPeerDisconnected(
         DEDICATED_SERVER_PEER_ID,
-        "desconexao_local",
+        reason,
       );
     }
   }

@@ -157,3 +157,70 @@ export const AcceptP2PSessionCommand = defineCommand<
   "game.steam.accept-p2p-session",
   AcceptP2PSessionRequest
 >("game.steam.accept-p2p-session");
+
+// ── BUSCA DE LOBBY (G26) ─────────────────────────────────────────────────
+
+export type SteamLobbyComparison =
+  | "equal"
+  | "notEqual"
+  | "greaterThan"
+  | "greaterThanOrEqual"
+  | "lessThan"
+  | "lessThanOrEqual";
+
+export type SteamLobbyDistance = "close" | "default" | "far" | "worldwide";
+
+export interface SteamLobbySearchOptions {
+  /** Filtros de metadata string (apenas `equal`/`notEqual`). Máx. 16 filtros no total. */
+  readonly stringFilters?: ReadonlyArray<{
+    readonly key: string;
+    readonly value: string;
+    readonly comparison?: "equal" | "notEqual";
+  }>;
+  /** Filtros numéricos sobre metadata (inteiro de 32 bits). */
+  readonly numberFilters?: ReadonlyArray<{
+    readonly key: string;
+    readonly value: number;
+    readonly comparison?: SteamLobbyComparison;
+  }>;
+  readonly slotsAvailable?: number;
+  readonly distance?: SteamLobbyDistance;
+  /** 1..50 (padrão 50). */
+  readonly maxResults?: number;
+}
+
+// ── EVENTOS ADICIONAIS (G110) ────────────────────────────────────────────
+
+export interface LobbyDataUpdatedPayload {
+  readonly lobbyId: string;
+  /** Igual a `lobbyId` quando mudou a metadata do lobby; SteamID quando foi a de um membro. */
+  readonly memberSteamId: string;
+  readonly success: boolean;
+}
+
+export const LobbyDataUpdatedEvent = defineEvent<
+  "game.steam.lobby-data-updated",
+  LobbyDataUpdatedPayload
+>("game.steam.lobby-data-updated");
+
+export interface LobbyInviteReceivedPayload {
+  /** Lobby em que o jogador pediu para entrar pela Steam (convite / "Entrar no jogo"). */
+  readonly lobbyId: string;
+  readonly friendSteamId: string;
+}
+
+export const LobbyInviteReceivedEvent = defineEvent<
+  "game.steam.lobby-invite",
+  LobbyInviteReceivedPayload
+>("game.steam.lobby-invite");
+
+export interface P2PSessionFailedPayload {
+  readonly remoteSteamId: string;
+  /** EP2PSessionError da Steam. */
+  readonly error: number;
+}
+
+export const P2PSessionFailedEvent = defineEvent<
+  "game.steam.p2p-session-failed",
+  P2PSessionFailedPayload
+>("game.steam.p2p-session-failed");

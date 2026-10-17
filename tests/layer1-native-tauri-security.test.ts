@@ -128,7 +128,7 @@ describe(
         expect(
           driver,
         ).toContain(
-          "steam_workshop_download_item",
+          "modding_download_workshop_item",
         );
       },
     );

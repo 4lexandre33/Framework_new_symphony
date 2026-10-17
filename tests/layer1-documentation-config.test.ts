@@ -128,7 +128,7 @@ describe("Stage 89 — a auditoria detecta documentação errada", () => {
       name: "contagem de comandos Tauri errada",
       code: "DOC_TAURI_COMMAND_COUNT",
       file: "docs/layer1/native-tauri-steam.md",
-      change: (t) => t.replace(/\*\*37\*\*/u, "**36**"),
+      change: (t) => t.replace(/\*\*53\*\*/u, "**52**"),
     },
     {
       name: "afirmação obsoleta no README",
