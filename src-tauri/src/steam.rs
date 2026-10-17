@@ -1,4 +1,10 @@
+use crate::steam_support::{
+    classify_incoming_packet, clamp_count, validate_lobby_search, validate_stat_f32,
+    LobbyComparison, LobbySearchDto, P2PBatchBudget, PacketDisposition, SteamEventDto,
+    SteamEventQueue, MAX_LOBBY_SEARCH_RESULTS, MAX_PENDING_STEAM_EVENTS,
+};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::ffi::CString;
 use std::io::{Read, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -22,14 +28,162 @@ pub struct SteamState {
     callback_stop: Arc<AtomicBool>,
     callback_thread: Mutex<Option<JoinHandle<()>>>,
     initialization_error: Mutex<Option<String>>,
+    events: Arc<Mutex<SteamEventQueue>>,
+    stats_ready: Arc<AtomicBool>,
+    callback_handles: Mutex<Vec<steamworks::CallbackHandle>>,
+}
+
+fn push_event(queue: &Arc<Mutex<SteamEventQueue>>, event: SteamEventDto) {
+    if let Ok(mut guard) = queue.lock() {
+        guard.push(event);
+    }
+}
+
+fn chat_change_label(change: &steamworks::ChatMemberStateChange) -> &'static str {
+    match change {
+        steamworks::ChatMemberStateChange::Entered => "entered",
+        steamworks::ChatMemberStateChange::Left => "left",
+        steamworks::ChatMemberStateChange::Disconnected => "disconnected",
+        steamworks::ChatMemberStateChange::Kicked => "kicked",
+        steamworks::ChatMemberStateChange::Banned => "banned",
+    }
+}
+
+/// Registra os callbacks Steam que alimentam a fila de eventos drenada pelo
+/// WebView (`steam_poll_events`). Os handlers rodam na thread do callback pump
+/// e apenas enfileiram dados (nenhuma chamada bloqueante).
+fn register_event_callbacks(
+    client: &steamworks::Client,
+    events: &Arc<Mutex<SteamEventQueue>>,
+    stats_ready: &Arc<AtomicBool>,
+) -> Vec<steamworks::CallbackHandle> {
+    let mut handles = Vec::new();
+    let local_steam_id = client.user().steam_id().raw();
+
+    let queue = Arc::clone(events);
+    handles.push(client.register_callback(move |value: steamworks::P2PSessionRequest| {
+        push_event(
+            &queue,
+            SteamEventDto::P2pSessionRequest {
+                remote_steam_id: value.remote.raw().to_string(),
+            },
+        );
+    }));
+
+    let queue = Arc::clone(events);
+    handles.push(client.register_callback(move |value: steamworks::P2PSessionConnectFail| {
+        push_event(
+            &queue,
+            SteamEventDto::P2pSessionConnectFail {
+                remote_steam_id: value.remote.raw().to_string(),
+                error: value.error,
+            },
+        );
+    }));
+
+    let queue = Arc::clone(events);
+    handles.push(client.register_callback(move |value: steamworks::LobbyChatUpdate| {
+        push_event(
+            &queue,
+            SteamEventDto::LobbyChatUpdate {
+                lobby_id: value.lobby.raw().to_string(),
+                user_steam_id: value.user_changed.raw().to_string(),
+                making_change_steam_id: value.making_change.raw().to_string(),
+                change: chat_change_label(&value.member_state_change).to_string(),
+            },
+        );
+    }));
+
+    let queue = Arc::clone(events);
+    handles.push(client.register_callback(move |value: steamworks::LobbyDataUpdate| {
+        push_event(
+            &queue,
+            SteamEventDto::LobbyDataUpdate {
+                lobby_id: value.lobby.raw().to_string(),
+                member_steam_id: value.member.raw().to_string(),
+                success: value.success,
+            },
+        );
+    }));
+
+    let queue = Arc::clone(events);
+    handles.push(client.register_callback(move |value: steamworks::GameLobbyJoinRequested| {
+        push_event(
+            &queue,
+            SteamEventDto::LobbyJoinRequested {
+                lobby_id: value.lobby_steam_id.raw().to_string(),
+                friend_steam_id: value.friend_steam_id.raw().to_string(),
+            },
+        );
+    }));
+
+    let queue = Arc::clone(events);
+    let ready = Arc::clone(stats_ready);
+    handles.push(client.register_callback(move |value: steamworks::UserStatsReceived| {
+        let success = value.result.is_ok();
+        if value.steam_id.raw() == local_steam_id && success {
+            ready.store(true, Ordering::Release);
+        }
+        push_event(
+            &queue,
+            SteamEventDto::UserStatsReceived {
+                steam_id: value.steam_id.raw().to_string(),
+                success,
+                error: value.result.err().map(|error| format!("{error:?}")),
+            },
+        );
+    }));
+
+    let queue = Arc::clone(events);
+    handles.push(client.register_callback(
+        move |value: steamworks::MicroTxnAuthorizationResponse| {
+            push_event(
+                &queue,
+                SteamEventDto::MicroTxnAuthorization {
+                    app_id: value.app_id.0,
+                    order_id: value.order_id.to_string(),
+                    authorized: value.authorized,
+                },
+            );
+        },
+    ));
+
+    let queue = Arc::clone(events);
+    handles.push(client.register_callback(move |value: steamworks::DownloadItemResult| {
+        push_event(
+            &queue,
+            SteamEventDto::WorkshopDownloadResult {
+                published_file_id: value.published_file_id.0.to_string(),
+                success: value.error.is_none(),
+                error: value.error.map(|error| format!("{error:?}")),
+            },
+        );
+    }));
+
+    let queue = Arc::clone(events);
+    handles.push(client.register_callback(move |_: steamworks::SteamServersConnected| {
+        push_event(&queue, SteamEventDto::SteamServersConnected);
+    }));
+
+    let queue = Arc::clone(events);
+    handles.push(client.register_callback(move |_: steamworks::SteamServersDisconnected| {
+        push_event(&queue, SteamEventDto::SteamServersDisconnected);
+    }));
+
+    handles
 }
 
 impl SteamState {
     pub fn initialize() -> Self {
         let callback_stop = Arc::new(AtomicBool::new(false));
+        let events = Arc::new(Mutex::new(SteamEventQueue::new(MAX_PENDING_STEAM_EVENTS)));
+        let stats_ready = Arc::new(AtomicBool::new(false));
 
         match steamworks::Client::init() {
             Ok((client, single_client)) => {
+                let callback_handles = register_event_callbacks(&client, &events, &stats_ready);
+                // Stats/conquistas só são confiáveis depois de UserStatsReceived (G112).
+                client.user_stats().request_current_stats();
                 let thread_stop = Arc::clone(&callback_stop);
                 let callback_thread = thread::Builder::new()
                     .name("steamworks-callback-pump".to_string())
@@ -54,6 +208,9 @@ impl SteamState {
                             callback_stop,
                             callback_thread: Mutex::new(Some(handle)),
                             initialization_error: Mutex::new(None),
+                            events,
+                            stats_ready,
+                            callback_handles: Mutex::new(callback_handles),
                         }
                     }
                     Err(error) => {
@@ -66,6 +223,10 @@ impl SteamState {
                         // fails, std drops that closure immediately, which drops SingleClient.
                         // We still own `client` here, so dropping it completes the failed-init
                         // cleanup without attempting to use a moved value.
+                        for handle in &callback_handles {
+                            handle.disconnect();
+                        }
+                        drop(callback_handles);
                         drop(client);
 
                         Self {
@@ -73,6 +234,9 @@ impl SteamState {
                             callback_stop,
                             callback_thread: Mutex::new(None),
                             initialization_error: Mutex::new(Some(message)),
+                            events,
+                            stats_ready,
+                            callback_handles: Mutex::new(Vec::new()),
                         }
                     }
                 }
@@ -86,6 +250,9 @@ impl SteamState {
                     callback_stop,
                     callback_thread: Mutex::new(None),
                     initialization_error: Mutex::new(Some(message)),
+                    events,
+                    stats_ready,
+                    callback_handles: Mutex::new(Vec::new()),
                 }
             }
         }
@@ -112,7 +279,18 @@ impl SteamState {
             .and_then(|value| value.clone())
     }
 
-    fn client(&self) -> Result<steamworks::Client, String> {
+    pub fn stats_ready(&self) -> bool {
+        self.stats_ready.load(Ordering::Acquire)
+    }
+
+    pub fn drain_events(&self, max_events: u32) -> Vec<SteamEventDto> {
+        self.events
+            .lock()
+            .map(|mut queue| queue.drain(max_events))
+            .unwrap_or_default()
+    }
+
+    pub(crate) fn client(&self) -> Result<steamworks::Client, String> {
         let guard = self
             .client
             .lock()
@@ -129,6 +307,12 @@ impl SteamState {
 
     pub fn shutdown(&self) {
         self.callback_stop.store(true, Ordering::Release);
+
+        if let Ok(mut handles) = self.callback_handles.lock() {
+            for handle in handles.drain(..) {
+                handle.disconnect();
+            }
+        }
 
         let callback_handle = self
             .callback_thread
@@ -172,6 +356,7 @@ pub struct SteamRuntimeStatusDto {
     pub initialized: bool,
     pub callback_thread_running: bool,
     pub initialization_error: Option<String>,
+    pub stats_ready: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -189,6 +374,14 @@ pub struct SteamLobbyDto {
     pub owner_steam_id: String,
     pub member_count: u32,
     pub max_members: u32,
+    pub metadata: BTreeMap<String, String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct SteamP2PBatchDto {
+    pub packets: Vec<SteamP2PPacketDto>,
+    pub dropped_oversized: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -227,6 +420,17 @@ pub struct SteamCloudFileDto {
     pub timestamp: i64,
     pub persisted: bool,
 }
+/// Stats/conquistas só podem ser lidas/alteradas depois de UserStatsReceived.
+/// O erro é explícito (o WebView reenfileira e tenta de novo no evento
+/// `statsReady`), em vez de falhar silenciosamente (G112).
+fn ensure_stats_ready(state: &SteamState) -> Result<(), String> {
+    if state.stats_ready() {
+        Ok(())
+    } else {
+        Err("STATS_NOT_READY: stats da Steam ainda não foram recebidas".to_string())
+    }
+}
+
 
 fn validate_identifier(value: &str, label: &str) -> Result<(), String> {
     if value.is_empty() || value.len() > MAX_STEAM_IDENTIFIER_LEN || value.contains('\0') {
@@ -327,18 +531,120 @@ fn validate_cloud_file_name(file_name: &str) -> Result<(), String> {
     Ok(())
 }
 
+const MAX_LOBBY_METADATA_ENTRIES: u32 = 64;
+
 fn lobby_details(
     client: &steamworks::Client,
     lobby_id: steamworks::LobbyId,
 ) -> SteamLobbyDto {
     let matchmaking = client.matchmaking();
+    let mut metadata = BTreeMap::new();
+    let count = matchmaking
+        .lobby_data_count(lobby_id)
+        .min(MAX_LOBBY_METADATA_ENTRIES);
+
+    for index in 0..count {
+        if let Some((key, value)) = matchmaking.lobby_data_by_index(lobby_id, index) {
+            metadata.insert(key, value);
+        }
+    }
 
     SteamLobbyDto {
         lobby_id: lobby_id.raw().to_string(),
         owner_steam_id: matchmaking.lobby_owner(lobby_id).raw().to_string(),
         member_count: matchmaking.lobby_member_count(lobby_id) as u32,
         max_members: matchmaking.lobby_member_limit(lobby_id).unwrap_or(0) as u32,
+        metadata,
     }
+}
+
+fn matchmaking_interface() -> Result<*mut steamworks::sys::ISteamMatchmaking, String> {
+    let matchmaking = unsafe { steamworks::sys::SteamAPI_SteamMatchmaking_v009() };
+
+    if matchmaking.is_null() {
+        Err("Interface ISteamMatchmaking indisponível".to_string())
+    } else {
+        Ok(matchmaking)
+    }
+}
+
+fn lobby_comparison(value: Option<&LobbyComparison>) -> steamworks::sys::ELobbyComparison {
+    use steamworks::sys::ELobbyComparison as C;
+    match value.unwrap_or(&LobbyComparison::Equal) {
+        LobbyComparison::Equal => C::k_ELobbyComparisonEqual,
+        LobbyComparison::NotEqual => C::k_ELobbyComparisonNotEqual,
+        LobbyComparison::GreaterThan => C::k_ELobbyComparisonGreaterThan,
+        LobbyComparison::GreaterThanOrEqual => C::k_ELobbyComparisonEqualToOrGreaterThan,
+        LobbyComparison::LessThan => C::k_ELobbyComparisonLessThan,
+        LobbyComparison::LessThanOrEqual => C::k_ELobbyComparisonEqualToOrLessThan,
+    }
+}
+
+/// Aplica os filtros com strings terminadas em NUL (os helpers do crate
+/// passam `&str` sem terminador para a API C).
+fn apply_lobby_search_filters(search: &LobbySearchDto) -> Result<(), String> {
+    use steamworks::sys::ELobbyDistanceFilter as D;
+    let matchmaking = matchmaking_interface()?;
+
+    for filter in search.string_filters.iter().flatten() {
+        let key = CString::new(filter.key.as_str()).map_err(|_| "Chave inválida".to_string())?;
+        let value =
+            CString::new(filter.value.as_str()).map_err(|_| "Valor inválido".to_string())?;
+        unsafe {
+            steamworks::sys::SteamAPI_ISteamMatchmaking_AddRequestLobbyListStringFilter(
+                matchmaking,
+                key.as_ptr(),
+                value.as_ptr(),
+                lobby_comparison(filter.comparison.as_ref()),
+            );
+        }
+    }
+
+    for filter in search.number_filters.iter().flatten() {
+        let key = CString::new(filter.key.as_str()).map_err(|_| "Chave inválida".to_string())?;
+        unsafe {
+            steamworks::sys::SteamAPI_ISteamMatchmaking_AddRequestLobbyListNumericalFilter(
+                matchmaking,
+                key.as_ptr(),
+                filter.value,
+                lobby_comparison(filter.comparison.as_ref()),
+            );
+        }
+    }
+
+    if let Some(slots) = search.slots_available {
+        unsafe {
+            steamworks::sys::SteamAPI_ISteamMatchmaking_AddRequestLobbyListFilterSlotsAvailable(
+                matchmaking,
+                slots as i32,
+            );
+        }
+    }
+
+    if let Some(distance) = search.distance.as_deref() {
+        let distance = match distance {
+            "close" => D::k_ELobbyDistanceFilterClose,
+            "far" => D::k_ELobbyDistanceFilterFar,
+            "worldwide" => D::k_ELobbyDistanceFilterWorldwide,
+            _ => D::k_ELobbyDistanceFilterDefault,
+        };
+        unsafe {
+            steamworks::sys::SteamAPI_ISteamMatchmaking_AddRequestLobbyListDistanceFilter(
+                matchmaking,
+                distance,
+            );
+        }
+    }
+
+    let max_results = search.max_results.unwrap_or(MAX_LOBBY_SEARCH_RESULTS);
+    unsafe {
+        steamworks::sys::SteamAPI_ISteamMatchmaking_AddRequestLobbyListResultCountFilter(
+            matchmaking,
+            max_results as i32,
+        );
+    }
+
+    Ok(())
 }
 
 fn networking_interface() -> Result<*mut steamworks::sys::ISteamNetworking, String> {
@@ -364,6 +670,7 @@ pub fn steam_runtime_status(state: State<'_, SteamState>) -> SteamRuntimeStatusD
         initialized: state.is_initialized(),
         callback_thread_running: state.callback_thread_running(),
         initialization_error: state.initialization_error(),
+        stats_ready: state.stats_ready(),
     }
 }
 
@@ -392,6 +699,7 @@ pub fn steam_unlock_achievement(
 ) -> Result<bool, String> {
     validate_identifier(&achievement_id, "Achievement ID")?;
     let client = state.client()?;
+    ensure_stats_ready(&state)?;
     let stats = client.user_stats();
 
     stats
@@ -414,6 +722,7 @@ pub fn steam_set_stat(
 ) -> Result<bool, String> {
     validate_identifier(&stat_name, "Stat name")?;
     let client = state.client()?;
+    ensure_stats_ready(&state)?;
 
     client
         .user_stats()
@@ -421,6 +730,167 @@ pub fn steam_set_stat(
         .map_err(|error| format!("Falha ao atualizar estatística: {error:?}"))?;
 
     Ok(true)
+}
+
+/// Estatística FLOAT (G112). Exige que as stats tenham chegado da Steam.
+#[tauri::command]
+pub fn steam_set_stat_float(
+    stat_name: String,
+    value: f64,
+    state: State<'_, SteamState>,
+) -> Result<bool, String> {
+    validate_identifier(&stat_name, "Stat name")?;
+    let value = validate_stat_f32(value)?;
+    let client = state.client()?;
+    ensure_stats_ready(&state)?;
+
+    client
+        .user_stats()
+        .set_stat_f32(&stat_name, value)
+        .map_err(|error| format!("Falha ao atualizar estatística float: {error:?}"))?;
+
+    Ok(true)
+}
+
+/// Lê uma estatística (`kind` = "int" | "float").
+#[tauri::command]
+pub fn steam_get_stat(
+    stat_name: String,
+    kind: String,
+    state: State<'_, SteamState>,
+) -> Result<f64, String> {
+    validate_identifier(&stat_name, "Stat name")?;
+    let client = state.client()?;
+    ensure_stats_ready(&state)?;
+
+    let stats = client.user_stats();
+    match kind.as_str() {
+        "int" => stats
+            .get_stat_i32(&stat_name)
+            .map(f64::from)
+            .map_err(|_| format!("Estatística int inexistente: {stat_name}")),
+        "float" => stats
+            .get_stat_f32(&stat_name)
+            .map(f64::from)
+            .map_err(|_| format!("Estatística float inexistente: {stat_name}")),
+        _ => Err(format!("Tipo de estatística inválido: {kind}")),
+    }
+}
+
+/// Drena a fila limitada de eventos nativos (P2P, lobby, stats, microtxn, UGC).
+#[tauri::command]
+pub fn steam_poll_events(
+    max_events: u32,
+    state: State<'_, SteamState>,
+) -> Result<Vec<SteamEventDto>, String> {
+    if !state.is_initialized() {
+        return Ok(Vec::new());
+    }
+
+    Ok(state.drain_events(clamp_count(max_events, crate::steam_support::MAX_EVENTS_PER_POLL)))
+}
+
+#[tauri::command]
+pub async fn steam_request_lobby_list(
+    search: Option<LobbySearchDto>,
+    state: State<'_, SteamState>,
+) -> Result<Vec<SteamLobbyDto>, String> {
+    let search = search.unwrap_or_default();
+    validate_lobby_search(&search)?;
+    let client = state.client()?;
+    let client_for_worker = client.clone();
+
+    let lobby_ids = tauri::async_runtime::spawn_blocking(move || {
+        apply_lobby_search_filters(&search)?;
+        let (sender, receiver) = mpsc::sync_channel::<Result<Vec<u64>, String>>(1);
+
+        client_for_worker.matchmaking().request_lobby_list(move |result| {
+            let mapped = result
+                .map(|lobbies| lobbies.into_iter().map(|lobby| lobby.raw()).collect())
+                .map_err(|error| format!("RequestLobbyList falhou: {error:?}"));
+            let _ = sender.send(mapped);
+        });
+
+        receiver
+            .recv_timeout(STEAM_ASYNC_TIMEOUT)
+            .map_err(|error| format!("Timeout aguardando RequestLobbyList: {error}"))?
+    })
+    .await
+    .map_err(|error| format!("Worker RequestLobbyList falhou: {error}"))??;
+
+    Ok(lobby_ids
+        .into_iter()
+        .take(MAX_LOBBY_SEARCH_RESULTS as usize)
+        .map(|lobby| lobby_details(&client, steamworks::LobbyId::from_raw(lobby)))
+        .collect())
+}
+
+#[tauri::command]
+pub fn steam_get_lobby_details(
+    lobby_id: String,
+    state: State<'_, SteamState>,
+) -> Result<SteamLobbyDto, String> {
+    let lobby_id = parse_steam_id(&lobby_id, "Lobby ID")?;
+    let client = state.client()?;
+    Ok(lobby_details(&client, steamworks::LobbyId::from_raw(lobby_id)))
+}
+
+#[tauri::command]
+pub fn steam_get_lobby_members(
+    lobby_id: String,
+    state: State<'_, SteamState>,
+) -> Result<Vec<String>, String> {
+    let lobby_id = parse_steam_id(&lobby_id, "Lobby ID")?;
+    let client = state.client()?;
+
+    Ok(client
+        .matchmaking()
+        .lobby_members(steamworks::LobbyId::from_raw(lobby_id))
+        .into_iter()
+        .map(|member| member.raw().to_string())
+        .collect())
+}
+
+#[tauri::command]
+pub fn steam_invite_to_lobby(
+    lobby_id: String,
+    invitee_steam_id: String,
+    state: State<'_, SteamState>,
+) -> Result<bool, String> {
+    let lobby_id = parse_steam_id(&lobby_id, "Lobby ID")?;
+    let invitee = parse_steam_id(&invitee_steam_id, "Invitee SteamID")?;
+    let _client = state.client()?;
+    let matchmaking = matchmaking_interface()?;
+
+    Ok(unsafe {
+        steamworks::sys::SteamAPI_ISteamMatchmaking_InviteUserToLobby(matchmaking, lobby_id, invitee)
+    })
+}
+
+#[tauri::command]
+pub fn steam_activate_invite_dialog(
+    lobby_id: String,
+    state: State<'_, SteamState>,
+) -> Result<bool, String> {
+    let lobby_id = parse_steam_id(&lobby_id, "Lobby ID")?;
+    let client = state.client()?;
+    client
+        .friends()
+        .activate_invite_dialog(steamworks::LobbyId::from_raw(lobby_id));
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn steam_set_lobby_joinable(
+    lobby_id: String,
+    joinable: bool,
+    state: State<'_, SteamState>,
+) -> Result<bool, String> {
+    let lobby_id = parse_steam_id(&lobby_id, "Lobby ID")?;
+    let client = state.client()?;
+    Ok(client
+        .matchmaking()
+        .set_lobby_joinable(steamworks::LobbyId::from_raw(lobby_id), joinable))
 }
 
 #[tauri::command]
@@ -600,12 +1070,39 @@ pub fn steam_read_p2p_packet(
         return Ok(None);
     }
 
-    if packet_size as usize > MAX_P2P_RELIABLE_BYTES {
+    if classify_incoming_packet(packet_size as usize) == PacketDisposition::Discard {
+        // Consome o pacote para não travar o canal para sempre (G111).
+        discard_p2p_packet(networking, channel);
         return Err(format!(
-            "Pacote recebido excede limite de segurança: {packet_size} bytes"
+            "Pacote recebido excede limite de segurança ({packet_size} bytes) e foi descartado"
         ));
     }
 
+    Ok(read_one_p2p_packet(networking, packet_size, channel))
+}
+
+fn discard_p2p_packet(networking: *mut steamworks::sys::ISteamNetworking, channel: i32) {
+    let mut scratch = [0_u8; 64];
+    let mut bytes_read = 0_u32;
+    let mut remote_id = 0_u64;
+
+    unsafe {
+        steamworks::sys::SteamAPI_ISteamNetworking_ReadP2PPacket(
+            networking,
+            scratch.as_mut_ptr().cast(),
+            scratch.len() as u32,
+            &mut bytes_read,
+            (&mut remote_id as *mut u64).cast(),
+            channel,
+        );
+    }
+}
+
+fn read_one_p2p_packet(
+    networking: *mut steamworks::sys::ISteamNetworking,
+    packet_size: u32,
+    channel: i32,
+) -> Option<SteamP2PPacketDto> {
     let mut data = vec![0_u8; packet_size as usize];
     let mut bytes_read = 0_u32;
     let mut remote_id = 0_u64;
@@ -622,17 +1119,77 @@ pub fn steam_read_p2p_packet(
     };
 
     if !read {
-        return Ok(None);
+        return None;
     }
 
     data.truncate(bytes_read as usize);
 
-    Ok(Some(SteamP2PPacketDto {
+    Some(SteamP2PPacketDto {
         source_steam_id: remote_id.to_string(),
         channel,
         bytes_received: bytes_read as usize,
         data,
-    }))
+    })
+}
+
+/// Drena pacotes de TODOS os canais 0..=255 numa única chamada IPC (G104),
+/// limitada por quantidade e bytes; pacotes acima do limite são descartados
+/// sem travar o canal (G111).
+#[tauri::command]
+pub fn steam_read_p2p_packets(
+    max_packets: u32,
+    max_total_bytes: u32,
+    state: State<'_, SteamState>,
+) -> Result<SteamP2PBatchDto, String> {
+    let _client = state.client()?;
+    let networking = networking_interface()?;
+    let mut budget = P2PBatchBudget::new(max_packets, max_total_bytes);
+    let mut packets = Vec::new();
+    let mut dropped_oversized = 0_u32;
+
+    'channels: for channel in 0..=MAX_P2P_CHANNEL {
+        loop {
+            if budget.exhausted() {
+                break 'channels;
+            }
+
+            let mut packet_size = 0_u32;
+            let available = unsafe {
+                steamworks::sys::SteamAPI_ISteamNetworking_IsP2PPacketAvailable(
+                    networking,
+                    &mut packet_size,
+                    channel,
+                )
+            };
+
+            if !available {
+                break;
+            }
+
+            if classify_incoming_packet(packet_size as usize) == PacketDisposition::Discard {
+                discard_p2p_packet(networking, channel);
+                dropped_oversized = dropped_oversized.saturating_add(1);
+                continue;
+            }
+
+            if !budget.can_take(packet_size as usize) {
+                break 'channels;
+            }
+
+            match read_one_p2p_packet(networking, packet_size, channel) {
+                Some(packet) => {
+                    budget.take(packet.data.len());
+                    packets.push(packet);
+                }
+                None => break,
+            }
+        }
+    }
+
+    Ok(SteamP2PBatchDto {
+        packets,
+        dropped_oversized,
+    })
 }
 
 #[tauri::command]
