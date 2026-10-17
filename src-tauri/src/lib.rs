@@ -71,7 +71,8 @@ pub fn run() {
             monetization::monetization_init_purchase,
             monetization::monetization_finalize_purchase,
             monetization::monetization_fetch_inventory,
-            monetization::monetization_consume_item
+            monetization::monetization_consume_item,
+            monetization::monetization_start_inventory_purchase
         ])
         .build(tauri::generate_context!())
         .expect("Erro ao construir o aplicativo Tauri");
