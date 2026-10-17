@@ -4,6 +4,7 @@ import type {
 } from "../../../contracts/net/types";
 
 import {
+  MAX_NETWORK_PACKET_BYTES,
   isValidNetworkChannel,
   isValidNetworkPayload,
   isValidNetworkPeerId,
@@ -28,12 +29,46 @@ export interface PeerDisconnectionHandler {
   ): void;
 }
 
+export interface TransportListenOptions {
+  readonly port?: number;
+  readonly room?: string;
+}
+
 export abstract class NetworkTransport {
   public abstract readonly type:
     TransportType;
 
   public abstract readonly isConnected:
     boolean;
+
+  /**
+   * Abre o transporte para receber conexões (modo host). Padrão: igual a
+   * `initialize()`. Transportes que não podem hospedar retornam `false`.
+   */
+  public async listen(
+    _options: TransportListenOptions = {},
+  ): Promise<boolean> {
+    return this.initialize();
+  }
+
+  /** `true` se este transporte consegue hospedar (`listen`). */
+  public get canHost(): boolean {
+    return true;
+  }
+
+  /** Maior frame aceito pelo transporte (a sessão fragmenta acima disso). */
+  public maxFrameBytes(
+    _reliable: boolean,
+  ): number {
+    return MAX_NETWORK_PACKET_BYTES;
+  }
+
+  /** Esquece/fecha um par específico no nível do link (best-effort). */
+  public closePeer(
+    _peerId: string,
+  ): void {
+    // padrão: nada a fechar
+  }
 
   protected readonly packetHandlers =
     new Set<PacketHandler>();
