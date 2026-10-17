@@ -373,6 +373,74 @@ describe("net gaps", () => {
     expect(client.transportType).toBe("broadcast_channel");
   });
 
+  it("G105/G106: WebSocket faz handshake real, honra canal e detecta queda por erro", async () => {
+    const sockets: FakeSocket[] = [];
+    class FakeSocket {
+      public binaryType = "blob";
+      public readyState = 0;
+      public bufferedAmount = 0;
+      public onopen: (() => void) | null = null;
+      public onmessage: ((event: { data: ArrayBuffer }) => void) | null = null;
+      public onerror: (() => void) | null = null;
+      public onclose: (() => void) | null = null;
+      public readonly sent: Uint8Array[] = [];
+      public constructor(public readonly url: string) {
+        sockets.push(this);
+        queueMicrotask(() => {
+          this.readyState = 1;
+          this.onopen?.();
+        });
+      }
+      public send(data: Uint8Array): void {
+        this.sent.push(data.slice());
+        const frame = decodeFrame(data);
+        if (frame?.type === 3 && this.url.includes("good")) {
+          // servidor de referência: responde HELLO com WELCOME
+          const welcome = new TextEncoder().encode(JSON.stringify({ protocol: 1, peerId: "server" }));
+          const out = new Uint8Array(4 + welcome.byteLength);
+          out.set([0xa7, 1, 4, 0]);
+          out.set(welcome, 4);
+          queueMicrotask(() => this.onmessage?.({ data: out.buffer }));
+        }
+      }
+      public close(): void {
+        this.readyState = 3;
+      }
+    }
+    const previous = (globalThis as { WebSocket?: unknown }).WebSocket;
+    (globalThis as { WebSocket?: unknown }).WebSocket = FakeSocket;
+    try {
+      const events: Emitted = [];
+      const client = makeService(events);
+      client.configure({ handshakeTimeoutMs: 200 });
+      const connecting = client.connect("ws://good.example/game");
+      await pump([client], 4);
+      expect(await connecting).toBe(true);
+      expect(client.transportType).toBe("websocket");
+      expect(client.mode).toBe("client");
+
+      expect(await client.sendTo("dedicated_server", 42, new Uint8Array([7]))).toBe(true);
+      const last = sockets[0]?.sent.at(-1) ?? new Uint8Array();
+      expect(decodeFrame(last)).toMatchObject({ type: 1, channel: 42 });
+      expect(await client.sendTo("someone-else", 0, new Uint8Array([1]))).toBe(false);
+
+      sockets[0]?.onerror?.();
+      await pump([client], 1);
+      expect(events.some((e) => e.type === "game.net.peer-disconnected")).toBe(true);
+      expect(client.mode).toBe("offline");
+
+      const silent = makeService();
+      silent.configure({ handshakeTimeoutMs: 100 });
+      const attempt = silent.connect("ws://mute.example/game");
+      await pump([silent], 2);
+      clock += 200;
+      await pump([silent], 2);
+      expect(await attempt).toBe(false);
+    } finally {
+      (globalThis as { WebSocket?: unknown }).WebSocket = previous;
+    }
+  });
+
   it("protocolo: frames inválidos, fragmento e snapshot validados", () => {
     expect(decodeFrame(new Uint8Array([1, 2, 3]))).toBeNull();
     expect(decodeFrame(new Uint8Array([0xa7, 1, 99, 0]))).toBeNull();

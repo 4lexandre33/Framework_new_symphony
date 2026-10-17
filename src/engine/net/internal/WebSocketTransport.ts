@@ -255,17 +255,12 @@ export class WebSocketTransport
                 return;
               }
 
-              const wasConnected =
-                this.connected;
-
-              this.connected =
-                false;
-
               settle(false);
 
-              // G105: erro depois de conectado é queda do par.
+              // G105: erro depois de conectado é queda do par
+              // (closeSocket notifica se estava conectado).
               this.closeSocket(
-                wasConnected,
+                true,
                 "erro_conexao",
               );
             };
