@@ -1,18 +1,20 @@
 import type { CrashReportPayload } from "../../../contracts/security/types";
 
+/**
+ * Monta o relatório de crash. G115: NÃO cria contexto WebGL (antes cada dump
+ * abria um, podendo derrubar o do jogo): o nome da GPU vem de quem chama
+ * (contexto já existente do render) ou fica "não coletado".
+ */
 export class CrashReportDumper {
   private crashSequence = 0;
 
   public generateReport(
-    error: Error | string,
+    error: unknown,
     activeSceneId?: string,
+    webglRenderer?: string,
   ): CrashReportPayload {
     const timestamp = Date.now();
-    const errorMessage = typeof error === "string" ? error : error.message;
-    const stackTrace =
-      typeof error === "string"
-        ? "Stack trace não disponível"
-        : error.stack ?? "Stack trace não disponível";
+    const { errorMessage, stackTrace } = describeError(error);
 
     return {
       crashId: this.createCrashId(timestamp),
@@ -22,7 +24,12 @@ export class CrashReportDumper {
         activeSceneId && activeSceneId.length > 0
           ? activeSceneId
           : "desconhecida",
-      webglRenderer: this.detectWebGLRenderer(),
+      webglRenderer:
+        webglRenderer && webglRenderer.length > 0
+          ? webglRenderer
+          : typeof document === "undefined"
+            ? "Headless / Node Environment"
+            : "não coletado",
       timestamp,
       environment: this.collectEnvironment(),
     };
@@ -66,39 +73,42 @@ export class CrashReportDumper {
 
     return environment;
   }
+}
 
-  private detectWebGLRenderer(): string {
-    if (typeof document === "undefined") {
-      return "Headless / Node Environment";
-    }
+const NO_STACK = "Stack trace não disponível";
+const MAX_MESSAGE = 4096;
 
-    try {
-      const canvas = document.createElement("canvas");
-      const gl = canvas.getContext("webgl2") ?? canvas.getContext("webgl");
+function describeError(error: unknown): { errorMessage: string; stackTrace: string } {
+  if (typeof error === "string") {
+    return { errorMessage: error.slice(0, MAX_MESSAGE), stackTrace: NO_STACK };
+  }
+  if (error instanceof Error) {
+    return {
+      errorMessage: (error.message || error.name || String(error)).slice(0, MAX_MESSAGE),
+      stackTrace: error.stack ?? NO_STACK,
+    };
+  }
+  let text: string;
+  try {
+    text = typeof error === "object" && error !== null ? JSON.stringify(error) : String(error);
+  } catch {
+    text = String(error);
+  }
+  return { errorMessage: (text ?? "erro desconhecido").slice(0, MAX_MESSAGE), stackTrace: NO_STACK };
+}
 
-      if (!gl) {
-        return "WebGL Indisponível";
-      }
-
-      let renderer = "WebGL Suportado";
-      const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
-
-      if (debugInfo) {
-        const detected = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
-        if (typeof detected === "string" && detected.length > 0) {
-          renderer = detected;
-        }
-      } else {
-        const detected = gl.getParameter(gl.RENDERER);
-        if (typeof detected === "string" && detected.length > 0) {
-          renderer = detected;
-        }
-      }
-
-      gl.getExtension("WEBGL_lose_context")?.loseContext();
-      return renderer;
-    } catch {
-      return "Erro ao identificar WebGL";
-    }
+/**
+ * Lê o nome da GPU de um contexto WebGL JÁ EXISTENTE (nunca cria um).
+ */
+export function readRendererName(gl: WebGLRenderingContext | WebGL2RenderingContext | null | undefined): string | undefined {
+  if (!gl) return undefined;
+  try {
+    const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+    const detected = debugInfo
+      ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
+      : gl.getParameter(gl.RENDERER);
+    return typeof detected === "string" && detected.length > 0 ? detected : undefined;
+  } catch {
+    return undefined;
   }
 }

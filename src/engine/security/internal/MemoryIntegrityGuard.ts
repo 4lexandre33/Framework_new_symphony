@@ -5,9 +5,17 @@ const UINT32_HIGH_MANTISSA_MASK = 0x000f_ffff;
 const FNV_OFFSET_BASIS = 0x811c_9dc5;
 const FNV_PRIME = 0x0100_0193;
 
+/**
+ * G114: descritores OPACOS. Só objetos emitidos por ESTA instância
+ * (`issued`, WeakSet — sem vazamento) são aceitos, e o checksum mistura um
+ * segredo por instância (`checksumSecret`) que nunca é exposto: copiar,
+ * forjar ou desserializar um descritor não passa na verificação.
+ */
 export class MemoryIntegrityGuard {
   private dynamicKey = createRandomUint32();
   private nonce = 1;
+  private readonly checksumSecret = createRandomUint32();
+  private readonly issued = new WeakSet<object>();
 
   private readonly scratchBuffer = new ArrayBuffer(FLOAT64_BYTES);
   private readonly scratchFloat64 = new Float64Array(this.scratchBuffer);
@@ -29,12 +37,14 @@ export class MemoryIntegrityGuard {
     const obfuscatedValue = this.transformMantissa(value, key);
     const checksum = this.calculateChecksum(id, obfuscatedValue, key);
 
-    return {
+    const descriptor: ProtectedValueDescriptor = Object.freeze({
       id,
       obfuscatedValue,
       key,
       checksum,
-    };
+    });
+    this.issued.add(descriptor);
+    return descriptor;
   }
 
   public readProtectedNumber(
@@ -56,6 +66,10 @@ export class MemoryIntegrityGuard {
     descriptor: ProtectedValueDescriptor,
   ): boolean {
     if (
+      typeof descriptor !== "object" ||
+      descriptor === null ||
+      !this.issued.has(descriptor) ||
+      typeof descriptor.id !== "string" ||
       descriptor.id.length === 0 ||
       !Number.isFinite(descriptor.obfuscatedValue) ||
       !Number.isInteger(descriptor.key) ||
@@ -136,7 +150,7 @@ export class MemoryIntegrityGuard {
     obfuscatedValue: number,
     key: number,
   ): number {
-    let hash = FNV_OFFSET_BASIS;
+    let hash = mixUint32(FNV_OFFSET_BASIS, this.checksumSecret);
 
     for (let index = 0; index < id.length; index += 1) {
       const code = id.charCodeAt(index);
