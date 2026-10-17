@@ -1,5 +1,6 @@
 import { defineEvent } from "../typed-event";
 import type { Schema } from "../schema";
+import type { HandlerErrorEventPayload } from "../handler-error";
 
 /**
  * Eventos emitidos pelo próprio kernel. Tipos ficam reservados sob o
@@ -106,6 +107,14 @@ export const KernelStopped = defineEvent<"kernel.stopped", Record<string, never>
   { description: "Emitido após `stop()` completar." },
 );
 
+export const KernelHandlerError = defineEvent<
+  "kernel.handler.error",
+  HandlerErrorEventPayload
+>("kernel.handler.error", {
+  description:
+    "Emitido quando um handler de evento/command/query lança (G30). O bus segue funcionando; falhas em handlers deste evento não geram outro.",
+});
+
 export const SYSTEM_EVENTS = [
   KernelPluginSetupStart,
   KernelPluginSetupDone,
@@ -120,4 +129,5 @@ export const SYSTEM_EVENTS = [
   KernelBooted,
   KernelStopping,
   KernelStopped,
+  KernelHandlerError,
 ] as const;

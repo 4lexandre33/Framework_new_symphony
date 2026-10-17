@@ -53,6 +53,10 @@ export class MiddlewareChain {
     let current = env;
     let stopped = false;
     let index = -1;
+    // O erro do terminal (handler) NUNCA é engolido por um middleware que
+    // faça `await next()`: é guardado e relançado no fim de `run()` (G29).
+    let terminalFailed = false;
+    let terminalError: unknown;
 
     const ctx: MiddlewareCtx = {
       stop: () => {
@@ -74,7 +78,12 @@ export class MiddlewareChain {
       if (stopped) return;
       index++;
       if (index >= relevant.length) {
-        await terminal(current);
+        try {
+          await terminal(current);
+        } catch (err) {
+          terminalFailed = true;
+          terminalError = err;
+        }
         return;
       }
       const mw = relevant[index]!;
@@ -102,6 +111,7 @@ export class MiddlewareChain {
     };
 
     await advance();
+    if (terminalFailed) throw terminalError;
   }
 
   private logError(message: string, meta?: Record<string, unknown>): void {

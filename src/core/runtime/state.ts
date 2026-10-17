@@ -15,6 +15,7 @@
 import type { KernelOptions, UserPluginConfigs } from "../contracts/kernel-options";
 import type { KernelStatus } from "../contracts/kernel-state";
 import type { Envelope, EventEnvelope } from "../contracts/envelope";
+import type { HandlerErrorInfo, HandlerErrorKind } from "../contracts/handler-error";
 import type { Logger } from "../contracts/logger";
 import type { PluginStorage } from "../contracts/plugin-storage";
 
@@ -47,7 +48,9 @@ import { EventRegistry } from "../contracts/events/registry";
 import { CommandRegistry } from "../contracts/commands/registry";
 import { QueryRegistry } from "../contracts/queries/registry";
 
-import { emitThroughPipeline, sendThroughPipeline } from "./pipeline";
+import { emitThroughPipeline, sendThroughPipeline, buildEventEnvelope } from "./pipeline";
+
+const HANDLER_ERROR_EVENT = "kernel.handler.error";
 
 const DEFAULT_BOOT_TIMEOUT_MS = 30_000;
 const DEFAULT_STOP_TIMEOUT_MS = 15_000;
@@ -143,8 +146,16 @@ export class KernelState {
     });
     this.resolver = new Resolver(this.capabilities);
     this.middleware = new MiddlewareChain(this.rootLog);
-    this.events = new EventBus(this.rootLog, { strict: this.strict });
-    this.dispatcher = new Dispatcher(this.rootLog, { strict: this.strict });
+    this.events = new EventBus(this.rootLog, {
+      strict: this.strict,
+      onHandlerError: (pluginId, env, err) =>
+        this.reportHandlerError(pluginId, "event", env, err),
+    });
+    this.dispatcher = new Dispatcher(this.rootLog, {
+      strict: this.strict,
+      onHandlerError: (pluginId, kind, env, err) =>
+        this.reportHandlerError(pluginId, kind, env, err),
+    });
     this.envelopeDispatcher = new EnvelopeDispatcher();
 
     const txSignal = new AbortController().signal;
@@ -185,6 +196,50 @@ export class KernelState {
           // duplicata — o primeiro vence
         }
       }
+    }
+  }
+
+  /**
+   * G30: torna observável a falha de um handler — hook síncrono
+   * `KernelOptions.onHandlerError` + evento `kernel.handler.error`.
+   * Falhas de handlers do próprio `kernel.handler.error` não são
+   * re-emitidas (sem recursão).
+   */
+  reportHandlerError(
+    pluginId: string,
+    kind: HandlerErrorKind,
+    env: Envelope,
+    err: unknown,
+  ): void {
+    const message = err instanceof Error ? err.message || String(err) : String(err);
+    const stack = err instanceof Error && typeof err.stack === "string" ? err.stack : undefined;
+    const base = {
+      pluginId,
+      kind,
+      type: env.type,
+      source: env.meta?.source ?? "unknown",
+      seq: env.meta?.seq ?? 0,
+      message,
+      ...(stack !== undefined ? { stack } : {}),
+    };
+    const hook = this.options.onHandlerError;
+    if (hook) {
+      try {
+        const info: HandlerErrorInfo = { ...base, error: err };
+        hook(info);
+      } catch {
+        /* hook hostil */
+      }
+    }
+    if (env.type === HANDLER_ERROR_EVENT) return;
+    if (this.status === "stopped") return;
+    try {
+      const evt = buildEventEnvelope(this, HANDLER_ERROR_EVENT, base, "kernel");
+      this.events.emitAsync(evt).catch(() => {
+        /* strict: falha de reporter não se propaga */
+      });
+    } catch {
+      /* nunca derruba o chamador */
     }
   }
 

@@ -1,5 +1,4 @@
-import { KernelError } from "../contracts/errors";
-import { guardAsync } from "./error-boundary";
+import { KernelError, PluginError } from "../contracts/errors";
 import type { Logger, HandlerCtx } from "../contracts/plugin-context";
 import type { CommandEnvelope, QueryEnvelope } from "../contracts/envelope";
 
@@ -18,20 +17,38 @@ interface CommandListener {
 }
 
 export interface DispatcherOptions {
-  /** Se true, handler que lança rejeita o `send` correspondente. */
+  /**
+   * Se true, o erro de um handler de command chega ao `send` embrulhado em
+   * `PluginError` (com `cause`). Se false, o `send` rejeita com o erro
+   * ORIGINAL. Em ambos os casos o `send` rejeita (G29).
+   */
   readonly strict?: boolean;
+  /** G30: chamado para cada handler de command/query que lança. */
+  readonly onHandlerError?: (
+    pluginId: string,
+    kind: "command" | "query",
+    env: CommandEnvelope | QueryEnvelope,
+    err: unknown,
+  ) => void;
 }
 
 export class Dispatcher {
   private readonly commandHandlers = new Map<string, CommandListener>();
   private readonly queryHandlers = new Map<string, { pluginId: string; fn: QueryHandler }>();
   private readonly strict: boolean;
+  private readonly onHandlerError: DispatcherOptions["onHandlerError"];
 
   constructor(
     private readonly logger: Logger,
     opts: DispatcherOptions = {},
   ) {
     this.strict = opts.strict ?? false;
+    this.onHandlerError = opts.onHandlerError;
+  }
+
+  /** true se existe handler registrado para o command. */
+  hasCommandHandler(type: string): boolean {
+    return this.commandHandlers.has(type);
   }
 
   /**
@@ -89,15 +106,38 @@ export class Dispatcher {
 
   /**
    * Commands possuem uma única autoridade. EventBus é o mecanismo multicast.
-   * Honra `strict`: erro do handler rejeita quando strict=true.
+   *
+   * G29: resolve com o VALOR RETORNADO pelo handler (aguardado se for
+   * Promise) e rejeita quando o handler lança (erro original; `PluginError`
+   * com `cause` se `strict`). Sem handler: resolve `undefined`, ou rejeita
+   * com `DISPATCH_NO_HANDLER` se `requireHandler`.
    */
-  async send(env: CommandEnvelope, signal: AbortSignal): Promise<void> {
+  async send<R = unknown>(
+    env: CommandEnvelope,
+    signal: AbortSignal,
+    requireHandler = false,
+  ): Promise<R | undefined> {
     const h = this.commandHandlers.get(env.type);
-    if (!h) return;
+    if (!h) {
+      if (requireHandler) {
+        throw new KernelError(
+          "DISPATCH_NO_HANDLER",
+          `nenhum handler para command "${env.type}"`,
+          { type: env.type },
+        );
+      }
+      return undefined;
+    }
     const ctx: HandlerCtx = { signal };
-    await guardAsync(h.pluginId, this.logger, () => h.fn(env, ctx), {
-      strict: this.strict,
-    });
+    try {
+      return (await h.fn(env, ctx)) as R;
+    } catch (err) {
+      this.report(h.pluginId, "command", env, err);
+      if (this.strict) {
+        throw new PluginError(h.pluginId, `handler failed in send("${env.type}")`, err);
+      }
+      throw err;
+    }
   }
 
   /**
@@ -119,10 +159,27 @@ export class Dispatcher {
       const result = await fn(env, ctx);
       return result as R;
     } catch (err) {
-      this.logger.error(`handler de "${pluginId}" falhou em ask("${env.type}")`, {
-        err: String(err),
-      });
+      this.report(pluginId, "query", env, err);
       throw err;
+    }
+  }
+
+  private report(
+    pluginId: string,
+    kind: "command" | "query",
+    env: CommandEnvelope | QueryEnvelope,
+    err: unknown,
+  ): void {
+    this.logger.error(
+      `handler de "${pluginId}" falhou em ${kind === "command" ? "send" : "ask"}("${env.type}")`,
+      { err: String(err) },
+    );
+    if (this.onHandlerError) {
+      try {
+        this.onHandlerError(pluginId, kind, env, err);
+      } catch {
+        /* reporter hostil */
+      }
     }
   }
 

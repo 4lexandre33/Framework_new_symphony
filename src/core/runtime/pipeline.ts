@@ -78,11 +78,17 @@ export async function emitThroughPipeline(
   });
 }
 
-export async function sendThroughPipeline(
+/**
+ * G29: resolve com o valor de retorno do handler do command (ou
+ * `undefined` sem handler / se um middleware parar o envelope) e rejeita
+ * quando o handler lança.
+ */
+export async function sendThroughPipeline<R = unknown>(
   state: KernelState,
   env: CommandEnvelope,
   signal: AbortSignal,
-): Promise<void> {
+  requireHandler = false,
+): Promise<R | undefined> {
   const err = validateCommand(state, env);
   if (err) throw err;
 
@@ -90,9 +96,15 @@ export async function sendThroughPipeline(
     try { sub(env); } catch { /* hostil */ }
   }
 
+  let result: R | undefined;
   await state.middleware.run(env, async (current) => {
-    await state.dispatcher.send(current as CommandEnvelope, signal);
+    result = await state.dispatcher.send<R>(
+      current as CommandEnvelope,
+      signal,
+      requireHandler,
+    );
   });
+  return result;
 }
 
 export async function askThroughPipeline<R>(

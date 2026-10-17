@@ -22,6 +22,7 @@ export * from "./commands";
 export * from "./envelope";
 export * from "./errors";
 export * from "./events";
+export * from "./handler-error";
 export * from "./kernel-options";
 export * from "./kernel-state";
 export * from "./kernel-version";

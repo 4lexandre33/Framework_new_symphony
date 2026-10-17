@@ -1,4 +1,4 @@
-import { guardAsync } from "./error-boundary";
+import { PluginError } from "../contracts/errors";
 import type { Logger } from "../contracts/logger";
 import type { EventEnvelope } from "../contracts/envelope";
 
@@ -15,6 +15,11 @@ export interface EventBusOptions {
    * Default: false — erros viram log, o bus nunca derruba o kernel.
    */
   readonly strict?: boolean;
+  /**
+   * G30: chamado para cada handler que lança (depois do log). Nunca
+   * derruba o bus: exceções do próprio callback são ignoradas.
+   */
+  readonly onHandlerError?: (pluginId: string, env: EventEnvelope, err: unknown) => void;
 }
 
 export class EventBus {
@@ -22,9 +27,11 @@ export class EventBus {
   private readonly anyHandlers = new Set<{ pluginId: string; fn: AnyHandler }>();
   private readonly byPlugin = new Map<string, Set<() => void>>();
   private readonly strict: boolean;
+  private readonly onHandlerError: EventBusOptions["onHandlerError"];
 
   constructor(private readonly logger: Logger, opts: EventBusOptions = {}) {
     this.strict = opts.strict ?? false;
+    this.onHandlerError = opts.onHandlerError;
   }
 
   /**
@@ -66,23 +73,35 @@ export class EventBus {
   }
 
   /**
-   * Executa todos os handlers em paralelo.
+   * Executa todos os handlers "em paralelo": cada handler é INVOCADO
+   * sincronamente, na ordem de inscrição, dentro desta chamada; só as partes
+   * assíncronas (depois do primeiro `await`) se sobrepõem.
    *
-   * - `strict: false` (default): NUNCA rejeita. Erros viram log.
+   * - `strict: false` (default): NUNCA rejeita. Erros viram log +
+   *   `onHandlerError` (G30).
    * - `strict: true`: rejeita no primeiro erro (Promise.all).
    */
   async emit(env: EventEnvelope): Promise<void> {
-    const tasks: Array<Promise<unknown>> = [];
     const direct = this.handlers.get(env.type);
-    if (direct) {
-      for (const h of direct) {
-        tasks.push(this.guard(h.pluginId, () => h.fn(env)));
+    const directCount = direct ? direct.size : 0;
+    const total = directCount + this.anyHandlers.size;
+    if (total === 0) return;
+    if (total === 1) {
+      // Caminho quente (ex.: game.loop.tick com 1 assinante): sem array.
+      if (direct) {
+        for (const h of direct) await this.invoke(h.pluginId, h.fn, env);
+      } else {
+        for (const h of this.anyHandlers) await this.invoke(h.pluginId, h.fn, env);
       }
+      return;
+    }
+    const tasks: Array<Promise<void>> = [];
+    if (direct) {
+      for (const h of direct) tasks.push(this.invoke(h.pluginId, h.fn, env));
     }
     for (const h of this.anyHandlers) {
-      tasks.push(this.guard(h.pluginId, () => h.fn(env)));
+      tasks.push(this.invoke(h.pluginId, h.fn, env));
     }
-    if (tasks.length === 0) return;
     await Promise.all(tasks);
   }
 
@@ -114,8 +133,28 @@ export class EventBus {
     }
   }
 
-  private guard<T>(pluginId: string, fn: () => Promise<T> | T): Promise<T | undefined> {
-    return guardAsync(pluginId, this.logger, fn, { strict: this.strict });
+  private async invoke(
+    pluginId: string,
+    fn: (env: EventEnvelope) => void | Promise<void>,
+    env: EventEnvelope,
+  ): Promise<void> {
+    try {
+      await fn(env);
+    } catch (err) {
+      this.logger.error(`handler de "${pluginId}" falhou em "${env.type}"`, {
+        err: String(err),
+      });
+      if (this.onHandlerError) {
+        try {
+          this.onHandlerError(pluginId, env, err);
+        } catch {
+          /* reporter hostil nunca derruba o bus */
+        }
+      }
+      if (this.strict) {
+        throw new PluginError(pluginId, "handler failed in strict mode", err);
+      }
+    }
   }
 
   private trackDispose(pluginId: string, dispose: () => void): void {
