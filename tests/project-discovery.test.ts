@@ -2,7 +2,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { createProjectPlugins, listProjects } from "../src/project";
+import { createProjectPlugins, listProjects, resolveProjectSelection } from "../src/project";
+import type { ProjectDefinition } from "../src/project-contract";
 
 const ROOT = path.resolve(__dirname, "..");
 
@@ -43,5 +44,30 @@ describe("descoberta de projetos consumidores", () => {
         }
       }
     }
+  });
+
+  describe("G24: vários projetos sem VITE_PROJECT não derrubam o app", () => {
+    const fake = (id: string): ProjectDefinition => ({ id, name: id.toUpperCase(), createPlugins: () => [] });
+    const two = [fake("a"), fake("b")];
+
+    it("sem seleção: none/ambiguous (não lança) com a lista disponível", () => {
+      const sel = resolveProjectSelection(two, {});
+      expect(sel).toMatchObject({ status: "none", reason: "ambiguous" });
+      expect(sel.status === "none" && sel.available.map((p) => p.id)).toEqual(["a", "b"]);
+    });
+
+    it("precedência argumento > VITE_PROJECT > ?project= > único", () => {
+      expect(resolveProjectSelection(two, { requested: "b", env: "a", search: "?project=a" })).toMatchObject({ status: "selected", source: "argument", project: { id: "b" } });
+      expect(resolveProjectSelection(two, { env: "a", search: "?project=b" })).toMatchObject({ status: "selected", source: "env", project: { id: "a" } });
+      expect(resolveProjectSelection(two, { search: "?project=b" })).toMatchObject({ status: "selected", source: "url", project: { id: "b" } });
+      expect(resolveProjectSelection([fake("x")], {})).toMatchObject({ status: "selected", source: "single" });
+      expect(resolveProjectSelection([], {})).toMatchObject({ status: "none", reason: "no-projects" });
+    });
+
+    it("?project= inexistente não lança; id explícito inexistente continua erro claro", () => {
+      expect(resolveProjectSelection(two, { search: "?project=zzz" })).toMatchObject({ status: "none", reason: "unknown-url", requested: "zzz" });
+      expect(() => resolveProjectSelection(two, { env: "zzz" })).toThrow(/não encontrado/u);
+      expect(resolveProjectSelection(two, { env: "none" })).toMatchObject({ status: "none", reason: "explicit-none" });
+    });
   });
 });

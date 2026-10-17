@@ -24,7 +24,8 @@ import { ModdingToken } from "../tokens/modding";
 import { MonetizationToken } from "../tokens/monetization";
 import { createEngineServices, type EngineServices } from "./EngineServices";
 import { createEnginePlugins } from "./createEnginePlugins";
-import { createProjectPlugins } from "../project";
+import { selectProject } from "../project";
+import { describeProjectSelection, mountProjectPicker } from "./ProjectPicker";
 import { getErrorMessage } from "./errors";
 import { DebugHud } from "../debug/hud/DebugHud";
 import { HudRenderer } from "../debug/hud/HudRenderer";
@@ -93,8 +94,17 @@ export async function bootstrap(): Promise<void> {
 
     hud.appendLog("✅ Plugins registrados.");
 
-    for (const plugin of createProjectPlugins()) {
-      kernel.register(plugin);
+    // G24: vários projetos sem VITE_PROJECT não derrubam o app — a engine
+    // sobe sem projeto e um seletor visível é montado.
+    const selection = selectProject();
+    hud.appendLog(`${selection.status === "selected" ? "🎮" : "⚠️"} ${describeProjectSelection(selection)}`);
+    if (selection.status === "selected") {
+      for (const plugin of selection.project.createPlugins()) {
+        kernel.register(plugin);
+      }
+    } else {
+      console.warn(`[Bootstrap] ${describeProjectSelection(selection)}`);
+      mountProjectPicker(selection);
     }
     hud.appendLog("⏳ Executando Kernel.boot()...");
 
