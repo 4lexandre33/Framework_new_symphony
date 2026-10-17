@@ -4,8 +4,15 @@ export interface ThreeRaycastCallback {
   (cursorX: number, cursorY: number): { hit: boolean; entityId?: string };
 }
 
+/**
+ * Hit-test do overlay: 1) DOM (elemento interativo sob o cursor; canvas da
+ * cena, #ui-root, body/html e `[data-overlay-passthrough]` não contam);
+ * 2) raycast 3D; 3) nada = fundo (passthrough).
+ */
 export class RaycastHitTestPassthrough {
   private lastHitState = false;
+  /** Canvas da cena 3D (vai para o raycast, não conta como UI). */
+  public sceneCanvas: Element | null = null;
 
   public performHitTest(
     cursorX: number,
@@ -18,8 +25,12 @@ export class RaycastHitTestPassthrough {
       if (
         domElement &&
         domElement.id !== "game-canvas" &&
+        domElement.id !== "three-canvas" &&
+        domElement !== this.sceneCanvas &&
         domElement.id !== "ui-root" &&
-        domElement.tagName !== "BODY"
+        domElement.tagName !== "BODY" &&
+        domElement.tagName !== "HTML" &&
+        !domElement.closest?.("[data-overlay-passthrough]")
       ) {
         const isPointerEventsAuto =
           typeof window !== "undefined" && typeof window.getComputedStyle === "function"

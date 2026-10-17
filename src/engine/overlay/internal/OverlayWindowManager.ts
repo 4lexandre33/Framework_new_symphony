@@ -5,8 +5,9 @@ import type {
 } from "../../../contracts/overlay/types";
 
 export class OverlayWindowManager {
-  private mode: OverlayMode = "always_on_top_hud";
-  private alwaysOnTopState = true;
+  // G15/G32: padrão seguro = janela comum (sem sempre-no-topo).
+  private mode: OverlayMode = "window";
+  private alwaysOnTopState = false;
   private taskbarBoundsCache: TaskbarBounds | null = null;
 
   public setMode(newMode: OverlayMode): void {
@@ -65,8 +66,8 @@ export class OverlayWindowManager {
   }
 
   public clear(): void {
-    this.mode = "always_on_top_hud";
-    this.alwaysOnTopState = true;
+    this.mode = "window";
+    this.alwaysOnTopState = false;
     this.taskbarBoundsCache = null;
   }
 }
