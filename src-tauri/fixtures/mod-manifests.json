@@ -1,0 +1,110 @@
+[
+  {
+    "name": "minimal-valid",
+    "valid": true,
+    "manifest": { "modId": "my-mod", "name": "My Mod", "version": "1.0.0", "author": "", "description": "", "minEngineVersion": "" }
+  },
+  {
+    "name": "full-valid",
+    "valid": true,
+    "manifest": {
+      "modId": "pack.hd_2",
+      "name": "HD Pack",
+      "version": "2.1.0-beta.1",
+      "author": "Ana",
+      "description": "Texturas",
+      "minEngineVersion": "1.0.0",
+      "entryScript": "scripts/main.js",
+      "overrides": [{ "virtualPath": "textures/hero.png", "realPath": "./assets\\hero.png", "modId": "pack.hd_2", "priority": 10 }],
+      "dependencies": [{ "modId": "base-lib", "minVersion": "1.2.0" }]
+    }
+  },
+  {
+    "name": "missing-author",
+    "valid": false,
+    "manifest": { "modId": "a", "name": "A", "version": "1.0.0", "description": "", "minEngineVersion": "" }
+  },
+  {
+    "name": "bad-mod-id",
+    "valid": false,
+    "manifest": { "modId": "../evil", "name": "A", "version": "1.0.0", "author": "", "description": "", "minEngineVersion": "" }
+  },
+  {
+    "name": "mod-id-leading-dot",
+    "valid": false,
+    "manifest": { "modId": ".hidden", "name": "A", "version": "1.0.0", "author": "", "description": "", "minEngineVersion": "" }
+  },
+  {
+    "name": "blank-name",
+    "valid": false,
+    "manifest": { "modId": "a", "name": "   ", "version": "1.0.0", "author": "", "description": "", "minEngineVersion": "" }
+  },
+  {
+    "name": "non-semver-version",
+    "valid": false,
+    "manifest": { "modId": "a", "name": "A", "version": "1.0", "author": "", "description": "", "minEngineVersion": "" }
+  },
+  {
+    "name": "non-semver-min-engine",
+    "valid": false,
+    "manifest": { "modId": "a", "name": "A", "version": "1.0.0", "author": "", "description": "", "minEngineVersion": "latest" }
+  },
+  {
+    "name": "entry-script-traversal",
+    "valid": false,
+    "manifest": { "modId": "a", "name": "A", "version": "1.0.0", "author": "", "description": "", "minEngineVersion": "", "entryScript": "../x.js" }
+  },
+  {
+    "name": "entry-script-not-js",
+    "valid": false,
+    "manifest": { "modId": "a", "name": "A", "version": "1.0.0", "author": "", "description": "", "minEngineVersion": "", "entryScript": "main.exe" }
+  },
+  {
+    "name": "override-absolute-real-path",
+    "valid": false,
+    "manifest": {
+      "modId": "a", "name": "A", "version": "1.0.0", "author": "", "description": "", "minEngineVersion": "",
+      "overrides": [{ "virtualPath": "x.png", "realPath": "/etc/passwd", "modId": "a", "priority": 1 }]
+    }
+  },
+  {
+    "name": "override-virtual-traversal",
+    "valid": false,
+    "manifest": {
+      "modId": "a", "name": "A", "version": "1.0.0", "author": "", "description": "", "minEngineVersion": "",
+      "overrides": [{ "virtualPath": "../x.png", "realPath": "x.png", "modId": "a", "priority": 1 }]
+    }
+  },
+  {
+    "name": "override-foreign-mod-id",
+    "valid": false,
+    "manifest": {
+      "modId": "a", "name": "A", "version": "1.0.0", "author": "", "description": "", "minEngineVersion": "",
+      "overrides": [{ "virtualPath": "x.png", "realPath": "x.png", "modId": "b", "priority": 1 }]
+    }
+  },
+  {
+    "name": "self-dependency",
+    "valid": false,
+    "manifest": {
+      "modId": "a", "name": "A", "version": "1.0.0", "author": "", "description": "", "minEngineVersion": "",
+      "dependencies": [{ "modId": "a", "minVersion": "1.0.0" }]
+    }
+  },
+  {
+    "name": "duplicate-dependency",
+    "valid": false,
+    "manifest": {
+      "modId": "a", "name": "A", "version": "1.0.0", "author": "", "description": "", "minEngineVersion": "",
+      "dependencies": [{ "modId": "b", "minVersion": "1.0.0" }, { "modId": "b", "minVersion": "1.1.0" }]
+    }
+  },
+  {
+    "name": "dependency-bad-version",
+    "valid": false,
+    "manifest": {
+      "modId": "a", "name": "A", "version": "1.0.0", "author": "", "description": "", "minEngineVersion": "",
+      "dependencies": [{ "modId": "b", "minVersion": ">=1" }]
+    }
+  }
+]
