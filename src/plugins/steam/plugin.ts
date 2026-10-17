@@ -156,14 +156,14 @@ export interface SteamPluginOptions {
 }
 
 export function createSteamPlugin(options: SteamPluginOptions = {}): Plugin {
-  let steamService: SteamBridgeService | null = null;
+  let bootService: SteamBridgeService | null = null;
 
   const manifest: Plugin["manifest"] = {
     ...steamManifest,
     lifecycleHooks: {
       // G112: disponibilidade resolvida no boot, antes dos consumidores começarem.
       onBoot: async (): Promise<void> => {
-        await steamService?.checkAvailability();
+        await bootService?.checkAvailability();
       },
     },
   };
@@ -172,11 +172,12 @@ export function createSteamPlugin(options: SteamPluginOptions = {}): Plugin {
     manifest,
 
     setup(ctx: PluginContext) {
-      const service = options.service ?? new SteamBridgeService();
-      steamService = service;
+      const steamService = options.service ?? new SteamBridgeService();
+      const service = steamService;
+      bootService = service;
 
-      ctx.caps.provide(SteamToken, service);
-      ctx.caps.provide(SteamNetworkToken, service);
+      ctx.caps.provide(SteamToken, steamService);
+      ctx.caps.provide(SteamNetworkToken, steamService);
 
       ctx.events.define(P2PMessageReceivedEvent);
       ctx.events.define(P2PSessionRequestEvent);
@@ -302,7 +303,7 @@ export function createSteamPlugin(options: SteamPluginOptions = {}): Plugin {
         unbindAvailability();
         stopP2PReader();
         service.dispose();
-        if (steamService === service) steamService = null;
+        if (bootService === service) bootService = null;
       });
 
       ctx.lifecycle.ready();

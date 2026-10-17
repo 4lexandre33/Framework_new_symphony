@@ -217,14 +217,14 @@ describe(
         const host =
           new NetworkService(
             createContext([]),
-            { backgroundPump: false },
+            {},
           );
         const service =
           new NetworkService(
             createContext(
               emitted,
             ),
-            { backgroundPump: false },
+            {},
           );
 
         host.bindSteamCapability(hostSteam);
@@ -271,7 +271,7 @@ describe(
         const service =
           new NetworkService(
             createContext([]),
-            { backgroundPump: false },
+            {},
           );
 
         const steam =

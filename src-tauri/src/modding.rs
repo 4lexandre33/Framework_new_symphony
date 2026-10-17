@@ -8,7 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use tauri::Manager;
 
 const MAX_MOD_MANIFEST_BYTES: u64 = 1024 * 1024;
@@ -148,6 +148,18 @@ pub fn normalize_relative_path(value: &str) -> Result<String, String> {
     Ok(segments.join("/"))
 }
 
+/// Valida um caminho relativo de mod (normalização + defesa por componentes).
+pub fn validate_relative_mod_path(value: &str, label: &str) -> Result<String, String> {
+    let normalized = normalize_relative_path(value).map_err(|e| format!("{label}: {e}"))?;
+    if Path::new(&normalized)
+        .components()
+        .any(|component| matches!(component, Component::ParentDir | Component::RootDir | Component::Prefix(_)))
+    {
+        return Err(format!("{label}: caminho inválido"));
+    }
+    Ok(normalized)
+}
+
 fn validate_text(value: &str, label: &str, max_len: usize, allow_empty: bool) -> Result<(), String> {
     if value.len() > max_len || value.contains('\0') || (!allow_empty && value.trim().is_empty()) {
         return Err(format!("{label} inválido"));
@@ -171,7 +183,7 @@ pub fn validate_manifest(manifest: &ModManifestDto) -> Result<(), String> {
     }
 
     if let Some(entry) = manifest.entry_script.as_deref() {
-        let normalized = normalize_relative_path(entry).map_err(|e| format!("entryScript: {e}"))?;
+        let normalized = validate_relative_mod_path(entry, "entryScript")?;
         if !(normalized.ends_with(".js") || normalized.ends_with(".mjs")) {
             return Err("entryScript precisa ser .js/.mjs".to_string());
         }
@@ -182,8 +194,8 @@ pub fn validate_manifest(manifest: &ModManifestDto) -> Result<(), String> {
         return Err(format!("no máximo {MAX_OVERRIDES} overrides"));
     }
     for entry in overrides {
-        normalize_relative_path(&entry.virtual_path).map_err(|e| format!("override.virtualPath: {e}"))?;
-        normalize_relative_path(&entry.real_path).map_err(|e| format!("override.realPath: {e}"))?;
+        validate_relative_mod_path(&entry.virtual_path, "override.virtualPath")?;
+        validate_relative_mod_path(&entry.real_path, "override.realPath")?;
         if entry.mod_id != manifest.mod_id {
             return Err("override.modId precisa ser o modId do manifesto".to_string());
         }
@@ -232,7 +244,7 @@ fn read_manifest(folder: &Path) -> Result<ModManifestDto, String> {
 /// Resolve `relative` dentro de `root` (ambos canônicos) e garante que o
 /// destino continua dentro de `root` (symlinks incluídos).
 pub fn resolve_inside(root: &Path, relative: &str) -> Result<PathBuf, String> {
-    let normalized = normalize_relative_path(relative)?;
+    let normalized = validate_relative_mod_path(relative, "arquivo")?;
     let candidate = root.join(normalized);
     let canonical = candidate
         .canonicalize()

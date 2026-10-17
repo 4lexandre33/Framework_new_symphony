@@ -141,7 +141,7 @@ export class BroadcastChannelTransport extends QueuedTransport {
     const room = parseBroadcastTarget(target);
     if (room === null || !this.open(room)) return false;
     instanceCounter += 1;
-    const random = Math.floor(Math.random() * 0xffffffff).toString(36);
+    const random = (globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}`).slice(0, 8);
     this.endpointId = `bc-client:${instanceCounter}-${random}`;
     this.role = "client";
     this.hostId = `bc-host:${room}`;

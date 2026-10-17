@@ -200,6 +200,15 @@ export function createNetworkPlugin(
           },
         );
 
+      // Render continua na pausa: mantém heartbeat/handshake vivos (sem timers).
+      const unbindRender =
+        ctx.events.on(
+          "game.loop.render",
+          (): void => {
+            service.onRenderFrame();
+          },
+        );
+
       // Steam P2P: host aceita sessões de clientes; falha derruba o par.
       const unbindSessionRequest =
         ctx.events.on<"game.steam.p2p-session-request", { remoteSteamId: string }>(
@@ -286,6 +295,7 @@ export function createNetworkPlugin(
       ctx.lifecycle.onDispose(
         (): void => {
           unbindTick();
+          unbindRender();
           unbindSessionRequest();
           unbindSessionFailed();
           unbindBroadcastSnapshot();

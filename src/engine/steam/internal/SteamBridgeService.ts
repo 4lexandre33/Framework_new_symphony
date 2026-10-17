@@ -414,9 +414,9 @@ export class SteamBridgeService implements SteamApi, SteamNetworkApi {
    * Executa uma operação de stats; se o nativo responder STATS_NOT_READY,
    * espera `game.steam.stats-ready` e tenta UMA vez de novo.
    */
-  private async withStats(command: string, args: Record<string, unknown>): Promise<boolean> {
+  private async withStats(call: () => Promise<boolean>): Promise<boolean> {
     try {
-      const result = await invoke<boolean>(command, args);
+      const result = await call();
       if (result === true) this.statsReadyFlag = true;
       return result === true;
     } catch (error: unknown) {
@@ -430,7 +430,7 @@ export class SteamBridgeService implements SteamApi, SteamNetworkApi {
     if (!ready) return false;
 
     try {
-      return (await invoke<boolean>(command, args)) === true;
+      return (await call()) === true;
     } catch {
       return false;
     }
@@ -463,7 +463,7 @@ export class SteamBridgeService implements SteamApi, SteamNetworkApi {
       return false;
     }
 
-    return this.withStats("steam_unlock_achievement", { achievementId });
+    return this.withStats(() => invoke<boolean>("steam_unlock_achievement", { achievementId }));
   }
 
   public async setStat(statName: string, value: number, options: SetStatOptions = {}): Promise<boolean> {
@@ -489,8 +489,8 @@ export class SteamBridgeService implements SteamApi, SteamNetworkApi {
     }
 
     return type === "int"
-      ? this.withStats("steam_set_stat", { statName, value })
-      : this.withStats("steam_set_stat_float", { statName, value });
+      ? this.withStats(() => invoke<boolean>("steam_set_stat", { statName, value }))
+      : this.withStats(() => invoke<boolean>("steam_set_stat_float", { statName, value }));
   }
 
   public async getStat(statName: string, type: SteamStatType = "int"): Promise<number | null> {

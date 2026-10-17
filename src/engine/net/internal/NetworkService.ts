@@ -67,11 +67,6 @@ const WEBSOCKET_PATTERN = /^wss?:\/\//iu;
 export interface NetworkServiceOptions {
   /** Relógio (ms). Padrão `performance.now()`. */
   readonly now?: () => number;
-  /**
-   * Timer próprio para heartbeat/polling enquanto conectado (padrão true):
-   * mantém a sessão viva com o game loop pausado.
-   */
-  readonly backgroundPump?: boolean;
   /** Fábricas de transporte (testes/injeção). */
   readonly createTransport?: Partial<Record<TransportType, () => NetworkTransport>>;
 }
@@ -142,15 +137,12 @@ export class NetworkService
   private lastTick =
     0;
 
-  private pumpTimer:
-    ReturnType<typeof setInterval> | null =
-      null;
+  /** Sessão ativa ou handshake em curso: o plugin bombeia também no render. */
+  private pumpActive =
+    false;
 
   private readonly now:
     () => number;
-
-  private readonly backgroundPump:
-    boolean;
 
   private readonly factories:
     Partial<Record<TransportType, () => NetworkTransport>>;
@@ -163,10 +155,6 @@ export class NetworkService
     this.now =
       options.now ??
       (() => performance.now());
-
-    this.backgroundPump =
-      options.backgroundPump ??
-      true;
 
     this.factories =
       options.createTransport ??
@@ -932,23 +920,24 @@ export class NetworkService
     }
   }
 
+  /*
+   * Sem timers no runtime de rede (política NET004): o bombeamento é feito
+   * pelo plugin em `game.loop.tick` E em `game.loop.render` (o render
+   * continua durante a pausa), mantendo heartbeat/handshake vivos com o
+   * jogo pausado.
+   */
   private startPump(): void {
-    if (!this.backgroundPump || this.pumpTimer !== null || this.disposed) {
-      return;
-    }
-
-    const interval =
-      Math.max(20, Math.min(250, Math.floor(this.session.heartbeatMs / 4)));
-
-    this.pumpTimer = setInterval(() => {
-      void this.pollPackets();
-    }, interval);
+    this.pumpActive = !this.disposed;
   }
 
   private stopPump(): void {
-    if (this.pumpTimer !== null) {
-      clearInterval(this.pumpTimer);
-      this.pumpTimer = null;
+    this.pumpActive = false;
+  }
+
+  /** Chamado a cada `game.loop.render`: só bombeia com sessão/handshake ativos. */
+  public onRenderFrame(): void {
+    if (this.pumpActive && !this.disposed) {
+      void this.pollPackets();
     }
   }
 

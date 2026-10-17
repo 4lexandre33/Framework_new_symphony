@@ -34,7 +34,7 @@ const now = (): number => clock;
 const services: NetworkService[] = [];
 
 function makeService(emitted: Emitted = [], options: ConstructorParameters<typeof NetworkService>[1] = {}): NetworkService {
-  const service = new NetworkService(ctxWith(emitted), { backgroundPump: false, now, ...options });
+  const service = new NetworkService(ctxWith(emitted), { now, ...options });
   services.push(service);
   return service;
 }
@@ -455,7 +455,7 @@ describe("net gaps", () => {
   it("plugin: consome game.steam.net opcional e trata broadcast-snapshot", () => {
     const consumes = netManifest.capabilities?.consumes?.map((entry) => entry.id) ?? [];
     expect(consumes).toContain("game.steam.net");
-    expect(createNetworkPlugin({ backgroundPump: false }).manifest.id).toBe("game.net");
+    expect(createNetworkPlugin().manifest.id).toBe("game.net");
   });
 });
 
