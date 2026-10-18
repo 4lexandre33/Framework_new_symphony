@@ -1,0 +1,110 @@
+
+> projeto1@0.1.0 arch:check
+> node scripts/architecture/check-boundaries.mjs && node scripts/architecture/check-dependencies.mjs
+
+============================================================
+  PROJETO1 — ETAPA 18: FISCALIZAÇÃO DE BOUNDARIES
+============================================================
+
+[OK] Arquitetura: v20
+[OK] Módulos canônicos: 23
+[OK] TypeScript Compiler API: 5.6.3
+[OK] Arquivos de código analisados: 750
+[OK] Referências de módulo analisadas: 2893
+[OK] Referências de projeto: 2403
+[OK] Referências externas: 490
+
+=== REGRAS EXECUTÁVEIS ===
+[BND001] engine/X/internal -> engine/Y/internal: proibido
+[BND002] engine/X/public -> */internal: proibido
+[BND003] plugins/X -> engine/Y/internal (X != Y): proibido
+[ALLOW] plugins/X -> engine/X/internal: permitido
+[BND004/BND006] domain -> engine/stack técnica concreta: proibido
+[BND007/BND008] services -> internals/plugins concretos: proibido
+[BND010/BND011] app compõe plugins/APIs; app/flows não atravessa internals/plugins
+[ALLOW] tests/** -> internal: permitido explicitamente
+
+=== COBERTURA ===
+engine/*/internal: 148 arquivo(s)
+engine/*/public: 23 arquivo(s)
+plugins/*: 24 arquivo(s)
+domain: 130 arquivo(s) de código
+services: 3 arquivo(s) de código
+app: 5 arquivo(s) de código
+app/flows: 2 arquivo(s) de código
+tests: 1044 referência(s) analisada(s)
+tests -> internal permitidos: 250
+
+=== RESULTADO ===
+[OK] Violações de boundary: 0
+[OK] Prova read-only antes: 90bd540d274aaef0e7ed9c5c7f9091b721a04562c957b4ddb99368e7ad2f4c7f
+[OK] Prova read-only depois: 90bd540d274aaef0e7ed9c5c7f9091b721a04562c957b4ddb99368e7ad2f4c7f
+[OK] Nenhum arquivo foi criado, removido, movido ou reescrito.
+
+============================================================
+  ETAPA 18 CONCLUÍDA COM SUCESSO
+============================================================
+As boundaries arquiteturais mínimas agora são fiscalizadas de forma executável.
+============================================================
+  PROJETO1 — ETAPA 19: GRAFO DE DEPENDÊNCIAS
+============================================================
+
+[OK] Arquitetura: v20
+[OK] TypeScript Compiler API: 5.6.3
+[OK] Plugins ativos: 24 (23 canônicos + 1 auxiliares bootstrapped).
+[OK] game.player ativo: não
+[OK] Manifests analisados estaticamente: 24
+[OK] Registry auxiliar: 1 ativo(s), 0 inativo(s).
+
+=== REGRAS FISCALIZADAS ===
+DEP001 composição ativa (23 canônicos + game.debug)
+DEP002 shape/id/name dos manifests
+DEP003 semver de manifests, provisions, consumes e dependsOn
+DEP004 capabilities fornecidas e capability primária canônica
+DEP005 capabilities obrigatórias
+DEP006 capabilities opcionais
+DEP007 capabilities.conflicts
+DEP008 dependências plugin -> plugin
+DEP009 ciclos em dependsOn
+DEP010 provider ambiguity com desempate por priority
+DEP011 regras de PluginKind do Kernel
+
+=== GRAFO DE CAPABILITIES ===
+Provisions declaradas: 24
+Capability IDs fornecidos: 24
+Requirements obrigatórios: 28
+Requirements opcionais: 21
+Requirements resolvidos: 49
+Opcionais sem provider compatível: 0
+Conflicts declarados: 0
+Provider ambiguities: 0
+
+=== GRAFO PLUGIN -> PLUGIN ===
+dependsOn total: 24
+dependsOn obrigatórios: 14
+dependsOn opcionais: 10
+Ciclos: 0
+Boot order calculável: sim
+
+=== INTEGRIDADE ===
+Semver violations: 0
+PluginKind violations: 0
+Conflicts ativos/inválidos: 0
+Capabilities obrigatórias ausentes/inválidas: 0
+Dependências plugin -> plugin inválidas: 0
+
+=== RESULTADO ===
+[OK] Violações do grafo: 0
+[OK] Capabilities obrigatórias resolvem para provider único.
+[OK] Capabilities opcionais obedecem ausência tolerada e semver.
+[OK] Provider priority preservada; nenhum empate ambíguo.
+[OK] dependsOn sem missing obrigatório, range inválido ou ciclo.
+[OK] Regras de PluginKind compatíveis com o Kernel.
+[OK] Prova read-only antes: 1c2ddba3a1744364a4adeedfac81459de6a020284ecf1620ec5c4863ff2a60ca
+[OK] Prova read-only depois: 1c2ddba3a1744364a4adeedfac81459de6a020284ecf1620ec5c4863ff2a60ca
+[OK] Nenhum arquivo foi criado, removido, movido ou reescrito.
+
+============================================================
+  ETAPA 19 CONCLUÍDA COM SUCESSO
+============================================================
+O grafo ativo de plugins/capabilities está consistente com semver, priority e PluginKind do Kernel.

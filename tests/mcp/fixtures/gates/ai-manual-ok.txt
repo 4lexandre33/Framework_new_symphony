@@ -1,0 +1,5 @@
+
+> projeto1@0.1.0 ai-manual:check
+> node scripts/architecture/generate-ai-manual.mjs --check
+
+[AI-MANUAL] OK — manual em sincronia com o código.

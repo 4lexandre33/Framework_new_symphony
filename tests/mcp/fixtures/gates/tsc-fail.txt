@@ -1,0 +1,4 @@
+src/bad.ts(1,7): error TS2322: Type 'string' is not assignable to type 'number'.
+src/bad.ts(1,7): error TS6133: 'n' is declared but its value is never read.
+src/bad.ts(3,12): error TS2339: Property 'naoExiste' does not exist on type 'string'.
+src/bad.ts(5,19): error TS2307: Cannot find module './faltando' or its corresponding type declarations.

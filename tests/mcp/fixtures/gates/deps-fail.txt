@@ -1,0 +1,19 @@
+=== RESULTADO ===
+[ERRO] Violações do grafo: 2
+
+[DEP003] game.physics | src/plugins/physics/index.ts
+  capability obrigatória "engine.render" sem provider compatível.
+  detalhes: {"capability":"engine.render","range":"^2.0.0"}
+[DEP007] <grafo> | src/plugins
+  ciclo em dependsOn: game.a -> game.b -> game.a
+
+[OK] Prova read-only antes: 1c2ddba3
+[OK] Prova read-only depois: 1c2ddba3
+
+============================================================
+  ETAPA 19 — GRAFO DE DEPENDÊNCIAS REPROVADO
+============================================================
+
+[ERRO] Etapa 18 não concluída.
+Error: TypeScript Compiler API ausente
+    at runStage18 (file:///repo/scripts/architecture/check-boundaries.mjs:10:5)

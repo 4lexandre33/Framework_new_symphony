@@ -1,0 +1,29 @@
+ ✓ tests/project-picker.test.ts (2 tests) 44ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/mcp/core.test.ts > exec (allowlist) > git: só leitura (push, commit, -c, branch com nome/-D, --output recusados)
+AssertionError: expected 128 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 128
+
+ ❯ tests/mcp/core.test.ts:409:23
+    407|     }
+    408|     const head = await exec.runAllowed("git", ["rev-parse", "--is-insi…
+    409|     expect(head.code).toBe(0);
+       |                       ^
+    410|     expect(head.stdout.trim()).toBe("true");
+    411|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed | 203 passed (204)
+      Tests  1 failed | 1176 passed (1177)
+   Start at  14:17:02
+   Duration  98.64s (transform 5.01s, setup 0ms, collect 18.41s, tests 26.23s, environment 6.49s, prepare 11.82s)
+
+A (sem jogos) VITEST falhou (exit 1)

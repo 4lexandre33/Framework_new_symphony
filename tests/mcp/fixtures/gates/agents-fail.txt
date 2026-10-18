@@ -1,0 +1,43 @@
+============================================================
+  AGENTS GUARDRAIL ORCHESTRATOR - PROJETO 1
+============================================================
+Fonte canônica: scripts/architecture/module-map.mjs (23 módulos)
+Freeze lock canônico: /.freeze-lock.json
+
+============================================================
+  Auditoria de Invariantes Arquiteturais do Projeto
+============================================================
+Fonte: scripts/architecture/module-map.mjs
+
+[32m[SUCESSO][0m 23 módulos validados a partir do module-map; invariantes arquiteturais respeitadas.
+
+============================================================
+  Verificando Integridade de Módulos Congelados
+============================================================
+Fonte: scripts/architecture/module-map.mjs
+
+[31m[ERRO DE CONGELAMENTO][0m Arquivo canônico não está no lock: src/engine/render/internal/ZzzGateFixture.ts
+[32m[ÍNTEGRO][0m src-tauri/Cargo.toml
+[32m[ÍNTEGRO][0m src-tauri/src/lib.rs
+[32m[ÍNTEGRO][0m src-tauri/src/modding.rs
+[32m[ÍNTEGRO][0m src-tauri/src/monetization.rs
+[32m[ÍNTEGRO][0m src-tauri/src/overlay.rs
+[32m[ÍNTEGRO][0m src-tauri/src/security.rs
+[32m[ÍNTEGRO][0m src-tauri/src/steam.rs
+[32m[ÍNTEGRO][0m src-tauri/steam_appid.txt
+[31m[VIOLAÇÃO DETECTADA][0m O arquivo congelado 'src/contracts/ai/types.ts' foi alterado!
+[32m[ÍNTEGRO][0m src/contracts/anim/types.ts
+[32m[ÍNTEGRO][0m src/contracts/assets/types.ts
+[32m[ÍNTEGRO][0m src/contracts/audio/types.ts
+[32m[ÍNTEGRO][0m src/contracts/camera/types.ts
+[32m[ÍNTEGRO][0m src/contracts/game-loop/types.ts
+[32m[ÍNTEGRO][0m src/contracts/input/types.ts
+[32m[ÍNTEGRO][0m src/contracts/modding/types.ts
+[32m[ÍNTEGRO][0m src/contracts/monetization/types.ts
+[32m[ÍNTEGRO][0m src/contracts/net/types.ts
+[32m[ÍNTEGRO][0m src/contracts/overlay/types.ts
+[32m[ÍNTEGRO][0m src/contracts/physics/types.ts
+[32m[ÍNTEGRO][0m src/contracts/render/types.ts
+[31m[BLOQUEIO DE BUILD] Modificações não autorizadas ou drift do catálogo foram detectados![0m
+Para atualizar legitimamente o código, desbloqueie antes da alteração e regenere o lock na etapa apropriada.
+[31m[EXECUÇÃO BLOQUEADA][0m Corrija as violações antes de prosseguir.

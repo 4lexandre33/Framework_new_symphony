@@ -1,0 +1,39 @@
+Provisions declaradas: 24
+Capability IDs fornecidos: 24
+Requirements obrigatórios: 28
+Requirements opcionais: 21
+Requirements resolvidos: 49
+Opcionais sem provider compatível: 0
+Conflicts declarados: 0
+Provider ambiguities: 0
+
+=== GRAFO PLUGIN -> PLUGIN ===
+dependsOn total: 24
+dependsOn obrigatórios: 14
+dependsOn opcionais: 10
+Ciclos: 0
+Boot order calculável: sim
+
+=== INTEGRIDADE ===
+Semver violations: 0
+PluginKind violations: 0
+Conflicts ativos/inválidos: 0
+Capabilities obrigatórias ausentes/inválidas: 0
+Dependências plugin -> plugin inválidas: 0
+
+=== RESULTADO ===
+[OK] Violações do grafo: 0
+[OK] Capabilities obrigatórias resolvem para provider único.
+[OK] Capabilities opcionais obedecem ausência tolerada e semver.
+[OK] Provider priority preservada; nenhum empate ambíguo.
+[OK] dependsOn sem missing obrigatório, range inválido ou ciclo.
+[OK] Regras de PluginKind compatíveis com o Kernel.
+[OK] Prova read-only antes: 1c2ddba3a1744364a4adeedfac81459de6a020284ecf1620ec5c4863ff2a60ca
+[OK] Prova read-only depois: 1c2ddba3a1744364a4adeedfac81459de6a020284ecf1620ec5c4863ff2a60ca
+[OK] Nenhum arquivo foi criado, removido, movido ou reescrito.
+
+============================================================
+  ETAPA 19 CONCLUÍDA COM SUCESSO
+============================================================
+O grafo ativo de plugins/capabilities está consistente com semver, priority e PluginKind do Kernel.
+[32m[PRONTO PARA DESENVOLVIMENTO][0m Ambiente seguro para os Agentes de IA.

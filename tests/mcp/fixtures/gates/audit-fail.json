@@ -1,0 +1,10 @@
+{
+  "version": "1.0.1",
+  "stage": 83,
+  "ok": false,
+  "violations": [
+    { "code": "NET008", "path": "src/engine/net/internal/WebSocketTransport.ts", "message": "socket não é fechado no dispose" },
+    { "code": "L1_BASELINE_DRIFT", "scope": "src/engine/world/public/index.ts:7", "message": "API pública mudou sem recertificação" },
+    { "rule": "PERF001", "file": "/repo/src/engine/render/internal/ThreeRenderEngine.ts", "line": 88, "message": "alocação por frame" }
+  ]
+}

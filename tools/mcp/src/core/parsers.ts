@@ -342,7 +342,7 @@ export function parseArch(text: string, root?: string): GateFailure[] {
     const l = raw.trimEnd();
     if (stageError) {
       if (l.trim() === "" && stageError.lines.length > 0) {
-        out.push(failure("scripts/architecture", `${stageError.label}: ${stageError.lines[0]}`, { code: "ARCH_ERROR" }));
+        out.push(failure("scripts/architecture", `${stageError.label.replace(/\.$/, "")}: ${stageError.lines[0]}`, { code: "ARCH_ERROR" }));
         stageError = null;
       } else if (l.trim() !== "") stageError.lines.push(l.trim());
       continue;
@@ -384,7 +384,7 @@ export function parseArch(text: string, root?: string): GateFailure[] {
     flush();
   }
   flush();
-  if (stageError && stageError.lines.length > 0) out.push(failure("scripts/architecture", `${stageError.label}: ${stageError.lines[0]}`, { code: "ARCH_ERROR" }));
+  if (stageError && stageError.lines.length > 0) out.push(failure("scripts/architecture", `${stageError.label.replace(/\.$/, "")}: ${stageError.lines[0]}`, { code: "ARCH_ERROR" }));
   return out;
 }
 

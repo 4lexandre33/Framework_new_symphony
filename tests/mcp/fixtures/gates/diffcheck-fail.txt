@@ -1,0 +1,5 @@
+src/projects/demo/main.ts:3: trailing whitespace.
++const x = 1;<TRAILING>
+docs/games/demo/README.md:10: space before tab in indent.
++ <TAB>item
+src/projects/demo/main.ts:20: leftover conflict marker

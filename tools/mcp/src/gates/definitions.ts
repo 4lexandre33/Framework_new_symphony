@@ -425,9 +425,11 @@ export interface TestRunResult {
 export async function runTests(env: GateEnv, options: TestRunOptions = {}): Promise<TestRunResult> {
   const outputFile = vitestOutputFile();
   const filters = [...(options.files ?? [])];
-  const args = ["vitest", "run", "--no-file-parallelism", "--reporter=json", `--outputFile=${outputFile}`];
-  if (options.namePattern) args.push("-t", options.namePattern);
-  if (filters.length > 0) args.push("--", ...filters);
+  // Filtros posicionais logo após `run` (com `--` o vitest ignora os filtros e roda tudo).
+  // Os chamadores garantem que nenhum filtro começa com "-".
+  if (filters.some((f) => f.startsWith("-"))) throw new McpToolError("INVALID_INPUT", "filtro de teste não pode começar com '-'");
+  const args = ["vitest", "run", ...filters, "--no-file-parallelism", "--reporter=json", `--outputFile=${outputFile}`];
+  if (options.namePattern) args.push(`--testNamePattern=${options.namePattern}`);
   const merged = new TailBuffer(OUTPUT_LIMIT);
   const onChunk = (c: Buffer): void => {
     merged.push(c);

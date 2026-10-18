@@ -1,0 +1,22 @@
+    Checking projeto1 v0.1.0 (/repo/src-tauri)
+warning: unused variable: `x`
+ --> src/steam.rs:3:9
+  |
+3 |     let x = 1;
+  |         ^ help: if this is intentional, prefix it with an underscore: `_x`
+  |
+  = note: `#[warn(unused_variables)]` on by default
+
+error[E0425]: cannot find value `nao_existe` in this scope
+  --> src/lib.rs:10:5
+   |
+10 |     nao_existe
+   |     ^^^^^^^^^^ not found in this scope
+
+error[E0308]: mismatched types
+   --> src/security.rs:120:17
+    |
+120 |     let n: u32 = "texto";
+    |            ---   ^^^^^^^ expected `u32`, found `&str`
+
+error: could not compile `projeto1` (lib) due to 2 previous errors; 1 warning emitted
