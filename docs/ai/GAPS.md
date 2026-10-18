@@ -1,6 +1,6 @@
 # Lacunas e riscos da engine que AINDA valem, com contornos
 
-Escrito à mão. Revisado em 2026-10-18 contra o código (tokens, contratos, plugins e `tests/*-gaps.test.ts`) depois das correções dos commits `e21d2ff..4f940f3`. A auditoria de 2026-10-09 listava ~130 itens (G1…G129); quase todos foram CORRIGIDOS. Este arquivo lista só o que continua aberto, parcial ou sem verificação.
+Escrito à mão. Revisado em 2026-10-18 contra o código (tokens, contratos, plugins e `tests/*-gaps.test.ts`) depois das correções dos commits `e21d2ff..4f940f3` (e, em seguida, G47, G67, G73, G129, G130, G132, G133, G134). A auditoria de 2026-10-09 listava ~130 itens (G1…G129); quase todos foram CORRIGIDOS. Este arquivo lista só o que continua aberto, parcial ou sem verificação.
 
 Regra: um jogo NÃO altera a engine. Use o contorno e registre o que observar em `src/projects/<jogo>/ENGINE_REPORT.md`.
 
@@ -78,4 +78,3 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 | # | G | Tipo | Problema | Contorno |
 |---|---|---|---|---|
 | G135 | B | LACUNA | Carteira só em memória (não persiste); catálogo começa com 2 SKUs de exemplo; compra real exige um `PurchaseProvider` do SERVIDOR do jogo (sem ele `initPurchase` resolve `null`) | Salve o saldo via `game.storage` e recredite no boot; `registerCatalog(itens, { replace: true })`; sem servidor, nada de dinheiro real |
-
