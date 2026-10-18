@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { PluginContext } from "@core";
 import type { DialogueTreeDescriptor, QuestDescriptor } from "../src/contracts/scripting/types";
 import { ScriptingService } from "../src/engine/scripting/internal/ScriptingService";
+import { TriggerZoneManager } from "../src/engine/scripting/internal/TriggerZoneManager";
 import type { WorldApi } from "../src/tokens/world";
 import type { CameraApi } from "../src/tokens/camera";
 import type { AudioApi } from "../src/tokens/audio";
@@ -349,5 +350,55 @@ describe("scripting gaps (G10, G123–G129)", () => {
     expect(handlers.get("game.scripting.play-cutscene")?.({ payload: undefined })).toBe(false);
     expect(handlers.get("game.scripting.advance-dialogue")?.({ payload: undefined })).toBeNull();
     expect(handlers.get("game.scripting.start-quest")?.({ payload: null })).toBe(false);
+  });
+});
+
+describe("G129 — varredura EXATA (segmento × caixa/esfera/cilindro)", () => {
+  function crossings(zone: Parameters<TriggerZoneManager["registerZone"]>[0], from: { x: number; y: number; z: number }, to: { x: number; y: number; z: number }): string[] {
+    const manager = new TriggerZoneManager();
+    const events: string[] = [];
+    const cb = (type: "enter" | "exit"): void => {
+      events.push(type);
+    };
+    manager.registerZone(zone);
+    manager.checkEntityInZones("e", from, cb);
+    manager.checkEntityInZones("e", to, cb);
+    return events;
+  }
+
+  const base = { triggerOnce: false, dimensions: { x: 0, y: 0, z: 0 } } as const;
+
+  it("zonas finíssimas atravessadas por deslocamentos enormes disparam enter+exit", () => {
+    // caixa de 1 mm de espessura, deslocamento de 10 km (antes: amostrado, 32 amostras)
+    expect(crossings({ ...base, zoneId: "wall", shape: "box", position: { x: 0, y: 0, z: 0 }, dimensions: { x: 0.001, y: 2, z: 2 } }, { x: -5000, y: 0.3, z: 0.2 }, { x: 5000, y: 0.3, z: 0.2 })).toEqual(["enter", "exit"]);
+    expect(crossings({ ...base, zoneId: "s", shape: "sphere", position: { x: 3, y: 1, z: 0 }, radius: 0.01 }, { x: -1e4, y: 1, z: 0.005 }, { x: 1e4, y: 1, z: 0.005 })).toEqual(["enter", "exit"]);
+    expect(crossings({ ...base, zoneId: "c", shape: "cylinder", position: { x: 0, y: 0, z: 0 }, radius: 0.002, height: 10 }, { x: 0.001, y: 4.9, z: -9000 }, { x: 0.001, y: -4.9, z: 9000 })).toEqual(["enter", "exit"]);
+  });
+
+  it("passar rente por fora não dispara (sem falso positivo)", () => {
+    expect(crossings({ ...base, zoneId: "wall", shape: "box", position: { x: 0, y: 0, z: 0 }, dimensions: { x: 0.001, y: 2, z: 2 } }, { x: -5000, y: 1.01, z: 0 }, { x: 5000, y: 1.01, z: 0 })).toEqual([]);
+    expect(crossings({ ...base, zoneId: "s", shape: "sphere", position: { x: 0, y: 0, z: 0 }, radius: 1 }, { x: -10, y: 1.001, z: 0 }, { x: 10, y: 1.001, z: 0 })).toEqual([]);
+    // cilindro: passa na altura certa mas fora do raio; e dentro do raio mas acima da altura
+    expect(crossings({ ...base, zoneId: "c", shape: "cylinder", position: { x: 0, y: 0, z: 0 }, radius: 1, height: 2 }, { x: 1.01, y: 0, z: -10 }, { x: 1.01, y: 0, z: 10 })).toEqual([]);
+    expect(crossings({ ...base, zoneId: "c2", shape: "cylinder", position: { x: 0, y: 0, z: 0 }, radius: 1, height: 2 }, { x: -10, y: 1.01, z: 0 }, { x: 10, y: 1.01, z: 0 })).toEqual([]);
+    // diagonal que só "quina" fora da caixa
+    expect(crossings({ ...base, zoneId: "b", shape: "box", position: { x: 0, y: 0, z: 0 }, dimensions: { x: 2, y: 2, z: 2 } }, { x: 0, y: 2.1, z: 0 }, { x: 2.1, y: 0, z: 0 })).toEqual([]);
+  });
+
+  it("caixa girada: segmento que cruza só no espaço local", () => {
+    const s = Math.sin(Math.PI / 8);
+    const c = Math.cos(Math.PI / 8);
+    // caixa fina 4 × 2 × 0.01 girada 45° em Y (diagonal x = -z)
+    const zone = { ...base, zoneId: "rot", shape: "box" as const, position: { x: 0, y: 0, z: 0 }, dimensions: { x: 4, y: 2, z: 0.01 }, rotation: { x: 0, y: s, z: 0, w: c } };
+    // atravessa a espessura a 1,5 do centro ao longo do eixo longo (dentro: meia-largura 2)
+    const k = Math.SQRT1_2;
+    const inside = 1.5 * k;
+    expect(crossings(zone, { x: -100 + inside, y: 0, z: -100 - inside }, { x: 100 + inside, y: 0, z: 100 - inside })).toEqual(["enter", "exit"]);
+    // mesma direção a 2,5 do centro: fora da caixa
+    const outside = 2.5 * k;
+    expect(crossings(zone, { x: -100 + outside, y: 0, z: -100 - outside }, { x: 100 + outside, y: 0, z: 100 - outside })).toEqual([]);
+    // paralelo ao eixo longo, afastado 0,1 da face fina
+    const off = 0.1 * k;
+    expect(crossings(zone, { x: -100 * k + off, y: 0, z: 100 * k + off }, { x: 100 * k + off, y: 0, z: -100 * k + off })).toEqual([]);
   });
 });

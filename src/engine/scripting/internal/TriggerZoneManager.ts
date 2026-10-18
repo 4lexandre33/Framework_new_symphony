@@ -15,9 +15,6 @@ export interface TriggerZoneCallback {
   ): void;
 }
 
-/** Máximo de amostras por zona/entidade na varredura contínua. */
-const MAX_SWEEP_SAMPLES = 32;
-
 const ORIGIN: Vector3Scripting = Object.freeze({ x: 0, y: 0, z: 0 });
 
 interface ZoneRecord {
@@ -41,8 +38,6 @@ interface ZoneRecord {
   readonly qy: number;
   readonly qz: number;
   readonly qw: number;
-  /** Menor extensão da zona (passo máximo da varredura). */
-  readonly minExtent: number;
   readonly tags: ReadonlyArray<string> | null;
 }
 
@@ -137,7 +132,7 @@ export class TriggerZoneManager {
         continue;
       }
 
-      // Entidade rápida que atravessou a zona entre dois checks (G129).
+      // Entidade rápida que atravessou a zona entre dois checks (G129: teste exato do segmento).
       if (
         hadPosition &&
         sweep !== false &&
@@ -291,7 +286,6 @@ function createZoneRecord(config: TriggerZoneConfig): ZoneRecord | null {
   const halfY = config.shape === "box" ? dy * 0.5 : config.shape === "cylinder" ? height * 0.5 : radius;
   const halfZ = config.shape === "box" ? dz * 0.5 : radius;
 
-  const minExtent = Math.max(1e-3, Math.min(halfX, halfY, halfZ) * 2);
   const tags = config.targetTags && config.targetTags.length > 0 ? config.targetTags.slice() : null;
 
   return {
@@ -313,12 +307,17 @@ function createZoneRecord(config: TriggerZoneConfig): ZoneRecord | null {
     qy,
     qz,
     qw,
-    minExtent,
     tags,
   };
 }
 
-function isInsideZone(zone: ZoneRecord, px: number, py: number, pz: number): boolean {
+/** Saída de `toLocal` (sem alocação; uso síncrono imediato). */
+let localX = 0;
+let localY = 0;
+let localZ = 0;
+
+/** Leva o ponto do mundo ao espaço local da zona (translação + rotação inversa). */
+function toLocal(zone: ZoneRecord, px: number, py: number, pz: number): void {
   let x = px - zone.cx;
   let y = py - zone.cy;
   let z = pz - zone.cz;
@@ -338,6 +337,17 @@ function isInsideZone(zone: ZoneRecord, px: number, py: number, pz: number): boo
     z = iz * qw + iw * -qz + ix * -qy - iy * -qx;
   }
 
+  localX = x;
+  localY = y;
+  localZ = z;
+}
+
+function isInsideZone(zone: ZoneRecord, px: number, py: number, pz: number): boolean {
+  toLocal(zone, px, py, pz);
+  const x = localX;
+  const y = localY;
+  const z = localZ;
+
   switch (zone.config.shape) {
     case "box":
       return Math.abs(x) <= zone.halfX && Math.abs(y) <= zone.halfY && Math.abs(z) <= zone.halfZ;
@@ -350,9 +360,34 @@ function isInsideZone(zone: ZoneRecord, px: number, py: number, pz: number): boo
   }
 }
 
+/** Intervalo paramétrico atual do segmento (recortado pelas lajes). */
+let clipLo = 0;
+let clipHi = 1;
+
+/** Recorta [clipLo, clipHi] pela laje |a + t*d| <= half; false se vazio. */
+function clipSlab(a: number, d: number, half: number): boolean {
+  if (Math.abs(d) < 1e-12) {
+    return Math.abs(a) <= half;
+  }
+
+  let t0 = (-half - a) / d;
+  let t1 = (half - a) / d;
+
+  if (t0 > t1) {
+    const swap = t0;
+    t0 = t1;
+    t1 = swap;
+  }
+
+  if (t0 > clipLo) clipLo = t0;
+  if (t1 < clipHi) clipHi = t1;
+  return clipLo <= clipHi;
+}
+
 /**
- * Amostra o segmento com passo <= metade da menor extensão da zona (máx.
- * MAX_SWEEP_SAMPLES amostras). Ignora as extremidades (já testadas).
+ * Teste EXATO segmento x zona (G129) no espaço local: caixa = lajes
+ * (slab test), esfera = distância do ponto mais próximo, cilindro = laje em
+ * Y + mínimo da quadrática radial no intervalo. Sem alocação.
  */
 function segmentCrossesZone(
   zone: ZoneRecord,
@@ -363,28 +398,43 @@ function segmentCrossesZone(
   by: number,
   bz: number,
 ): boolean {
-  const dx = bx - ax;
-  const dy = by - ay;
-  const dz = bz - az;
-  const length = Math.sqrt(dx * dx + dy * dy + dz * dz);
-  if (!(length > zone.minExtent * 0.5)) return false;
+  toLocal(zone, ax, ay, az);
+  const lax = localX;
+  const lay = localY;
+  const laz = localZ;
+  toLocal(zone, bx, by, bz);
+  const dx = localX - lax;
+  const dy = localY - lay;
+  const dz = localZ - laz;
 
-  // Rejeição rápida pela esfera envolvente da zona.
-  const boundRadius = Math.sqrt(zone.halfX * zone.halfX + zone.halfY * zone.halfY + zone.halfZ * zone.halfZ);
-  const t0 = Math.max(0, Math.min(1, ((zone.cx - ax) * dx + (zone.cy - ay) * dy + (zone.cz - az) * dz) / (length * length)));
-  const nx = ax + dx * t0 - zone.cx;
-  const ny = ay + dy * t0 - zone.cy;
-  const nz = az + dz * t0 - zone.cz;
-  if (nx * nx + ny * ny + nz * nz > boundRadius * boundRadius) return false;
+  clipLo = 0;
+  clipHi = 1;
 
-  const samples = Math.min(MAX_SWEEP_SAMPLES, Math.ceil(length / (zone.minExtent * 0.5)));
-  for (let index = 1; index < samples; index += 1) {
-    const t = index / samples;
-    if (isInsideZone(zone, ax + dx * t, ay + dy * t, az + dz * t)) return true;
+  switch (zone.config.shape) {
+    case "box":
+      return clipSlab(lax, dx, zone.halfX) && clipSlab(lay, dy, zone.halfY) && clipSlab(laz, dz, zone.halfZ);
+    case "sphere": {
+      const lengthSq = dx * dx + dy * dy + dz * dz;
+      const t = lengthSq > 1e-24 ? Math.max(0, Math.min(1, -(lax * dx + lay * dy + laz * dz) / lengthSq)) : 0;
+      const nx = lax + dx * t;
+      const ny = lay + dy * t;
+      const nz = laz + dz * t;
+      return nx * nx + ny * ny + nz * nz <= zone.radius * zone.radius;
+    }
+    case "cylinder": {
+      if (!clipSlab(lay, dy, zone.halfY)) return false;
+      // Mínimo de |(ax,az) + t*(dx,dz)|^2 com t em [clipLo, clipHi].
+      const lengthSq = dx * dx + dz * dz;
+      let t = lengthSq > 1e-24 ? -(lax * dx + laz * dz) / lengthSq : clipLo;
+      if (t < clipLo) t = clipLo;
+      if (t > clipHi) t = clipHi;
+      const nx = lax + dx * t;
+      const nz = laz + dz * t;
+      return nx * nx + nz * nz <= zone.radius * zone.radius;
+    }
+    default:
+      return false;
   }
-
-  // Ponto mais próximo do centro (cobre segmentos muito longos).
-  return isInsideZone(zone, ax + dx * t0, ay + dy * t0, az + dz * t0);
 }
 
 function tagsMatch(required: ReadonlyArray<string>, tags: ReadonlyArray<string>): boolean {

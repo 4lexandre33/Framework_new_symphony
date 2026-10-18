@@ -23,7 +23,7 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 - world: `updateEntityTransform`/`patchEntity`, snapshots imutáveis, spawn tolerante, octree cresce além dos limites, distâncias reais, deserialize valida antes, cena pré-carrega assets (G6, G64–G68; G67 parcial).
 - ai: árvores por agente, várias navmeshes/áreas, teleporte, linha de visão filtrada, estímulo sonoro real, clamp 3D, portais tolerantes com raio, funnel, separação, chegada única, `requestAgentPath` puro (G7, G25, G69–G73; G73 parcial).
 - anim: reinício (`restart`), exit time, `clip-finished`, ordem livre, sprites pela FSM, relógio único (G74–G78).
-- scripting: keyframes executam (câmera/áudio/anim/vfx/diálogo) + evento por keyframe, zonas automáticas (`trackEntity`), variáveis de diálogo, árvores validadas, ciclo de quest completo, exits de zona, varredura e rotação (G10, G123–G128; G129 parcial).
+- scripting: keyframes executam (câmera/áudio/anim/vfx/diálogo) + evento por keyframe, zonas automáticas (`trackEntity`), variáveis de diálogo, árvores validadas, ciclo de quest completo, exits de zona, varredura exata (segmento × caixa/esfera/cilindro) e rotação (G10, G123–G129).
 - storage: memória automática em node, perfil online honesto/plugável, backups + HMAC + `loadGameDetailed`, namespace, slots seguros, índice, cota, migrações (G12, G100–G103; G102 parcial).
 - net: host sem Steam (loopback `mock`, `broadcast_channel`), handshake, heartbeat, fragmentação, snapshot automático, RTT/perda reais, canais 0..255, pump em Worker com a aba oculta (host não derruba clientes; a simulação continua parada) (G8 parcial, G104–G108, G130).
 - steam: `game.steam.net` FORNECIDO (lobbies, busca, membros, convites, P2P), eventos nativos, stats float, `checkAvailability` no boot (G26, G109–G112).
@@ -88,7 +88,3 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 |---|---|---|---|---|
 | G135 | B | LACUNA | Carteira só em memória (não persiste); catálogo começa com 2 SKUs de exemplo; compra real exige um `PurchaseProvider` do SERVIDOR do jogo (sem ele `initPurchase` resolve `null`) | Salve o saldo via `game.storage` e recredite no boot; `registerCatalog(itens, { replace: true })`; sem servidor, nada de dinheiro real |
 
-## scripting
-| # | G | Tipo | Problema | Contorno |
-|---|---|---|---|---|
-| G129 | B | RISCO | A varredura de zonas (`sweep`, padrão true) é AMOSTRADA: passo ≤ metade da menor extensão da zona, no máximo 32 amostras por tick; deslocamento > 16× a menor extensão pode atravessar uma zona fina sem `entered` | Zonas não muito finas; para teleporte use `{ sweep: false }`; deslocamentos enormes: subdivida no jogo |
