@@ -569,3 +569,34 @@ describe("terrain gaps — plugin", () => {
     expect(manifest.permissions?.events).toEqual(expect.arrayContaining(["game.terrain.chunk-unloaded", "game.terrain.reset", "game.loop.render"]));
   });
 });
+
+describe("terrain gaps — G133 padrões opt-in", () => {
+  it("sem água e sem colliders por padrão; opt-in por configure", async () => {
+    const physics = new PhysicsService(createCtx([]), new PhysicsWorld());
+    expect(await physics.initialize()).toBe(true);
+
+    try {
+      const generator = new TerrainGenerator(1337);
+      expect(generator.getConfig().seaLevel).toBe(-1);
+      const lake = findColumn(generator, (height) => height < 12);
+      const coord = { x: Math.floor(lake.x / 16), y: 0, z: Math.floor(lake.z / 16) };
+      const { service } = createTerrain({ physics });
+      await loadChunks(service, [coord]);
+      expect(service.getVoxelBlock({ x: lake.x, y: 16, z: lake.z }).id).toBe(0);
+      expect(service.getStats().colliders).toBe(0);
+      expect(physics.hasBody(`terrain_chunk_${coord.x}:0:${coord.z}`)).toBe(false);
+
+      service.configure({ colliders: { enabled: true }, generation: { seaLevel: 16 } });
+      await flush();
+      service.update(1 / 60);
+      expect(service.getVoxelBlock({ x: lake.x, y: 16, z: lake.z }).id).toBe(7);
+      expect(service.getStats().colliders).toBe(1);
+    } finally {
+      physics.dispose();
+    }
+  });
+
+  it("createTerrainPlugin aceita opções iniciais", () => {
+    expect(() => createTerrainPlugin({ colliders: { enabled: true }, generation: { seaLevel: 12 } })).not.toThrow();
+  });
+});
