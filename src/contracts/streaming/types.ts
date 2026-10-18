@@ -17,7 +17,15 @@ export type LODLevel = 0 | 1 | 2 | 3; // 0 = Alta fidelidade, 3 = Billboard/HLOD
 export interface LODLevelDescriptor {
   readonly level: LODLevel;
   readonly distanceThreshold: number;
+  /**
+   * URL de asset OU chave do jogo (G132). Só é carregada via `game.assets`
+   * quando `preload` é true, ou (sem `preload`) quando PARECE URL: tem
+   * esquema (`http(s):`, `blob:`, `data:`, `file:`, `asset:`, `tauri:`), começa com `/`, `./`, `../` ou termina em
+   * extensão (`.glb`, `.gltf`…). Ex.: `"tree-low"` não carrega.
+   */
   readonly meshUrl: string;
+  /** G132: true força o pré-carregamento de `meshUrl`; false nunca carrega. */
+  readonly preload?: boolean;
   readonly maxScreenSpaceError?: number;
 }
 
@@ -127,7 +135,7 @@ export interface LODLevelChangedPayload {
   readonly entityId: string;
   readonly previousLevel: LODLevel;
   readonly newLevel: LODLevel;
-  /** `meshUrl` do novo nível (pré-carregado via `game.assets` quando presente). */
+  /** `meshUrl` do novo nível (pré-carregado via `game.assets` só se for URL ou `preload: true`, G132). */
   readonly meshUrl?: string;
 }
 

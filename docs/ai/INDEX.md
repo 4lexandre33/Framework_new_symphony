@@ -27,7 +27,7 @@ versão 1.0.0 · GERADO por `npm run ai-manual:generate` (não edite à mão; `n
 | Partículas GPU, Decals & Pós-Processamento | vfx | game.vfx | - | 2399 |
 | Terreno Procedural, Biomas & Voxels | terrain | game.terrain | game.loop, game.render, game.physics, game.camera | 3038 |
 | Cutscenes, Diálogos & Quests | scripting | game.scripting | game.loop | 3948 |
-| Streaming Espacial, LOD & HLOD | streaming | game.streaming | game.loop, game.camera, game.render, game.assets | 2529 |
+| Streaming Espacial, LOD & HLOD | streaming | game.streaming | game.loop, game.camera, game.render, game.assets | 2633 |
 | Desktop Overlay & Raycast Click Passthrough | overlay | game.overlay | game.loop, game.render | 1705 |
 | Profiler, Anti-cheat & Crash Dumper | security | game.security | game.loop, game.world, game.render | 2250 |
 | Steam Workshop, Dynamic Loading & Asset Override | modding | game.modding | - | 2364 |
@@ -36,7 +36,7 @@ versão 1.0.0 · GERADO por `npm run ai-manual:generate` (não edite à mão; `n
 | Render Runtime | render | game.render | - | 3000 |
 | Multiplayer Network & State Replication | net | game.net | game.loop | 2549 |
 
-Tamanho: RULES ≈ 2224, CORE ≈ 3010, RECIPES ≈ 7140, todos os módulos ≈ 58446 tokens (estimativa: caracteres/3,6).
+Tamanho: RULES ≈ 2224, CORE ≈ 3010, RECIPES ≈ 7140, todos os módulos ≈ 58550 tokens (estimativa: caracteres/3,6).
 
 ## Atalhos por tipo de jogo
 - 3D com física: render, camera, physics, input, assets, audio, ui, game-loop.

@@ -19,7 +19,7 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 - sprites: sprites, tilemap (1 draw call, UV por tile), animação por quadros, parallax e atlas trimmed/rotated funcionam (G92–G95).
 - ui: templates, HTML sanitizado/`contentText`, a engine NÃO captura ESC nem `[data-action]` por padrão, `[data-ui-action]` → `game.ui.action`, dicionários de i18n, `popModal(id)`/`modal-closed`, ESC não fecha modal sem opt-in (`closeOnEscape`/`setBehavior`), HUD sem bloquear ponteiro, modo sem DOM (G11, G96–G99, G134).
 - terrain: colliders, paleta/cores, streaming automático, lote de edições, 256 de altura, edições persistentes/exportáveis, mistura de biomas, recuperação do worker, água/metadata, `getSurfaceHeight`, água e colliders opt-in (G3, G18, G54–G59, G133).
-- streaming: origem do centro configurável, `assetUrls` carregados, setores manuais fixos (pin), HLOD real, `unregisterSector`/`clear` seguros, LOD móvel com histerese (G17, G60–G63).
+- streaming: origem do centro configurável, `assetUrls` carregados, setores manuais fixos (pin), HLOD real, `unregisterSector`/`clear` seguros, LOD móvel com histerese, `meshUrl` só carrega se for URL ou `preload: true` (G17, G60–G63, G132).
 - world: `updateEntityTransform`/`patchEntity`, snapshots imutáveis, spawn tolerante, octree cresce além dos limites, distâncias reais, deserialize valida antes, cena pré-carrega assets (G6, G64–G68; G67 parcial).
 - ai: árvores por agente, várias navmeshes/áreas, teleporte, linha de visão filtrada, estímulo sonoro real, clamp 3D, portais tolerantes com raio, funnel, separação, chegada única, `requestAgentPath` puro (G7, G25, G69–G73; G73 parcial).
 - anim: reinício (`restart`), exit time, `clip-finished`, ordem livre, sprites pela FSM, relógio único (G74–G78).
@@ -65,10 +65,6 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 | G73 | M | LACUNA | Agentes não colidem com a geometria física (só separação entre agentes); ficam presos à navmesh (`constrainToNavMesh`, padrão true). `syncPhysicsBody` move o corpo, mas o corpo não bloqueia o agente | Navmesh recuada das paredes; obstáculos = buracos/áreas da navmesh (`excludedAreas`) e recarga da navmesh quando mudam |
 | — | B | RISCO | Percepção padrão: visão 20 u / 90°, audição = alvo a ≤ 10 u (sem linha de visão) | Ajuste `perceptionConfig` (ex.: `hearingRadius: 0`) |
 
-## streaming
-| # | G | Tipo | Problema | Contorno |
-|---|---|---|---|---|
-| G132 | M | RISCO | `meshUrl` não vazio de um nível de LOD é CARREGADO via `game.assets` (uma "chave" como `"tree-low"` vira fetch com falha, conta em `assetsFailed`) | Para LOD gerenciado pelo jogo use `meshUrl: ""` e decida pelo `newLevel` do evento `lod-changed` |
 
 
 

@@ -19,7 +19,7 @@ import {
   type StreamingStats,
   type Vector3Streaming,
 } from "../../../contracts/streaming/types";
-import { DistanceLODManager } from "./DistanceLODManager";
+import { DistanceLODManager, isLikelyAssetUrl } from "./DistanceLODManager";
 import { WorldStreamingSectorManager, type SectorRecord } from "./WorldStreamingSectorManager";
 import { HLODBuilder } from "./HLODBuilder";
 import { StreamingWorkerPool } from "./StreamingWorkerPool";
@@ -861,6 +861,14 @@ export class StreamingService implements StreamingApi {
     const assets = this.assets;
 
     if (!assets || !meshUrl || this.lodAssets.get(entityId)?.url === meshUrl) {
+      return;
+    }
+
+    // G132: só carrega URL (ou `preload: true`); chave do jogo não vira fetch.
+    const preload = this.lodManager.getEntityLevelDescriptor(entityId)?.preload;
+
+    if (preload === false || (preload !== true && !isLikelyAssetUrl(meshUrl))) {
+      this.releaseLODAsset(entityId);
       return;
     }
 

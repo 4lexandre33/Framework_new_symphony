@@ -60,7 +60,8 @@ export type LODLevel = 0 | 1 | 2 | 3;
 interface LODLevelDescriptor {
   readonly level: LODLevel;
   readonly distanceThreshold: number;
-  readonly meshUrl: string;
+  readonly meshUrl: string; // URL de asset OU chave do jogo (G132).
+  readonly preload?: boolean; // G132: true força o pré-carregamento de `meshUrl`; false nunca carrega.
   readonly maxScreenSpaceError?: number;
 }
 interface LODEntityDescriptor {
@@ -131,7 +132,7 @@ interface LODLevelChangedPayload {
   readonly entityId: string;
   readonly previousLevel: LODLevel;
   readonly newLevel: LODLevel;
-  readonly meshUrl?: string; // `meshUrl` do novo nível (pré-carregado via `game.assets` quando presente).
+  readonly meshUrl?: string; // `meshUrl` do novo nível (pré-carregado via `game.assets` só se for URL ou `preload: true`, G132).
 }
 event LODLevelChangedEvent = "game.streaming.lod-changed" payload LODLevelChangedPayload
 interface RequestSectorLoadPayload {
@@ -154,5 +155,5 @@ command SetStreamingRadiusCommand = "game.streaming.set-radius" request SetStrea
 - Setores: `registerSector({ sectorCoord, boundsMin, boundsMax, assetUrls, priority? })`. Ao entrar no raio os `assetUrls` são carregados via `game.assets` e sai `game.streaming.sector-loaded`; ao sair, liberados + `sector-unloaded`. O jogo cria/remove o conteúdo do setor nesses eventos (`getSectorAsset(coord, url)` dá a instância carregada).
 - Raio padrão 100 (+15 de histerese): `setStreamingRadius(load, histerese)`.
 - Manual: `loadSector` FIXA o setor (pinned) até `releaseSector`/`unloadSector`; `unloadSector` suprime até ele sair do raio. `unregisterSector` remove com evento; `clear()` descarrega tudo com eventos.
-- LOD: `registerLODEntity` avalia o nível JÁ (níveis em qualquer ordem); `updateLODEntityPosition` move; histerese por entidade ou `setLODHysteresis`. `game.streaming.lod-changed` traz `newLevel`. `meshUrl` não vazio é CARREGADO via assets: LOD feito pelo jogo usa `meshUrl: ""` (GAPS G132).
+- LOD: `registerLODEntity` avalia o nível JÁ (níveis em qualquer ordem); `updateLODEntityPosition` move; histerese por entidade ou `setLODHysteresis`. `game.streaming.lod-changed` traz `newLevel`. `meshUrl` só é pré-carregado via assets se PARECER URL (esquema http(s)/blob/data/file/asset/tauri, começa com `/`/`./`/`../` ou tem extensão, ex.: `tree_lo.glb`) ou com `preload: true`; chaves do jogo (`"tree-low"`) não carregam e chegam em `meshUrl` do evento; `preload: false` nunca carrega (G132).
 - HLOD real: `buildHLOD(coord, chavesDeCena, { switchDistance, hideSources })` funde malhas da cena num proxy por material; `removeHLOD`; `getHLODStats()`.

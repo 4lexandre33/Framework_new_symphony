@@ -7,6 +7,7 @@ import type { PluginContext } from "@core";
 
 import type { StreamingSectorDescriptor } from "../src/contracts/streaming/types";
 import { StreamingService } from "../src/engine/streaming/internal/StreamingService";
+import { isLikelyAssetUrl } from "../src/engine/streaming/internal/DistanceLODManager";
 import { createStreamingPlugin } from "../src/plugins/streaming/plugin";
 import type { AssetsApi } from "../src/tokens/assets";
 import type { CameraApi } from "../src/tokens/camera";
@@ -174,6 +175,46 @@ describe("streaming gaps — G17 centro e assets", () => {
     expect(emitted.find((e) => e.type === "game.streaming.lod-changed")?.payload).toMatchObject({ newLevel: 1, meshUrl: "tree_lo.glb" });
     service.unregisterLODEntity("tree");
     expect(assets.refs.size).toBe(0);
+  });
+
+  it("G132: chave que não é URL não carrega; preload força/desliga", async () => {
+    const { service, emitted } = createService();
+    const assets = createAssets();
+    service.bindDependencies({ assets: assets.api });
+    service.updateStreamingCenter({ x: 0, y: 0, z: 0 });
+    service.registerLODEntity({
+      entityId: "rock",
+      worldPosition: { x: 0, y: 0, z: 0 },
+      currentLevel: 0,
+      lodLevels: [
+        { level: 0, distanceThreshold: 0, meshUrl: "rock-high" },
+        { level: 1, distanceThreshold: 30, meshUrl: "rock-low", preload: true },
+        { level: 2, distanceThreshold: 60, meshUrl: "rock_far.glb", preload: false },
+      ],
+    });
+    await flush();
+    expect(assets.order).toEqual([]);
+    service.update({ x: 40, y: 0, z: 0 }, 0.016);
+    await flush();
+    expect(assets.order).toEqual(["rock-low"]);
+    service.update({ x: 100, y: 0, z: 0 }, 0.016);
+    await flush();
+    expect(assets.order).toEqual(["rock-low"]);
+    expect(assets.refs.size).toBe(0);
+    expect(service.getStats().assetsFailed ?? 0).toBe(0);
+    const changes = emitted.filter((e) => e.type === "game.streaming.lod-changed").map((e) => e.payload.meshUrl);
+    expect(changes).toEqual(["rock-low", "rock_far.glb"]);
+    service.unregisterLODEntity("rock");
+  });
+
+  it("G132: heurística de URL", () => {
+    for (const url of ["tree.glb", "/models/a", "./a", "../b", "https://x/y", "blob:abc", "models/tree.gltf?v=2"]) {
+      expect(isLikelyAssetUrl(url), url).toBe(true);
+    }
+
+    for (const key of ["", "tree-low", "rock_2", "lod:far", "models/tree"]) {
+      expect(isLikelyAssetUrl(key), key).toBe(false);
+    }
   });
 });
 

@@ -23,6 +23,24 @@ interface LODRecord {
 
 const DEFAULT_HYSTERESIS = 2;
 
+/**
+ * G132: `meshUrl` parece URL de asset (esquema http(s)/blob/data/file/asset/tauri, caminho `/` `./` `../` ou
+ * extensão de arquivo no último segmento)? Chaves como `"tree-low"` não.
+ */
+export function isLikelyAssetUrl(value: string): boolean {
+  if (value.length === 0) {
+    return false;
+  }
+
+  if (/^(?:https?|blob|data|file|asset|tauri):/iu.test(value) || value.startsWith("/") || value.startsWith("./") || value.startsWith("../")) {
+    return true;
+  }
+
+  const clean = value.split(/[?#]/u, 1)[0] ?? "";
+  const slash = clean.lastIndexOf("/");
+  return /\.[a-z0-9]{1,8}$/iu.test(slash >= 0 ? clean.slice(slash + 1) : clean);
+}
+
 export class DistanceLODManager {
   private readonly lodEntities = new Map<string, LODRecord>();
   private hysteresisMargin = DEFAULT_HYSTERESIS;
@@ -92,6 +110,11 @@ export class DistanceLODManager {
 
   public getEntityLOD(entityId: string): LODLevel | null {
     return this.lodEntities.get(entityId)?.currentLevel ?? null;
+  }
+
+  public getEntityLevelDescriptor(entityId: string): LODLevelDescriptor | null {
+    const record = this.lodEntities.get(entityId);
+    return record?.levels[record.currentIndex] ?? null;
   }
 
   public getEntityMeshUrl(entityId: string): string | null {
