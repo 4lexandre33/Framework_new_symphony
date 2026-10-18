@@ -11,12 +11,12 @@
   "cargoManifestMutatedByTauri": true,
   "cargoManifestRestored": true,
   "executablePath": "src-tauri/target/release/projeto1.exe",
-  "executableBytes": 10642432,
-  "executableSha256": "9b2d902ffbde320693305a7d011b3c165983e8d8a5301d810ead3e62ef95165d",
+  "executableBytes": 11363328,
+  "executableSha256": "ab7c0b20fb5cfeacbd7cf16a585cdd1c10a0379e04f6d726476fddc069ad8aca",
   "installerPath": "src-tauri/target/release/bundle/nsis/projeto1_0.1.0_x64-setup.exe",
-  "installerBytes": 2979710,
-  "installerSha256": "9039072b7c8bb5340245035029a85df1ab84b05316d9516cafcfc9aa8555a2ee",
+  "installerBytes": 3182516,
+  "installerSha256": "6b6c332679bcc65038a09f6068f3a4aeb9fb6c44876bbb26283adea8c6bd19d7",
   "installerCount": 1,
   "tauriConfigOverride": "src-tauri/tauri.stage88.conf.json",
-  "generatedAtUtc": "2026-10-09T17:41:29.675Z"
+  "generatedAtUtc": "2026-10-18T10:08:47.592Z"
 }
