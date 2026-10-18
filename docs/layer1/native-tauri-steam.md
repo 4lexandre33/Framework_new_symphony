@@ -9,8 +9,10 @@ A comunicação WebView → Rust é uma **fronteira não confiável**. Todo coma
 precisa de payload validado, mínimo privilégio, erro serializável/mapeado e API
 TypeScript tipada. Não há shell arbitrário nem escape de caminho.
 
-Os comandos registrados em `src-tauri/src/lib.rs` (`generate_handler!`) somam
-**66**, por área:
+Os comandos registrados em `src-tauri/src/lib.rs` (`generate_handler!`) são
+**66** no total. Os das áreas certificadas na Stage 89 (steam, overlay,
+security, modding, monetization) somam **56**; storage (4) e net (6) vieram
+depois (G102/G8) e ainda não entram na auditoria da Stage 89. Por área:
 
 | Área | Qtde | Arquivo |
 |---|---|---|
