@@ -17,6 +17,7 @@ import type {
 import type {
   AutoSnapshotOptions,
   EntitySnapshot,
+  NetHostEndpoint,
   NetHostOptions,
   NetMode,
   NetPeerInfo,
@@ -402,6 +403,30 @@ export class NetworkService
         : "client";
   }
 
+  /**
+   * G8: endereço do host WebSocket nativo ativo (`ws://127.0.0.1:porta` e,
+   * com `bind: "lan"`, `ws://<ip-lan>:porta`); null fora desse modo.
+   */
+  public getHostEndpoint(): NetHostEndpoint | null {
+    if (this.currentMode !== "host" || !(this.activeTransport instanceof WebSocketTransport)) {
+      return null;
+    }
+
+    const info = this.activeTransport.getHostInfo();
+
+    if (info === null) {
+      return null;
+    }
+
+    return {
+      transport: "websocket",
+      port: info.port,
+      bind: info.bind === "lan" ? "lan" : "loopback",
+      localUrl: `ws://127.0.0.1:${String(info.port)}`,
+      lanUrl: info.lanAddress ? `ws://${info.lanAddress}:${String(info.port)}` : null,
+    };
+  }
+
   public async startHost(
     options: NetHostOptions = {},
   ): Promise<boolean> {
@@ -419,7 +444,8 @@ export class NetworkService
       maxClients > MAX_CLIENTS_LIMIT ||
       (options.port !== undefined &&
         (!Number.isInteger(options.port) || options.port < 1 || options.port > 65_535)) ||
-      (options.transport !== undefined && !isSupportedTransportType(options.transport))
+      (options.transport !== undefined && !isSupportedTransportType(options.transport)) ||
+      (options.bind !== undefined && options.bind !== "loopback" && options.bind !== "lan")
     ) {
       return false;
     }
@@ -440,7 +466,7 @@ export class NetworkService
       return false;
     }
 
-    // WebSocket do navegador não hospeda (precisa de servidor externo).
+    // WebSocket só hospeda no app nativo (servidor Rust, G8); no navegador não.
     if (!this.activeTransport.canHost) {
       return false;
     }
@@ -449,6 +475,8 @@ export class NetworkService
       await this.activeTransport.listen({
         ...(options.port !== undefined ? { port: options.port } : {}),
         ...(options.room !== undefined ? { room: options.room } : {}),
+        ...(options.bind !== undefined ? { bind: options.bind } : {}),
+        maxClients,
       });
 
     if (!listening || this.disposed) {

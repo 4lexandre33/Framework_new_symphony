@@ -11,7 +11,16 @@ import {
 
 import {
   NetworkTransport,
+  type TransportListenOptions,
 } from "./NetworkTransport";
+
+import {
+  decodeNativeWsHostEvents,
+  tauriNativeWsHostBridge,
+  type NativeWsHostBridge,
+  type NativeWsHostError,
+  type NativeWsHostInfo,
+} from "./NativeWebSocketHostBridge";
 
 import {
   RateMeter,
@@ -43,6 +52,24 @@ function isSupportedWebSocketUrl(
   }
 }
 
+/** Porta padrão do host WebSocket nativo. */
+export const DEFAULT_WEBSOCKET_HOST_PORT =
+  7777;
+
+export interface WebSocketTransportOptions {
+  /** Servidor nativo (G8); padrão: comandos Tauri `net_ws_host_*`. */
+  readonly hostBridge?: NativeWsHostBridge;
+}
+
+/**
+ * Transporte WebSocket.
+ *
+ * - CLIENTE (`connect("ws://…")`): fala com um host/relay do protocolo do
+ *   `game.net`; o host aparece como o par `dedicated_server`.
+ * - HOST (`listen`, só no app nativo — G8): o Rust abre um servidor
+ *   WebSocket local/LAN (`net_ws_host_*`) e cada cliente vira o par
+ *   `ws_<n>`; os eventos são drenados no `pollPackets` (pump da rede).
+ */
 export class WebSocketTransport
   extends NetworkTransport {
   public readonly type:
@@ -84,17 +111,128 @@ export class WebSocketTransport
   private readonly receivedMeter =
     new RateMeter(nowMs);
 
-  /** WebSocket no navegador é só cliente: hospedar exige servidor externo. */
-  public override get canHost(): boolean {
-    return false;
+  private readonly hostBridge:
+    NativeWsHostBridge;
+
+  /** Host nativo ativo (null = modo cliente/ocioso). */
+  private hostInfo:
+    NativeWsHostInfo | null =
+      null;
+
+  private readonly hostPeers =
+    new Set<string>();
+
+  private hostPollInFlight =
+    false;
+
+  private hostGeneration =
+    0;
+
+  private lastHostErrorValue:
+    NativeWsHostError | null =
+      null;
+
+  public constructor(
+    options: WebSocketTransportOptions = {},
+  ) {
+    super();
+    this.hostBridge =
+      options.hostBridge ??
+      tauriNativeWsHostBridge;
   }
 
-  public override async listen(): Promise<boolean> {
-    return false;
+  /**
+   * Só o app nativo hospeda (servidor WebSocket no Rust). No navegador o
+   * WebSocket é só cliente: hospedar exige servidor externo.
+   */
+  public override get canHost(): boolean {
+    return !this.disposed && this.hostBridge.isAvailable();
+  }
+
+  /**
+   * Abre o servidor nativo: `port` (padrão 7777), `bind` `loopback`
+   * (padrão, só esta máquina) ou `lan`, `maxClients` (1..250, padrão 16).
+   */
+  public override async listen(
+    options: TransportListenOptions = {},
+  ): Promise<boolean> {
+    if (!this.canHost) {
+      return false;
+    }
+
+    if (this.hostInfo !== null) {
+      return true;
+    }
+
+    this.closeSocket(
+      false,
+    );
+
+    const generation =
+      this.hostGeneration +
+      1;
+
+    this.hostGeneration =
+      generation;
+
+    try {
+      const info =
+        await this.hostBridge.start(
+          options.port ??
+            DEFAULT_WEBSOCKET_HOST_PORT,
+          options.bind ??
+            "loopback",
+          options.maxClients ??
+            16,
+        );
+
+      if (
+        this.disposed ||
+        generation !==
+          this.hostGeneration
+      ) {
+        void this.hostBridge.stop().catch(() => false);
+        return false;
+      }
+
+      this.hostInfo =
+        info;
+
+      this.lastHostErrorValue =
+        null;
+
+      return true;
+    } catch (error) {
+      this.lastHostErrorValue =
+        toHostError(error);
+
+      return false;
+    }
+  }
+
+  /** Host nativo ativo: porta, bind e IP de LAN provável (null se não hospeda). */
+  public getHostInfo():
+    NativeWsHostInfo | null {
+    return this.hostInfo;
+  }
+
+  /** Último erro do servidor nativo (ex.: `bind-failed` porta em uso). */
+  public get lastHostError():
+    NativeWsHostError | null {
+    return this.lastHostErrorValue;
+  }
+
+  public get isHosting():
+    boolean {
+    return this.hostInfo !== null;
   }
 
   public get isConnected():
     boolean {
+    if (this.hostInfo !== null) {
+      return !this.disposed;
+    }
+
     return (
       !this.disposed &&
       this.connected &&
@@ -118,6 +256,10 @@ export class WebSocketTransport
         target,
       )
     ) {
+      return false;
+    }
+
+    if (this.hostInfo !== null) {
       return false;
     }
 
@@ -313,6 +455,11 @@ export class WebSocketTransport
 
   public async disconnect():
     Promise<void> {
+    await this.stopHost(
+      true,
+      "desconexao_local",
+    );
+
     this.closeSocket(
       true,
     );
@@ -324,6 +471,14 @@ export class WebSocketTransport
     channel: number = 0,
     _reliable: boolean = true,
   ): Promise<boolean> {
+    if (this.hostInfo !== null) {
+      return await this.hostSend(
+        targetId,
+        data,
+        channel,
+      );
+    }
+
     if (
       !this.isConnected ||
       !this.socket ||
@@ -393,6 +548,14 @@ export class WebSocketTransport
       return false;
     }
 
+    if (this.hostInfo !== null) {
+      return await this.hostSend(
+        "*",
+        data,
+        channel,
+      );
+    }
+
     return await this.send(
       DEDICATED_SERVER_PEER_ID,
       data,
@@ -403,7 +566,246 @@ export class WebSocketTransport
 
   public async pollPackets():
     Promise<void> {
-    // WebSocket entrega pacotes reativamente por onmessage.
+    // Cliente: entrega reativa por onmessage. Host nativo: drena a fila do Rust.
+    if (
+      this.hostInfo === null ||
+      this.hostPollInFlight
+    ) {
+      return;
+    }
+
+    const generation =
+      this.hostGeneration;
+
+    this.hostPollInFlight =
+      true;
+
+    let buffer: ArrayBuffer;
+
+    try {
+      buffer =
+        await this.hostBridge.poll();
+    } catch (error) {
+      this.hostPollInFlight =
+        false;
+
+      if (
+        generation ===
+          this.hostGeneration
+      ) {
+        // Servidor sumiu (ex.: `not-running`): todos os pares caem.
+        this.lastHostErrorValue =
+          toHostError(error);
+
+        await this.stopHost(
+          true,
+          "host_parado",
+          false,
+        );
+      }
+
+      return;
+    }
+
+    this.hostPollInFlight =
+      false;
+
+    if (
+      this.disposed ||
+      generation !==
+        this.hostGeneration
+    ) {
+      return;
+    }
+
+    decodeNativeWsHostEvents(
+      buffer,
+      this.hostEventSink,
+    );
+  }
+
+  private readonly hostEventSink = {
+    connected: (
+      peerId: string,
+    ): void => {
+      if (this.hostPeers.has(peerId)) {
+        return;
+      }
+
+      this.hostPeers.add(
+        peerId,
+      );
+
+      this.notifyPeerConnected(
+        peerId,
+      );
+    },
+
+    disconnected: (
+      peerId: string,
+      reason: string,
+    ): void => {
+      if (!this.hostPeers.delete(peerId)) {
+        return;
+      }
+
+      this.notifyPeerDisconnected(
+        peerId,
+        reason,
+      );
+    },
+
+    message: (
+      peerId: string,
+      data: Uint8Array,
+    ): void => {
+      if (
+        !this.hostPeers.has(peerId) ||
+        !isValidNetworkPayload(
+          data,
+        )
+      ) {
+        return;
+      }
+
+      this.bytesReceivedCount +=
+        data.byteLength;
+
+      this.receivedMeter.add(
+        data.byteLength,
+      );
+
+      this.notifyPacket(
+        peerId,
+        0,
+        data,
+      );
+    },
+  };
+
+  private async hostSend(
+    targetId: string,
+    data: Uint8Array,
+    channel: number,
+  ): Promise<boolean> {
+    const broadcast =
+      targetId === "*";
+
+    if (
+      !isValidNetworkChannel(
+        channel,
+      ) ||
+      !isValidNetworkPayload(
+        data,
+      ) ||
+      (broadcast
+        ? this.hostPeers.size === 0
+        : !this.hostPeers.has(targetId))
+    ) {
+      this.rejectedSendCount +=
+        1;
+
+      return false;
+    }
+
+    try {
+      const accepted =
+        await this.hostBridge.send(
+          targetId,
+          data,
+        );
+
+      if (!accepted) {
+        this.rejectedSendCount +=
+          1;
+
+        return false;
+      }
+
+      const bytes =
+        broadcast
+          ? data.byteLength *
+            this.hostPeers.size
+          : data.byteLength;
+
+      this.bytesSentCount +=
+        bytes;
+
+      this.sentMeter.add(
+        bytes,
+      );
+
+      this.successfulSendCount +=
+        1;
+
+      return true;
+    } catch {
+      this.rejectedSendCount +=
+        1;
+
+      return false;
+    }
+  }
+
+  public override closePeer(
+    peerId: string,
+  ): void {
+    if (
+      this.hostInfo === null ||
+      !this.hostPeers.has(peerId)
+    ) {
+      return;
+    }
+
+    void this.hostBridge
+      .closePeer(
+        peerId,
+      )
+      .catch(
+        () => false,
+      );
+  }
+
+  /** Para o servidor nativo; com `notify` derruba os pares conhecidos. */
+  private async stopHost(
+    notify: boolean,
+    reason: string,
+    callNative = true,
+  ): Promise<void> {
+    if (this.hostInfo === null) {
+      return;
+    }
+
+    this.hostInfo =
+      null;
+
+    this.hostGeneration +=
+      1;
+
+    this.hostPollInFlight =
+      false;
+
+    const peers =
+      [...this.hostPeers];
+
+    this.hostPeers.clear();
+
+    if (notify) {
+      for (const peerId of peers) {
+        this.notifyPeerDisconnected(
+          peerId,
+          reason,
+        );
+      }
+    }
+
+    if (callNative) {
+      try {
+        await this.hostBridge.stop();
+      } catch {
+        // best-effort: o app também para o servidor ao sair.
+      }
+    }
   }
 
   /** Estatísticas do link (não destrutivo). RTT/perda reais vêm da sessão. */
@@ -421,9 +823,11 @@ export class WebSocketTransport
           this.receivedMeter.perSecond(),
         ),
       activeConnections:
-        this.isConnected
-          ? 1
-          : 0,
+        this.hostInfo !== null
+          ? this.hostPeers.size
+          : this.isConnected
+            ? 1
+            : 0,
       transportType:
         this.type,
     };
@@ -453,6 +857,11 @@ export class WebSocketTransport
 
     this.disposed =
       true;
+
+    void this.stopHost(
+      false,
+      "dispose",
+    );
 
     this.closeSocket(
       false,
@@ -528,4 +937,35 @@ export class WebSocketTransport
     socket.onclose =
       null;
   }
+}
+
+function toHostError(
+  error: unknown,
+): NativeWsHostError {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    typeof (error as { code?: unknown }).code === "string"
+  ) {
+    const native =
+      error as { code: string; message?: unknown };
+
+    return {
+      code:
+        native.code,
+      message:
+        typeof native.message === "string"
+          ? native.message
+          : native.code,
+    };
+  }
+
+  return {
+    code:
+      "unavailable",
+    message:
+      error instanceof Error
+        ? error.message
+        : String(error),
+  };
 }

@@ -9,8 +9,10 @@ A comunicação WebView → Rust é uma **fronteira não confiável**. Todo coma
 precisa de payload validado, mínimo privilégio, erro serializável/mapeado e API
 TypeScript tipada. Não há shell arbitrário nem escape de caminho.
 
-Os comandos registrados em `src-tauri/src/lib.rs` (`generate_handler!`) somam
-**56**, por área:
+Os comandos registrados em `src-tauri/src/lib.rs` (`generate_handler!`) são
+**66** no total. Os das áreas certificadas na Stage 89 (steam, overlay,
+security, modding, monetization) somam **56**; storage (4) e net (6) vieram
+depois (G102/G8) e ainda não entram na auditoria da Stage 89. Por área:
 
 | Área | Qtde | Arquivo |
 |---|---|---|
@@ -19,6 +21,8 @@ Os comandos registrados em `src-tauri/src/lib.rs` (`generate_handler!`) somam
 | Security (relógio do sistema, crash dump) | 2 | `src-tauri/src/security.rs` |
 | Modding (scan, lista de instalados, leitura segura de arquivo, mods ativos, Workshop download/estado/publicação) | 8 | `src-tauri/src/modding.rs` |
 | Monetization (MicroTxn só via servidor, Steam Inventory fetch/consume/StartPurchase) | 5 | `src-tauri/src/monetization.rs` |
+| Storage (backend de saves em arquivos: read/write atômico/delete/list em `<app_data_dir>/storage/<namespace>/`) | 4 | `src-tauri/src/storage.rs` |
+| Net (host WebSocket nativo do `game.net`: start/stop/status/poll binário/send binário/close peer; loopback ou LAN) | 6 | `src-tauri/src/net_ws_host.rs` |
 
 Sem a feature `steam` (`--no-default-features`) os mesmos comandos Steam são
 servidos por `src-tauri/src/steam_offline.rs`, que responde "indisponível"

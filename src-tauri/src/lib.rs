@@ -1,5 +1,6 @@
 mod modding;
 mod monetization;
+mod net_ws_host;
 mod overlay;
 mod security;
 #[cfg(feature = "steam")]
@@ -20,6 +21,7 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(steam_state)
+        .manage(net_ws_host::WsHostState::default())
         .invoke_handler(tauri::generate_handler![
             steam::steam_runtime_status,
             steam::steam_is_initialized,
@@ -80,13 +82,20 @@ pub fn run() {
             storage::storage_file_read,
             storage::storage_file_write,
             storage::storage_file_delete,
-            storage::storage_file_list
+            storage::storage_file_list,
+            net_ws_host::net_ws_host_start,
+            net_ws_host::net_ws_host_stop,
+            net_ws_host::net_ws_host_status,
+            net_ws_host::net_ws_host_poll,
+            net_ws_host::net_ws_host_send,
+            net_ws_host::net_ws_host_close_peer
         ])
         .build(tauri::generate_context!())
         .expect("Erro ao construir o aplicativo Tauri");
 
     app.run(|app_handle, event| {
         if matches!(event, tauri::RunEvent::Exit) {
+            app_handle.state::<net_ws_host::WsHostState>().shutdown();
             app_handle.state::<SteamState>().shutdown();
         }
     });
