@@ -6,13 +6,13 @@
   "module": "game.storage",
   "semanticFingerprints": {
     "src/engine/storage/internal/StorageErrors.ts": "8d736a0ddbd653c52a85ed65c0bb27bcc9c4169ba26aacfd29141b73746fb46f",
-    "src/engine/storage/internal/KeyValueStorageBackend.ts": "3fa4a4775a2b0d3b03bec9008e52b69cbbe6511850e4d7a06c9fd55916ca28f2",
+    "src/engine/storage/internal/KeyValueStorageBackend.ts": "0a70dbe2d027a48ef829ff618472d27db550c800c2c5d1c19a5c5bbc3a87d328",
     "src/engine/storage/internal/SaveRecordCodec.ts": "1efb66590a90fc4aedf1bc0721564338a4d00a5a47eb47e7f3d2c5223dc6c3be",
     "src/engine/storage/internal/KeyValueSaveDriver.ts": "1500e3e58594a96bc04ac533ecf85ff17168e743c1397dfff6b0609af39c8415",
     "src/engine/storage/internal/LocalDatabaseDriver.ts": "c057bc16afc5f2c416d7eddc1497022bff8ab1a00e1d3917d1b09a84384174ce",
-    "src/engine/storage/internal/SteamCloudDriver.ts": "6d1865a5d9ecf69402ffd543d31635d063acd90b76fc5f93fbc2ecb56ab84c6e",
+    "src/engine/storage/internal/SteamCloudDriver.ts": "6bc607729a7e178fb3e76ebb4f00bb4e899d855e64a9768e8583a9500458badc",
     "src/engine/storage/internal/CloudDatabaseDriver.ts": "47268cc1769407f5fc3159c7be0094a7bb704d40bbd06edcbda7de47f91faa68",
-    "src/engine/storage/internal/StorageService.ts": "5d8c64289676fc4657f3a1f8042ebf0d63ff5e3c45a1060b6a261e4596f479c3",
+    "src/engine/storage/internal/StorageService.ts": "208f57c2e404e7af171a446b78dfc93752c3edb91c49ebb392652c857efe3326",
     "src/engine/storage/internal/DomainSaveGamePortAdapter.ts": "44f554e69397d73f2bd673643a9d7587fc91646d804fe35d90890424cb9cf3fd",
     "src/plugins/storage/plugin.ts": "a90046e1e9b62392f184da14c59cd6373a50bc779ac0a83427a73b393300de02"
   },

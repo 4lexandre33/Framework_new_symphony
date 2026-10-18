@@ -39,9 +39,9 @@
   "ownedFileSha256": {
     "src-tauri/Cargo.toml": "fbfe89089b1eccd8d5901a2143486a61ac3b6ded0c4e5dfc645d278d43648902",
     "src-tauri/src/steam.rs": "747269887d036e98e081704d74eeb81a71ef15e3d40bb2a296e4e98c435b87d4",
-    "src-tauri/src/lib.rs": "a88e96f5a6285ad685a728a2eb9bed27a7fe8beab9aba5b5d5b85af14cad2a22",
+    "src-tauri/src/lib.rs": "8c4c2d0918d70c77533372e706ee897f9b5def07402ea715e3c02b9d63a59c5b",
     "src/engine/steam/internal/SteamBridgeService.ts": "990ef756c2a0a44f89d5b3f2b1e3b800dc0043821c4ad2976f97f57fd1091e90",
-    "src/plugins/net/plugin.ts": "a873544a759aae0b56f74e0df4c3f434c14d7c6b93ae76764fa26cfb8c3f902c"
+    "src/plugins/net/plugin.ts": "97c7809182ebdf5fd820ee93f35e5a4d247bae3f5733370e4e75cdf9417d7e5d"
   },
   "baselinePolicy": {
     "stage84OwnedRuntimeSha": true,

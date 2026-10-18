@@ -39,11 +39,11 @@
   "files": [
     {
       "path": "src/engine/assets/internal/AssetCache.ts",
-      "fingerprint": "6251f678ab52c38b6b1e1644837c6cc23fc030a78c0834e56997d1db6c523e35"
+      "fingerprint": "c3e02916a1a7cf5fa9d4b4128d6127a89828471a29898b404c283040e5ec2796"
     },
     {
       "path": "src/engine/assets/internal/AssetsManagerService.ts",
-      "fingerprint": "952f209b18e126139724c3bf731bc659ff88e974915209d056bf7b3e2af4fd9f"
+      "fingerprint": "49079bb458eb3b6fedd8e924a572461882e92dda45cde64bec67848d75c85402"
     },
     {
       "path": "src/engine/assets/internal/AudioLoaderService.ts",
@@ -63,7 +63,7 @@
     },
     {
       "path": "src/engine/streaming/internal/DistanceLODManager.ts",
-      "fingerprint": "f72b935330f8be02ad86127bcfb9b95d557b2008952d6b7632b77aa72d740aa8"
+      "fingerprint": "87b2dda1aed9f6ec38094b6b762a413c603471730851c8cb4cb9eeeb22fd118c"
     },
     {
       "path": "src/engine/streaming/internal/HLODBuilder.ts",
@@ -71,7 +71,7 @@
     },
     {
       "path": "src/engine/streaming/internal/StreamingService.ts",
-      "fingerprint": "ec83a4625c450b9c1c92dd385d41ea99cc813d764128ad8c839a84878eeef111"
+      "fingerprint": "56f0b63047c06f82dcaff1c7a2c44f259214ea68fe5989f9b3ffc60282a26d78"
     },
     {
       "path": "src/engine/streaming/internal/StreamingWorkerPool.ts",
@@ -107,7 +107,7 @@
     },
     {
       "path": "src/engine/terrain/internal/TerrainService.ts",
-      "fingerprint": "b58d3c21bc4aeaf30ce36411d4a690a085e9eddd5e92ff5d104565a9522a2b1f"
+      "fingerprint": "5f935270053a18e2cdfd4284c544491e87b47b455b45638bd1e44d50afe37252"
     },
     {
       "path": "src/engine/terrain/internal/VoxelChunkManager.ts",
@@ -119,7 +119,7 @@
     },
     {
       "path": "src/plugins/terrain/plugin.ts",
-      "fingerprint": "080c10429826f739876e22dbdcc4cbf62fe9c49385490d8ed2b54b6ebcd452d1"
+      "fingerprint": "ceaced47729c709a3c89ca9e65096660d449947a946bcae2e94f892736792742"
     }
   ]
 }

@@ -86,6 +86,7 @@ interface RenderFramePayload {
   readonly realDeltaSeconds?: number; // Presentes quando o frame vem do `game.loop.render` (repassados como recebidos).
   readonly isPaused?: boolean;
 }
+const RENDER_SHARED_RESOURCE: unique symbol; // G81: marca de recurso de GPU COMPARTILHADO e com dono (ex.: cache de assets).
 event RenderFrameEvent = "game.render.frame" payload RenderFramePayload
 interface ViewportResizePayload {
   readonly width: number;
@@ -153,7 +154,7 @@ event RenderContextRestoredEvent = "game.render.context-restored" payload Render
 ## notas verificadas (comportamento)
 - O desenho acontece DEPOIS dos handlers síncronos de `game.loop.render`: posicionar malhas no render aparece no mesmo frame.
 - Interpolação opcional: mova o objeto no tick e marque `setInterpolated(chave, true)`; a engine desenha entre o tick anterior e o atual e restaura o valor real. Após teleporte: `snapInterpolation(chave)`.
-- Conteúdo: Three.js nos adapters do jogo + `addMeshToScene(chaveÚnica, obj)`. `removeMeshFromScene` libera geometria/material/texturas de Mesh/InstancedMesh/Points/Line/Sprite, EXCETO recursos usados por outro objeto registrado, marcados `userData.renderRetain = true` ou com `{ disposeResources: false }` (instâncias de GLTF: GAPS G81). Para esconder use `visible = false`.
+- Conteúdo: Three.js nos adapters do jogo + `addMeshToScene(chaveÚnica, obj)`. `removeMeshFromScene` libera geometria/material/texturas de Mesh/InstancedMesh/Points/Line/Sprite, EXCETO recursos usados por outro objeto registrado, marcados `userData.renderRetain = true` ou `RENDER_SHARED_RESOURCE` (GPU do cache de assets: GLTF/texturas — não precisa de `{ disposeResources: false }` para instâncias de `loadGLTF`), ou com `{ disposeResources: false }`. Para esconder use `visible = false`.
 - Câmera: com câmera virtual registrada, `game.camera` escreve posição/rotação/fov a cada frame (enquadre por ela; `setCameraMode`/`updateCameraTarget` só valem sem câmera virtual). near/far/tamanho ortográfico: `configurePerspectiveCamera`/`configureOrthographicCamera` (persistem em resize); leitura em `getCameraSettings()`.
 - Viewport: `setViewportOptions({ autoResize, maxPixelRatio, rect })`; `game.render.resize` sai no boot e a cada mudança; `getViewportDimensions()` é objeto reutilizado (`copyViewportDimensions`).
 - Luzes: `setAmbientLight`; a direcional da engine aceita `target`/`shadowAreaSize`/`shadowMapSize`; `setShadowFocus(centro)` move luz e alvo juntos (mundos grandes: chame seguindo o foco). Extras: `addLight(id, { type: "point" | "spot" | "hemisphere" | … })` / `removeLight`.

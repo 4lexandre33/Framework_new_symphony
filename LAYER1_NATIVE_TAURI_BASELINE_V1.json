@@ -10,7 +10,7 @@
     "src-tauri/Cargo.toml": "fbfe89089b1eccd8d5901a2143486a61ac3b6ded0c4e5dfc645d278d43648902",
     "src-tauri/tauri.conf.json": "d1db3bd844f86caf7377fd0c2447c9339f83f76cea7e7a4222b72e1cf0fdfae5",
     "src-tauri/capabilities/default.json": "be7b3668ed23d4a8bae5405000f42ae0f045795711273e06dcc4d84caa50e15d",
-    "src-tauri/src/lib.rs": "a88e96f5a6285ad685a728a2eb9bed27a7fe8beab9aba5b5d5b85af14cad2a22",
+    "src-tauri/src/lib.rs": "8c4c2d0918d70c77533372e706ee897f9b5def07402ea715e3c02b9d63a59c5b",
     "src-tauri/src/steam.rs": "747269887d036e98e081704d74eeb81a71ef15e3d40bb2a296e4e98c435b87d4",
     "src-tauri/src/security.rs": "5d514837f2e6f385674aecb86b1fa3367c0629ac4062a83a224972256ea63afa",
     "src-tauri/src/overlay.rs": "4afc85c326c59ca58bfb541f3a0b2c4e8a591abcc5d9aa9423b8a3af346106b2",
@@ -78,7 +78,11 @@
     "steam_set_stat_float",
     "steam_store_stats",
     "steam_unlock_achievement",
-    "steam_workshop_download_item"
+    "steam_workshop_download_item",
+    "storage_file_delete",
+    "storage_file_list",
+    "storage_file_read",
+    "storage_file_write"
   ],
   "invokedCommands": [
     "modding_publish_workshop_item",

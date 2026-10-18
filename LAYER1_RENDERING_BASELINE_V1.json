@@ -43,7 +43,7 @@
     },
     {
       "path": "src/engine/render/internal/SceneGraphManager.ts",
-      "fingerprint": "00cfccc250b6858e2a006a44fcb2a4378d20a55353465c14d2865c56d2f60dc5"
+      "fingerprint": "fadc8459341d464c66272838c7ab236f40c6d8ac85c5b223c8eaebf75ed1c6c3"
     },
     {
       "path": "src/engine/render/internal/ThreeRenderEngine.ts",

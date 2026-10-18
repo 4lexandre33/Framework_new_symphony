@@ -13,13 +13,13 @@
   "semanticRuntimeFiles": 20,
   "semanticFingerprints": {
     "src/engine/world/internal/EntityManager.ts": "9f08d70e237d52c4270ac13f5acea2172bf7eadf28d09da4c92ac3b67d04d870",
-    "src/engine/world/internal/OctreeManager.ts": "8808a4b6bb2ce4d1aa3ca6623a22dffbee0b6612fbd830e1a41964b897cdb4e4",
+    "src/engine/world/internal/OctreeManager.ts": "890d820fb3cb4521eda90c5a69d19f43f7dcc9b6bff4baa49d6f9cf6a412ec9c",
     "src/engine/world/internal/SceneManager.ts": "430684541cf5eb76bd65577a99a724d226f86a0b7f9d246fe61a0c8e8b973e6e",
     "src/engine/world/internal/SpatialGrid.ts": "151aaf14dff0149c6d0c55161330ac92bd0588bed20836ed75471c0786d8b65e",
     "src/engine/world/internal/WorldService.ts": "69398d834841dfcde70b7b018ac43e917d233b659f59510339b02c2422a4466b",
     "src/engine/world/internal/WorldStateSerializer.ts": "dc2b6b1021e38551ffa31e873d634e6c6c46d638db2b601aef98aa86e81bf490",
     "src/plugins/world/plugin.ts": "65b9a8636c154f19e284c554570b8f75b037fdef6401335dd1ffbd55eb606842",
-    "src/engine/ai/internal/AIAgentManager.ts": "679d6331178079ae09f8fa16b139246d1219bacc561bf6264d57b64fca1c16e2",
+    "src/engine/ai/internal/AIAgentManager.ts": "5caa53313198b07f6f80e38c554cc24549d584cc26982230e1a371fad1090260",
     "src/engine/ai/internal/AIService.ts": "00cab793af0abcabf47a3c039bc3a9dcde891c394cb591a449645a6305de2633",
     "src/engine/ai/internal/BehaviorTree.ts": "c73a5154056ede4439c96ee6a62ee902b838bc9fc68ae4fc4aae1c81c2b2f69a",
     "src/engine/ai/internal/NavMeshQuery.ts": "e9e90b2d2e5b0ae7e2397d78b3b69d7daa05b7ee0bb8ed4840adb9d672d55a8e",
@@ -30,7 +30,7 @@
     "src/engine/scripting/internal/DialogueTreeParser.ts": "b77096e912c5e1a1eac1497c0aaf9cc196f1943ad14762d9adcf1c160a9809f4",
     "src/engine/scripting/internal/QuestManager.ts": "4b053e6c5ee408de8abb1bb5c9f041999b636e31e3cb2b746d2be6059afa5e07",
     "src/engine/scripting/internal/ScriptingService.ts": "8a7dca86799e30cedd07ecc07ec0b2f05cd8c0786d9d6b39b3d87bd4a1a27133",
-    "src/engine/scripting/internal/TriggerZoneManager.ts": "d43702f9b680c71efdc738503e01b8b802c09255b9f2661b0c5a3b6066e338a9",
+    "src/engine/scripting/internal/TriggerZoneManager.ts": "9f41ecad723a0cd3f725184bb40e2c5764e88568b49e922c2dcb338742724a26",
     "src/plugins/scripting/plugin.ts": "f4936bc6fe9b6d268d8c840ddf2c8c74624f2f3aca3cff6aab41a67a4115de79"
   },
   "certifiedHotPaths": [

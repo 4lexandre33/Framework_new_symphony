@@ -17,8 +17,8 @@
     "provisions": 24,
     "providedCapabilityIds": 24,
     "requiredCapabilityRequirements": 28,
-    "optionalCapabilityRequirements": 20,
-    "resolvedCapabilityRequirements": 48,
+    "optionalCapabilityRequirements": 21,
+    "resolvedCapabilityRequirements": 49,
     "optionalUnresolved": 0,
     "conflictsDeclared": 0,
     "pluginDependencies": 24,
@@ -767,6 +767,15 @@
         "providerPriority": 0
       },
       {
+        "consumerPluginId": "game.monetization",
+        "capabilityId": "game.storage",
+        "range": "^1.0.0",
+        "optional": true,
+        "providerPluginId": "game.storage",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
         "consumerPluginId": "game.debug",
         "capabilityId": "game.streaming",
         "range": "^1.0.0",
@@ -854,14 +863,14 @@
       "provisions": 24,
       "providedCapabilityIds": 24,
       "requiredCapabilityRequirements": 28,
-      "optionalCapabilityRequirements": 20,
-      "resolvedCapabilityRequirements": 48,
+      "optionalCapabilityRequirements": 21,
+      "resolvedCapabilityRequirements": 49,
       "optionalUnresolved": 0,
       "conflictsDeclared": 0,
       "pluginDependencies": 24,
       "requiredPluginDependencies": 14,
       "optionalPluginDependencies": 10
     },
-    "semanticSha256": "ac12f6fe6c26bfca7a785ce024aa95a439b3c25c7b369fdb0c902e4e87b4719c"
+    "semanticSha256": "a38ccac5ddca65cc32c37cce62d84ec1e97d3ed5dda1b21dbfd3ecfc792b95d2"
   }
 }
