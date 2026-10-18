@@ -5,11 +5,11 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parseTscOutput, toPascal } from "../../tools/mcp/src/tools/projects.ts";
-import { createTestClient, makeTempRepo, REPO_ROOT, textOf, type TempRepo, type TestClient } from "./harness.ts";
+import { createTestClient, HAS_SAMPLE_GAME, makeTempRepo, REPO_ROOT, textOf, type TempRepo, type TestClient } from "./harness.ts";
 
 const isWindows = process.platform === "win32";
 
-describe("projects: leitura no repo real", () => {
+describe.skipIf(!HAS_SAMPLE_GAME)("projects: leitura no repo real", () => {
   let t: TestClient;
   beforeAll(async () => {
     t = await createTestClient();

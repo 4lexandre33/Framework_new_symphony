@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 /**
  * Harness dos testes do MCP da engine: cliente MCP real (SDK) ligado ao
  * servidor real por `InMemoryTransport`.
@@ -29,6 +30,10 @@ import type { NamedDomain } from "../../tools/mcp/src/tools/index.ts";
 
 /** Raiz do repositório onde os testes rodam. */
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+/** O jogo de exemplo existe? (o check de isolamento roda os testes SEM jogos). */
+export const HAS_SAMPLE_GAME = existsSync(path.join(REPO_ROOT, "src", "projects", "physics-sandbox", "index.ts"));
+/** Há um repositório git? (cópias temporárias não têm .git). */
+export const HAS_GIT = existsSync(path.join(REPO_ROOT, ".git"));
 
 /** Erro lançado por `callTool` quando a tool devolve `isError: true`. */
 export class ToolCallError extends Error {

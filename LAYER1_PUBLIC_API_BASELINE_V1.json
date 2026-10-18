@@ -193,7 +193,7 @@
       "contracts": [
         {
           "path": "src/contracts/world/types.ts",
-          "fingerprint": "2830186c20d64284a155bc531b7155065e2ffabee535fbce64d3cba52a68edb2"
+          "fingerprint": "c9c421724b674ec431c569bddad7a6fc304e2c14a0c4fa1573201f8698932e18"
         }
       ],
       "tokens": [
@@ -202,7 +202,7 @@
           "capabilityId": "game.world",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "ffad7faa887705d95d77005e2c906bb6c00882313607e5b16af5ead75f1c6bda"
+          "fingerprint": "6f309f4c10f87303ff5af0551bd1fbf8fb3d6419f9ef2759ee7b8e09224c59cd"
         }
       ]
     },
@@ -622,7 +622,7 @@
           "capabilityId": "game.loop",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "ff1d88c0bba41e285d9b7fe395001c78cc8d7eb110ab0bde4828442a946babf4"
+          "fingerprint": "0d25d146e5a1a73c49ac8065a3dbe6619d7acb3f3e28f4a8efe2bb8524eb443e"
         }
       ]
     },

@@ -8,7 +8,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parseGaps, parseIndex, parseModuleDoc, splitRow } from "../../tools/mcp/src/knowledge/docs.ts";
 import { parseTokenSource } from "../../tools/mcp/src/knowledge/token-api.ts";
-import { createTestClient, makeTempRepo, REPO_ROOT, textOf, type TestClient } from "./harness.ts";
+import { createTestClient, HAS_SAMPLE_GAME, makeTempRepo, REPO_ROOT, textOf, type TestClient } from "./harness.ts";
 
 const read = (rel: string): string => readFileSync(path.join(REPO_ROOT, rel), "utf8");
 const moduleKeys = readdirSync(path.join(REPO_ROOT, "docs/ai/modules"))
@@ -68,7 +68,7 @@ describe("registro", () => {
 });
 
 describe("engine_info", () => {
-  it("devolve versão, git, módulos, jogos e freeze-lock", async () => {
+  it.skipIf(!HAS_SAMPLE_GAME)("devolve versão, git, módulos, jogos e freeze-lock", async () => {
     const pkg = JSON.parse(read("package.json")) as { version: string };
     const out = await t.callTool("engine_info");
     expect(out.engineVersion).toBe(pkg.version);

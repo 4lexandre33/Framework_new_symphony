@@ -17,6 +17,7 @@ import { allTools } from "../../tools/mcp/src/tools/index.ts";
 import {
   createTestClient,
   errorOf,
+  HAS_GIT,
   isAlive,
   makeTempRepo,
   REPO_ROOT,
@@ -405,9 +406,11 @@ describe("exec (allowlist)", () => {
     for (const args of [["status", "--porcelain"], ["log", "-1", "--oneline"], ["diff", "--stat"], ["rev-parse", "HEAD"], ["branch", "--show-current"], ["branch", "--list", "main*"], ["show", "HEAD:package.json"]]) {
       expect(() => assertCommandAllowed("git", args)).not.toThrow();
     }
-    const head = await exec.runAllowed("git", ["rev-parse", "--is-inside-work-tree"]);
-    expect(head.code).toBe(0);
-    expect(head.stdout.trim()).toBe("true");
+    if (HAS_GIT) {
+      const head = await exec.runAllowed("git", ["rev-parse", "--is-inside-work-tree"]);
+      expect(head.code).toBe(0);
+      expect(head.stdout.trim()).toBe("true");
+    }
   });
 
   it("node roda sem shell, mescla env e respeita cwd dentro do repo", async () => {

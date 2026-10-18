@@ -17,7 +17,7 @@ versão 1.0.0 · GERADO por `npm run ai-manual:generate` (não edite à mão; `n
 | Asset Pipeline & VRAM Cache | assets | game.assets | - | 1777 |
 | Motor de Física (Rapier WASM) | physics | game.physics | - | 4170 |
 | Persistência & Banco de Dados | storage | game.storage | - | 3272 |
-| Gerenciador de Mundo, Cenas & ECS | world | game.world | - | 2504 |
+| Gerenciador de Mundo, Cenas & ECS | world | game.world | - | 3195 |
 | Interface de Usuário & HUD | ui | game.ui | - | 2289 |
 | Pipeline de Animações & State Machines | anim | game.anim | game.loop | 2249 |
 | Motor 2D, Tilemaps & Pixel Art | sprites | game.sprites | game.render, game.assets | 1995 |
@@ -32,11 +32,11 @@ versão 1.0.0 · GERADO por `npm run ai-manual:generate` (não edite à mão; `n
 | Profiler, Anti-cheat & Crash Dumper | security | game.security | game.loop, game.world, game.render | 2250 |
 | Steam Workshop, Dynamic Loading & Asset Override | modding | game.modding | - | 2364 |
 | Microtransações Steam & Steam Inventory Service | monetization | game.monetization | - | 3123 |
-| Deterministic Game Loop | game-loop | game.loop | - | 1177 |
+| Deterministic Game Loop | game-loop | game.loop | - | 1220 |
 | Render Runtime | render | game.render | - | 3067 |
 | Multiplayer Network & State Replication | net | game.net | game.loop | 3107 |
 
-Tamanho: RULES ≈ 2232, CORE ≈ 3010, RECIPES ≈ 7174, todos os módulos ≈ 61221 tokens (estimativa: caracteres/3,6).
+Tamanho: RULES ≈ 2232, CORE ≈ 3010, RECIPES ≈ 7792, todos os módulos ≈ 61955 tokens (estimativa: caracteres/3,6).
 
 ## Atalhos por tipo de jogo
 - 3D com física: render, camera, physics, input, assets, audio, ui, game-loop.

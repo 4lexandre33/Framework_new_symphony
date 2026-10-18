@@ -6,7 +6,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { JobManager, type JobStartOptions } from "../../tools/mcp/src/core/jobs.ts";
 import { escapeVdf, parseVdf, serializeVdf } from "../../tools/mcp/src/core/vdf.ts";
-import { createTestClient, makeTempRepo, REPO_ROOT, type TempRepo, type TestClient } from "./harness.ts";
+import { createTestClient, HAS_SAMPLE_GAME, makeTempRepo, REPO_ROOT, type TempRepo, type TestClient } from "./harness.ts";
 
 const FIXTURES = path.join(REPO_ROOT, "tests", "mcp", "fixtures", "build");
 
@@ -361,7 +361,7 @@ describe("build (repo temporário)", () => {
  * Build web real (physics-sandbox) — ~10 s numa máquina comum
  * ========================================================================== */
 
-describe("build_web real", () => {
+describe.skipIf(!HAS_SAMPLE_GAME)("build_web real", () => {
   it("vite build do physics-sandbox com wait devolve chunks", async () => {
     const t = await createTestClient();
     try {

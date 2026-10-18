@@ -21,6 +21,7 @@ interface GameLoopApi {
   resume(): void; // Retoma sem "catch-up" do tempo passado em pausa.
   setTickRate(ticksPerSecond: number): boolean; // Define ticks por segundo (inteiro ou fracionário em [1, 240]).
   setTargetFps(framesPerSecond: number): boolean; // Limita a taxa de frames de render.
+  stepTicks(n: number): Promise<number>; // Avança a simulação manualmente enquanto o loop está PAUSADO (ferramentas de depuração, ex.: `loop_control ste…
   getStats(): GameLoopStats; // Retorna um objeto novo a cada chamada.
 }
 capability GameLoopToken = "game.loop"@1.0.0 api GameLoopApi

@@ -446,9 +446,11 @@ export async function collectCurrentGameLoop(
         "Number.isFinite",
       ),
     schedulesAfterAwait:
-      implementationSource.includes(
+      (implementationSource.includes(
         "await this.processFrame"
-      ) &&
+      ) ||
+        (/this\.currentFrame\s*=\s*frame;/u.test(implementationSource) &&
+          implementationSource.includes("await frame;"))) &&
       implementationSource.includes(
         "this.scheduleNextFrame();",
       ),

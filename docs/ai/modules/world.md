@@ -11,6 +11,7 @@ interface WorldApi {
   readonly currentSceneId: string | null;
   readonly activeEntityCount: number;
   loadScene( scene: SceneDescriptor, options?: SceneLoadOptions, ): Promise<boolean>; // Carrega a cena: descarrega a anterior (padrão), pré-carrega `assetsToPreload` via `game.assets` (quando dispo…
+  loadSceneDocument( doc: SceneDocument, options?: SceneDocumentLoadOptions, ): Promise<boolean>; // Carrega um SceneDocument v1 (JSON de `scenes/*.scene.json`): valida documento + prefabs ANTES de tocar o mund…
   unloadScene( sceneId: string, ): Promise<boolean>; // Descarrega a cena ativa: emite `entity-despawned` para cada entidade, libera os assets pré-carregados e emite…
   spawnEntity( state: EntitySpawnInput, ): boolean; // Cria (ou substitui, com o mesmo id) uma entidade.
   despawnEntity( entityId: string, ): boolean;
@@ -162,6 +163,14 @@ interface UpdateEntityTransformRequest {
   readonly patch: EntityTransformPatch;
 }
 command UpdateEntityTransformCommand = "game.world.update-entity-transform" request UpdateEntityTransformRequest
+interface SceneDocumentLoadOptions extends SceneLoadOptions { // Opções de `WorldApi.loadSceneDocument` (as de `loadScene` + prefabs).
+  readonly prefabs?: PrefabCollection; // Prefabs por id (`{ [prefabId]: doc }`) ou lista de PrefabDocument.
+}
+interface SceneDocumentErrorPayload {
+  readonly sceneId: string | null; // `sceneId` do documento (null se ausente/inválido).
+  readonly errors: ReadonlyArray<SceneDocumentError>;
+}
+event SceneDocumentErrorEvent = "game.world.scene-document-error" payload SceneDocumentErrorPayload // Emitido quando `loadSceneDocument` falha (validação, prefab inexistente, falha de `loadScene`).
 ```
 ## notas verificadas (comportamento)
 - `world` é só dado (ECS + consultas): não cria malha nem corpo físico.
@@ -172,3 +181,6 @@ command UpdateEntityTransformCommand = "game.world.update-entity-transform" requ
 - Cena: `loadScene(desc, { clearPreviousScene, autoStartLoop, failOnAssetError, showLoadingScreen })` pré-carrega `assetsToPreload` via `game.assets` (progresso em `scene-loading`); `unloadScene` emite `entity-despawned` + `scene-unloaded` e libera os assets.
 - `serializeWorldState`/`deserializeWorldState`: valida o JSON inteiro antes (erro ⇒ `false`, mundo intacto), restaura `sceneId` e emite `state-restored`.
 - `game.ai` lê a posição inicial do agente da entidade do world; `game.scripting` rastreia entidades do world por tags (`trackEntity`).
+- Cena em dados (opcional): `loadSceneDocument(doc, { prefabs?, ...SceneLoadOptions })` com `SceneDocument` v1 (`format: "engine.scene"`, `version: 1`; arquivos em `src/projects/<id>/scenes/*.scene.json`, prefabs `engine.prefab` em `prefabs/*.prefab.json`). Valida TUDO antes de tocar o mundo (erro ⇒ `false`, nada spawnado, evento `game.world.scene-document-error` `{ sceneId, errors: [{ path, code, message }] }`), chama `loadScene` com os assets da cena + dos prefabs usados e spawna pelo `spawnEntity` normal (ids preservados, `entity-spawned`). Os spawns vêm DEPOIS de `scene-loaded` (cujo `totalEntities` não os conta): use as entidades após o `await`.
+- Mapeamento SceneDocument → spawn: `id→entityId`, `type→type` (padrão "entity"), `position/rotation/scale` iguais (padrões 0/identidade/1; quaternion não unitário é normalizado), `tags→tags`, `data→customData` (clonado). Prefab: campos da entidade vencem; `tags` = união (prefab primeiro); `data` = merge raso.
+- `validateSceneDocument(doc, { prefabs?, assetExists? })` / `validatePrefabDocument(doc)` / `resolveSceneEntities(scene, prefabs)` são puros (`contracts/world/scene-document.ts`, sem DOM — o MCP usa o mesmo código). Códigos estáveis: `INVALID_FORMAT`, `UNSUPPORTED_VERSION`, `REQUIRED`, `UNKNOWN_FIELD` (chaves `$...` liberadas), `INVALID_ID` (1–128 de `[A-Za-z0-9_.:-]`), `DUPLICATE_ENTITY_ID`, `DUPLICATE_ASSET_ID`, `NON_FINITE_NUMBER`, `ZERO_QUATERNION`, `ZERO_SCALE`, `INVALID_ASSET_TYPE`, `UNKNOWN_PREFAB`, `ASSET_NOT_FOUND`, `DATA_NOT_JSON`, `DATA_TOO_DEEP` (>16), `DATA_TOO_LARGE` (>64 KiB), `TOO_MANY_ENTITIES` (>10000), entre outros (ver `SceneDocumentErrorCode`).
