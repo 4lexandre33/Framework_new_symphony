@@ -17,7 +17,7 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 - audio: handles por som, canal posicional, crossfade termina no fim, `stopMusic`, mudo sem Web Audio, limite de vozes, desbloqueio automático no 1º gesto (G20, G27, G84–G87).
 - vfx: partículas aparecem e não vazam, emissor móvel com duração/burst, decals projetados com id, pós-processamento real, presets registráveis (G9, G19, G28, G88–G91).
 - sprites: sprites, tilemap (1 draw call, UV por tile), animação por quadros, parallax e atlas trimmed/rotated funcionam (G92–G95).
-- ui: templates, HTML sanitizado/`contentText`, a engine NÃO captura ESC nem `[data-action]` por padrão, `[data-ui-action]` → `game.ui.action`, dicionários de i18n, `popModal(id)`/`modal-closed`, HUD sem bloquear ponteiro, modo sem DOM (G11, G96–G99).
+- ui: templates, HTML sanitizado/`contentText`, a engine NÃO captura ESC nem `[data-action]` por padrão, `[data-ui-action]` → `game.ui.action`, dicionários de i18n, `popModal(id)`/`modal-closed`, ESC não fecha modal sem opt-in (`closeOnEscape`/`setBehavior`), HUD sem bloquear ponteiro, modo sem DOM (G11, G96–G99, G134).
 - terrain: colliders, paleta/cores, streaming automático, lote de edições, 256 de altura, edições persistentes/exportáveis, mistura de biomas, recuperação do worker, água/metadata, `getSurfaceHeight` (G3, G18, G54–G59).
 - streaming: origem do centro configurável, `assetUrls` carregados, setores manuais fixos (pin), HLOD real, `unregisterSector`/`clear` seguros, LOD móvel com histerese (G17, G60–G63).
 - world: `updateEntityTransform`/`patchEntity`, snapshots imutáveis, spawn tolerante, octree cresce além dos limites, distâncias reais, deserialize valida antes, cena pré-carrega assets (G6, G64–G68; G67 parcial).
@@ -75,10 +75,6 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 |---|---|---|---|---|
 | G133 | B | RISCO | Padrões que surpreendem: água até `seaLevel` 16 (deserto começa em 10, então há lagoas; água não é sólida para `getSurfaceHeight`/colliders) e colliders trimesh LIGADOS por chunk (custo de física mesmo se nada pisa no terreno) | `configure({ generation: { seaLevel: -1 } })` para sem água; `configure({ colliders: { enabled: false } })` se o terreno é só visual |
 
-## ui
-| # | G | Tipo | Problema | Contorno |
-|---|---|---|---|---|
-| G134 | B | RISCO | ESC fecha o modal do topo quando `closable !== false` (padrão da engine; o jogo não muda as opções do plugin) | Modal que o jogo controla pelo teclado (ex.: pausa no ESC): `closable: false`; ou trate `game.ui.modal-closed` com `reason: "escape"` |
 
 ## storage
 | # | G | Tipo | Problema | Contorno |

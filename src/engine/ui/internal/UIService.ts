@@ -7,6 +7,7 @@ import type {
   ScreenContent,
   UIPluginBehaviorOptions,
   UIScreenId,
+  UIBehaviorUpdate,
 } from "../../../contracts/ui/types";
 import { UIManager } from "./UIManager";
 import { HUDDataBinder } from "./HUDDataBinder";
@@ -70,7 +71,8 @@ export class UIService implements UIApi {
       {
         // G96: por padrão a engine NÃO captura ESC para o menu de pausa.
         escapeTogglesPauseMenu: options.escapeTogglesPauseMenu ?? false,
-        escapeClosesModals: options.escapeClosesModals ?? true,
+        // G134: ESC também NÃO fecha modais por padrão (o jogo opta).
+        escapeClosesModals: options.escapeClosesModals ?? false,
       },
     );
 
@@ -183,6 +185,13 @@ export class UIService implements UIApi {
     }
 
     this.dataBinder.refresh();
+  }
+
+  public setBehavior(options: UIBehaviorUpdate): void {
+    this.uiManager.setOptions({
+      ...(options.escapeTogglesPauseMenu !== undefined ? { escapeTogglesPauseMenu: options.escapeTogglesPauseMenu } : {}),
+      ...(options.escapeClosesModals !== undefined ? { escapeClosesModals: options.escapeClosesModals } : {}),
+    });
   }
 
   public setLocale(locale: string): boolean {

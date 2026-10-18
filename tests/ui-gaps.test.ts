@@ -176,7 +176,8 @@ describe("G97 — dicionários do jogo e setLocale sem apagar DOM do jogo", () =
 
 describe("G98 — pop por id, depth e modal-closed", () => {
   it("popModal(id), ordem por depth e evento modal-closed com motivo", () => {
-    const { service, emitted } = createService();
+    // G134: ESC fecha modais só com opt-in (antes era o padrão).
+    const { service, emitted } = createService({ escapeClosesModals: true });
     service.pushModal({ id: "top", title: "T", depth: 10 });
     service.pushModal({ id: "low", title: "L", depth: 1 });
     service.pushModal({ id: "mid", title: "M", depth: 5 });
@@ -289,6 +290,38 @@ describe("G99 — HUD não bloqueia o canvas, binder indexado, máximos < 1", ()
     expect(emitted.map(([type]) => type)).toEqual(
       expect.arrayContaining(["game.ui.modal-pushed", "game.ui.modal-closed", "game.ui.screen-changed", "game.ui.hud-updated"]),
     );
+    service.dispose();
+  });
+});
+
+describe("G134 — ESC não fecha modais sem opt-in", () => {
+  it("padrão: ESC não fecha nem com closable", () => {
+    const { service, emitted } = createService();
+    service.pushModal({ id: "m", title: "M" });
+    escape();
+    expect(service.isModalOpen("m")).toBe(true);
+    expect(emitted.some(([type]) => type === "game.ui.modal-closed")).toBe(false);
+    service.dispose();
+  });
+
+  it("closeOnEscape por modal e setBehavior em runtime", () => {
+    const { service } = createService();
+    service.pushModal({ id: "a", title: "A" });
+    service.pushModal({ id: "b", title: "B", depth: 1, closeOnEscape: true });
+    escape();
+    expect(service.isModalOpen("b")).toBe(false);
+    escape();
+    expect(service.isModalOpen("a")).toBe(true);
+    service.setBehavior({ escapeClosesModals: true });
+    service.pushModal({ id: "c", title: "C", closeOnEscape: false });
+    escape();
+    expect(service.isModalOpen("c")).toBe(true);
+    service.popModal("c");
+    escape();
+    expect(service.isModalOpen("a")).toBe(false);
+    service.pushModal({ id: "d", title: "D", closable: false });
+    escape();
+    expect(service.isModalOpen("d")).toBe(true);
     service.dispose();
   });
 });

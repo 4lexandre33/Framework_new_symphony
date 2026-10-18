@@ -27,7 +27,7 @@ export interface UIManagerHooks {
 export interface UIManagerOptions {
   /** ESC alterna hud ⇄ pause_menu (padrão true aqui; o plugin usa false). */
   readonly escapeTogglesPauseMenu?: boolean;
-  /** ESC fecha o modal do topo (padrão true). */
+  /** ESC fecha o modal do topo (padrão true aqui; o plugin usa false, G134). */
   readonly escapeClosesModals?: boolean;
 }
 
@@ -343,7 +343,9 @@ export class UIManager {
     const top = this.modalStack[this.modalStack.length - 1];
 
     if (top !== undefined) {
-      if (this.escapeClosesModals && top.config.closable !== false) {
+      const closeOnEscape = top.config.closeOnEscape ?? this.escapeClosesModals;
+
+      if (closeOnEscape && top.config.closable !== false) {
         event.preventDefault();
         this.popModal(undefined, "escape");
       }

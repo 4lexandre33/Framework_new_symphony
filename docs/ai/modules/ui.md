@@ -28,6 +28,7 @@ interface UIApi {
   registerTemplate(templateId: string, htmlContent: string): void;
   renderTemplate(templateId: string, data?: Readonly<Record<string, string | number>>): string; // Instancia um template com valores ESCAPADOS (string HTML).
   setScreenContent(screenId: UIScreenId, content: ScreenContent): boolean; // Substitui o conteúdo de uma tela embutida (as telas padrão são só placeholders).
+  setBehavior(options: UIBehaviorUpdate): void; // G134: muda em runtime os atalhos de ESC (`escapeClosesModals`, `escapeTogglesPauseMenu`; ambos padrão false).
 }
 capability UIToken = "game.ui"@1.0.0 api UIApi
 ```
@@ -44,6 +45,7 @@ interface ModalConfig {
   readonly trustedHtml?: boolean;
   readonly depth?: number; // Camada do modal: maior fica por cima (empate: o mais recente).
   readonly closable?: boolean;
+  readonly closeOnEscape?: boolean; // G134: ESC fecha ESTE modal (precisa de `closable !== false`).
   readonly customData?: Record<string, unknown>;
 }
 interface ScreenContent { // Conteúdo de uma tela embutida (`setScreenContent`).
@@ -55,8 +57,12 @@ interface ScreenContent { // Conteúdo de uma tela embutida (`setScreenContent`)
 }
 interface UIPluginBehaviorOptions {
   readonly escapeTogglesPauseMenu?: boolean; // ESC alterna `hud` ⇄ `pause_menu`.
-  readonly escapeClosesModals?: boolean; // ESC fecha o modal do topo se `closable !== false` (padrão true).
+  readonly escapeClosesModals?: boolean; // ESC fecha o modal do topo se `closable !== false`.
   readonly legacyDataActions?: boolean; // Comportamento legado de `[data-action]` (start-game carrega "level_01", open-settings, close-modal).
+}
+interface UIBehaviorUpdate { // Atalhos de teclado alteráveis em runtime (`UIApi.setBehavior`, G134).
+  readonly escapeTogglesPauseMenu?: boolean;
+  readonly escapeClosesModals?: boolean;
 }
 export type HUDValue = string | number | boolean; // Valor exibível no HUD.
 export type HUDData = Readonly<Record<string, HUDValue>>;
@@ -123,7 +129,7 @@ command BindHUDValueCommand = "game.ui.bind-hud-value" request BindHUDValueReque
 - `screen-hud` começa ativa; o contêiner `#hud-overlay` começa vazio e NÃO captura o ponteiro (cliques passam ao canvas). Telas/modais marcam `data-input-ignore`.
 - HUD: `data-bind="chave"` (texto) e `data-hud-fill="chave"` (barra = chave / `data-hud-max` ou `max<Chave>`; máximos < 1 aceitos); valores por `bindHUDData`/`updateHUD`. Bindings reindexados por MutationObserver (`refreshHUDBindings` para DOM fora de `#ui-root`).
 - A engine NÃO captura ESC nem `[data-action]`. Botões do jogo: `data-ui-action="x"` (+ `data-ui-value`) dentro de `#ui-root` ⇒ evento `game.ui.action`; a engine só trata `close-modal` e `open-screen`. DOM próprio com listener próprio também serve.
-- Modais: `pushModal({ id, title, contentText | contentHtml | templateId+templateData, closable, depth })`. `contentHtml` é SANITIZADO (sem script/on*/javascript:); `trustedHtml: true` só para HTML 100% do jogo; nomes de jogador → `contentText`. Mesmo id substitui. `popModal(id)`, `closeAllModals`, evento `game.ui.modal-closed` (`reason`). ESC fecha o modal do topo se `closable !== false` (GAPS G134).
+- Modais: `pushModal({ id, title, contentText | contentHtml | templateId+templateData, closable, closeOnEscape, depth })`. `contentHtml` é SANITIZADO (sem script/on*/javascript:); `trustedHtml: true` só para HTML 100% do jogo; nomes de jogador → `contentText`. Mesmo id substitui. `popModal(id)`, `closeAllModals`, evento `game.ui.modal-closed` (`reason`). ESC NÃO fecha modais por padrão (G134): opt-in por modal (`closeOnEscape: true`) ou global (`ui.setBehavior({ escapeClosesModals: true })`); `closable: false` sempre impede. Fechado por ESC ⇒ `reason: "escape"`.
 - Telas embutidas (`main_menu`, `pause_menu`…) são placeholders: preencha com `setScreenContent(tela, { templateId | html | text })` ou use DOM próprio. `openScreen` alterna a visível (`game.ui.screen-changed`).
 - Templates: `registerTemplate(id, html)` com `{{chave}}`; `renderTemplate` escapa os valores.
 - i18n: `registerDictionary(locale, dict)`, `translate`, `setLocale` (fallback pt-BR; reescreve só `[data-i18n]` cujas chaves existem).

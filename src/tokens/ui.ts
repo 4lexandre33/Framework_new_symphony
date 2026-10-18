@@ -5,6 +5,7 @@ import type {
   HUDData,
   LocaleDictionary,
   ScreenContent,
+  UIBehaviorUpdate,
 } from "../contracts/ui/types";
 
 export interface UIApi {
@@ -55,6 +56,11 @@ export interface UIApi {
   renderTemplate(templateId: string, data?: Readonly<Record<string, string | number>>): string;
   /** Substitui o conteúdo de uma tela embutida (as telas padrão são só placeholders). */
   setScreenContent(screenId: UIScreenId, content: ScreenContent): boolean;
+  /**
+   * G134: muda em runtime os atalhos de ESC (`escapeClosesModals`,
+   * `escapeTogglesPauseMenu`; ambos padrão false). Campos ausentes mantêm.
+   */
+  setBehavior(options: UIBehaviorUpdate): void;
 }
 
 export const UIToken = defineCapability<UIApi>("game.ui", "1.0.0");

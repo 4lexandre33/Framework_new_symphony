@@ -32,6 +32,11 @@ export interface ModalConfig {
    */
   readonly depth?: number;
   readonly closable?: boolean;
+  /**
+   * G134: ESC fecha ESTE modal (precisa de `closable !== false`). Sem o campo
+   * vale a opção global `escapeClosesModals` (padrão false).
+   */
+  readonly closeOnEscape?: boolean;
   readonly customData?: Record<string, unknown>;
 }
 
@@ -51,7 +56,11 @@ export interface UIPluginBehaviorOptions {
    * captura ESC; o jogo decide a pausa.
    */
   readonly escapeTogglesPauseMenu?: boolean;
-  /** ESC fecha o modal do topo se `closable !== false` (padrão true). */
+  /**
+   * ESC fecha o modal do topo se `closable !== false`. Padrão false (G134):
+   * o jogo opta (aqui, em `UIApi.setBehavior` ou por modal com
+   * `ModalConfig.closeOnEscape: true`).
+   */
   readonly escapeClosesModals?: boolean;
   /**
    * Comportamento legado de `[data-action]` (start-game carrega "level_01",
@@ -59,6 +68,12 @@ export interface UIPluginBehaviorOptions {
    * e ações desconhecidas viram o evento `game.ui.action`.
    */
   readonly legacyDataActions?: boolean;
+}
+
+/** Atalhos de teclado alteráveis em runtime (`UIApi.setBehavior`, G134). */
+export interface UIBehaviorUpdate {
+  readonly escapeTogglesPauseMenu?: boolean;
+  readonly escapeClosesModals?: boolean;
 }
 
 /** Valor exibível no HUD. As chaves são definidas pelo projeto, não pela engine. */
