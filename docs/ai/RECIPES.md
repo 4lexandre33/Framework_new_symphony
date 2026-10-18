@@ -413,12 +413,13 @@ import { ChunkGeneratedEvent } from "../../../contracts/terrain/types";
 import type { ChunkGeneratedPayload } from "../../../contracts/terrain/types";
 import type { TerrainApi } from "../../../tokens/terrain";
 
-/** Opção A. Também desliga água e colliders quando o terreno é só cenário (padrões: seaLevel 16, colliders ligados). */
-export function startTerrain(terrain: TerrainApi, seed: number, visualOnly: boolean): void {
+/** Opção A. Padrões (G133): sem água e sem colliders; ligue colliders quando algo pisa no terreno e água se quiser lagos. */
+export function startTerrain(terrain: TerrainApi, seed: number, walkable: boolean, water = false): void {
   terrain.setSeed(seed);
   terrain.configure({
     streaming: { enabled: true, radiusChunks: 4, centerSource: "camera" },
-    ...(visualOnly ? { colliders: { enabled: false }, generation: { seaLevel: -1 } } : {}),
+    ...(walkable ? { colliders: { enabled: true } } : {}),
+    ...(water ? { generation: { seaLevel: 16 } } : {}),
   });
 }
 

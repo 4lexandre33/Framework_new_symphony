@@ -18,7 +18,7 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 - vfx: partículas aparecem e não vazam, emissor móvel com duração/burst, decals projetados com id, pós-processamento real, presets registráveis (G9, G19, G28, G88–G91).
 - sprites: sprites, tilemap (1 draw call, UV por tile), animação por quadros, parallax e atlas trimmed/rotated funcionam (G92–G95).
 - ui: templates, HTML sanitizado/`contentText`, a engine NÃO captura ESC nem `[data-action]` por padrão, `[data-ui-action]` → `game.ui.action`, dicionários de i18n, `popModal(id)`/`modal-closed`, ESC não fecha modal sem opt-in (`closeOnEscape`/`setBehavior`), HUD sem bloquear ponteiro, modo sem DOM (G11, G96–G99, G134).
-- terrain: colliders, paleta/cores, streaming automático, lote de edições, 256 de altura, edições persistentes/exportáveis, mistura de biomas, recuperação do worker, água/metadata, `getSurfaceHeight` (G3, G18, G54–G59).
+- terrain: colliders, paleta/cores, streaming automático, lote de edições, 256 de altura, edições persistentes/exportáveis, mistura de biomas, recuperação do worker, água/metadata, `getSurfaceHeight`, água e colliders opt-in (G3, G18, G54–G59, G133).
 - streaming: origem do centro configurável, `assetUrls` carregados, setores manuais fixos (pin), HLOD real, `unregisterSector`/`clear` seguros, LOD móvel com histerese (G17, G60–G63).
 - world: `updateEntityTransform`/`patchEntity`, snapshots imutáveis, spawn tolerante, octree cresce além dos limites, distâncias reais, deserialize valida antes, cena pré-carrega assets (G6, G64–G68; G67 parcial).
 - ai: árvores por agente, várias navmeshes/áreas, teleporte, linha de visão filtrada, estímulo sonoro real, clamp 3D, portais tolerantes com raio, funnel, separação, chegada única, `requestAgentPath` puro (G7, G25, G69–G73; G73 parcial).
@@ -70,10 +70,6 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 |---|---|---|---|---|
 | G132 | M | RISCO | `meshUrl` não vazio de um nível de LOD é CARREGADO via `game.assets` (uma "chave" como `"tree-low"` vira fetch com falha, conta em `assetsFailed`) | Para LOD gerenciado pelo jogo use `meshUrl: ""` e decida pelo `newLevel` do evento `lod-changed` |
 
-## terrain
-| # | G | Tipo | Problema | Contorno |
-|---|---|---|---|---|
-| G133 | B | RISCO | Padrões que surpreendem: água até `seaLevel` 16 (deserto começa em 10, então há lagoas; água não é sólida para `getSurfaceHeight`/colliders) e colliders trimesh LIGADOS por chunk (custo de física mesmo se nada pisa no terreno) | `configure({ generation: { seaLevel: -1 } })` para sem água; `configure({ colliders: { enabled: false } })` se o terreno é só visual |
 
 
 ## storage

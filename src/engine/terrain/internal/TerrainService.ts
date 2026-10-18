@@ -172,8 +172,9 @@ export class TerrainService implements TerrainApi {
     centerSource: "explicit",
   };
 
+  // G133: colliders por chunk são opt-in (`configure({ colliders: { enabled: true } })`).
   private readonly colliders: ResolvedColliders = {
-    enabled: true,
+    enabled: false,
     friction: 0.8,
     collisionGroups: undefined,
   };

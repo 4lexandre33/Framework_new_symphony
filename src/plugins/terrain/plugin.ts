@@ -4,7 +4,7 @@ import { RenderToken } from "../../tokens/render";
 import { PhysicsToken, type PhysicsApi } from "../../tokens/physics";
 import { CameraToken, type CameraApi } from "../../tokens/camera";
 import type { GameRenderPayload, GameTickPayload } from "../../contracts/game-loop/types";
-import { BlockModifiedEvent, ChunkGeneratedEvent, ChunkUnloadedEvent, ModifyVoxelBlockCommand, RequestChunkLoadCommand, TerrainResetEvent, type ModifyVoxelBlockPayload, type RequestChunkLoadPayload } from "../../contracts/terrain/types";
+import { type TerrainConfigOptions, BlockModifiedEvent, ChunkGeneratedEvent, ChunkUnloadedEvent, ModifyVoxelBlockCommand, RequestChunkLoadCommand, TerrainResetEvent, type ModifyVoxelBlockPayload, type RequestChunkLoadPayload } from "../../contracts/terrain/types";
 import { TerrainService } from "../../engine/terrain/internal/TerrainService";
 
 export const terrainManifest:
@@ -134,7 +134,14 @@ function getOptional<T>(read: () => T | undefined): T | null {
   }
 }
 
-export function createTerrainPlugin():
+/**
+ * `options` (G133) = mesmo formato de `TerrainApi.configure`, aplicado no
+ * setup. Padrões: sem água (`generation.seaLevel: -1`) e sem colliders
+ * (`colliders.enabled: false`); ligue o que o jogo precisa.
+ */
+export function createTerrainPlugin(
+  options?: TerrainConfigOptions,
+):
   Plugin {
   let terrainService:
     TerrainService | null =
@@ -196,6 +203,12 @@ export function createTerrainPlugin():
 
       terrainService =
         service;
+
+      if (options !== undefined) {
+        service.configure(
+          options,
+        );
+      }
 
       ctx.caps.provide(
         TerrainToken,

@@ -88,14 +88,21 @@ export interface TerrainStreamingOptions {
 }
 
 export interface TerrainColliderOptions {
-  /** Cria colliders (trimesh por chunk) quando `game.physics` existe. Padrão true. */
+  /**
+   * Cria colliders (trimesh por chunk) quando `game.physics` existe.
+   * Padrão false (G133): opt-in, para o terreno só visual não custar física.
+   */
   readonly enabled?: boolean;
   readonly friction?: number;
   readonly collisionGroups?: { readonly memberships: number; readonly filter: number };
 }
 
 export interface TerrainGenerationOptions {
-  /** Água preenche o ar até esta altura (inclusive). Padrão 16. -1 desliga. */
+  /**
+   * Água preenche o ar até esta altura (inclusive). Padrão -1 = sem água
+   * (G133: opt-in; ex.: 16 dá lagoas em terrenos baixos/deserto, que começa
+   * em 10). A água não é sólida (colliders/`getSurfaceHeight`).
+   */
   readonly seaLevel?: number;
   /** Cavernas por ruído 3D. Padrão false. */
   readonly caves?: boolean;

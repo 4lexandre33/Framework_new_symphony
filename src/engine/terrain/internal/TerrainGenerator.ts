@@ -29,8 +29,9 @@ export interface ResolvedGenerationConfig {
   readonly caveThreshold: number;
 }
 
+/** G133: água é opt-in (`seaLevel` ≥ 0); o padrão -1 não gera água. */
 export const DEFAULT_GENERATION_CONFIG: ResolvedGenerationConfig = Object.freeze({
-  seaLevel: 16,
+  seaLevel: -1,
   caves: false,
   caveThreshold: 0.42,
 });

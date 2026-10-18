@@ -128,6 +128,8 @@ describe("terrain gaps — G3 colliders, paleta e streaming", () => {
 
     try {
       const { service } = createTerrain({ physics });
+      // G133: colliders são opt-in.
+      service.configure({ colliders: { enabled: true } });
       await loadChunks(service, [{ x: 0, y: 0, z: 0 }]);
       expect(physics.hasBody("terrain_chunk_0:0:0")).toBe(true);
       expect(service.getStats().colliders).toBe(1);
@@ -511,6 +513,8 @@ describe("terrain gaps — G59 metadata, água, contrato e bordas", () => {
     const lake = findColumn(generator, (height) => height < 12);
     const coord = { x: Math.floor(lake.x / 16), y: 0, z: Math.floor(lake.z / 16) };
     const { service, render } = createTerrain();
+    // G133: água é opt-in (padrão seaLevel -1).
+    service.configure({ generation: { seaLevel: 16 } });
     await loadChunks(service, [coord, { x: coord.x + 1, y: 0, z: coord.z }]);
     expect(service.getVoxelBlock({ x: lake.x, y: 16, z: lake.z }).id).toBe(7);
     const object = render.scene.get(`chunk_${coord.x}:0:${coord.z}`)!;
