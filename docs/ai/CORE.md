@@ -20,7 +20,7 @@ interface SlotContribution {
 interface PluginPermissions { // Permissões declaradas no manifest.
   readonly storage?: "read" | "write" | "none";
   readonly network?: "read" | "write" | "none";
-  readonly events?: readonly string[]; // Tipos de evento que o plugin pode EMITIR.
+  readonly events?: readonly string[]; // Tipos de evento que o plugin pode EMITIR (allow-list exata).
   readonly capabilities?: readonly string[]; // Ids de capability que o plugin pode consumir/fornecer.
 }
 interface PluginSandbox { // Só faz sentido para `kind: "external"`.
@@ -64,15 +64,19 @@ interface EnvApi {
 interface HandlerCtx {
   readonly signal: AbortSignal;
 }
+interface EmitOptions { // Semântica de entrega (G122): - `emit` é FIRE-AND-FORGET por uma fila FIFO de concorrência limitada (`KernelOp…
+  readonly copy?: boolean; // Clona o payload (`structuredClone`) antes de enfileirar/entregar.
+}
 interface EventBusApi {
-  emit<T extends string, P>(type: T, payload: P): void;
-  emitAsync<T extends string, P>(type: T, payload: P): Promise<void>;
+  emit<T extends string, P>(type: T, payload: P, opts?: EmitOptions): void;
+  emitAsync<T extends string, P>(type: T, payload: P, opts?: EmitOptions): Promise<void>;
   on<T extends string, P>( type: T, handler: (env: EventEnvelope<T, P>) => void | Promise<void>, ): () => void;
   onAny(handler: (env: Envelope) => void | Promise<void>): () => void;
   define(def: EventDefinition): void;
 }
 interface CommandApi {
-  send<T extends string, P>(type: T, payload: P): Promise<void>;
+  send<T extends string, P, R = unknown>(type: T, payload: P): Promise<R>; // Envia um command à sua autoridade única (G29).
+  request<R = unknown, P = unknown>(type: string, payload: P): Promise<R>; // Request/response explícito: como `send`, mas REJEITA com `KernelError("DISPATCH_NO_HANDLER")` se não houver h…
   handle<T extends string, P>( type: T, handler: (env: CommandEnvelope<T, P>, ctx: HandlerCtx) => unknown | Promise<unknown>, ): () => void;
   define(def: CommandDefinition): void;
 }

@@ -32,6 +32,12 @@ interface GameTickPayload { // Payload de `game.loop.tick`.
   readonly totalTimeSeconds: number;
   readonly tickCount: number;
 }
+interface GameTickSnapshot { // Cópia mutável/guardável de um `GameTickPayload`.
+  deltaSeconds: number;
+  totalTimeSeconds: number;
+  tickCount: number;
+}
+function copyTickPayload(src: GameTickPayload, out: GameTickSnapshot = { deltaSeconds: 0, totalTimeSeconds: 0, tickCount: 0 }): GameTickSnapshot; // G31: copia os números do payload REUTILIZADO do tick.
 event GameTickEvent = "game.loop.tick" payload GameTickPayload
 interface GameRenderPayload { // Payload de `game.loop.render` (também reutilizado entre frames).
   readonly alphaInterpolation: number;
@@ -39,6 +45,13 @@ interface GameRenderPayload { // Payload de `game.loop.render` (também reutiliz
   readonly realDeltaSeconds: number; // Delta de relógio de parede do frame (limitado a 0,25 s), mesmo pausado.
   readonly isPaused: boolean;
 }
+interface GameRenderSnapshot { // Cópia mutável/guardável de um `GameRenderPayload`.
+  alphaInterpolation: number;
+  deltaSeconds: number;
+  realDeltaSeconds: number;
+  isPaused: boolean;
+}
+function copyRenderPayload(src: GameRenderPayload, out: GameRenderSnapshot = { alphaInterpolation: 0, deltaSeconds: 0, realDeltaSeconds: 0, isPaused: false }): GameRenderSnapshot; // G31: como `copyTickPayload`, para o payload reutilizado do render.
 event GameRenderEvent = "game.loop.render" payload GameRenderPayload
 interface PauseOptions {
   readonly freezeRender?: boolean; // true = também para de emitir `game.loop.render` (imagem congelada, sem custo de GPU).

@@ -10,12 +10,12 @@ precisa de payload validado, mínimo privilégio, erro serializável/mapeado e A
 TypeScript tipada. Não há shell arbitrário nem escape de caminho.
 
 Os comandos registrados em `src-tauri/src/lib.rs` (`generate_handler!`) somam
-**53**, por área:
+**56**, por área:
 
 | Área | Qtde | Arquivo |
 |---|---|---|
 | Steam (runtime, usuário, achievements, stats int/float, eventos nativos, lobby/busca/membros/convites, P2P em lote, cloud, overlay, workshop) | 34 | `src-tauri/src/steam.rs` |
-| Overlay (janela, cursor, always-on-top, taskbar) | 4 | `src-tauri/src/overlay.rs` |
+| Overlay (janela, cursor, always-on-top, decorações, estado da janela, taskbar) | 7 | `src-tauri/src/overlay.rs` |
 | Security (relógio do sistema, crash dump) | 2 | `src-tauri/src/security.rs` |
 | Modding (scan, lista de instalados, leitura segura de arquivo, mods ativos, Workshop download/estado/publicação) | 8 | `src-tauri/src/modding.rs` |
 | Monetization (MicroTxn só via servidor, Steam Inventory fetch/consume/StartPurchase) | 5 | `src-tauri/src/monetization.rs` |

@@ -245,7 +245,7 @@ describe("steam gaps", () => {
     expect(
       await fake.commands.get("game.steam.accept-p2p-session")?.({ payload: { remoteSteamId: "76561198000000009" } }),
     ).toBe(true);
-    expect(await fake.commands.get("game.steam.create-lobby")?.({ payload: { lobbyType: "public", maxMembers: 999 } })).toBe(false);
+    expect(await fake.commands.get("game.steam.create-lobby")?.({ payload: { lobbyType: "public", maxMembers: 999 } })).toBeNull(); // G29: devolve os detalhes ou null
     expect(fake.emitted.some((e) => e.type === "game.steam.lobby-created" && (e.payload as { isSuccess: boolean }).isSuccess === false)).toBe(true);
 
     // pacote lido por qualquer consumidor também sai como game.steam.p2p-received

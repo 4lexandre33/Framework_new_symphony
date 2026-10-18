@@ -7,14 +7,21 @@ use (from src/projects/<jogo>/**):
 ## token src/tokens/modding.ts
 ```ts
 interface ModdingApi {
-  getLoadedMods(): ReadonlyArray<ModManifestDescriptor>;
-  enableMod(modId: string): Promise<boolean>;
+  getLoadedMods(): ReadonlyArray<ModManifestDescriptor>; // Mods ATIVOS em ordem de carga (dependências primeiro).
+  enableMod(modId: string): Promise<boolean>; // Ativa o mod (e dependências): registra overrides, executa o `entryScript` no sandbox e persiste a lista de at…
   disableMod(modId: string): boolean;
-  getAssetOverride(virtualPath: string): string | null;
+  getAssetOverride(virtualPath: string): string | null; // URL do override vencedor (caminho normalizado).
   registerAssetOverride(override: AssetOverrideDescriptor): void;
-  downloadWorkshopMod(itemId: string): Promise<boolean>;
-  publishWorkshopMod( localFolderPath: string, title: string, description: string, ): Promise<string>;
-  clear(): void;
+  downloadWorkshopMod(itemId: string): Promise<boolean>; // Assina + baixa + aguarda instalação do item do Workshop e o registra.
+  publishWorkshopMod( localFolderPath: string, title: string, description: string, ): Promise<string>; // Publica no Workshop a pasta de um mod local (precisa estar em `<app_data>/mods`; aceita o modId).
+  clear(): void; // Desativa todos os mods (scripts, overrides, URLs) e limpa overrides manuais, SEM esquecer os mods instalados …
+  getInstalledMods(): ReadonlyArray<InstalledModInfo>; // Todos os mods conhecidos (instalados/registrados), válidos e inválidos.
+  refreshInstalledMods(): Promise<ReadonlyArray<InstalledModInfo>>; // Reescaneia a pasta de mods e os itens do Workshop (Tauri).
+  installMod(manifest: unknown, options?: InstallModOptions): InstalledModInfo; // Registra um mod fornecido pelo jogo (empacotado/baixado), inclusive offline.
+  resolveAssetUrl(virtualPath: string): Promise<string | null>; // URL utilizável do override (blob: para mods em disco).
+  setScriptCapabilities(modId: string, capabilities: ReadonlyArray<ModScriptCapability>): void; // Capacidades do script do mod (padrão: `log` e `messages`).
+  postToModScript(modId: string, type: string, payload: unknown): boolean; // Envia uma mensagem ao script do mod (`mod.on(type, handler)`).
+  getWorkshopItemState(itemId: string): Promise<WorkshopItemState | null>; // Estado de download/instalação de um item do Workshop (`null` sem Steam).
 }
 capability ModdingToken = "game.modding"@1.0.0 api ModdingApi
 ```
@@ -94,6 +101,44 @@ interface PublishModToWorkshopPayload {
   readonly title: string;
   readonly description: string;
 }
+const MODDING_API_VERSION = "1.0.0"; // Versão da API de modding.
+export type ModSource = "local" | "workshop" | "game"; // `local`: pasta `<app_data>/mods`; `workshop`: item Steam instalado; `game`: registrado pelo jogo (`installMod…
+interface InstalledModInfo {
+  readonly modId: string | null; // `null` quando o manifesto é inválido.
+  readonly manifest: ModManifestDescriptor | null;
+  readonly source: ModSource;
+  readonly rootPath: string | null; // Pasta canônica em disco (`null` para mods do jogo).
+  readonly workshopItemId: string | null;
+  readonly enabled: boolean;
+  readonly error: string | null; // Motivo da rejeição (manifesto inválido) — o mod não some sem aviso.
+}
+export type ModScriptCapability = "log" | "messages" | "assets"; // Capacidades do script de mod (sandbox em Worker): - `log`: `mod.log(...)` vai para o log do plugin; - `messag…
+interface InstallModOptions {
+  readonly scriptSource?: string; // Código do `entryScript` (mods empacotados/baixados pelo jogo).
+  readonly baseUrl?: string; // Base para resolver `realPath` relativos dos overrides (ex.: `/mods/hd/`).
+  readonly replace?: boolean; // Substitui um mod já instalado com o mesmo `modId` (padrão false).
+}
+interface WorkshopItemState {
+  readonly itemId: string;
+  readonly subscribed: boolean;
+  readonly installed: boolean;
+  readonly downloading: boolean;
+  readonly downloadPending: boolean;
+  readonly needsUpdate: boolean;
+  readonly bytesDownloaded: number;
+  readonly bytesTotal: number;
+}
+interface ModScriptMessagePayload {
+  readonly modId: string;
+  readonly type: string;
+  readonly data: unknown;
+}
+event ModScriptMessageEvent = "game.modding.script-message" payload ModScriptMessagePayload // Mensagem enviada por um script de mod (`mod.send`) com capacidade `messages`.
+interface ModErrorPayload {
+  readonly modId: string;
+  readonly error: string;
+}
+event ModErrorEvent = "game.modding.mod-error" payload ModErrorPayload // Falha de script/instalação/ativação de um mod.
 command PublishModToWorkshopCommand = "game.modding.publish-workshop" request PublishModToWorkshopPayload
 ```
 ## notas verificadas (comportamento)

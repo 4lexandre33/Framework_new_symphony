@@ -17,7 +17,7 @@ interface Render3DApi {
   getRenderer(): THREE.WebGLRenderer; // Retorna a instância nativa do THREE.WebGLRenderer.
   getActiveCamera(): THREE.Camera; // Retorna a câmera ativa no momento (Perspective ou Orthographic).
   getScene(): THREE.Scene; // Retorna a cena 3D principal (THREE.Scene).
-  getViewportDimensions(): ViewportDimensions; // Retorna as dimensões atuais do Viewport (objeto INTERNO reutilizado; copie os números).
+  getViewportDimensions(): ViewportDimensions; // Retorna as dimensões atuais do Viewport (objeto INTERNO reutilizado; copie os números com `copyViewportDimens…
   setCameraMode(mode: CameraMode, target?: Vector3D): void; // Modifica o modo da câmera (Perspective, Orthographic, Follow).
   updateCameraTarget(target: Vector3D, offset?: Vector3D): void; // Atualiza a posição do alvo da câmera de acompanhamento (Follow Camera).
   setAmbientLight(config: AmbientLightConfig): void; // Configura a luz ambiente da cena.
@@ -69,6 +69,7 @@ interface ViewportDimensions {
   aspectRatio: number;
   pixelRatio: number;
 }
+function copyViewportDimensions(src: Readonly<ViewportDimensions>, out: ViewportDimensions = { width: 0, height: 0, aspectRatio: 1, pixelRatio: 1 }): ViewportDimensions; // G31: `getViewportDimensions()` devolve o objeto INTERNO reutilizado.
 interface AmbientLightConfig {
   color: number | string;
   intensity: number;

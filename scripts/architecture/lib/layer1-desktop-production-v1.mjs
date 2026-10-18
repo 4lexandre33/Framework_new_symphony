@@ -104,9 +104,9 @@ export function auditLayer1DesktopProduction({ projectRoot = process.cwd() } = {
     windowConfig.width === 1280 &&
       windowConfig.height === 720 &&
       windowConfig.resizable === true &&
-      windowConfig.transparent === true &&
-      windowConfig.decorations === false &&
-      windowConfig.alwaysOnTop === true,
+      windowConfig.transparent === false &&
+      windowConfig.decorations === true &&
+      windowConfig.alwaysOnTop === false,
     "configuração desktop da janela deve permanecer explícita e estável",
   );
 

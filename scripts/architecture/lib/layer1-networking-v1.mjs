@@ -31,6 +31,12 @@ export const NETWORKING_RUNTIME_FILES =
     "src/engine/net/internal/SteamP2PTransport.ts",
     "src/engine/net/internal/StateReplicator.ts",
     "src/engine/net/internal/NetworkService.ts",
+    "src/engine/net/internal/NetProtocol.ts",
+    "src/engine/net/internal/NetSession.ts",
+    "src/engine/net/internal/LoopbackTransport.ts",
+    "src/engine/net/internal/BroadcastChannelTransport.ts",
+    "src/engine/net/internal/QueuedTransport.ts",
+    "src/engine/net/internal/RateMeter.ts",
   ]);
 
 export const NETWORKING_PUBLIC_FILES =

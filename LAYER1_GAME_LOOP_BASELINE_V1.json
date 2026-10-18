@@ -34,7 +34,7 @@
   "files": [
     {
       "path": "src/engine/game-loop/internal/DeterministicGameLoop.ts",
-      "fingerprint": "c3b6e6a3bfe4e3063f1116ec212880877570ce891587d2e57e70454c38417aa2"
+      "fingerprint": "ffe88bc9572a1f0b98b11e92e9241ec8f10cc956c40f9bb4038ac98c3e0b4403"
     },
     {
       "path": "src/plugins/game-loop/plugin.ts",
@@ -42,7 +42,7 @@
     },
     {
       "path": "src/contracts/game-loop/types.ts",
-      "fingerprint": "b7cacf635f0c608838f71f3523d21e697b3336eb37545f0343d9cc31da7ee24c"
+      "fingerprint": "a8ab5b0bc35ab3a3c47a9f05e4776861e7dea528fb023199fea8f67fb7ba374c"
     },
     {
       "path": "src/tokens/game-loop.ts",

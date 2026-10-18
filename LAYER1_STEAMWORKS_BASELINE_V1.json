@@ -38,10 +38,10 @@
   ],
   "ownedFileSha256": {
     "src-tauri/Cargo.toml": "fbfe89089b1eccd8d5901a2143486a61ac3b6ded0c4e5dfc645d278d43648902",
-    "src-tauri/src/steam.rs": "71b51cc5818e1fb2111f2d1c3873a1fd19730591d157c881d3692a6a51b27601",
-    "src-tauri/src/lib.rs": "8158e37ef624c7e5b4b8b5345941fa0e362171461e05aa4bf51c7c2927ff51b5",
-    "src/engine/steam/internal/SteamBridgeService.ts": "44b781ffb75792988ff6088ade4ba4f4578482cd55318d51bb65147543a7a711",
-    "src/plugins/net/plugin.ts": "8713a2d2dc99e4c5ba0cdc4212fbc7b079a66313807d50808ecd6605abdb129c"
+    "src-tauri/src/steam.rs": "747269887d036e98e081704d74eeb81a71ef15e3d40bb2a296e4e98c435b87d4",
+    "src-tauri/src/lib.rs": "a88e96f5a6285ad685a728a2eb9bed27a7fe8beab9aba5b5d5b85af14cad2a22",
+    "src/engine/steam/internal/SteamBridgeService.ts": "990ef756c2a0a44f89d5b3f2b1e3b800dc0043821c4ad2976f97f57fd1091e90",
+    "src/plugins/net/plugin.ts": "a873544a759aae0b56f74e0df4c3f434c14d7c6b93ae76764fa26cfb8c3f902c"
   },
   "baselinePolicy": {
     "stage84OwnedRuntimeSha": true,

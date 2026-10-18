@@ -987,7 +987,7 @@ export async function auditLayer1NativeTauri({
         "WORKSHOP_ITEM_ID_PATTERN",
         "MAX_LOCAL_PATH_LENGTH",
         "isTauriRuntime",
-        "steam_workshop_download_item",
+        "modding_download_workshop_item",
         "wrapInvokeError",
       ],
     )

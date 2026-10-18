@@ -1,7 +1,7 @@
 # net — Multiplayer Network & State Replication
 capability: game.net@1.0.0 | category: runtime | engine plugin id: game.net
 dependsOn: game.loop
-consumes: SteamToken
+consumes: SteamToken, SteamNetworkToken
 use (from src/projects/<jogo>/**):
   import { NetworkToken } from "../../tokens/net";
   // acesso: const api = ctx.caps.require(Token)  (declare o token em capabilities.consumes + permissions.capabilities)
@@ -11,23 +11,29 @@ use (from src/projects/<jogo>/**):
 interface NetworkApi {
   readonly mode: NetMode;
   readonly transportType: TransportType;
-  startHost( options?: { port?: number; maxClients?: number; }, ): Promise<boolean>;
-  connect( targetAddressOrSteamId: string, ): Promise<boolean>;
+  startHost( options?: NetHostOptions, ): Promise<boolean>; // Abre uma sessão de host.
+  connect( targetAddressOrSteamId: string, ): Promise<boolean>; // Conecta a um host e resolve `true` só após o handshake (WELCOME).
   disconnect(): Promise<void>;
-  sendTo( targetId: string, channel: number, data: Uint8Array, reliable?: boolean, ): Promise<boolean>;
+  sendTo( targetId: string, channel: number, data: Uint8Array, reliable?: boolean, ): Promise<boolean>; // Envia a um par conectado.
   broadcast( channel: number, data: Uint8Array, reliable?: boolean, ): Promise<boolean>;
-  getStats(): NetworkStats;
+  getStats(): NetworkStats; // Não destrutivo: RTT e perda reais medidos por ping/pong da sessão.
   getStateReplicator(): StateReplicationApi;
   registerEntity( entityId: string, initialSnapshot: EntitySnapshot, ): void;
   unregisterEntity( entityId: string, ): void;
   updateEntityState( entityId: string, state: Partial<EntitySnapshot>, ): void;
-  getInterpolatedState( entityId: string, renderAlpha: number, ): EntitySnapshot | null;
+  getInterpolatedState( entityId: string, renderAlpha: number, ): EntitySnapshot | null; // Estado interpolado.
+  getAvailableTransports(): ReadonlyArray<TransportType>; // Transportes utilizáveis neste runtime.
+  setPreferredTransport( type: TransportType | null, ): boolean; // Transporte padrão do `startHost()` (só offline; `false` se indisponível).
+  configure( options: NetSessionOptions, ): void; // Heartbeat/timeouts da sessão.
+  getPeers(): ReadonlyArray<NetPeerInfo>; // Pares com handshake completo e suas métricas.
+  broadcastSnapshot( snapshot?: WorldStateSnapshot, reliable?: boolean, ): Promise<boolean>; // Envia um snapshot de mundo aos pares (padrão: gerado do replicador).
+  setAutoSnapshot( options: AutoSnapshotOptions, ): boolean; // Envio automático de snapshot pelo host a cada N ticks.
 }
 capability NetworkToken = "game.net"@1.0.0 api NetworkApi
 ```
 ## contract src/contracts/net/types.ts
 ```ts
-export type TransportType = "steam_p2p" | "websocket" | "webrtc" | "mock";
+export type TransportType = "steam_p2p" | "websocket" | "webrtc" | "mock" | "broadcast_channel"; // - `steam_p2p`: Steam (Tauri + Steam ativa); - `websocket`: cliente de um servidor/relay que fala o protocolo …
 export type NetMode = "host" | "client" | "offline";
 interface NetVector3 {
   x: number;
@@ -49,6 +55,7 @@ interface EntitySnapshot {
   readonly sequence: number;
   readonly timestamp: number;
 }
+function copyEntitySnapshot(src: EntitySnapshot): EntitySnapshot; // G31: `getInterpolatedState()` devolve um objeto REUTILIZADO por entidade (ou o snapshot interno do histórico).
 interface WorldStateSnapshot {
   readonly sequence: number;
   readonly timestamp: number;
@@ -60,7 +67,7 @@ interface StateReplicationApi {
   registerEntity(entityId: string, initialSnapshot: EntitySnapshot): void;
   unregisterEntity(entityId: string): void;
   pushEntitySnapshot(snapshot: EntitySnapshot): void;
-  processWorldSnapshot(worldSnapshot: WorldStateSnapshot): void;
+  processWorldSnapshot(worldSnapshot: WorldStateSnapshot, sourcePeerId?: string): void; // Aplica um snapshot de mundo vindo de `sourcePeerId` (padrão: `worldSnapshot.hostSteamId`): cria/atualiza as e…
   getInterpolatedState(entityId: string, alpha: number): EntitySnapshot | null;
   generateWorldSnapshot(sequence: number, tick: number, hostSteamId: string): WorldStateSnapshot;
   clear(): void;
@@ -78,12 +85,34 @@ interface NetPacket {
   readonly payload: Uint8Array;
 }
 interface NetworkStats {
-  readonly rttMs: number;
-  readonly packetLossRate: number;
+  readonly rttMs: number; // RTT médio medido por ping/pong da sessão (0 sem pares/medição).
+  readonly packetLossRate: number; // Fração 0..1 de pings sem resposta na janela recente (perda real).
   readonly bytesSentPerSec: number;
   readonly bytesReceivedPerSec: number;
   readonly activeConnections: number;
   readonly transportType: TransportType;
+}
+interface NetHostOptions {
+  readonly port?: number; // Sala do loopback/BroadcastChannel (padrão: `room` ou 7777).
+  readonly maxClients?: number; // Limite de clientes aceitos no handshake (1..250, padrão 16).
+  readonly transport?: TransportType; // Transporte explícito; padrão: Steam se disponível, senão `mock` (loopback).
+  readonly room?: string; // Nome da sala (loopback/BroadcastChannel): `[A-Za-z0-9_.-]{1,64}`.
+}
+interface NetSessionOptions {
+  readonly heartbeatIntervalMs?: number; // Intervalo de ping (padrão 1000 ms).
+  readonly peerTimeoutMs?: number; // Par sem tráfego por este tempo é desconectado (padrão 5000 ms).
+  readonly handshakeTimeoutMs?: number; // Tempo máximo para o WELCOME do host no `connect` (padrão 5000 ms).
+}
+interface AutoSnapshotOptions {
+  readonly enabled: boolean;
+  readonly intervalTicks?: number; // Envia a cada N ticks do game loop (padrão 3).
+  readonly reliable?: boolean; // Snapshot confiável (padrão false; acima do MTU usa confiável fragmentado).
+}
+interface NetPeerInfo {
+  readonly peerId: string;
+  readonly rttMs: number | null; // RTT suavizado; `null` antes do primeiro pong.
+  readonly packetLossRate: number;
+  readonly lastHeardMs: number;
 }
 interface NetPacketReceivedPayload {
   readonly senderId: string;
@@ -98,7 +127,7 @@ interface PeerConnectedPayload {
 event PeerConnectedEvent = "game.net.peer-connected" payload PeerConnectedPayload
 interface PeerDisconnectedPayload {
   readonly peerId: string;
-  readonly reason: string;
+  readonly reason: string; // `timeout` | `remote_bye` | `link_closed` | `local_disconnect` | `steam_session_failed` | outro.
 }
 event PeerDisconnectedEvent = "game.net.peer-disconnected" payload PeerDisconnectedPayload
 interface WorldSnapshotPayload {

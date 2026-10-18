@@ -14,25 +14,23 @@
     "bootstrappedTooling": 1,
     "inactiveExperimental": 1,
     "activePlugins": 24,
-    "provisions": 23,
-    "providedCapabilityIds": 23,
+    "provisions": 24,
+    "providedCapabilityIds": 24,
     "requiredCapabilityRequirements": 28,
-    "optionalCapabilityRequirements": 15,
-    "resolvedCapabilityRequirements": 43,
+    "optionalCapabilityRequirements": 20,
+    "resolvedCapabilityRequirements": 48,
     "optionalUnresolved": 0,
     "conflictsDeclared": 0,
-    "pluginDependencies": 21,
+    "pluginDependencies": 24,
     "requiredPluginDependencies": 14,
-    "optionalPluginDependencies": 7,
+    "optionalPluginDependencies": 10,
     "cycles": 0,
     "providerAmbiguities": 0,
     "semverViolations": 0,
     "pluginKindViolations": 0,
     "graphViolations": 0
   },
-  "dormantOwnedCapabilitiesAtCapture": [
-    "game.steam.net"
-  ],
+  "dormantOwnedCapabilitiesAtCapture": [],
   "policy": {
     "canonicalCountDerivedFromModuleMap": true,
     "auxiliaryActivationDerivedFromModuleMap": true,
@@ -360,6 +358,13 @@
         "priority": 0
       },
       {
+        "capabilityId": "game.steam.net",
+        "pluginId": "game.steam",
+        "kind": "preloaded",
+        "version": "1.0.0",
+        "priority": 0
+      },
+      {
         "capabilityId": "game.steam",
         "pluginId": "game.steam",
         "kind": "preloaded",
@@ -627,6 +632,24 @@
         "providerPriority": 0
       },
       {
+        "consumerPluginId": "game.overlay",
+        "capabilityId": "game.render",
+        "range": "^1.0.0",
+        "optional": true,
+        "providerPluginId": "game.render",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.security",
+        "capabilityId": "game.render",
+        "range": "^1.0.0",
+        "optional": true,
+        "providerPluginId": "game.render",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
         "consumerPluginId": "game.sprites",
         "capabilityId": "game.render",
         "range": "^1.0.0",
@@ -690,10 +713,28 @@
         "providerPriority": 0
       },
       {
+        "consumerPluginId": "game.net",
+        "capabilityId": "game.steam.net",
+        "range": "^1.0.0",
+        "optional": true,
+        "providerPluginId": "game.steam",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
+      },
+      {
         "consumerPluginId": "game.debug",
         "capabilityId": "game.steam",
         "range": "^1.0.0",
         "optional": false,
+        "providerPluginId": "game.steam",
+        "providerVersion": "1.1.0",
+        "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.monetization",
+        "capabilityId": "game.steam",
+        "range": "^1.0.0",
+        "optional": true,
         "providerPluginId": "game.steam",
         "providerVersion": "1.1.0",
         "providerPriority": 0
@@ -796,22 +837,31 @@
         "providerPluginId": "game.world",
         "providerVersion": "1.0.0",
         "providerPriority": 0
+      },
+      {
+        "consumerPluginId": "game.security",
+        "capabilityId": "game.world",
+        "range": "^1.0.0",
+        "optional": true,
+        "providerPluginId": "game.world",
+        "providerVersion": "1.0.0",
+        "providerPriority": 0
       }
     ],
     "optionalUnresolved": [],
     "counts": {
       "plugins": 24,
-      "provisions": 23,
-      "providedCapabilityIds": 23,
+      "provisions": 24,
+      "providedCapabilityIds": 24,
       "requiredCapabilityRequirements": 28,
-      "optionalCapabilityRequirements": 15,
-      "resolvedCapabilityRequirements": 43,
+      "optionalCapabilityRequirements": 20,
+      "resolvedCapabilityRequirements": 48,
       "optionalUnresolved": 0,
       "conflictsDeclared": 0,
-      "pluginDependencies": 21,
+      "pluginDependencies": 24,
       "requiredPluginDependencies": 14,
-      "optionalPluginDependencies": 7
+      "optionalPluginDependencies": 10
     },
-    "semanticSha256": "427844801bc6b5d3a75a80965b1ab411ed0f5c879fbac4a0c9e6d5e38cdb60ec"
+    "semanticSha256": "ac12f6fe6c26bfca7a785ce024aa95a439b3c25c7b369fdb0c902e4e87b4719c"
   }
 }

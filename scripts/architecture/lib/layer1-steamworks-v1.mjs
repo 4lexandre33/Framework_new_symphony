@@ -54,6 +54,16 @@ const REQUIRED_NATIVE_COMMANDS = Object.freeze([
   "steam_overlay_is_enabled",
   "steam_activate_overlay",
   "steam_workshop_download_item",
+  "steam_poll_events",
+  "steam_set_stat_float",
+  "steam_get_stat",
+  "steam_read_p2p_packets",
+  "steam_request_lobby_list",
+  "steam_get_lobby_details",
+  "steam_get_lobby_members",
+  "steam_invite_to_lobby",
+  "steam_activate_invite_dialog",
+  "steam_set_lobby_joinable",
 ]);
 
 function abs(projectRoot, relativePath) {
@@ -245,19 +255,16 @@ export async function auditLayer1Steamworks({ projectRoot = process.cwd() } = {}
     violations.push(violation("L1STEAM020", "src/plugins/steam/plugin.ts", "provider canônico game.steam não foi preservado"));
   }
 
-  if (steamPlugin.includes("SteamNetworkToken") || steamPlugin.includes("ctx.caps.provide(SteamNetworkToken")) {
-    violations.push(violation("L1STEAM021", "src/plugins/steam/plugin.ts", "Stage84 não deve ativar game.steam.net nem alterar o grafo certificado da Stage73"));
-  }
-
-  if (!(graphBaseline.dormantOwnedCapabilitiesAtCapture ?? []).includes("game.steam.net")) {
-    violations.push(violation("L1STEAM022", "LAYER1_CAPABILITY_GRAPH_BASELINE_V1.json", "game.steam.net deve permanecer capability secundária/dormente da baseline canônica"));
+  // G109: game.steam.net passou a ser fornecido de propósito pelo plugin steam.
+  if (!steamPlugin.includes("SteamNetworkToken")) {
+    violations.push(violation("L1STEAM021", "src/plugins/steam/plugin.ts", "o plugin steam deve fornecer game.steam.net (G109)"));
   }
 
   const steamNetProvider = (graphBaseline.graph?.providers ?? []).find(
     (entry) => entry.capabilityId === "game.steam.net",
   );
-  if (steamNetProvider !== undefined) {
-    violations.push(violation("L1STEAM023", "LAYER1_CAPABILITY_GRAPH_BASELINE_V1.json", "provider de game.steam.net não deve ser introduzido na Stage84"));
+  if (steamNetProvider === undefined) {
+    violations.push(violation("L1STEAM023", "LAYER1_CAPABILITY_GRAPH_BASELINE_V1.json", "a baseline do grafo deve registrar o provider de game.steam.net (G109)"));
   }
 
   if (host.includes('std::env::set_var("SteamAppId"') || host.includes('std::env::set_var("SteamGameId"')) {

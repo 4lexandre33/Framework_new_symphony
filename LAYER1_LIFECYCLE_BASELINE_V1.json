@@ -34,8 +34,8 @@
       "id": "game.steam",
       "path": "src/plugins/steam/plugin.ts",
       "readyCalls": 1,
-      "onDisposeCalls": 0,
-      "hasOnBootHook": false,
+      "onDisposeCalls": 1,
+      "hasOnBootHook": true,
       "hasOnStopHook": false
     },
     {
@@ -187,7 +187,7 @@
       "path": "src/plugins/overlay/plugin.ts",
       "readyCalls": 1,
       "onDisposeCalls": 1,
-      "hasOnBootHook": false,
+      "hasOnBootHook": true,
       "hasOnStopHook": false
     },
     {

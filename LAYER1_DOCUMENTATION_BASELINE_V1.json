@@ -2,9 +2,12 @@
   "schemaVersion": 1,
   "stage": 89,
   "baselineId": "layer1-documentation-v1-stage89",
-  "certifiedStages": { "first": 71, "last": 88 },
+  "certifiedStages": {
+    "first": 71,
+    "last": 88
+  },
   "moduleCount": 23,
-  "tauriCommandCount": 37,
+  "tauriCommandCount": 56,
   "documents": [
     "README.md",
     "docs/layer1/README.md",

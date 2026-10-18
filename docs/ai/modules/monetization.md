@@ -1,5 +1,6 @@
 # monetization — Microtransações Steam & Steam Inventory Service
 capability: game.monetization@1.0.0 | category: functional | engine plugin id: game.monetization
+consumes: SteamToken
 use (from src/projects/<jogo>/**):
   import { MonetizationToken } from "../../tokens/monetization";
   // acesso: const api = ctx.caps.require(Token)  (declare o token em capabilities.consumes + permissions.capabilities)
@@ -11,15 +12,23 @@ interface MonetizationApi {
   getItemBySku(sku: string): MonetizationItemDTO | null;
   getWalletBalance(currencyId: string): number;
   getWalletSnapshot(): VirtualWalletDTO;
-  creditCurrency(currencyId: string, amount: number, reason?: string): number;
-  debitCurrency(currencyId: string, amount: number, reason?: string): boolean;
-  initPurchase(sku: string): Promise<TransactionReceiptDTO | null>;
-  finalizePurchase(orderId: string): Promise<boolean>;
+  creditCurrency(currencyId: string, amount: number, reason?: string): number; // Credita `amount` (inteiro seguro > 0).
+  debitCurrency(currencyId: string, amount: number, reason?: string): boolean; // Debita `amount` (inteiro seguro > 0); `false` se inválido ou sem saldo.
+  initPurchase(sku: string): Promise<TransactionReceiptDTO | null>; // Inicia compra com dinheiro real pelo `PurchaseProvider` (servidor).
+  finalizePurchase(orderId: string): Promise<boolean>; // Finaliza pelo provedor; credita só o que o recibo verificado concede.
   getSteamInventory(): ReadonlyArray<SteamInventoryItemDTO>;
   fetchSteamInventory(): Promise<ReadonlyArray<SteamInventoryItemDTO>>;
   consumeInventoryItem(itemId: string, quantity?: number): Promise<boolean>;
-  validateReceipt(receipt: TransactionReceiptDTO): boolean;
-  clear(): void;
+  validateReceipt(receipt: TransactionReceiptDTO): boolean; // `true` só para recibo aprovado pelo provedor nesta sessão (sem validação local por sal).
+  clear(): void; // Zera carteira, ordens pendentes, entitlements e inventário em cache.
+  registerCatalogItem(item: MonetizationItemDTO): void; // Registra/atualiza um item do catálogo do jogo (valida; lança se inválido).
+  registerCatalog(items: ReadonlyArray<MonetizationItemDTO>, options?: RegisterCatalogOptions): void; // Registra vários itens (tudo ou nada); `replace` remove os atuais antes.
+  removeCatalogItem(sku: string): boolean;
+  setPurchaseProvider(provider: PurchaseProvider | null): void; // Define (ou remove com `null`) o provedor de compra real.
+  isPurchaseSupported(): boolean; // `true` se há provedor de compra configurado.
+  verifyReceipt(receipt: TransactionReceiptDTO): Promise<boolean>; // Verificação de recibo pelo provedor (`false` sem provedor).
+  startInventoryPurchase(sku: string, quantity?: number): Promise<boolean>; // Abre o checkout da Steam para um item com `steamItemDefId` (Steam Inventory).
+  getEntitlements(): Readonly<Record<string, number>>; // Itens (não moeda) concedidos por compras verificadas: sku → quantidade.
 }
 capability MonetizationToken = "game.monetization"@1.0.0 api MonetizationApi
 ```
@@ -34,12 +43,43 @@ interface MonetizationItemDTO {
   readonly currencyCode: string;
   readonly itemType: MonetizationItemType;
   readonly grantedCurrencyAmount?: number;
+  readonly grantedCurrencyId?: string; // Moeda creditada por `grantedCurrencyAmount` (padrão `"gold"`).
   readonly grantedItemSkus?: ReadonlyArray<string>;
+  readonly steamItemDefId?: number; // Definição no Steam Inventory (compra via checkout da Steam e mapeamento do inventário).
   readonly iconUrl?: string;
   readonly isDiscounted?: boolean;
   readonly discountPercentage?: number;
 }
 export type TransactionStatus = "pending" | "approved" | "failed" | "refunded";
+interface PurchaseInitRequest {
+  readonly sku: string;
+  readonly item: MonetizationItemDTO;
+  readonly steamId: string | null; // SteamID do jogador (null sem Steam).
+}
+interface PurchaseInitResult {
+  readonly orderId: string; // Id da ordem criada pelo SERVIDOR (ex.: ISteamMicroTxn/InitTxn).
+  readonly transId?: string;
+  readonly amountCents: number;
+}
+interface PurchaseGrants { // O que o servidor autorizou entregar (autoridade sobre o catálogo local).
+  readonly currencies?: Readonly<Record<string, number>>;
+  readonly items?: Readonly<Record<string, number>>;
+}
+interface VerifiedPurchase {
+  readonly status: TransactionStatus;
+  readonly receipt: TransactionReceiptDTO; // Recibo verificado pelo servidor (FinalizeTxn/QueryTxn).
+  readonly grants?: PurchaseGrants;
+  readonly reason?: string;
+}
+interface PurchaseProvider { // Provedor de compra com dinheiro real.
+  readonly id: string;
+  initPurchase(request: PurchaseInitRequest): Promise<PurchaseInitResult>;
+  finalizePurchase(orderId: string): Promise<VerifiedPurchase>;
+  verifyReceipt?(receipt: TransactionReceiptDTO): Promise<boolean>; // Verificação server-side de um recibo (opcional).
+}
+interface RegisterCatalogOptions {
+  readonly replace?: boolean; // Remove o catálogo atual (inclusive os SKUs de exemplo) antes.
+}
 interface TransactionReceiptDTO {
   readonly orderId: string;
   readonly transId: string;
@@ -91,6 +131,12 @@ interface WalletUpdatedPayload {
   readonly reason: string;
 }
 event WalletUpdatedEvent = "game.monetization.wallet-updated" payload WalletUpdatedPayload
+interface ItemGrantedPayload {
+  readonly sku: string;
+  readonly quantity: number;
+  readonly orderId: string;
+}
+event ItemGrantedEvent = "game.monetization.item-granted" payload ItemGrantedPayload // Item (não moeda) entregue por uma compra verificada.
 interface InventoryRefreshedPayload {
   readonly itemCount: number;
   readonly timestamp: number;
