@@ -21,6 +21,10 @@
  * Janela de overlay (transparente/sem bordas/sempre-no-topo) é OPT-IN do
  * projeto aqui (transparência só pode ser definida na criação da janela).
  *
+ * `app.security` (CSP) NÃO é tocado pelo merge-config: todo jogo herda a CSP
+ * do host, que libera `ws:`/`wss:` em `connect-src` (clientes WebSocket
+ * app-a-app para o host nativo do G8).
+ *
  * Uso:
  *   node scripts/tauri-project-config.mjs <id>            # gera e imprime o caminho
  *   node scripts/tauri-project-config.mjs <id> --build    # + VITE_PROJECT=<id> tauri build --config <arquivo>

@@ -34,4 +34,19 @@ describe("G32 tauri.conf.json e identidade por jogo", () => {
     expect(() => buildProjectTauriConfig("a", { window: { width: "100" } })).toThrow(/number/);
     expect(() => buildProjectTauriConfig("a", { extra: 1 })).toThrow(/desconhecida/);
   });
+
+  it("G8: CSP de produção libera WebSocket (ws:/wss:) para clientes app-a-app e o merge por jogo preserva a CSP", () => {
+    const cfg = JSON.parse(fs.readFileSync("src-tauri/tauri.conf.json", "utf8"));
+    const csp: string = cfg.app.security.csp;
+    const connect = csp.split(";").map((d) => d.trim()).find((d) => d.startsWith("connect-src"));
+    expect(connect).toBeDefined();
+    const sources = (connect as string).split(/\s+/u).slice(1);
+    expect(sources).toContain("ws:");
+    expect(sources).toContain("wss:");
+    expect(sources).toContain("ipc:");
+    // O merge-config por jogo não toca app.security: a CSP do host vale para todos os jogos.
+    const merged = buildProjectTauriConfig("meu-jogo", { window: { title: "X" } }, cfg.app.windows[0]);
+    expect(merged.app.security).toBeUndefined();
+    expect(Object.keys(merged.app)).toEqual(["windows"]);
+  });
 });
