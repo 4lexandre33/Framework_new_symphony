@@ -23,6 +23,8 @@ import type {
   EntityTransformPatch,
   SceneAssetDescriptor,
   SceneDescriptor,
+  SceneDocumentError,
+  SceneDocumentLoadOptions,
   SceneLoadOptions,
   SpatialPoint2D,
   SpatialQueryResult,
@@ -50,6 +52,10 @@ import {
 import {
   WorldStateSerializer,
 } from "./WorldStateSerializer";
+
+import {
+  prepareSceneDocument,
+} from "./SceneDocumentLoader";
 
 export class WorldService
   implements WorldApi {
@@ -151,6 +157,67 @@ export class WorldService
     }
 
     return loaded;
+  }
+
+  public async loadSceneDocument(
+    doc: unknown,
+    options?: SceneDocumentLoadOptions,
+  ): Promise<boolean> {
+    const {
+      prefabs,
+      ...sceneOptions
+    } = options ?? {};
+
+    // Tudo é validado ANTES de tocar o mundo (carga atômica).
+    const prepared =
+      prepareSceneDocument(
+        doc,
+        prefabs,
+      );
+
+    if (!prepared.ok) {
+      this.emitSceneDocumentError(
+        prepared.sceneId,
+        prepared.errors,
+      );
+
+      return false;
+    }
+
+    const loaded =
+      await this.loadScene(
+        prepared.descriptor,
+        sceneOptions,
+      );
+
+    if (!loaded) {
+      this.emitSceneDocumentError(
+        prepared.descriptor.sceneId,
+        [
+          {
+            path: "",
+            code:
+              "SCENE_LOAD_FAILED",
+            message:
+              "loadScene retornou false (transição em andamento ou falha de asset com failOnAssetError)",
+          },
+        ],
+      );
+
+      return false;
+    }
+
+    // Mesmo caminho de um spawn manual (ids preservados, entity-spawned).
+    for (
+      const spawn of
+      prepared.spawns
+    ) {
+      this.spawnEntity(
+        spawn,
+      );
+    }
+
+    return true;
   }
 
   public async unloadScene(
@@ -448,6 +515,23 @@ export class WorldService
 
   public clear(): void {
     this.sceneManager.clear();
+  }
+
+  private emitSceneDocumentError(
+    sceneId: string | null,
+    errors: ReadonlyArray<SceneDocumentError>,
+  ): void {
+    console.error(
+      `[WorldService] ❌ loadSceneDocument '${String(sceneId)}': ${String(errors.length)} erro(s); nada foi spawnado.`,
+    );
+
+    this.ctx.events.emit(
+      "game.world.scene-document-error",
+      {
+        sceneId,
+        errors,
+      },
+    );
   }
 
   private rebuildSpatialIndexes():

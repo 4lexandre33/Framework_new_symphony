@@ -135,7 +135,11 @@ export type SceneDocumentErrorCode =
   | "DATA_TOO_DEEP"       // profundidade > 16
   | "DATA_TOO_LARGE"      // JSON > 64 KiB (UTF-8)
   | "TOO_MANY_ENTITIES"   // > 10000
-  | "TOO_MANY_ERRORS";    // lista truncada em 200
+  | "TOO_MANY_ERRORS"     // lista truncada em 200
+  // Só na engine (WorldApi.loadSceneDocument):
+  | "SCENE_LOAD_FAILED"   // loadScene retornou false (transição em andamento, failOnAssetError)
+  | "SPAWN_REJECTED"      // entrada recusada pelo normalizador do EntityManager
+  | "INTERNAL";           // exceção inesperada
 
 export interface SceneDocumentError {
   /** Caminho no documento, ex.: `entities[2].position.x`. */

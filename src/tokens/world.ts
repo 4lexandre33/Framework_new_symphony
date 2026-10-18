@@ -9,6 +9,8 @@ import type {
   EntityStatePatch,
   EntityTransformPatch,
   SceneDescriptor,
+  SceneDocument,
+  SceneDocumentLoadOptions,
   SceneLoadOptions,
   SpatialPoint2D,
   SpatialQueryResult,
@@ -31,6 +33,19 @@ export interface WorldApi {
   loadScene(
     scene: SceneDescriptor,
     options?: SceneLoadOptions,
+  ): Promise<boolean>;
+
+  /**
+   * Carrega um SceneDocument v1 (JSON de `scenes/*.scene.json`): valida
+   * documento + prefabs ANTES de tocar o mundo, aplica prefabs (campos da
+   * entidade vencem; tags união; data merge raso), chama `loadScene` com os
+   * assets da cena + prefabs usados e spawna cada entidade com o próprio id.
+   * Erro ⇒ `false`, nada spawnado e evento `game.world.scene-document-error`.
+   * Os spawns acontecem DEPOIS de `scene-loaded` (aguarde a Promise).
+   */
+  loadSceneDocument(
+    doc: SceneDocument,
+    options?: SceneDocumentLoadOptions,
   ): Promise<boolean>;
 
   /**
