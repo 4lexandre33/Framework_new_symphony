@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "stage": 88,
   "status": "PASS",
-  "gitHeadBeforeStage88Commit": "5ca0118685df9018c5f40a0d25fffbf923d4917e",
+  "gitHeadBeforeStage88Commit": "4f940f35b6c6ebbb713a5b1fd84c41b250da1247",
   "prerequisites": {
     "stage86": "PASS",
     "stage87": "PASS"
@@ -134,11 +134,11 @@
     "cargoManifestMutatedByTauri": true,
     "cargoManifestRestored": true,
     "executablePath": "src-tauri/target/release/projeto1",
-    "executableBytes": 16807176,
-    "executableSha256": "be88b9103aa62f8c9b3ce78f97e7e47aedbc158f210068c3d36ab9ed863e65b0",
+    "executableBytes": 17568864,
+    "executableSha256": "88ba25091bbe7f92f7a4fe08877fc1d734220f9bafa29aa5009531a2ca479740",
     "frontendEntry": "dist/index.html",
     "tauriConfigOverride": "src-tauri/tauri.stage88.conf.json",
-    "generatedAtUtc": "2026-10-09T17:28:18.745Z"
+    "generatedAtUtc": "2026-10-18T09:56:06.242Z"
   },
   "windowsPackageEvidence": {
     "schemaVersion": 1,
@@ -153,14 +153,14 @@
     "cargoManifestMutatedByTauri": true,
     "cargoManifestRestored": true,
     "executablePath": "src-tauri/target/release/projeto1.exe",
-    "executableBytes": 10642432,
-    "executableSha256": "9b2d902ffbde320693305a7d011b3c165983e8d8a5301d810ead3e62ef95165d",
+    "executableBytes": 11363328,
+    "executableSha256": "ab7c0b20fb5cfeacbd7cf16a585cdd1c10a0379e04f6d726476fddc069ad8aca",
     "installerPath": "src-tauri/target/release/bundle/nsis/projeto1_0.1.0_x64-setup.exe",
-    "installerBytes": 2979710,
-    "installerSha256": "9039072b7c8bb5340245035029a85df1ab84b05316d9516cafcfc9aa8555a2ee",
+    "installerBytes": 3182516,
+    "installerSha256": "6b6c332679bcc65038a09f6068f3a4aeb9fb6c44876bbb26283adea8c6bd19d7",
     "installerCount": 1,
     "tauriConfigOverride": "src-tauri/tauri.stage88.conf.json",
-    "generatedAtUtc": "2026-10-09T17:41:29.675Z"
+    "generatedAtUtc": "2026-10-18T10:08:47.592Z"
   },
-  "generatedAtUtc": "2026-10-09T17:41:30.233Z"
+  "generatedAtUtc": "2026-10-18T10:08:48.117Z"
 }

@@ -14,18 +14,18 @@
   },
   "linuxReleaseExecutable": {
     "path": "src-tauri/target/release/projeto1",
-    "bytes": 16807176,
-    "sha256": "be88b9103aa62f8c9b3ce78f97e7e47aedbc158f210068c3d36ab9ed863e65b0"
+    "bytes": 17568864,
+    "sha256": "88ba25091bbe7f92f7a4fe08877fc1d734220f9bafa29aa5009531a2ca479740"
   },
   "windowsReleaseExecutable": {
     "path": "src-tauri/target/release/projeto1.exe",
-    "bytes": 10642432,
-    "sha256": "9b2d902ffbde320693305a7d011b3c165983e8d8a5301d810ead3e62ef95165d"
+    "bytes": 11363328,
+    "sha256": "ab7c0b20fb5cfeacbd7cf16a585cdd1c10a0379e04f6d726476fddc069ad8aca"
   },
   "windowsNsisInstaller": {
     "path": "src-tauri/target/release/bundle/nsis/projeto1_0.1.0_x64-setup.exe",
-    "bytes": 2979710,
-    "sha256": "9039072b7c8bb5340245035029a85df1ab84b05316d9516cafcfc9aa8555a2ee"
+    "bytes": 3182516,
+    "sha256": "6b6c332679bcc65038a09f6068f3a4aeb9fb6c44876bbb26283adea8c6bd19d7"
   },
-  "generatedAtUtc": "2026-10-09T17:41:30.233Z"
+  "generatedAtUtc": "2026-10-18T10:08:48.117Z"
 }

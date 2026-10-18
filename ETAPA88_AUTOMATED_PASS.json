@@ -3,7 +3,7 @@
   "stage": 88,
   "stageName": "Desktop / Steam Production Readiness",
   "status": "PASS",
-  "gitHeadBeforeStage88Commit": "5ca0118685df9018c5f40a0d25fffbf923d4917e",
+  "gitHeadBeforeStage88Commit": "4f940f35b6c6ebbb713a5b1fd84c41b250da1247",
   "gates": {
     "stage86Prerequisite": "PASS",
     "stage87Prerequisite": "PASS",
@@ -21,5 +21,5 @@
     "cargoManifestIntegrity": "PASS"
   },
   "violations": 0,
-  "generatedAtUtc": "2026-10-09T17:41:30.233Z"
+  "generatedAtUtc": "2026-10-18T10:08:48.117Z"
 }

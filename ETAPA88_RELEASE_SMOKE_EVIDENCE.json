@@ -11,9 +11,9 @@
   "cargoManifestMutatedByTauri": true,
   "cargoManifestRestored": true,
   "executablePath": "src-tauri/target/release/projeto1",
-  "executableBytes": 16807176,
-  "executableSha256": "be88b9103aa62f8c9b3ce78f97e7e47aedbc158f210068c3d36ab9ed863e65b0",
+  "executableBytes": 17568864,
+  "executableSha256": "88ba25091bbe7f92f7a4fe08877fc1d734220f9bafa29aa5009531a2ca479740",
   "frontendEntry": "dist/index.html",
   "tauriConfigOverride": "src-tauri/tauri.stage88.conf.json",
-  "generatedAtUtc": "2026-10-09T17:28:18.745Z"
+  "generatedAtUtc": "2026-10-18T09:56:06.242Z"
 }
