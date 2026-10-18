@@ -16,6 +16,8 @@ export default defineConfig(() => ({
       "**/cypress/**",
       "**/.{idea,git,cache,output,temp}/**",
       "**/.migration/**",
+      "**/.claude/**",
+      "tools/mcp/**/fixtures/**",
       "**/{karma,rollup,webpack,vite,jest,ava,babel,nyc,cypress,playwright}.config.*",
     ],
   },
