@@ -669,7 +669,7 @@
       "contracts": [
         {
           "path": "src/contracts/net/types.ts",
-          "fingerprint": "07f8de5e4af4df44e2a0251b710ac2c69994e6df4482bbf2ca55fcd59f978f65"
+          "fingerprint": "fcd3e4b6f1e92aea13a387fde9b87ead651450dd3c8bf94caa0f80aae2484fbb"
         }
       ],
       "tokens": [
@@ -678,7 +678,7 @@
           "capabilityId": "game.net",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "aab6105413ec5aed31e9fe7cf0da49979c53f2cc9fd9b7a0f2d28474ad51b920"
+          "fingerprint": "202c0b8d738d939cc6de21119b65710a1e85e9cefe456a9fce0423bc2541701f"
         }
       ]
     }

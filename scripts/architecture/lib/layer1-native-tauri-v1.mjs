@@ -36,6 +36,8 @@ export const NATIVE_TAURI_RUNTIME_FILES =
     "src-tauri/src/overlay.rs",
     "src-tauri/src/modding.rs",
     "src-tauri/src/monetization.rs",
+    "src-tauri/src/storage.rs",
+    "src-tauri/src/net_ws_host.rs",
     "src/engine/steam/internal/SteamBridgeService.ts",
     "src/engine/security/internal/TauriSecurityDriver.ts",
     "src/engine/overlay/internal/TauriOverlayDriver.ts",

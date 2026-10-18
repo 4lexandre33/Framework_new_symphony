@@ -37,6 +37,7 @@ export const NETWORKING_RUNTIME_FILES =
     "src/engine/net/internal/BroadcastChannelTransport.ts",
     "src/engine/net/internal/QueuedTransport.ts",
     "src/engine/net/internal/RateMeter.ts",
+    "src/engine/net/internal/NativeWebSocketHostBridge.ts",
   ]);
 
 export const NETWORKING_PUBLIC_FILES =

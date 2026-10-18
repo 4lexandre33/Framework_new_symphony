@@ -26,17 +26,18 @@
   "semanticFingerprintAlgorithm": "normalized-source-sha256-v1",
   "semanticFingerprints": {
     "src/engine/net/internal/NetworkPacketValidator.ts": "a2677cfe6dbbbddd550c2229a0aabebddafdab06248877c6ff4813d4656a39ff",
-    "src/engine/net/internal/NetworkTransport.ts": "e0e1cd8b5cee08b235f48c51563aa6c85c4b549d2687d52342b5fadd051acf47",
-    "src/engine/net/internal/WebSocketTransport.ts": "e4b4842c7daa6980c023615b77ff826e3a1edfd938b62252dc56871fb562d118",
+    "src/engine/net/internal/NetworkTransport.ts": "c41e3d19c55ef9df76f64570326eb9d5f21977550cfbf4ffd36476c77a8478f9",
+    "src/engine/net/internal/WebSocketTransport.ts": "1420fbb842bad409b7911111d31fa7c1eae9ef4a06e69951948b8e787f4e68db",
     "src/engine/net/internal/SteamP2PTransport.ts": "81cf9cf43a480b9ad2f8d177272e14f698cd806505ecd7a0451ddb0250290a93",
     "src/engine/net/internal/StateReplicator.ts": "1a18edb94c23752f015366bd0312165c8725c11f14a20f42ed5c997c562f069b",
-    "src/engine/net/internal/NetworkService.ts": "3565394558bbcacd6b49aefd02704c28e91a16d08ba52c48fc44dea39343de1c",
+    "src/engine/net/internal/NetworkService.ts": "fab2ea0d332033d9d20caa0a35436e5152ab9748de8576d772eeb98a937a4b9f",
     "src/engine/net/internal/NetProtocol.ts": "08337b63a69d325e825152a5cadd55235e4aadf0b2f3ed866e3b9d07a6bd3250",
     "src/engine/net/internal/NetSession.ts": "e047db6db94fea10433d265bea7d2190ced70e8e27dcabb94e7140d63d5219d1",
     "src/engine/net/internal/LoopbackTransport.ts": "fab6ce11035626c418c2db0b2f9d58acf690ef55449b824fb05055262f6dcc21",
     "src/engine/net/internal/BroadcastChannelTransport.ts": "63923a31a5677ec83eca84005b98ad1a31c0e85f34ba7459168091afddbecb4d",
     "src/engine/net/internal/QueuedTransport.ts": "5490c724c5778e698e80cc9412c89d0e7be7eb045f8080d3b5006468cce5f202",
-    "src/engine/net/internal/RateMeter.ts": "ae0785ed829fd7896b1d154f91ba93f0aa1b73218a0b8ec4629015a66d4a1bfa"
+    "src/engine/net/internal/RateMeter.ts": "ae0785ed829fd7896b1d154f91ba93f0aa1b73218a0b8ec4629015a66d4a1bfa",
+    "src/engine/net/internal/NativeWebSocketHostBridge.ts": "86edd143971eb9673cdd7a0dc8cca11523741530c5e8ee9d367fc207578ab95b"
   },
   "canonicalCompatibility": {
     "publicApiBaseline": "layer1-public-api-v1-stage72",
@@ -57,7 +58,7 @@
     "onStopHooks": 0
   },
   "capturedCounts": {
-    "semanticRuntimeFiles": 6,
+    "semanticRuntimeFiles": 13,
     "publicFilesDelegatedToStage72": 3,
     "pluginFilesDelegatedToStages73And74": 1
   },

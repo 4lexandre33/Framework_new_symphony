@@ -10,9 +10,8 @@ precisa de payload validado, mínimo privilégio, erro serializável/mapeado e A
 TypeScript tipada. Não há shell arbitrário nem escape de caminho.
 
 Os comandos registrados em `src-tauri/src/lib.rs` (`generate_handler!`) são
-**66** no total. Os das áreas certificadas na Stage 89 (steam, overlay,
-security, modding, monetization) somam **56**; storage (4) e net (6) vieram
-depois (G102/G8) e ainda não entram na auditoria da Stage 89. Por área:
+somam **66** no total, todos auditados na Stage 89 (storage e net entraram
+com G102/G8). Por área:
 
 | Área | Qtde | Arquivo |
 |---|---|---|

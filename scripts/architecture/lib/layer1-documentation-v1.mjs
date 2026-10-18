@@ -33,7 +33,7 @@ const STALE_README_CLAIMS = Object.freeze([
   [/Estrutura conceitual futura/u, "README ainda possui a seção 'Estrutura conceitual futura'"],
 ]);
 
-const TAURI_AREAS = Object.freeze(["steam", "overlay", "security", "modding", "monetization"]);
+const TAURI_AREAS = Object.freeze(["steam", "overlay", "security", "modding", "monetization", "storage", "net_ws_host"]);
 const FIRST_STAGE = 71;
 const LAST_STAGE = 89;
 
@@ -85,7 +85,7 @@ function tauriHandlers(libSource) {
   if (start < 0) return [];
   const end = libSource.indexOf("]", start);
   const block = libSource.slice(start, end);
-  return [...block.matchAll(/\b(steam|overlay|security|modding|monetization)::([a-z0-9_]+)/gu)].map((m) => ({
+  return [...block.matchAll(/\b(steam|overlay|security|modding|monetization|storage|net_ws_host)::([a-z0-9_]+)/gu)].map((m) => ({
     area: m[1],
     name: m[2],
   }));

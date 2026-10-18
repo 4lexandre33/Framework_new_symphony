@@ -85,7 +85,7 @@ afterAll(() => {
 });
 
 describe("Stage 89 — auditoria da documentação (repositório real)", () => {
-  it("passa sem violações e confirma 23 módulos e 56 comandos", async () => {
+  it("passa sem violações e confirma 23 módulos e 66 comandos", async () => {
     const result = await audit({ projectRoot: REAL_ROOT });
     expect(result.stage).toBe(89);
     expect(result.violations).toEqual([]);
@@ -94,7 +94,7 @@ describe("Stage 89 — auditoria da documentação (repositório real)", () => {
       fs.readFileSync(path.join(REAL_ROOT, "LAYER1_DOCUMENTATION_BASELINE_V1.json"), "utf8"),
     ) as { moduleCount: number; tauriCommandCount: number; layer1FinalGate: string };
     expect(baseline.moduleCount).toBe(23);
-    expect(baseline.tauriCommandCount).toBe(56);
+    expect(baseline.tauriCommandCount).toBe(66);
     expect(baseline.layer1FinalGate).toBe("closed-by-stage-90");
   });
 });
@@ -128,7 +128,7 @@ describe("Stage 89 — a auditoria detecta documentação errada", () => {
       name: "contagem de comandos Tauri errada",
       code: "DOC_TAURI_COMMAND_COUNT",
       file: "docs/layer1/native-tauri-steam.md",
-      change: (t) => t.replace(/\*\*56\*\*/u, "**55**"),
+      change: (t) => t.replace(/\*\*66\*\*/u, "**65**"),
     },
     {
       name: "afirmação obsoleta no README",
