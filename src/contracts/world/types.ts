@@ -3,6 +3,11 @@ import {
   defineEvent,
 } from "@core";
 
+import type {
+  PrefabCollection,
+  SceneDocumentError,
+} from "./scene-document";
+
 /* ============================================================================
  * TIPOS MATEMÁTICOS DE MUNDO
  * ========================================================================== */
@@ -310,4 +315,35 @@ export const UpdateEntityTransformCommand =
     UpdateEntityTransformRequest
   >(
     "game.world.update-entity-transform",
+  );
+
+/* ============================================================================
+ * SCENE DOCUMENT (cena em dados — ver ./scene-document.ts)
+ * ========================================================================== */
+
+export * from "./scene-document";
+
+/** Opções de `WorldApi.loadSceneDocument` (as de `loadScene` + prefabs). */
+export interface SceneDocumentLoadOptions
+  extends SceneLoadOptions {
+  /** Prefabs por id (`{ [prefabId]: doc }`) ou lista de PrefabDocument. */
+  readonly prefabs?: PrefabCollection;
+}
+
+export interface SceneDocumentErrorPayload {
+  /** `sceneId` do documento (null se ausente/inválido). */
+  readonly sceneId: string | null;
+  readonly errors: ReadonlyArray<SceneDocumentError>;
+}
+
+/**
+ * Emitido quando `loadSceneDocument` falha (validação, prefab inexistente,
+ * falha de `loadScene`). Nada é spawnado nesse caso.
+ */
+export const SceneDocumentErrorEvent =
+  defineEvent<
+    "game.world.scene-document-error",
+    SceneDocumentErrorPayload
+  >(
+    "game.world.scene-document-error",
   );
