@@ -94,6 +94,15 @@ export interface SteamCloudStorageStatus {
   /** `not-native` | `steam-unavailable` | `custom-backend`. */
   readonly reason?: string;
   readonly detail?: string;
+  /**
+   * Quando o Steam foi sondado pela última vez (ms do relógio do driver). A
+   * sonda é refeita nas operações depois de 30 s ou de uma falha remota.
+   */
+  readonly checkedAt?: number;
+  /** Saves gravados no fallback local (Steam fora) já levados à nuvem nesta sessão. */
+  readonly importedFromLocal?: number;
+  /** Saves ainda só no fallback local (falharam ao subir; nova tentativa na próxima sonda). */
+  readonly pendingLocalKeys?: number;
 }
 
 export type LoadGameStatus = "ok" | "recovered" | "missing" | "corrupted";

@@ -143,6 +143,36 @@ export interface SteamRemoteStorageBackendOptions {
   readonly bridge?: SteamRemoteStorageBridge;
   /** Padrão: `isTauriRuntime()`; false = nem tenta o Steam. */
   readonly nativeAvailable?: boolean;
+  /** Relógio (ms) para a nova sonda periódica. Padrão: `Date.now`. */
+  readonly now?: () => number;
+  /** Intervalo mínimo entre sondas, verificado nas chamadas (sem timers). Padrão 30 s. */
+  readonly reprobeIntervalMs?: number;
+}
+
+/** Intervalo padrão entre sondas do Steam (verificado nas operações). */
+export const STEAM_CLOUD_REPROBE_INTERVAL_MS = 30_000;
+
+/** Chaves do driver `steam_cloud` que podem estar no fallback local. */
+const STEAM_SAVE_KEY_PATTERN =
+  /^(?:ns:[^:]*:)?steam_cloud_save_/u;
+
+/** Índice do driver: otimização reconstruível (nunca copiado; removido ao importar). */
+const STEAM_INDEX_KEY_PATTERN =
+  /^(?:ns:[^:]*:)?steam_cloud_save_#index$/u;
+
+function errorDetail(error: unknown): string {
+  return typeof error === "string" ? error : String((error as { message?: unknown })?.message ?? error);
+}
+
+/** `metadata.timestamp` (ms) de um save gravado pelo driver; null se ilegível. */
+function savedTimestampMs(raw: string): number | null {
+  try {
+    const parsed = JSON.parse(raw) as { metadata?: { timestamp?: unknown } } | null;
+    const timestamp = parsed?.metadata?.timestamp;
+    return typeof timestamp === "number" && Number.isFinite(timestamp) && timestamp > 0 ? timestamp : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -151,15 +181,32 @@ export interface SteamRemoteStorageBackendOptions {
  * inicializado; caso contrário, fallback HONESTO para o backend local, com
  * o modo exposto em `getStatus()` (`StorageApi.getSteamCloudStatus`).
  *
- * O modo é decidido UMA vez (na primeira operação) e mantido na sessão, para
- * não misturar arquivos entre nuvem e disco local.
+ * Sonda e reconciliação:
+ * - A sonda (`steam_cloud_status`) é refeita, nas próprias operações (sem
+ *   timers), quando passou `reprobeIntervalMs` desde a última ou quando uma
+ *   operação remota falhou. Fora do app nativo (`not-native`) não sonda.
+ * - Sempre que a sonda encontra o Steam disponível e há saves do driver no
+ *   fallback local (gravados enquanto o Steam estava fora), eles são levados
+ *   para o Remote Storage ANTES da operação seguir: chave ausente na nuvem é
+ *   copiada; presente nos dois, vence a mais nova se os dois horários forem
+ *   conhecidos (`metadata.timestamp` do save × horário do arquivo no Steam),
+ *   senão vence a nuvem. A cópia local é então apagada (não há saves
+ *   divididos nem "ressurreição" de um save apagado na nuvem); o índice da
+ *   nuvem é removido para ser reconstruído. Chave que falha fica no local e
+ *   é tentada de novo na próxima sonda (`pendingLocalKeys` no status).
  */
 export class SteamRemoteStorageBackend
   implements AsyncKeyValueStorageBackend {
   private readonly fallback: AnyKeyValueStorageBackend;
   private readonly bridge: SteamRemoteStorageBridge;
   private readonly nativeAvailable: boolean;
+  private readonly now: () => number;
+  private readonly reprobeIntervalMs: number;
   private probing: Promise<SteamCloudStorageStatus> | null = null;
+  private probedAt: number | null = null;
+  private stale = false;
+  private importedFromLocal = 0;
+  private pendingLocalKeys = 0;
   private status: SteamCloudStorageStatus = {
     mode: "unknown",
     synced: false,
@@ -171,9 +218,14 @@ export class SteamRemoteStorageBackend
     this.fallback = options.fallback;
     this.bridge = options.bridge ?? tauriSteamRemoteStorageBridge;
     this.nativeAvailable = options.nativeAvailable ?? isTauriRuntime();
+    this.now = options.now ?? Date.now;
+    this.reprobeIntervalMs =
+      Number.isFinite(options.reprobeIntervalMs) && (options.reprobeIntervalMs as number) >= 0
+        ? (options.reprobeIntervalMs as number)
+        : STEAM_CLOUD_REPROBE_INTERVAL_MS;
   }
 
-  /** Estado atual (sonda o Steam se ainda não sondou). */
+  /** Estado atual (sonda o Steam se ainda não sondou ou se a sonda venceu). */
   public getStatus(): Promise<SteamCloudStorageStatus> {
     return this.probe();
   }
@@ -183,25 +235,41 @@ export class SteamRemoteStorageBackend
     return this.status;
   }
 
+  private needsProbe(): boolean {
+    if (this.probedAt === null) return true;
+    if (!this.nativeAvailable) return false;
+    return this.stale || this.now() - this.probedAt >= this.reprobeIntervalMs;
+  }
+
   private probe(): Promise<SteamCloudStorageStatus> {
     if (this.probing !== null) {
       return this.probing;
     }
 
-    this.probing = (async (): Promise<SteamCloudStorageStatus> => {
+    if (!this.needsProbe()) {
+      return Promise.resolve(this.status);
+    }
+
+    const run = (async (): Promise<SteamCloudStorageStatus> => {
+      this.stale = false;
+
       if (!this.nativeAvailable) {
+        this.probedAt = this.now();
         this.status = {
           mode: "local-fallback",
           synced: false,
           reason: "not-native",
+          checkedAt: this.probedAt,
         };
         return this.status;
       }
 
+      let next: SteamCloudStorageStatus;
+
       try {
         const dto = await this.bridge.status();
 
-        this.status = {
+        next = {
           mode: "remote-storage",
           // Com a nuvem desligada (conta ou app) o Steam grava só no disco
           // local e sincroniza quando for religada.
@@ -210,18 +278,157 @@ export class SteamRemoteStorageBackend
           appEnabled: dto.appEnabled === true,
         };
       } catch (error) {
-        this.status = {
+        next = {
           mode: "local-fallback",
           synced: false,
           reason: "steam-unavailable",
-          detail: typeof error === "string" ? error : String((error as { message?: unknown })?.message ?? error),
+          detail: errorDetail(error),
         };
       }
 
+      if (next.mode === "remote-storage") {
+        await this.importLocalFallback();
+      }
+
+      this.probedAt = this.now();
+      this.status = {
+        ...next,
+        checkedAt: this.probedAt,
+        importedFromLocal: this.importedFromLocal,
+        pendingLocalKeys: this.pendingLocalKeys,
+      };
       return this.status;
     })();
 
-    return this.probing;
+    this.probing = run;
+    void run.finally(() => {
+      if (this.probing === run) this.probing = null;
+    }).catch(() => undefined);
+    return run;
+  }
+
+  /** Falha de uma operação remota: a próxima chamada sonda o Steam de novo. */
+  private markRemoteFailure(): void {
+    this.stale = true;
+  }
+
+  private async fallbackKeys(): Promise<string[]> {
+    const fallback = this.fallback as Partial<AsyncKeyValueStorageBackend> & {
+      readonly length?: number;
+      key?(index: number): string | null;
+    };
+
+    if (typeof fallback.keys === "function") {
+      return await fallback.keys();
+    }
+
+    const keys: string[] = [];
+    const length = fallback.length ?? 0;
+
+    for (let index = 0; index < length; index += 1) {
+      const key = fallback.key?.(index) ?? null;
+
+      if (key !== null) {
+        keys.push(key);
+      }
+    }
+
+    return keys;
+  }
+
+  /** Leva para a nuvem os saves do driver que ficaram no fallback local. */
+  private async importLocalFallback(): Promise<void> {
+    let localKeys: string[];
+
+    try {
+      localKeys = (await this.fallbackKeys()).filter((key) => STEAM_SAVE_KEY_PATTERN.test(key));
+    } catch (error) {
+      console.warn("[Storage] Não foi possível listar o fallback local do Steam Cloud:", error);
+      return;
+    }
+
+    if (localKeys.length === 0) {
+      this.pendingLocalKeys = 0;
+      return;
+    }
+
+    let remoteFiles: Map<string, number>;
+
+    try {
+      remoteFiles = new Map((await this.bridge.listFiles()).map((file) => [file.name, file.timestamp]));
+    } catch (error) {
+      console.warn("[Storage] Steam Cloud indisponível para importar o fallback local:", error);
+      this.pendingLocalKeys = localKeys.length;
+      return;
+    }
+
+    let pending = 0;
+    let touched = false;
+
+    for (const key of localKeys) {
+      try {
+        if (STEAM_INDEX_KEY_PATTERN.test(key)) {
+          // Índice local é descartado: o da nuvem é reconstruído pela varredura.
+          await this.fallback.removeItem(key);
+          continue;
+        }
+
+        const name = encodeSteamCloudFileName(key);
+        const value = await this.fallback.getItem(key);
+
+        if (name === null || value === null) {
+          if (value === null) continue;
+          pending += 1;
+          continue;
+        }
+
+        const remoteSeconds = remoteFiles.get(name);
+        let upload = remoteSeconds === undefined;
+
+        if (!upload) {
+          const localMs = savedTimestampMs(value);
+          // Horário do Steam é em segundos; só sobrescreve se claramente mais novo.
+          upload =
+            localMs !== null &&
+            typeof remoteSeconds === "number" &&
+            remoteSeconds > 0 &&
+            localMs >= (remoteSeconds + 1) * 1000;
+        }
+
+        if (upload) {
+          const written = await this.bridge.writeFile(name, Array.from(new TextEncoder().encode(value)));
+
+          if (written !== true) {
+            pending += 1;
+            continue;
+          }
+
+          touched = true;
+          this.importedFromLocal += 1;
+        }
+
+        await this.fallback.removeItem(key);
+      } catch (error) {
+        pending += 1;
+        console.warn(`[Storage] Save local '${key}' não foi levado ao Steam Cloud (fica no disco local):`, error);
+      }
+    }
+
+    if (touched) {
+      for (const [name] of remoteFiles) {
+        const key = decodeSteamCloudFileName(name);
+
+        if (key !== null && STEAM_INDEX_KEY_PATTERN.test(key)) {
+          try {
+            await this.bridge.deleteFile(name);
+          } catch {
+            // índice é otimização; o driver tolera índice velho com varredura.
+          }
+        }
+      }
+    }
+
+    this.pendingLocalKeys = pending;
   }
 
   private async remote(): Promise<boolean> {
@@ -261,6 +468,7 @@ export class SteamRemoteStorageBackend
         ? null
         : new TextDecoder().decode(Uint8Array.from(data));
     } catch (error) {
+      this.markRemoteFailure();
       throw normalizeStorageError(error, "load", `Falha ao ler '${name}' do Steam Cloud.`);
     }
   }
@@ -277,6 +485,7 @@ export class SteamRemoteStorageBackend
     try {
       written = await this.bridge.writeFile(name, Array.from(new TextEncoder().encode(value)));
     } catch (error) {
+      this.markRemoteFailure();
       throw normalizeStorageError(error, "save", `Falha ao gravar '${name}' no Steam Cloud.`);
     }
 
@@ -302,33 +511,14 @@ export class SteamRemoteStorageBackend
     try {
       await this.bridge.deleteFile(name);
     } catch (error) {
+      this.markRemoteFailure();
       throw normalizeStorageError(error, "delete", `Falha ao remover '${name}' do Steam Cloud.`);
     }
   }
 
   public async keys(): Promise<string[]> {
     if (!(await this.remote())) {
-      const fallback = this.fallback as Partial<AsyncKeyValueStorageBackend> & {
-        readonly length?: number;
-        key?(index: number): string | null;
-      };
-
-      if (typeof fallback.keys === "function") {
-        return await fallback.keys();
-      }
-
-      const keys: string[] = [];
-      const length = fallback.length ?? 0;
-
-      for (let index = 0; index < length; index += 1) {
-        const key = fallback.key?.(index) ?? null;
-
-        if (key !== null) {
-          keys.push(key);
-        }
-      }
-
-      return keys;
+      return await this.fallbackKeys();
     }
 
     try {
@@ -345,6 +535,7 @@ export class SteamRemoteStorageBackend
 
       return keys;
     } catch (error) {
+      this.markRemoteFailure();
       throw normalizeStorageError(error, "list", "Falha ao listar o Steam Cloud.");
     }
   }

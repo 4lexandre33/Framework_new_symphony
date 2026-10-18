@@ -22,6 +22,9 @@ class FakeSteamCloud implements SteamRemoteStorageBridge {
   public accountEnabled = true;
   public refuseWrites = false;
   public statusCalls = 0;
+  /** Horário (s) por arquivo; ausente = 0 (desconhecido). */
+  public readonly timestamps = new Map<string, number>();
+  public failReads = false;
 
   public async status(): Promise<{ accountEnabled: boolean; appEnabled: boolean }> {
     this.statusCalls += 1;
@@ -30,7 +33,8 @@ class FakeSteamCloud implements SteamRemoteStorageBridge {
   }
 
   public async listFiles(): Promise<Array<{ name: string; size: number; timestamp: number; persisted: boolean }>> {
-    return [...this.files].map(([name, data]) => ({ name, size: data.length, timestamp: 0, persisted: true }));
+    if (!this.online) throw "Steam indisponível nesta sessão";
+    return [...this.files].map(([name, data]) => ({ name, size: data.length, timestamp: this.timestamps.get(name) ?? 0, persisted: true }));
   }
 
   public async writeFile(fileName: string, data: number[]): Promise<boolean> {
@@ -42,6 +46,7 @@ class FakeSteamCloud implements SteamRemoteStorageBridge {
   }
 
   public async readFile(fileName: string): Promise<number[] | null> {
+    if (this.failReads || !this.online) throw "falha de leitura";
     const data = this.files.get(fileName);
     return data ? Array.from(data) : null;
   }
@@ -75,7 +80,7 @@ describe("G131 Steam Remote Storage", () => {
     expect((await driver.listSaves()).map((m) => m.slotName)).toEqual(["Slot 1"]);
     expect(local.length).toBe(0);
     expect(cloud.files.size).toBeGreaterThanOrEqual(3); // principal + backup + índice
-    expect(await driver.getStatus()).toEqual({ mode: "remote-storage", synced: true, accountEnabled: true, appEnabled: true });
+    expect(await driver.getStatus()).toMatchObject({ mode: "remote-storage", synced: true, accountEnabled: true, appEnabled: true, importedFromLocal: 0, pendingLocalKeys: 0 });
 
     expect(await driver.deleteSave("Slot 1")).toBe(true);
     expect(await driver.loadGame("Slot 1")).toBeNull();
@@ -117,5 +122,72 @@ describe("G131 Steam Remote Storage", () => {
 
     const injected = new StorageService(ctx, { backend: new MemoryKeyValueStorageBackend() });
     expect(await injected.getSteamCloudStatus()).toMatchObject({ mode: "local-fallback", reason: "custom-backend" });
+  });
+
+  it("Steam volta durante a sessão: nova sonda nas chamadas e saves do fallback local sobem para a nuvem", async () => {
+    let clock = 1_000_000;
+    const cloud = new FakeSteamCloud();
+    cloud.online = false;
+    const local = new MemoryKeyValueStorageBackend();
+    const driver = new SteamCloudDriver({ localFallback: local, steamBridge: cloud, nativeAvailable: true, now: () => clock });
+    await driver.saveGame("offline", { gold: 5 });
+    expect(await driver.getStatus()).toMatchObject({ mode: "local-fallback", reason: "steam-unavailable" });
+    expect(local.length).toBeGreaterThan(0);
+
+    cloud.online = true;
+    clock += 10_000; // antes do intervalo: continua local (sem sondar)
+    expect(await driver.loadGame("offline")).toEqual({ gold: 5 });
+    expect(cloud.statusCalls).toBe(1);
+
+    clock += 30_000; // passou o intervalo: a próxima operação sonda e importa
+    expect(await driver.loadGame("offline")).toEqual({ gold: 5 });
+    expect(cloud.statusCalls).toBe(2);
+    expect(local.length).toBe(0); // nada dividido entre local e nuvem
+    expect([...cloud.files.keys()].some((name) => name.includes("offline"))).toBe(true);
+    expect((await driver.listSaves()).map((m) => m.slotName)).toEqual(["offline"]);
+    expect(await driver.getStatus()).toMatchObject({ mode: "remote-storage", importedFromLocal: 1, pendingLocalKeys: 0, checkedAt: clock });
+  });
+
+  it("conflito local × nuvem: vence o mais novo com horários conhecidos; sem horário vence a nuvem", async () => {
+    let clock = 5_000_000;
+    const cloud = new FakeSteamCloud();
+    const writer = new SteamCloudDriver({ localFallback: new MemoryKeyValueStorageBackend(), steamBridge: cloud, nativeAvailable: true, now: () => clock });
+    await writer.saveGame("a", { v: "nuvem-a" });
+    await writer.saveGame("b", { v: "nuvem-b" });
+    await writer.saveGame("c", { v: "nuvem-c" });
+    const nameOf = (slot: string) => [...cloud.files.keys()].find((n) => n.endsWith(`save_${slot}.sav`))!;
+    cloud.timestamps.set(nameOf("a"), 1_000); // nuvem velha (s) → local mais novo vence
+    cloud.timestamps.set(nameOf("b"), 9_000_000); // nuvem mais nova → nuvem vence
+    // c: sem horário na nuvem → nuvem vence
+
+    // Sessão anterior sem Steam gravou a, b e c no disco local (clock 5_000_000 ms).
+    const local = new MemoryKeyValueStorageBackend();
+    cloud.online = false;
+    const offline = new SteamCloudDriver({ localFallback: local, steamBridge: cloud, nativeAvailable: true, now: () => clock });
+    await offline.saveGame("a", { v: "local-a" });
+    await offline.saveGame("b", { v: "local-b" });
+    await offline.saveGame("c", { v: "local-c" });
+
+    cloud.online = true;
+    const next = new SteamCloudDriver({ localFallback: local, steamBridge: cloud, nativeAvailable: true, now: () => clock });
+    expect(await next.loadGame("a")).toEqual({ v: "local-a" });
+    expect(await next.loadGame("b")).toEqual({ v: "nuvem-b" });
+    expect(await next.loadGame("c")).toEqual({ v: "nuvem-c" });
+    expect(local.length).toBe(0);
+    expect(await next.getStatus()).toMatchObject({ importedFromLocal: 1, pendingLocalKeys: 0 });
+  });
+
+  it("falha remota força nova sonda; Steam caído passa para o fallback local", async () => {
+    const cloud = new FakeSteamCloud();
+    const local = new MemoryKeyValueStorageBackend();
+    const driver = new SteamCloudDriver({ localFallback: local, steamBridge: cloud, nativeAvailable: true });
+    await driver.saveGame("s", { a: 1 });
+    cloud.online = false;
+    await expect(driver.loadGame("s")).rejects.toBeDefined();
+    expect(cloud.statusCalls).toBe(1);
+    await driver.saveGame("t", { b: 2 }); // sonda de novo (falha anterior) → local
+    expect(cloud.statusCalls).toBe(2);
+    expect(await driver.getStatus()).toMatchObject({ mode: "local-fallback", reason: "steam-unavailable" });
+    expect(local.length).toBeGreaterThan(0);
   });
 });

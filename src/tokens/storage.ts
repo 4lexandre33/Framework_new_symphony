@@ -88,6 +88,11 @@ export interface StorageApi {
   /**
    * Onde o driver `steam_cloud` grava de fato (G131): Steam Remote Storage
    * quando o cliente Steam está ativo no app nativo; senão `local-fallback`.
+   * O Steam é sondado de novo (nas operações, sem timers) a cada 30 s e após
+   * falha remota; ao voltar, os saves gravados no fallback local são levados
+   * à nuvem (chave ausente → copiada; nos dois → vence a mais nova se os
+   * horários forem conhecidos, senão a nuvem) e apagados do local
+   * (`importedFromLocal` / `pendingLocalKeys`).
    */
   getSteamCloudStatus(): Promise<SteamCloudStorageStatus>;
 

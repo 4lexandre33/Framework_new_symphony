@@ -78,6 +78,8 @@ export class SteamCloudDriver {
               options.steamBridge,
             nativeAvailable:
               options.nativeAvailable,
+            now:
+              options.now,
           })
         : null;
 
