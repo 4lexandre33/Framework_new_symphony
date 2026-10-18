@@ -22,6 +22,14 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(steam_state)
         .manage(net_ws_host::WsHostState::default())
+        // G8: o host WebSocket pertence à página que o abriu. Reload/navegação
+        // da janela principal derruba o host órfão (o TS também trata
+        // `already-running` parando e tentando de novo uma vez).
+        .on_page_load(|webview, payload| {
+            if webview.label() == "main" && payload.event() == tauri::webview::PageLoadEvent::Started {
+                webview.app_handle().state::<net_ws_host::WsHostState>().shutdown();
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             steam::steam_runtime_status,
             steam::steam_is_initialized,

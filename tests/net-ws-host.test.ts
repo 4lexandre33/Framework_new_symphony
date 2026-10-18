@@ -344,4 +344,51 @@ describe("G8 host WebSocket nativo", () => {
     expect(transport.isHosting).toBe(false);
     transport.dispose();
   });
+
+  it("reload do WebView: host órfão (already-running) é parado e o listen tenta de novo uma vez", async () => {
+    install();
+    // Página anterior deixou o servidor nativo rodando, com um cliente.
+    await server.start(7777, "loopback", 4);
+    const orphanSocket = Object.create(FakeClientSocket.prototype) as FakeClientSocket;
+    Object.assign(orphanSocket, { url: "ws://127.0.0.1:7777", onclose: null });
+    server.accept(orphanSocket);
+    server.startCalls.length = 0;
+
+    const transport = new WebSocketTransport({ hostBridge: server });
+    expect(await transport.listen({ port: 7778, maxClients: 2 })).toBe(true);
+    expect(server.startCalls).toEqual([
+      [7778, "loopback", 2],
+      [7778, "loopback", 2],
+    ]);
+    expect(server.running).toEqual({ port: 7778, bind: "loopback", maxClients: 2 });
+    expect(server.sockets.size).toBe(0); // cliente órfão derrubado
+    expect(transport.lastHostError).toBeNull();
+    transport.dispose();
+
+    // Só UMA nova tentativa: se o segundo start também falhar, resolve false.
+    install();
+    let starts = 0;
+    const stubborn = {
+      ...server,
+      isAvailable: () => true,
+      start: async () => {
+        starts += 1;
+        throw { code: "already-running", message: "x" };
+      },
+      stop: async () => true,
+    } as unknown as NativeWsHostBridge;
+    const second = new WebSocketTransport({ hostBridge: stubborn });
+    expect(await second.listen()).toBe(false);
+    expect(starts).toBe(2);
+    expect(second.lastHostError?.code).toBe("already-running");
+    second.dispose();
+
+    // Outros erros não disparam a nova tentativa.
+    install();
+    server.failStart = { code: "bind-failed", message: "porta em uso" };
+    const third = new WebSocketTransport({ hostBridge: server });
+    expect(await third.listen()).toBe(false);
+    expect(server.startCalls).toHaveLength(1);
+    third.dispose();
+  });
 });

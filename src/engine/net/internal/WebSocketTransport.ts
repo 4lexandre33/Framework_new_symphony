@@ -175,16 +175,60 @@ export class WebSocketTransport
     this.hostGeneration =
       generation;
 
+    const port =
+      options.port ??
+      DEFAULT_WEBSOCKET_HOST_PORT;
+
+    const bind =
+      options.bind ??
+      "loopback";
+
+    const maxClients =
+      options.maxClients ??
+      16;
+
     try {
-      const info =
-        await this.hostBridge.start(
-          options.port ??
-            DEFAULT_WEBSOCKET_HOST_PORT,
-          options.bind ??
-            "loopback",
-          options.maxClients ??
-            16,
-        );
+      let info: NativeWsHostInfo;
+
+      try {
+        info =
+          await this.hostBridge.start(
+            port,
+            bind,
+            maxClients,
+          );
+      } catch (error) {
+        // O servidor nativo vive no processo Rust e sobrevive a um reload
+        // do WebView: um `already-running` aqui é (quase sempre) o host
+        // órfão da página anterior, que este transporte não conhece. Há
+        // no máximo um host por app, então o derrubamos e tentamos UMA vez.
+        if (
+          toHostError(error).code !==
+            "already-running" ||
+          this.disposed ||
+          generation !==
+            this.hostGeneration
+        ) {
+          throw error;
+        }
+
+        await this.hostBridge.stop();
+
+        if (
+          this.disposed ||
+          generation !==
+            this.hostGeneration
+        ) {
+          return false;
+        }
+
+        info =
+          await this.hostBridge.start(
+            port,
+            bind,
+            maxClients,
+          );
+      }
 
       if (
         this.disposed ||
