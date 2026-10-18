@@ -22,10 +22,24 @@ export interface AssetsApi {
   /**
    * Carrega um GLTF/GLB e devolve uma INSTÂNCIA independente: `scene` é um
    * clone (SkeletonUtils) do modelo em cache, que compartilha geometria,
-   * materiais e texturas. Cada chamada retém +1; chame `releaseAsset(url)`
-   * por instância. `getAsset(url)` devolve o modelo-base (não adicione à cena).
+   * materiais e texturas. Cada chamada retém +1; chame `releaseInstance(gltf)`
+   * (ou `releaseAsset(url)`) por instância. `getAsset(url)` devolve o
+   * modelo-base (não adicione à cena).
+   *
+   * G81: geometria/material/textura do cache ficam com
+   * `userData.renderRetain = true`, então `render.removeMeshFromScene(chave)`
+   * de uma instância NÃO os libera (outras instâncias continuam usando); a GPU
+   * é liberada quando a última referência sai do cache. Recursos que o jogo
+   * criou/clonou na instância continuam sendo liberados pelo render.
    */
   loadGLTF(url: string): Promise<any>;
+
+  /**
+   * Libera a referência de UMA instância devolvida por `loadGLTF` (aceita o
+   * objeto gltf ou o seu `scene`). Idempotente por instância; `false` se não
+   * é uma instância conhecida ou já foi liberada.
+   */
+  releaseInstance(instance: unknown): boolean;
 
   /**
    * Carrega uma textura (PNG, JPG, WebP) com progresso real. `colorSpace`
@@ -62,7 +76,8 @@ export interface AssetsApi {
   retainAsset(url: string, options?: TextureLoadOptions): boolean;
 
   /**
-   * Decrementa a contagem de referências de um asset. Se a contagem atingir zero, a VRAM e a memória RAM são liberadas.
+   * Decrementa a contagem de referências de um asset. Se a contagem atingir zero, a VRAM e a memória RAM são liberadas
+   * (inclusive a GPU compartilhada com instâncias GLTF/usuários da textura: remova-os da cena antes).
    * Liberar mais vezes do que reteve não tem efeito (nunca fica negativo).
    */
   releaseAsset(url: string, options?: TextureLoadOptions): void;

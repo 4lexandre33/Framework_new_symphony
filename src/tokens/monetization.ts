@@ -56,6 +56,18 @@ export interface MonetizationApi {
   startInventoryPurchase(sku: string, quantity?: number): Promise<boolean>;
   /** Itens (não moeda) concedidos por compras verificadas: sku → quantidade. */
   getEntitlements(): Readonly<Record<string, number>>;
+
+  /** `true` se a carteira tem persistência (plugin `persistWallet` ou `walletPersistence`). */
+  isWalletPersistent(): boolean;
+  /**
+   * Resolve quando a carteira salva foi restaurada (iniciada sozinha no boot;
+   * idempotente). O restaurado é SOMADO ao que já mudou em memória antes.
+   * `false` sem persistência ou se a leitura falhou (autosave desligado
+   * para não sobrescrever o save).
+   */
+  restoreWallet(): Promise<boolean>;
+  /** Salva agora (mesmo se a restauração falhou). `false` sem persistência/erro. */
+  saveWallet(): Promise<boolean>;
 }
 
 export const MonetizationToken = defineCapability<MonetizationApi>(

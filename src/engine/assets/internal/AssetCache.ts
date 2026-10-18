@@ -6,6 +6,12 @@ import type {
   CachedAssetRecord,
 } from "../../../tokens/assets";
 
+import {
+  isSharedGpuResource,
+  markSharedGpuResources,
+  unmarkSharedGpuResources,
+} from "./SharedGpuResources";
+
 interface DisposableLike {
   dispose(): void;
 }
@@ -169,6 +175,12 @@ export class AssetCache {
           1,
       },
     );
+
+    // G81: o cache é dono da GPU compartilhada com instâncias/usuários.
+    markSharedGpuResources(
+      data,
+      type,
+    );
   }
 
   public retain(
@@ -303,12 +315,20 @@ export class AssetCache {
       return;
     }
 
+    unmarkSharedGpuResources(
+      data,
+      type,
+    );
+
     if (
       type ===
       "texture"
     ) {
       if (
         hasDispose(
+          data,
+        ) &&
+        !isSharedGpuResource(
           data,
         )
       ) {
@@ -354,6 +374,10 @@ export class AssetCache {
             value,
           ) ||
         disposedResources.has(
+          value,
+        ) ||
+        // Ainda pertence a outro asset do cache (G81).
+        isSharedGpuResource(
           value,
         )
         ) {

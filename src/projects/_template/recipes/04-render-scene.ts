@@ -12,7 +12,7 @@ export function buildScene(render: Render3DApi): () => void {
 
   return (): void => {
     // Libera geometria/material/texturas que nenhum outro objeto registrado usa.
-    // Instâncias de GLTF do cache: removeMeshFromScene(chave, { disposeResources: false }) + assets.releaseAsset(url).
+    // Instâncias de GLTF do cache: removeMeshFromScene(chave) não libera a GPU compartilhada (G81); depois assets.releaseInstance(gltf).
     render.removeMeshFromScene("meu-jogo:cube");
   };
 }

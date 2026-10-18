@@ -10,6 +10,7 @@ import type {
   SaveGameOptions,
   SaveMigration,
   StorageBackendInfo,
+  SteamCloudStorageStatus,
 } from "../contracts/storage/types";
 
 export interface StorageApi {
@@ -76,6 +77,19 @@ export interface StorageApi {
 
   /** Backend em uso; `persistent: false` = memória (node/vitest/headless). */
   getBackendInfo(): StorageBackendInfo;
+
+  /**
+   * Backend REALMENTE em uso depois da sonda da 1ª operação (IndexedDB/arquivo
+   * podem cair para `local-storage`/`memory`, ex.: origem opaca).
+   * `getBackendInfo()` antes disso devolve o preferido.
+   */
+  resolveBackendInfo(): Promise<StorageBackendInfo>;
+
+  /**
+   * Onde o driver `steam_cloud` grava de fato (G131): Steam Remote Storage
+   * quando o cliente Steam está ativo no app nativo; senão `local-fallback`.
+   */
+  getSteamCloudStatus(): Promise<SteamCloudStorageStatus>;
 
   /**
    * Envia o perfil ao backend remoto. Sem backend configurado retorna false

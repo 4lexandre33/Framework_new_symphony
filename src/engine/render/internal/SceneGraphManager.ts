@@ -1,10 +1,11 @@
 import * as THREE from "three";
 
-import type {
-  AmbientLightConfig,
-  DirectionalLightConfig,
-  SceneLightConfig,
-  Vector3D,
+import {
+  RENDER_SHARED_RESOURCE,
+  type AmbientLightConfig,
+  type DirectionalLightConfig,
+  type SceneLightConfig,
+  type Vector3D,
 } from "../../../contracts/render/types";
 
 /**
@@ -22,7 +23,10 @@ interface DrawableLike extends THREE.Object3D {
 }
 
 function isRetained(target: { userData?: Record<string, unknown> }): boolean {
-  return target.userData?.[RETAIN_FLAG] === true;
+  return (
+    target.userData?.[RETAIN_FLAG] === true ||
+    (target as { [RENDER_SHARED_RESOURCE]?: unknown })[RENDER_SHARED_RESOURCE] === true
+  );
 }
 
 function hasDrawableResources(object: THREE.Object3D): object is DrawableLike {

@@ -3,12 +3,14 @@ import { type MonetizationApi } from "../../../tokens/monetization";
 import {
   ItemGrantedEvent,
   type MonetizationItemDTO,
+  type PersistedWalletState,
   type PurchaseGrants,
   type PurchaseProvider,
   type RegisterCatalogOptions,
   type SteamInventoryItemDTO,
   type TransactionReceiptDTO,
   type VirtualWalletDTO,
+  type WalletPersistence,
 } from "../../../contracts/monetization/types";
 import { StoreCatalogRegistry, validateCatalogItem } from "./StoreCatalogRegistry";
 import { InventoryReceiptValidator } from "./InventoryReceiptValidator";
@@ -21,8 +23,16 @@ const ORDER_ID_PATTERN = /^[A-Za-z0-9_.:-]{1,128}$/u;
 
 export interface MonetizationServiceOptions {
   readonly tauriDriver?: TauriMonetizationDriver;
-  /** Semeia os 2 SKUs de exemplo (padrão true, por compatibilidade). */
+  /**
+   * Semeia 2 SKUs de EXEMPLO (`gold_pack_small`/`gold_pack_large`) para
+   * demos. Padrão false (G135): o catálogo começa vazio e o jogo registra o seu.
+   */
   readonly seedDefaultCatalog?: boolean;
+  /**
+   * Persistência da carteira (saldos + entitlements). Com isto a carteira é
+   * restaurada no boot e salva a cada mudança (depois da restauração).
+   */
+  readonly walletPersistence?: WalletPersistence;
 }
 
 function errorMessage(error: unknown): string {
@@ -40,12 +50,137 @@ export class MonetizationService implements MonetizationApi {
   private cachedInventory: SteamInventoryItemDTO[] = [];
   private provider: PurchaseProvider | null = null;
   private steamIdResolver: (() => Promise<string | null>) | null = null;
+  private persistence: WalletPersistence | null;
+  private restorePromise: Promise<boolean> | null = null;
+  private restored = false;
+  private dirty = false;
+  private saving: Promise<boolean> | null = null;
 
   public constructor(private readonly ctx: PluginContext, options: MonetizationServiceOptions = {}) {
     this.tauriDriver = options.tauriDriver ?? new TauriMonetizationDriver();
-    if (options.seedDefaultCatalog !== false) {
+    if (options.seedDefaultCatalog === true) {
       this.seedDefaultCatalog();
     }
+    this.persistence = options.walletPersistence ?? null;
+    if (this.persistence !== null) {
+      void this.restoreWallet();
+    }
+  }
+
+  // ── persistência da carteira (G135) ──────────────────────────────────────
+
+  public isWalletPersistent(): boolean {
+    return this.persistence !== null;
+  }
+
+  public restoreWallet(): Promise<boolean> {
+    if (this.restorePromise === null) {
+      this.restorePromise = this.doRestore();
+    }
+    return this.restorePromise;
+  }
+
+  private async doRestore(): Promise<boolean> {
+    const persistence = this.persistence;
+    if (persistence === null) return false;
+
+    let raw: unknown;
+    try {
+      raw = await persistence.load();
+    } catch (error: unknown) {
+      console.warn("[Monetization] Falha ao restaurar a carteira; autosave desligado para não sobrescrever o save.", error);
+      return false;
+    }
+    if (this.persistence !== persistence) return false;
+
+    if (raw !== null && raw !== undefined) {
+      const state = raw as Partial<PersistedWalletState>;
+      if (typeof state !== "object" || state.version !== 1) {
+        console.warn("[Monetization] Carteira salva em formato desconhecido; ignorada (autosave desligado).");
+        return false;
+      }
+      const applied = this.wallet.mergeRestored(
+        typeof state.currencies === "object" && state.currencies !== null ? state.currencies : {},
+      );
+      if (typeof state.entitlements === "object" && state.entitlements !== null) {
+        for (const [sku, quantity] of Object.entries(state.entitlements)) {
+          if (!ORDER_ID_PATTERN.test(sku) || !isValidAmount(quantity)) continue;
+          const next = (this.entitlements.get(sku) ?? 0) + quantity;
+          if (Number.isSafeInteger(next)) this.entitlements.set(sku, next);
+        }
+      }
+      for (const [currencyId, delta] of Object.entries(applied)) {
+        this.ctx.events.emit("game.monetization.wallet-updated", {
+          currencyId,
+          newBalance: this.wallet.getBalance(currencyId),
+          delta,
+          reason: "restore",
+        });
+      }
+    }
+
+    this.restored = true;
+    // Mudanças feitas antes da restauração terminar agora vão para o save.
+    if (this.dirty) void this.flushSaves();
+    return true;
+  }
+
+  public async saveWallet(): Promise<boolean> {
+    if (this.persistence === null) return false;
+    // Nunca grava por cima do save antes de tentar restaurá-lo.
+    await this.restoreWallet();
+    if (this.persistence === null) return false;
+    this.dirty = true;
+    return await this.flushSaves();
+  }
+
+  private exportWalletState(): PersistedWalletState {
+    return {
+      version: 1,
+      currencies: this.wallet.getSnapshot().currencies,
+      entitlements: Object.fromEntries(this.entitlements),
+    };
+  }
+
+  /** Marca mudança; autosave só depois de restaurar (sem timers: coalesce). */
+  private markWalletChanged(): void {
+    if (this.persistence === null) return;
+    this.dirty = true;
+    if (this.restored) void this.flushSaves();
+  }
+
+  /** Grava até não haver mudança pendente; saves concorrentes se juntam. */
+  private flushSaves(): Promise<boolean> {
+    if (this.saving !== null) return this.saving;
+    const run = (async (): Promise<boolean> => {
+      let ok = true;
+      while (this.dirty && this.persistence !== null) {
+        this.dirty = false;
+        try {
+          await this.persistence.save(this.exportWalletState());
+          ok = true;
+        } catch (error: unknown) {
+          ok = false;
+          console.warn("[Monetization] Falha ao salvar a carteira.", error);
+          break;
+        }
+      }
+      return ok;
+    })();
+    this.saving = run;
+    void run.finally(() => {
+      if (this.saving !== run) return;
+      this.saving = null;
+      // Mudança chegou entre o fim do laço e este ponto.
+      if (this.dirty && this.restored) void this.flushSaves();
+    });
+    return run;
+  }
+
+  /** Desliga a persistência (dispose): nada mais é salvo, nem o `clear()`. */
+  public detachWalletPersistence(): void {
+    this.persistence = null;
+    this.dirty = false;
   }
 
   // ── catálogo (G13) ────────────────────────────────────────────────────────
@@ -95,6 +230,7 @@ export class MonetizationService implements MonetizationApi {
       return isValidCurrencyId(currencyId) ? this.wallet.getBalance(currencyId) : 0;
     }
     const newBalance = this.wallet.getBalance(currencyId);
+    this.markWalletChanged();
     this.ctx.events.emit("game.monetization.wallet-updated", {
       currencyId,
       newBalance,
@@ -107,6 +243,7 @@ export class MonetizationService implements MonetizationApi {
   public debitCurrency(currencyId: string, amount: number, reason = "debit"): boolean {
     const success = this.wallet.debit(currencyId, amount, reason);
     if (success) {
+      this.markWalletChanged();
       this.ctx.events.emit("game.monetization.wallet-updated", {
         currencyId,
         newBalance: this.wallet.getBalance(currencyId),
@@ -320,6 +457,7 @@ export class MonetizationService implements MonetizationApi {
       const next = (this.entitlements.get(grantedSku) ?? 0) + quantity;
       if (!Number.isSafeInteger(next)) continue;
       this.entitlements.set(grantedSku, next);
+      this.markWalletChanged();
       this.ctx.events.emit(ItemGrantedEvent.type, { sku: grantedSku, quantity, orderId });
     }
   }
@@ -385,7 +523,12 @@ export class MonetizationService implements MonetizationApi {
     return success;
   }
 
+  /**
+   * Zera o estado em memória. NÃO grava por si só (o save persistido fica);
+   * a próxima mudança da carteira, ou `saveWallet()`, grava o estado novo.
+   */
   public clear(): void {
+    this.dirty = false;
     this.wallet.clear();
     this.bridge.clear();
     this.validator.clear();

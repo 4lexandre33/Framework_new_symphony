@@ -48,8 +48,8 @@ try {
     await page.addScriptTag({ content: bundle });
     const result = await page.evaluate(() => window.storageGaps.opaqueOrigin());
     console.log("opaqueOrigin", JSON.stringify(result));
-    const expectedKind = result.webStorageThrows ? "memory" : "local-storage";
-    check("G12 backend escolhido conforme o Web Storage utilizável, sem lançar", result.info.kind === expectedKind && result.loaded?.a === 1, result);
+    const okKind = result.webStorageThrows ? ["memory"] : ["indexeddb", "local-storage"];
+    check("G12/G102 origem opaca: IndexedDB/Web Storage indisponíveis caem para o próximo backend, sem lançar", okKind.includes(result.info.kind) && result.loaded?.a === 1, result);
     await page.close();
   }
 
@@ -62,9 +62,23 @@ try {
   page.on("pageerror", (error) => errors.push(String(error)));
 
   await page.goto("http://storage.test/index.html");
+  const imported = await page.evaluate(() => window.storageGaps.legacyImport());
+  console.log("legacyImport", JSON.stringify(imported));
+  check("G102 navegador usa IndexedDB por padrão", imported.info.kind === "indexeddb" && imported.info.persistent === true, imported.info);
+  check("G102 saves antigos do localStorage importados para o IndexedDB", imported.loaded?.gold === 7 && imported.list.includes("antigo"), imported);
+  check("G102 novos saves não vão para o localStorage", !imported.localKeys.some((k) => k.includes("novo")), imported.localKeys);
+
+  const idbWritten = await page.evaluate(() => window.storageGaps.idbWrite());
+  check("G102 IndexedDB aceita saves de 8 MB (+ backup) acima da cota do Web Storage", idbWritten.info.kind === "indexeddb" && idbWritten.localKeys.length === 0, idbWritten);
+  await page.reload();
+  const idbRead = await page.evaluate(() => window.storageGaps.idbRead());
+  console.log("idbRead", JSON.stringify({ ...idbRead }));
+  check("G102 IndexedDB persiste entre recarregamentos", idbRead.first === "r" && idbRead.size === 8 * 1024 * 1024 && idbRead.list.includes("grande"), idbRead);
+  check("G102 IndexedDB delete", idbRead.deleted === true && idbRead.after === null, idbRead);
+
   const written = await page.evaluate(() => window.storageGaps.persistWrite());
   console.log("persistWrite", JSON.stringify(written));
-  check("G12 Web Storage real é o backend persistente", written.info.kind === "local-storage" && written.info.persistent === true, written.info);
+  check("G12 Web Storage real (injetado) é persistente", written.info.kind === "custom" && written.info.persistent === true, written.info);
   check(
     "G102 chaves com namespace; backup e índice internos",
     written.keys.every((k) => k.startsWith("ns:meu-jogo:")) && written.keys.some((k) => k.includes("#bak1:")) && written.keys.some((k) => k.endsWith("#index")),

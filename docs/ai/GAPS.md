@@ -13,7 +13,7 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 - render: interpolação opcional, desenho DEPOIS dos handlers de render, dispose com contagem de referências (`renderRetain`, `disposeResources:false`), API de câmera/viewport, `dispose()` do token é no-op, eventos de perda de contexto, luzes extras e foco de sombra (G22, G40–G44).
 - camera: sem câmera virtual o render não é sobrescrito; colisão do braço ignora o alvo; `priority` decide a ativa (com evento); `followTargetId`/`lookAtTargetId`; blend do descritor; trauma global; alvo copiado; oclusão por evento + fade automático opcional (`occlusionFade`) (G4, G45–G48).
 - input: bordas por tick (`isActionPressedInTick`), roda (`getWheelDelta`/`WheelUp`), vários gamepads/analógicos, filtros de foco, `preventDefault` das teclas mapeadas, eventos de pointer lock (G5, G49–G53).
-- assets: `loadGLTF` clona por instância, `loadAudio` não espera gesto, `clearCache` respeita refcount, `loadJSON`/`loadBinary`/`preloadManifest`, URL normalizada, `colorSpace` (G79–G83; G81 parcial).
+- assets: `loadGLTF` clona por instância, `loadAudio` não espera gesto, `clearCache` respeita refcount, `loadJSON`/`loadBinary`/`preloadManifest`, URL normalizada, `colorSpace`, GPU compartilhada do cache marcada (`RENDER_SHARED_RESOURCE`) e `releaseInstance` (G79–G83).
 - audio: handles por som, canal posicional, crossfade termina no fim, `stopMusic`, mudo sem Web Audio, limite de vozes, desbloqueio automático no 1º gesto (G20, G27, G84–G87).
 - vfx: partículas aparecem e não vazam, emissor móvel com duração/burst, decals projetados com id, pós-processamento real, presets registráveis (G9, G19, G28, G88–G91).
 - sprites: sprites, tilemap (1 draw call, UV por tile), animação por quadros, parallax e atlas trimmed/rotated funcionam (G92–G95).
@@ -23,46 +23,30 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 - world: `updateEntityTransform`/`patchEntity`, snapshots imutáveis, spawn tolerante, octree cresce além dos limites e é atualizada incrementalmente, distâncias reais, deserialize valida antes, cena pré-carrega assets (G6, G64–G68).
 - ai: árvores por agente, várias navmeshes/áreas, teleporte, linha de visão filtrada, estímulo sonoro real, clamp 3D, portais tolerantes com raio, funnel, separação, chegada única, `requestAgentPath` puro, colisão opcional com a física (`physicsCollision`: collide-and-slide de cápsula) (G7, G25, G69–G73).
 - anim: reinício (`restart`), exit time, `clip-finished`, ordem livre, sprites pela FSM, relógio único (G74–G78).
-- scripting: keyframes executam (câmera/áudio/anim/vfx/diálogo) + evento por keyframe, zonas automáticas (`trackEntity`), variáveis de diálogo, árvores validadas, ciclo de quest completo, exits de zona, varredura exata (segmento × caixa/esfera/cilindro) e rotação (G10, G123–G129).
-- storage: memória automática em node, perfil online honesto/plugável, backups + HMAC + `loadGameDetailed`, namespace, slots seguros, índice, cota, migrações (G12, G100–G103; G102 parcial).
+- scripting: keyframes executam (câmera/áudio/anim/vfx/diálogo) + evento por keyframe, zonas automáticas (`trackEntity`), variáveis de diálogo, árvores validadas, ciclo de quest completo, exits de zona, varredura e rotação (G10, G123–G128; G129 parcial).
+- storage: memória automática em node, perfil online honesto/plugável, backups + HMAC + `loadGameDetailed`, namespace, slots seguros, índice, cota, migrações, backends IndexedDB (navegador) e arquivo (Tauri) automáticos com importação do localStorage antigo; `steam_cloud` usa o Steam Remote Storage com fallback local explícito (`getSteamCloudStatus`) (G12, G100–G103, G131).
 - net: host sem Steam (loopback `mock`, `broadcast_channel`), handshake, heartbeat, fragmentação, snapshot automático, RTT/perda reais, canais 0..255, pump em Worker com a aba oculta (host não derruba clientes; a simulação continua parada) (G8 parcial, G104–G108, G130).
 - steam: `game.steam.net` FORNECIDO (lobbies, busca, membros, convites, P2P), eventos nativos, stats float, `checkAvailability` no boot (G26, G109–G112).
 - security: captura automática de erros, FPS real em janela móvel, heurísticas de speedhack, dump com resultado real e limite por sessão (G16, G113–G115).
 - modding: sandbox de scripts em Worker, mods do jogo offline (`installMod`), lista de instalados, lista de ativos persistida, `clear` seguro, fluxo real do Workshop (G14, G116–G118; publicar só nativo).
-- monetization: catálogo registrável, compra só por `PurchaseProvider` do servidor (nada de ouro falso), carteira validada, checkout do Steam Inventory (G13, G119, G120).
+- monetization: catálogo registrável, compra só por `PurchaseProvider` do servidor (nada de ouro falso), carteira validada, checkout do Steam Inventory, carteira persistente opcional (`persistWallet`), catálogo de exemplo só por opt-in (G13, G119, G120; G135 parcial: servidor obrigatório por design).
 - overlay: passthrough manual/automático real com raycast 3D, modos aplicam flags nativas, erros expostos, `restoreWindow` (G15, G121).
 
 ## Transversais
 | # | G | Tipo | Problema | Contorno |
 |---|---|---|---|---|
 | G31 | B | DESIGN | Objetos reutilizados de propósito (sem alocação): payloads de `game.loop.tick`/`render`, `getInterpolatedState`, `getViewportDimensions`, getters de input (`getMouseDelta`, `getWheelDelta`, `getPointerPosition`…), contexto das ações de IA | Leia na hora; para guardar use `copyTickPayload`/`copyRenderPayload` (contracts/game-loop), `copyEntitySnapshot` (contracts/net), `copyViewportDimensions` (contracts/render). Em DEV, mutar o payload do tick é detectado e revertido |
-| NV | M | NV | Steam real (conquistas, stats, lobbies, P2P), transporte `steam_p2p`, Workshop (download/publicação UGC), Steam Inventory/MicroTxn, flags nativas do overlay, merge do `desktop.json` e gravação de crash dump em disco: implementados e testados com bridges falsas/Chromium, NÃO com cliente Steam nem janela Tauri reais | O jogo deve funcionar sem nada disso (tudo resolve `false`/`null`/`[]` e não lança); valide no app nativo antes de prometer o recurso; registre o observado no ENGINE_REPORT |
+| NV | M | NV | Steam real (conquistas, stats, lobbies, P2P), transporte `steam_p2p`, Workshop (download/publicação UGC), Steam Inventory/MicroTxn, Steam Remote Storage (`steam_cloud`), backend de arquivos do app (`storage_file_*`), flags nativas do overlay, merge do `desktop.json` e gravação de crash dump em disco: implementados e testados com bridges falsas/Chromium, NÃO com cliente Steam nem janela Tauri reais | O jogo deve funcionar sem nada disso (tudo resolve `false`/`null`/`[]` e não lança); valide no app nativo antes de prometer o recurso; registre o observado no ENGINE_REPORT |
 
 ## physics
 | # | G | Tipo | Problema | Contorno |
 |---|---|---|---|---|
 | G37 | B | DESIGN | `step(dt)` manual fora de [1/240, 1] s lança RangeError (a engine nunca chama assim; o tick é 1..240 Hz) | Não chame `step()`; a engine já avança no tick |
 
-## render / assets
-| # | G | Tipo | Problema | Contorno |
-|---|---|---|---|---|
-| G81 | M | RISCO | Clones de `loadGLTF` compartilham geometria/material/textura com o modelo do cache, que não está na cena: `removeMeshFromScene(chave)` de um clone LIBERA esses recursos ainda usados pelo cache/outros clones (o three os reenvia à GPU, com custo) | Para instâncias de GLTF: `removeMeshFromScene(chave, { disposeResources: false })` + `assets.releaseAsset(url)` por instância |
-
-
-
 ## ai
 | # | G | Tipo | Problema | Contorno |
 |---|---|---|---|---|
 | — | B | RISCO | Percepção padrão: visão 20 u / 90°, audição = alvo a ≤ 10 u (sem linha de visão) | Ajuste `perceptionConfig` (ex.: `hearingRadius: 0`) |
-
-
-
-
-## storage
-| # | G | Tipo | Problema | Contorno |
-|---|---|---|---|---|
-| G102 | M | LACUNA | No app o backend é o `localStorage` do WebView (síncrono, cota ~5 MB); serialização JSON síncrona; não há backend IndexedDB/arquivo | Saves pequenos (sem blobs); autosave em momentos parados; capture `quota-exceeded` |
-| G131 | M | LACUNA | Driver `steam_cloud` NÃO usa o Steam Remote Storage: é o mesmo `localStorage` com prefixo `steam_cloud_save_` | Trate como local; não prometa sincronização na nuvem |
 
 ## net
 | # | G | Tipo | Problema | Contorno |
@@ -77,4 +61,4 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 ## monetization
 | # | G | Tipo | Problema | Contorno |
 |---|---|---|---|---|
-| G135 | B | LACUNA | Carteira só em memória (não persiste); catálogo começa com 2 SKUs de exemplo; compra real exige um `PurchaseProvider` do SERVIDOR do jogo (sem ele `initPurchase` resolve `null`) | Salve o saldo via `game.storage` e recredite no boot; `registerCatalog(itens, { replace: true })`; sem servidor, nada de dinheiro real |
+| G135 | B | DESIGN | Compra com dinheiro real exige um `PurchaseProvider` do SERVIDOR do jogo (sem ele `initPurchase` resolve `null` + `purchase-failed` "unsupported"). A carteira persistida (`persistWallet`) fica no cliente e é editável | Sem servidor, nada de dinheiro real; para moeda paga, o servidor é a fonte da verdade e reconcilia o saldo |

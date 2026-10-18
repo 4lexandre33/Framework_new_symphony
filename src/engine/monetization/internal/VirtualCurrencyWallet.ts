@@ -77,6 +77,23 @@ export class VirtualCurrencyWallet {
     };
   }
 
+  /**
+   * Soma saldos restaurados ao estado atual (G135). Entradas inválidas ou que
+   * estourariam o inteiro seguro são ignoradas. Devolve o que foi aplicado.
+   */
+  public mergeRestored(balances: Readonly<Record<string, unknown>>): Record<string, number> {
+    const applied: Record<string, number> = {};
+    for (const [currencyId, amount] of Object.entries(balances)) {
+      if (!isValidCurrencyId(currencyId) || !isValidAmount(amount)) continue;
+      const updated = this.getBalance(currencyId) + amount;
+      if (!Number.isSafeInteger(updated)) continue;
+      this.currencies.set(currencyId, updated);
+      this.recordTransaction(currencyId, amount, updated, "restore");
+      applied[currencyId] = amount;
+    }
+    return applied;
+  }
+
   public getHistory(): ReadonlyArray<WalletTransactionEntry> {
     return this.transactionHistory;
   }

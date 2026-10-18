@@ -65,13 +65,35 @@ export interface SaveConfiguration {
   readonly requireSignature?: boolean;
 }
 
-export type StorageBackendKind = "local-storage" | "memory" | "custom";
+/**
+ * Backend dos saves. Seleção automática: app Tauri → `tauri-file`
+ * (`<app_data_dir>/storage/saves/`); navegador → `indexeddb`; senão
+ * `local-storage`; senão `memory` (não persistente).
+ */
+export type StorageBackendKind = "tauri-file" | "indexeddb" | "local-storage" | "memory" | "custom";
 
 export interface StorageBackendInfo {
   readonly kind: StorageBackendKind;
   /** false = os dados somem ao fechar (backend em memória). */
   readonly persistent: boolean;
   readonly namespace: string | null;
+}
+
+/**
+ * Estado do driver `steam_cloud` (G131). `remote-storage` = grava no Steam
+ * Remote Storage (ISteamRemoteStorage); `synced` só é true se a nuvem estiver
+ * ligada para a conta E para o app (senão o Steam guarda localmente e
+ * sincroniza depois). `local-fallback` = sem Steam (navegador, app sem cliente
+ * Steam ou build sem a feature `steam`): os saves vão para o backend local.
+ */
+export interface SteamCloudStorageStatus {
+  readonly mode: "unknown" | "remote-storage" | "local-fallback";
+  readonly synced: boolean;
+  readonly accountEnabled?: boolean;
+  readonly appEnabled?: boolean;
+  /** `not-native` | `steam-unavailable` | `custom-backend`. */
+  readonly reason?: string;
+  readonly detail?: string;
 }
 
 export type LoadGameStatus = "ok" | "recovered" | "missing" | "corrupted";
