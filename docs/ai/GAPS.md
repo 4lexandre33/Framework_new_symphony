@@ -24,7 +24,7 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 - ai: árvores por agente, várias navmeshes/áreas, teleporte, linha de visão filtrada, estímulo sonoro real, clamp 3D, portais tolerantes com raio, funnel, separação, chegada única, `requestAgentPath` puro (G7, G25, G69–G73; G73 parcial).
 - anim: reinício (`restart`), exit time, `clip-finished`, ordem livre, sprites pela FSM, relógio único (G74–G78).
 - scripting: keyframes executam (câmera/áudio/anim/vfx/diálogo) + evento por keyframe, zonas automáticas (`trackEntity`), variáveis de diálogo, árvores validadas, ciclo de quest completo, exits de zona, varredura e rotação (G10, G123–G128; G129 parcial).
-- storage: memória automática em node, perfil online honesto/plugável, backups + HMAC + `loadGameDetailed`, namespace, slots seguros, índice, cota, migrações, backends IndexedDB (navegador) e arquivo (Tauri) automáticos com importação do localStorage antigo (G12, G100–G103).
+- storage: memória automática em node, perfil online honesto/plugável, backups + HMAC + `loadGameDetailed`, namespace, slots seguros, índice, cota, migrações, backends IndexedDB (navegador) e arquivo (Tauri) automáticos com importação do localStorage antigo; `steam_cloud` usa o Steam Remote Storage com fallback local explícito (`getSteamCloudStatus`) (G12, G100–G103, G131).
 - net: host sem Steam (loopback `mock`, `broadcast_channel`), handshake, heartbeat, fragmentação, snapshot automático, RTT/perda reais, canais 0..255 (G8 parcial, G104–G108).
 - steam: `game.steam.net` FORNECIDO (lobbies, busca, membros, convites, P2P), eventos nativos, stats float, `checkAvailability` no boot (G26, G109–G112).
 - security: captura automática de erros, FPS real em janela móvel, heurísticas de speedhack, dump com resultado real e limite por sessão (G16, G113–G115).
@@ -37,7 +37,7 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 |---|---|---|---|---|
 | G31 | B | DESIGN | Objetos reutilizados de propósito (sem alocação): payloads de `game.loop.tick`/`render`, `getInterpolatedState`, `getViewportDimensions`, getters de input (`getMouseDelta`, `getWheelDelta`, `getPointerPosition`…), contexto das ações de IA | Leia na hora; para guardar use `copyTickPayload`/`copyRenderPayload` (contracts/game-loop), `copyEntitySnapshot` (contracts/net), `copyViewportDimensions` (contracts/render). Em DEV, mutar o payload do tick é detectado e revertido |
 | G130 | M | RISCO | Aba/janela oculta suspende o loop E o pump da rede (que roda no `game.loop.render`): um HOST oculto para a simulação e os clientes caem por timeout (5 s) | Em multiplayer avise o host para não minimizar; se preciso `net.configure({ peerTimeoutMs })` maior; em solo trate `visibilitychange` (menu de pausa) |
-| NV | M | NV | Steam real (conquistas, stats, lobbies, P2P), transporte `steam_p2p`, Workshop (download/publicação UGC), Steam Inventory/MicroTxn, flags nativas do overlay, merge do `desktop.json` e gravação de crash dump em disco: implementados e testados com bridges falsas/Chromium, NÃO com cliente Steam nem janela Tauri reais | O jogo deve funcionar sem nada disso (tudo resolve `false`/`null`/`[]` e não lança); valide no app nativo antes de prometer o recurso; registre o observado no ENGINE_REPORT |
+| NV | M | NV | Steam real (conquistas, stats, lobbies, P2P), transporte `steam_p2p`, Workshop (download/publicação UGC), Steam Inventory/MicroTxn, Steam Remote Storage (`steam_cloud`), backend de arquivos do app (`storage_file_*`), flags nativas do overlay, merge do `desktop.json` e gravação de crash dump em disco: implementados e testados com bridges falsas/Chromium, NÃO com cliente Steam nem janela Tauri reais | O jogo deve funcionar sem nada disso (tudo resolve `false`/`null`/`[]` e não lança); valide no app nativo antes de prometer o recurso; registre o observado no ENGINE_REPORT |
 
 ## physics
 | # | G | Tipo | Problema | Contorno |
@@ -79,11 +79,6 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 | # | G | Tipo | Problema | Contorno |
 |---|---|---|---|---|
 | G134 | B | RISCO | ESC fecha o modal do topo quando `closable !== false` (padrão da engine; o jogo não muda as opções do plugin) | Modal que o jogo controla pelo teclado (ex.: pausa no ESC): `closable: false`; ou trate `game.ui.modal-closed` com `reason: "escape"` |
-
-## storage
-| # | G | Tipo | Problema | Contorno |
-|---|---|---|---|---|
-| G131 | M | LACUNA | Driver `steam_cloud` NÃO usa o Steam Remote Storage: é o mesmo `localStorage` com prefixo `steam_cloud_save_` | Trate como local; não prometa sincronização na nuvem |
 
 ## net
 | # | G | Tipo | Problema | Contorno |

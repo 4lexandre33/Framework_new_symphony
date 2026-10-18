@@ -14,6 +14,7 @@ import type {
   StorageBackendInfo,
   StorageBackendKind,
   StorageDriverType,
+  SteamCloudStorageStatus,
 } from "../../../contracts/storage/types";
 
 import type {
@@ -227,13 +228,25 @@ export class StorageService
           dependencies.now,
       });
 
+    // Backend escolhido pela engine → steam_cloud usa o Steam Remote Storage
+    // e cai nele só sem Steam (G131); backend injetado → usado como está.
     this.steamDriver =
       dependencies.steamDriver ??
-      new SteamCloudDriver({
-        backend,
-        now:
-          dependencies.now,
-      });
+      new SteamCloudDriver(
+        dependencies.backend ===
+          undefined
+          ? {
+              localFallback:
+                backend,
+              now:
+                dependencies.now,
+            }
+          : {
+              backend,
+              now:
+                dependencies.now,
+            },
+      );
 
     this.cloudDbDriver =
       dependencies.cloudDbDriver ??
@@ -497,6 +510,12 @@ export class StorageService
       namespace:
         this.config.namespace,
     };
+  }
+
+  public async getSteamCloudStatus():
+    Promise<SteamCloudStorageStatus> {
+    return await this.steamDriver
+      .getStatus();
   }
 
   public async resolveBackendInfo():

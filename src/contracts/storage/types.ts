@@ -79,6 +79,23 @@ export interface StorageBackendInfo {
   readonly namespace: string | null;
 }
 
+/**
+ * Estado do driver `steam_cloud` (G131). `remote-storage` = grava no Steam
+ * Remote Storage (ISteamRemoteStorage); `synced` só é true se a nuvem estiver
+ * ligada para a conta E para o app (senão o Steam guarda localmente e
+ * sincroniza depois). `local-fallback` = sem Steam (navegador, app sem cliente
+ * Steam ou build sem a feature `steam`): os saves vão para o backend local.
+ */
+export interface SteamCloudStorageStatus {
+  readonly mode: "unknown" | "remote-storage" | "local-fallback";
+  readonly synced: boolean;
+  readonly accountEnabled?: boolean;
+  readonly appEnabled?: boolean;
+  /** `not-native` | `steam-unavailable` | `custom-backend`. */
+  readonly reason?: string;
+  readonly detail?: string;
+}
+
 export type LoadGameStatus = "ok" | "recovered" | "missing" | "corrupted";
 
 export interface LoadGameResult<T> {
