@@ -26,7 +26,7 @@ import {
 } from "../../tools/mcp/src/core/parsers.ts";
 import { createRepoPaths } from "../../tools/mcp/src/core/paths.ts";
 import { ALL_ORDER, extractGateResult, findAuditScript, gateCommand, RESULT_MARKER, runSingleGate } from "../../tools/mcp/src/gates/definitions.ts";
-import { createTestClient, makeTempRepo, REPO_ROOT, type TempRepo, type TestClient } from "./harness.ts";
+import { createTestClient, HAS_GIT, makeTempRepo, REPO_ROOT, type TempRepo, type TestClient } from "./harness.ts";
 
 const FIX = path.join(REPO_ROOT, "tests", "mcp", "fixtures", "gates");
 const fx = (name: string): string => readFileSync(path.join(FIX, name), "utf8");
@@ -227,7 +227,7 @@ describe("gate_run / gate_result (repo real)", () => {
     expect(progress[0]).toContain("tsc");
   }, 600_000);
 
-  it("diff-check como job: jobId → job termina → gate_result estruturado", async () => {
+  it.skipIf(!HAS_GIT)("diff-check como job: jobId → job termina → gate_result estruturado", async () => {
     const started = await t.callTool("gate_run", { gate: "diff-check", async: true });
     expect(started).toMatchObject({ async: true, gate: "diff-check", command: "git diff --check" });
     expect(started.jobId).toMatch(/^job-/);

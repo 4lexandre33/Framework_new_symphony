@@ -36,7 +36,7 @@ versão 1.0.0 · GERADO por `npm run ai-manual:generate` (não edite à mão; `n
 | Render Runtime | render | game.render | - | 3067 |
 | Multiplayer Network & State Replication | net | game.net | game.loop | 3107 |
 
-Tamanho: RULES ≈ 2232, CORE ≈ 3010, RECIPES ≈ 7792, todos os módulos ≈ 61955 tokens (estimativa: caracteres/3,6).
+Tamanho: RULES ≈ 2405, CORE ≈ 3010, RECIPES ≈ 7792, todos os módulos ≈ 61955 tokens (estimativa: caracteres/3,6).
 
 ## Atalhos por tipo de jogo
 - 3D com física: render, camera, physics, input, assets, audio, ui, game-loop.

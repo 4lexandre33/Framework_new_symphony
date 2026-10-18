@@ -201,13 +201,18 @@ erros = `false` + evento `game.world.scene-document-error`). Receita nova
 ## 4. Erros padronizados (`code`)
 `INVALID_INPUT`, `NOT_FOUND`, `PATH_OUTSIDE_REPO`, `WRITE_FORBIDDEN`, `READONLY`,
 `PROJECT_EXISTS`, `COMMAND_FAILED`, `TIMEOUT`, `JOB_LIMIT`, `NO_RUNTIME`,
-`BRIDGE_TIMEOUT`, `BRIDGE_ERROR`, `PLAYWRIGHT_MISSING`, `SCHEMA_INVALID`.
+`BRIDGE_TIMEOUT`, `BRIDGE_ERROR`, `PLAYWRIGHT_MISSING`, `SCHEMA_INVALID`,
+`COMMAND_NOT_ALLOWED`, `INTERNAL`.
+
+> Implementado: 75 tools. Além da tabela: `engine_ping` (teste de conexão),
+> `gate_result` (resultado estruturado de um gate rodado como job) e
+> `loop_control` com `action: "stats"`.
 
 ## 5. Critérios de aceite (todos obrigatórios)
 1. `npm run mcp` sobe e responde `tools/list` com todas as tools da seção 3.
 2. Cada tool tem teste em `tests/mcp/` via cliente MCP em memória (sucesso + erro).
 3. e2e: `runtime_launch` (projeto `physics-sandbox`, headless) → `kernel_inspect`
-   `status=ready` → `world_spawn` → `world_entities` contém a entidade →
+   `status=running` → `world_spawn` → `world_entities` contém a entidade →
    `screenshot` devolve PNG não vazio → `scene_load_live` de uma cena de teste →
    `runtime_stop` limpa processos.
 4. `npm run build` de produção NÃO contém o DevBridge (teste procura a string

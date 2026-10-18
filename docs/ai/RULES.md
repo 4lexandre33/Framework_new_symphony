@@ -45,6 +45,9 @@ npm run project:isolation    # engine continua verde sem os jogos
 ```
 Testes do jogo ficam DENTRO da pasta do jogo (`src/projects/<jogo>/*.test.ts`), com fakes parciais das APIs dos tokens (receita 11). Nunca desative guardrails nem mexa em baselines para obter verde.
 
+## MCP da engine (se o seu cliente tiver)
+Servidor MCP `engine` (`.mcp.json`, `npm run mcp`; guia em `docs/mcp/README.md`): manual (`docs_read`, `module_api`, `gaps_list`), criar/checar jogo (`project_create`, `project_check`), gates (`gate_run`), jogo rodando (`runtime_launch` → `kernel_inspect`, `world_*`, `screenshot`, `logs_tail`), cenas JSON (`scene_*`, `prefab_*`, `assets_validate`) e build/Steam (`build_*`, `steam_*`). Ele só escreve em `src/projects/<jogo>/`, `docs/games/<jogo>/` e `src-tauri/gen/`; as regras acima continuam valendo.
+
 ## Quem atualiza o quê (verificado nos plugins)
 | módulo | a engine chama sozinha | o jogo precisa |
 |---|---|---|
@@ -68,6 +71,7 @@ Antes de planejar, leia `docs/ai/GAPS.md`: lista curta do que ainda falta (host 
 - `docs/ai/modules/*.md` — API pública de cada módulo (token + tipos + eventos + comandos + notas).
 - `docs/ai/RECIPES.md` — trechos que compilam (fonte: `src/projects/_template/recipes/`).
 - `docs/ai/GAPS.md` — lacunas abertas e contornos.
+- `docs/mcp/README.md` — servidor MCP da engine (ferramentas para IA).
 
 ## Ordem de boot do kernel (verificado em src/core/runtime/boot.ts)
 1. `setup(ctx)` de todos os plugins, em ordem topológica de `dependsOn` (dependências primeiro).

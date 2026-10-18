@@ -1,7 +1,7 @@
 {
   "version": "20.0.0",
   "moduleMapSchemaVersion": 1,
-  "lockedAt": "2026-10-18T23:00:26.818Z",
+  "lockedAt": "2026-10-18T23:56:09.110Z",
   "files": {
     "src-tauri/Cargo.toml": "9134e9599f6a955ca13982a788ca4ee52076d4c8af4fa4d7a21505a27f4cce4d",
     "src-tauri/src/lib.rs": "dffb1dca96d00a8da889922fbe28f324c0e35f8779197af1ce5ee2f242a1857c",
