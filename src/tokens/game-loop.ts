@@ -34,6 +34,21 @@ export interface GameLoopApi {
    * Não afeta a taxa de simulação (fixed tick).
    */
   setTargetFps(framesPerSecond: number): boolean;
+  /**
+   * Avança a simulação manualmente enquanto o loop está PAUSADO
+   * (ferramentas de depuração, ex.: `loop_control step` do MCP).
+   *
+   * Roda `n` ticks fixos (inteiro, limitado a [1, 600]) emitindo os
+   * `game.loop.tick` normais — cada tick aguarda todos os handlers antes do
+   * próximo, como no loop — e depois emite UM `game.loop.render`
+   * (`isPaused: true`, `deltaSeconds: 0`, alpha no estado mais recente),
+   * mesmo com `freezeRender`. Espera o frame em andamento terminar e
+   * serializa chamadas concorrentes.
+   *
+   * Resolve com o número de ticks executados: 0 se o loop não está pausado
+   * ou `n` não é um número finito.
+   */
+  stepTicks(n: number): Promise<number>;
   /** Retorna um objeto novo a cada chamada. */
   getStats(): GameLoopStats;
 }

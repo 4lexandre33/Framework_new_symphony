@@ -627,46 +627,11 @@ implements GameLoopApi {
       const stepDeltaSeconds =
         this.fixedDeltaTimeSeconds;
 
-      this.totalRunningTimeSeconds +=
-        stepDeltaSeconds;
-      this.tickCount +=
-        1;
-
-      this.tickPayload.deltaSeconds =
-        stepDeltaSeconds;
-      this.tickPayload.totalTimeSeconds =
-        this.totalRunningTimeSeconds;
-      this.tickPayload.tickCount =
-        this.tickCount;
-
       // Determinism rule: the next fixed step cannot begin before every
       // handler of the current step has completed.
-      await this.ctx.events.emitAsync(
-        "game.loop.tick",
-        this.tickPayload,
+      await this.runFixedStep(
+        stepDeltaSeconds,
       );
-
-      if (
-        this.payloadGuard &&
-        (
-          this.tickPayload.deltaSeconds !==
-            stepDeltaSeconds ||
-          this.tickPayload.totalTimeSeconds !==
-            this.totalRunningTimeSeconds ||
-          this.tickPayload.tickCount !==
-            this.tickCount
-        )
-      ) {
-        this.tickPayload.deltaSeconds =
-          stepDeltaSeconds;
-        this.tickPayload.totalTimeSeconds =
-          this.totalRunningTimeSeconds;
-        this.tickPayload.tickCount =
-          this.tickCount;
-        this.reportPayloadMutation(
-          "game.loop.tick",
-        );
-      }
 
       this.accumulatorSeconds -=
         stepDeltaSeconds;
@@ -728,16 +693,76 @@ implements GameLoopApi {
 
     // Pausado: a cena continua sendo desenhada, mas sistemas que usam o
     // delta (animação, partículas, câmera) ficam parados.
-    this.renderPayload.deltaSeconds =
+    await this.emitRender(
       this.paused
         ? 0
-        : frameDeltaSeconds;
+        : frameDeltaSeconds,
+      frameDeltaSeconds,
+      this.paused,
+    );
+  }
+
+  /**
+   * Um tick fixo: avança tempo/contador, emite `game.loop.tick` com o
+   * payload reutilizado e aguarda todos os handlers (regra de determinismo).
+   */
+  private async runFixedStep(
+    stepDeltaSeconds: number,
+  ): Promise<void> {
+    this.totalRunningTimeSeconds +=
+      stepDeltaSeconds;
+    this.tickCount +=
+      1;
+
+    this.tickPayload.deltaSeconds =
+      stepDeltaSeconds;
+    this.tickPayload.totalTimeSeconds =
+      this.totalRunningTimeSeconds;
+    this.tickPayload.tickCount =
+      this.tickCount;
+
+    await this.ctx.events.emitAsync(
+      "game.loop.tick",
+      this.tickPayload,
+    );
+
+    if (
+      this.payloadGuard &&
+      (
+        this.tickPayload.deltaSeconds !==
+          stepDeltaSeconds ||
+        this.tickPayload.totalTimeSeconds !==
+          this.totalRunningTimeSeconds ||
+        this.tickPayload.tickCount !==
+          this.tickCount
+      )
+    ) {
+      this.tickPayload.deltaSeconds =
+        stepDeltaSeconds;
+      this.tickPayload.totalTimeSeconds =
+        this.totalRunningTimeSeconds;
+      this.tickPayload.tickCount =
+        this.tickCount;
+      this.reportPayloadMutation(
+        "game.loop.tick",
+      );
+    }
+  }
+
+  /** Emite `game.loop.render` com o payload reutilizado (+ guarda G31). */
+  private async emitRender(
+    deltaSeconds: number,
+    realDeltaSeconds: number,
+    isPaused: boolean,
+  ): Promise<void> {
+    this.renderPayload.deltaSeconds =
+      deltaSeconds;
 
     this.renderPayload.realDeltaSeconds =
-      frameDeltaSeconds;
+      realDeltaSeconds;
 
     this.renderPayload.isPaused =
-      this.paused;
+      isPaused;
 
     if (!this.payloadGuard) {
       await this.ctx.events.emitAsync(
@@ -749,10 +774,6 @@ implements GameLoopApi {
 
     const alpha =
       this.renderPayload.alphaInterpolation;
-    const delta =
-      this.renderPayload.deltaSeconds;
-    const paused =
-      this.renderPayload.isPaused;
 
     await this.ctx.events.emitAsync(
       "game.loop.render",
@@ -763,20 +784,20 @@ implements GameLoopApi {
       this.renderPayload.alphaInterpolation !==
         alpha ||
       this.renderPayload.deltaSeconds !==
-        delta ||
+        deltaSeconds ||
       this.renderPayload.realDeltaSeconds !==
-        frameDeltaSeconds ||
+        realDeltaSeconds ||
       this.renderPayload.isPaused !==
-        paused
+        isPaused
     ) {
       this.renderPayload.alphaInterpolation =
         alpha;
       this.renderPayload.deltaSeconds =
-        delta;
+        deltaSeconds;
       this.renderPayload.realDeltaSeconds =
-        frameDeltaSeconds;
+        realDeltaSeconds;
       this.renderPayload.isPaused =
-        paused;
+        isPaused;
       this.reportPayloadMutation(
         "game.loop.render",
       );
