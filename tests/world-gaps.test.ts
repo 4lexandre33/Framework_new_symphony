@@ -305,3 +305,78 @@ describe("world gaps (G6, G31, G64–G68)", () => {
     expect(sphere.map((result) => result.entityId)).toEqual(["center"]);
   });
 });
+
+describe("G67 — octree incremental", () => {
+  function lcg(seed: number): () => number {
+    let state = seed >>> 0;
+    return (): number => {
+      state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+      return state / 4294967296;
+    };
+  }
+
+  it("movimentos/inserções/remoções não reconstroem a árvore e as consultas batem com força bruta", () => {
+    const random = lcg(42);
+    const octree = new OctreeManager();
+    const truth = new Map<string, { x: number; y: number; z: number }>();
+    const point = (): { x: number; y: number; z: number } => ({ x: random() * 900 - 450, y: random() * 900 - 450, z: random() * 900 - 450 });
+
+    for (let i = 0; i < 400; i += 1) {
+      const p = point();
+      truth.set(`e${i}`, p);
+      octree.insert(`e${i}`, p);
+    }
+
+    const brute = (center: { x: number; y: number; z: number }, radius: number): string[] =>
+      Array.from(truth.entries())
+        .filter(([, p]) => Math.hypot(p.x - center.x, p.y - center.y, p.z - center.z) <= radius)
+        .map(([id]) => id)
+        .sort();
+
+    for (let step = 0; step < 300; step += 1) {
+      for (let k = 0; k < 20; k += 1) {
+        const id = `e${Math.floor(random() * 400)}`;
+        const action = random();
+        if (action < 0.8) {
+          const current = truth.get(id);
+          if (current) {
+            // passos pequenos (mesma folha quase sempre) e alguns saltos
+            const jump = random() < 0.1;
+            const next = jump ? point() : { x: Math.max(-499, Math.min(499, current.x + random() * 4 - 2)), y: current.y, z: current.z };
+            truth.set(id, next);
+            expect(octree.update(id, next)).toBe(true);
+          }
+        } else if (action < 0.9) {
+          truth.delete(id);
+          octree.remove(id);
+        } else {
+          const p = point();
+          truth.set(id, p);
+          octree.insert(id, p);
+        }
+      }
+
+      const center = point();
+      const radius = random() * 200;
+      expect(octree.querySphere(center, radius).map((r) => r.entityId).sort()).toEqual(brute(center, radius));
+    }
+
+    expect(octree.entityCount).toBe(truth.size);
+    expect(octree.rebuildCount).toBe(0);
+    // Tudo removido: filhos colapsam, árvore volta a um nó.
+    for (const id of Array.from(truth.keys())) octree.remove(id);
+    expect(octree.getNodeCount()).toBe(1);
+    expect(octree.querySphere({ x: 0, y: 0, z: 0 }, 1e6)).toEqual([]);
+  });
+
+  it("sair da raiz reconstrói uma vez (com folga) e não a cada passo", () => {
+    const octree = new OctreeManager({ min: { x: -10, y: -10, z: -10 }, max: { x: 10, y: 10, z: 10 } });
+    octree.insert("walker", { x: 0, y: 0, z: 0 });
+    for (let x = 0; x <= 30; x += 0.5) {
+      octree.update("walker", { x, y: 0, z: 0 });
+      expect(octree.querySphere({ x, y: 0, z: 0 }, 0.1).map((r) => r.entityId)).toEqual(["walker"]);
+    }
+    expect(octree.rebuildCount).toBeGreaterThan(0);
+    expect(octree.rebuildCount).toBeLessThanOrEqual(3);
+  });
+});

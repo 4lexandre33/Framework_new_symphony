@@ -17,7 +17,7 @@ versão 1.0.0 · GERADO por `npm run ai-manual:generate` (não edite à mão; `n
 | Asset Pipeline & VRAM Cache | assets | game.assets | - | 1674 |
 | Motor de Física (Rapier WASM) | physics | game.physics | - | 4170 |
 | Persistência & Banco de Dados | storage | game.storage | - | 2580 |
-| Gerenciador de Mundo, Cenas & ECS | world | game.world | - | 2475 |
+| Gerenciador de Mundo, Cenas & ECS | world | game.world | - | 2504 |
 | Interface de Usuário & HUD | ui | game.ui | - | 2289 |
 | Pipeline de Animações & State Machines | anim | game.anim | game.loop | 2249 |
 | Motor 2D, Tilemaps & Pixel Art | sprites | game.sprites | game.render, game.assets | 1995 |
@@ -36,7 +36,7 @@ versão 1.0.0 · GERADO por `npm run ai-manual:generate` (não edite à mão; `n
 | Render Runtime | render | game.render | - | 3000 |
 | Multiplayer Network & State Replication | net | game.net | game.loop | 2637 |
 
-Tamanho: RULES ≈ 2224, CORE ≈ 3010, RECIPES ≈ 7140, todos os módulos ≈ 58693 tokens (estimativa: caracteres/3,6).
+Tamanho: RULES ≈ 2224, CORE ≈ 3010, RECIPES ≈ 7140, todos os módulos ≈ 58722 tokens (estimativa: caracteres/3,6).
 
 ## Atalhos por tipo de jogo
 - 3D com física: render, camera, physics, input, assets, audio, ui, game-loop.

@@ -20,7 +20,7 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 - ui: templates, HTML sanitizado/`contentText`, a engine NÃO captura ESC nem `[data-action]` por padrão, `[data-ui-action]` → `game.ui.action`, dicionários de i18n, `popModal(id)`/`modal-closed`, ESC não fecha modal sem opt-in (`closeOnEscape`/`setBehavior`), HUD sem bloquear ponteiro, modo sem DOM (G11, G96–G99, G134).
 - terrain: colliders, paleta/cores, streaming automático, lote de edições, 256 de altura, edições persistentes/exportáveis, mistura de biomas, recuperação do worker, água/metadata, `getSurfaceHeight`, água e colliders opt-in (G3, G18, G54–G59, G133).
 - streaming: origem do centro configurável, `assetUrls` carregados, setores manuais fixos (pin), HLOD real, `unregisterSector`/`clear` seguros, LOD móvel com histerese, `meshUrl` só carrega se for URL ou `preload: true` (G17, G60–G63, G132).
-- world: `updateEntityTransform`/`patchEntity`, snapshots imutáveis, spawn tolerante, octree cresce além dos limites, distâncias reais, deserialize valida antes, cena pré-carrega assets (G6, G64–G68; G67 parcial).
+- world: `updateEntityTransform`/`patchEntity`, snapshots imutáveis, spawn tolerante, octree cresce além dos limites e é atualizada incrementalmente, distâncias reais, deserialize valida antes, cena pré-carrega assets (G6, G64–G68).
 - ai: árvores por agente, várias navmeshes/áreas, teleporte, linha de visão filtrada, estímulo sonoro real, clamp 3D, portais tolerantes com raio, funnel, separação, chegada única, `requestAgentPath` puro (G7, G25, G69–G73; G73 parcial).
 - anim: reinício (`restart`), exit time, `clip-finished`, ordem livre, sprites pela FSM, relógio único (G74–G78).
 - scripting: keyframes executam (câmera/áudio/anim/vfx/diálogo) + evento por keyframe, zonas automáticas (`trackEntity`), variáveis de diálogo, árvores validadas, ciclo de quest completo, exits de zona, varredura exata (segmento × caixa/esfera/cilindro) e rotação (G10, G123–G129).
@@ -53,10 +53,6 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 |---|---|---|---|---|
 | G47 | B | LACUNA | `detectOcclusion` só emite `game.camera.occlusion-changed` (ids físicos entre câmera e alvo); não há fade automático | O jogo deixa transparentes/oculta as malhas dessas entidades |
 
-## world
-| # | G | Tipo | Problema | Contorno |
-|---|---|---|---|---|
-| G67 | B | RISCO | Após mover/criar entidades a octree é RECONSTRUÍDA inteira na próxima `queryOctree`/`querySphere` (custo O(N) por consulta se houver movimento a cada tick) | Muitas entidades móveis + consultas frequentes: `querySpatialGrid` (XZ, incremental) |
 
 ## ai
 | # | G | Tipo | Problema | Contorno |
