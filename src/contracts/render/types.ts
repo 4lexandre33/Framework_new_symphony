@@ -67,6 +67,16 @@ export interface RenderFramePayload {
   readonly isPaused?: boolean;
 }
 
+/**
+ * G81: marca de recurso de GPU COMPARTILHADO e com dono (ex.: cache de
+ * assets). Propriedade símbolo no próprio recurso (geometria/material/
+ * textura): `resource[RENDER_SHARED_RESOURCE] === true` faz o render não
+ * liberá-lo em `removeMeshFromScene`/`clearScene`, como `userData.renderRetain`,
+ * mas — diferente do `userData` — NÃO é herdada por `clone()` (cópias feitas
+ * pelo jogo continuam sendo liberadas normalmente).
+ */
+export const RENDER_SHARED_RESOURCE: unique symbol = Symbol.for("game.render.shared-resource") as never;
+
 export const RenderFrameEvent = defineEvent<"game.render.frame", RenderFramePayload>(
   "game.render.frame"
 );

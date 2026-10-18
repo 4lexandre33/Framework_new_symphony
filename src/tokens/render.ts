@@ -128,7 +128,9 @@ export interface Render3DApi {
    * - recursos ainda usados por outro objeto registrado (contagem de
    *   referências feita no `addMeshToScene`; recursos trocados DEPOIS do
    *   registro não entram na contagem);
-   * - recursos (ou nós) com `userData.renderRetain === true`;
+   * - recursos (ou nós) com `userData.renderRetain === true`, ou recursos
+   *   marcados com `RENDER_SHARED_RESOURCE` (contracts/render; o cache de
+   *   assets marca a GPU de GLTFs/texturas em cache — G81);
    * - a geometria padrão compartilhada de `THREE.Sprite`;
    * - tudo, se `options.disposeResources === false` (use para cache de assets).
    * Custo O(tamanho do objeto removido).

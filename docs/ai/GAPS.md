@@ -13,7 +13,7 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 - render: interpolação opcional, desenho DEPOIS dos handlers de render, dispose com contagem de referências (`renderRetain`, `disposeResources:false`), API de câmera/viewport, `dispose()` do token é no-op, eventos de perda de contexto, luzes extras e foco de sombra (G22, G40–G44).
 - camera: sem câmera virtual o render não é sobrescrito; colisão do braço ignora o alvo; `priority` decide a ativa (com evento); `followTargetId`/`lookAtTargetId`; blend do descritor; trauma global; alvo copiado (G4, G45–G48; oclusão só como evento, G47).
 - input: bordas por tick (`isActionPressedInTick`), roda (`getWheelDelta`/`WheelUp`), vários gamepads/analógicos, filtros de foco, `preventDefault` das teclas mapeadas, eventos de pointer lock (G5, G49–G53).
-- assets: `loadGLTF` clona por instância, `loadAudio` não espera gesto, `clearCache` respeita refcount, `loadJSON`/`loadBinary`/`preloadManifest`, URL normalizada, `colorSpace` (G79–G83; G81 parcial).
+- assets: `loadGLTF` clona por instância, `loadAudio` não espera gesto, `clearCache` respeita refcount, `loadJSON`/`loadBinary`/`preloadManifest`, URL normalizada, `colorSpace`, GPU compartilhada do cache marcada (`RENDER_SHARED_RESOURCE`) e `releaseInstance` (G79–G83).
 - audio: handles por som, canal posicional, crossfade termina no fim, `stopMusic`, mudo sem Web Audio, limite de vozes, desbloqueio automático no 1º gesto (G20, G27, G84–G87).
 - vfx: partículas aparecem e não vazam, emissor móvel com duração/burst, decals projetados com id, pós-processamento real, presets registráveis (G9, G19, G28, G88–G91).
 - sprites: sprites, tilemap (1 draw call, UV por tile), animação por quadros, parallax e atlas trimmed/rotated funcionam (G92–G95).
@@ -43,11 +43,6 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 | # | G | Tipo | Problema | Contorno |
 |---|---|---|---|---|
 | G37 | B | DESIGN | `step(dt)` manual fora de [1/240, 1] s lança RangeError (a engine nunca chama assim; o tick é 1..240 Hz) | Não chame `step()`; a engine já avança no tick |
-
-## render / assets
-| # | G | Tipo | Problema | Contorno |
-|---|---|---|---|---|
-| G81 | M | RISCO | Clones de `loadGLTF` compartilham geometria/material/textura com o modelo do cache, que não está na cena: `removeMeshFromScene(chave)` de um clone LIBERA esses recursos ainda usados pelo cache/outros clones (o three os reenvia à GPU, com custo) | Para instâncias de GLTF: `removeMeshFromScene(chave, { disposeResources: false })` + `assets.releaseAsset(url)` por instância |
 
 ## camera
 | # | G | Tipo | Problema | Contorno |

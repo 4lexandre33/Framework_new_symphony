@@ -121,6 +121,9 @@ export class AssetsManagerService implements AssetsApi {
   private readonly baseUrl: string;
   private disposed = false;
 
+  /** G81: instância GLTF (ou seu `scene`) → chave do cache, para `releaseInstance`. */
+  private readonly instanceKeys = new WeakMap<object, { readonly key: string; released: boolean }>();
+
   public constructor(
     private readonly eventSink?: AssetsEventSink,
     loaders?: Partial<AssetLoaderSet>,
@@ -202,7 +205,40 @@ export class AssetsManagerService implements AssetsApi {
 
   public async loadGLTF(url: string): Promise<GLTF> {
     const template = await this.loadAsset<GLTF>(url, "gltf", undefined, undefined);
-    return instantiateGLTF(template);
+    const instance = instantiateGLTF(template);
+    const key = this.resolveKey(url, undefined);
+
+    if (key !== null && instance !== null && typeof instance === "object") {
+      const ticket = { key, released: false };
+      this.instanceKeys.set(instance, ticket);
+      const scene = (instance as { scene?: unknown }).scene;
+
+      if (scene !== null && typeof scene === "object" && scene !== (template as { scene?: unknown }).scene) {
+        this.instanceKeys.set(scene, ticket);
+      }
+    }
+
+    return instance;
+  }
+
+  public releaseInstance(instance: unknown): boolean {
+    if (this.disposed || instance === null || typeof instance !== "object") {
+      return false;
+    }
+
+    const ticket = this.instanceKeys.get(instance);
+
+    if (ticket === undefined || ticket.released) {
+      return false;
+    }
+
+    ticket.released = true;
+
+    if (this.cache.release(ticket.key)) {
+      this.dropAliasesFor(ticket.key);
+    }
+
+    return true;
   }
 
   public async loadTexture(url: string, options?: TextureLoadOptions): Promise<THREE.Texture> {
