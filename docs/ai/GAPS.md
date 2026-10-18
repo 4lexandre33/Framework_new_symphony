@@ -25,7 +25,7 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 - anim: reinício (`restart`), exit time, `clip-finished`, ordem livre, sprites pela FSM, relógio único (G74–G78).
 - scripting: keyframes executam (câmera/áudio/anim/vfx/diálogo) + evento por keyframe, zonas automáticas (`trackEntity`), variáveis de diálogo, árvores validadas, ciclo de quest completo, exits de zona, varredura e rotação (G10, G123–G128; G129 parcial).
 - storage: memória automática em node, perfil online honesto/plugável, backups + HMAC + `loadGameDetailed`, namespace, slots seguros, índice, cota, migrações (G12, G100–G103; G102 parcial).
-- net: host sem Steam (loopback `mock`, `broadcast_channel`), handshake, heartbeat, fragmentação, snapshot automático, RTT/perda reais, canais 0..255 (G8 parcial, G104–G108).
+- net: host sem Steam (loopback `mock`, `broadcast_channel`), handshake, heartbeat, fragmentação, snapshot automático, RTT/perda reais, canais 0..255, pump em Worker com a aba oculta (host não derruba clientes; a simulação continua parada) (G8 parcial, G104–G108, G130).
 - steam: `game.steam.net` FORNECIDO (lobbies, busca, membros, convites, P2P), eventos nativos, stats float, `checkAvailability` no boot (G26, G109–G112).
 - security: captura automática de erros, FPS real em janela móvel, heurísticas de speedhack, dump com resultado real e limite por sessão (G16, G113–G115).
 - modding: sandbox de scripts em Worker, mods do jogo offline (`installMod`), lista de instalados, lista de ativos persistida, `clear` seguro, fluxo real do Workshop (G14, G116–G118; publicar só nativo).
@@ -36,7 +36,6 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 | # | G | Tipo | Problema | Contorno |
 |---|---|---|---|---|
 | G31 | B | DESIGN | Objetos reutilizados de propósito (sem alocação): payloads de `game.loop.tick`/`render`, `getInterpolatedState`, `getViewportDimensions`, getters de input (`getMouseDelta`, `getWheelDelta`, `getPointerPosition`…), contexto das ações de IA | Leia na hora; para guardar use `copyTickPayload`/`copyRenderPayload` (contracts/game-loop), `copyEntitySnapshot` (contracts/net), `copyViewportDimensions` (contracts/render). Em DEV, mutar o payload do tick é detectado e revertido |
-| G130 | M | RISCO | Aba/janela oculta suspende o loop E o pump da rede (que roda no `game.loop.render`): um HOST oculto para a simulação e os clientes caem por timeout (5 s) | Em multiplayer avise o host para não minimizar; se preciso `net.configure({ peerTimeoutMs })` maior; em solo trate `visibilitychange` (menu de pausa) |
 | NV | M | NV | Steam real (conquistas, stats, lobbies, P2P), transporte `steam_p2p`, Workshop (download/publicação UGC), Steam Inventory/MicroTxn, flags nativas do overlay, merge do `desktop.json` e gravação de crash dump em disco: implementados e testados com bridges falsas/Chromium, NÃO com cliente Steam nem janela Tauri reais | O jogo deve funcionar sem nada disso (tudo resolve `false`/`null`/`[]` e não lança); valide no app nativo antes de prometer o recurso; registre o observado no ENGINE_REPORT |
 
 ## physics

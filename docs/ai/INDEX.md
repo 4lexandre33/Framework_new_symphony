@@ -34,9 +34,9 @@ versão 1.0.0 · GERADO por `npm run ai-manual:generate` (não edite à mão; `n
 | Microtransações Steam & Steam Inventory Service | monetization | game.monetization | - | 2467 |
 | Deterministic Game Loop | game-loop | game.loop | - | 1177 |
 | Render Runtime | render | game.render | - | 3000 |
-| Multiplayer Network & State Replication | net | game.net | game.loop | 2549 |
+| Multiplayer Network & State Replication | net | game.net | game.loop | 2637 |
 
-Tamanho: RULES ≈ 2224, CORE ≈ 3010, RECIPES ≈ 7140, todos os módulos ≈ 58550 tokens (estimativa: caracteres/3,6).
+Tamanho: RULES ≈ 2224, CORE ≈ 3010, RECIPES ≈ 7140, todos os módulos ≈ 58638 tokens (estimativa: caracteres/3,6).
 
 ## Atalhos por tipo de jogo
 - 3D com física: render, camera, physics, input, assets, audio, ui, game-loop.

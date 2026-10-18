@@ -18,6 +18,7 @@ import {
   encodeSnapshotPayload,
 } from "../src/engine/net/internal/NetProtocol";
 import { createNetworkPlugin, netManifest } from "../src/plugins/net/plugin";
+import { HiddenTabPumpDriver } from "../src/engine/net/internal/HiddenTabPumpDriver";
 
 type Emitted = Array<{ type: string; payload: unknown }>;
 
@@ -514,3 +515,141 @@ class BatchSteam implements SteamApi {
     return this.inbox.splice(0, this.inbox.length);
   }
 }
+
+describe("G130 — rede continua bombeando com a aba oculta", () => {
+  class FakeDocument {
+    public hidden = false;
+    private readonly listeners = new Set<() => void>();
+    public addEventListener(_type: string, listener: () => void): void {
+      this.listeners.add(listener);
+    }
+    public removeEventListener(_type: string, listener: () => void): void {
+      this.listeners.delete(listener);
+    }
+    public setHidden(hidden: boolean): void {
+      this.hidden = hidden;
+      for (const listener of this.listeners) listener();
+    }
+    public get listenerCount(): number {
+      return this.listeners.size;
+    }
+  }
+
+  function fakeTimers() {
+    const handlers = new Map<number, () => void>();
+    let next = 1;
+    return {
+      handlers,
+      env: {
+        setInterval: (handler: () => void): unknown => {
+          handlers.set(next, handler);
+          return next++;
+        },
+        clearInterval: (handle: unknown): void => {
+          handlers.delete(handle as number);
+        },
+      },
+      fire(): void {
+        for (const handler of handlers.values()) handler();
+      },
+    };
+  }
+
+  const settle = async (): Promise<void> => {
+    for (let i = 0; i < 4; i += 1) await Promise.resolve();
+  };
+
+  async function hiddenHostScenario(withDriver: boolean): Promise<{ clientDropped: boolean; hostPeers: number }> {
+    const clientEvents: Emitted = [];
+    const host = makeService();
+    const client = makeService(clientEvents);
+    host.configure({ heartbeatIntervalMs: 100, peerTimeoutMs: 500 });
+    client.configure({ heartbeatIntervalMs: 100, peerTimeoutMs: 500 });
+    const room = withDriver ? "hidden-a" : "hidden-b";
+    await host.startHost({ room });
+    expect(await connectPair(host, client, `loopback://${room}`)).toBe(true);
+
+    const doc = new FakeDocument();
+    const timers = fakeTimers();
+    const driver = new HiddenTabPumpDriver(
+      () => host.onRenderFrame(),
+      { enabled: withDriver, useWorker: false, intervalMs: 50 },
+      { document: doc, createWorker: null, ...timers.env },
+    );
+    driver.start();
+    doc.setHidden(true); // host minimizado: o loop não chama mais tick/render
+    expect(driver.source).toBe(withDriver ? "interval" : "none");
+
+    for (let step = 0; step < 20; step += 1) {
+      clock += 50;
+      timers.fire();
+      await settle();
+      await client.pollPackets(); // o cliente está visível
+      await settle();
+    }
+
+    const clientDropped = clientEvents.some((e) => e.type === "game.net.peer-disconnected");
+    const hostPeers = host.getPeers().length;
+    doc.setHidden(false);
+    expect(driver.source).toBe("none");
+    expect(timers.handlers.size).toBe(0);
+    driver.dispose();
+    expect(doc.listenerCount).toBe(0);
+    return { clientDropped, hostPeers };
+  }
+
+  it("sem o driver o host oculto derruba o cliente; com o driver a sessão sobrevive", async () => {
+    const without = await hiddenHostScenario(false);
+    expect(without.clientDropped).toBe(true);
+    const withPump = await hiddenHostScenario(true);
+    expect(withPump.clientDropped).toBe(false);
+    expect(withPump.hostPeers).toBe(1);
+  });
+
+  it("usa Worker como relógio quando disponível e cai para intervalo se o Worker falha", () => {
+    const doc = new FakeDocument();
+    const posted: unknown[] = [];
+    const fakeWorker = {
+      onmessage: null as null | (() => void),
+      onerror: null as null | (() => void),
+      postMessage: (value: unknown): void => {
+        posted.push(value);
+      },
+      terminated: false,
+      terminate(): void {
+        this.terminated = true;
+      },
+    };
+    const timers = fakeTimers();
+    let pulses = 0;
+    const driver = new HiddenTabPumpDriver(
+      () => {
+        pulses += 1;
+      },
+      { intervalMs: 100 },
+      { document: doc, createWorker: () => fakeWorker as unknown as Worker, ...timers.env },
+    );
+    driver.start();
+    expect(driver.source).toBe("none");
+    doc.setHidden(true);
+    expect(driver.source).toBe("worker");
+    expect(posted).toEqual([100]);
+    fakeWorker.onmessage?.();
+    expect(pulses).toBe(1);
+    doc.setHidden(false);
+    expect(posted).toEqual([100, 0]);
+    doc.setHidden(true);
+    fakeWorker.onerror?.();
+    expect(fakeWorker.terminated).toBe(true);
+    expect(driver.source).toBe("interval");
+    timers.fire();
+    expect(pulses).toBe(2);
+    driver.dispose();
+    expect(timers.handlers.size).toBe(0);
+  });
+
+  it("o plugin aceita backgroundPump e o desliga com false", () => {
+    expect(createNetworkPlugin({ backgroundPump: false }).manifest.id).toBe("game.net");
+    expect(createNetworkPlugin({ backgroundPump: { intervalMs: 100 } }).manifest.id).toBe("game.net");
+  });
+});

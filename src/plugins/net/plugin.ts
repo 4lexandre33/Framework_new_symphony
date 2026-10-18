@@ -5,6 +5,19 @@ import { SteamNetworkToken } from "../../tokens/steam-net";
 import { BroadcastSnapshotCommand, ConnectPeerCommand, DisconnectPeerCommand, NetPacketReceivedEvent, PeerConnectedEvent, PeerDisconnectedEvent, SendNetPacketCommand, WorldSnapshotEvent, type BroadcastSnapshotRequest, type ConnectPeerRequest, type SendNetPacketRequest } from "../../contracts/net/types";
 import type { GameTickPayload } from "../../contracts/game-loop/types";
 import { NetworkService, type NetworkServiceOptions } from "../../engine/net/internal/NetworkService";
+import { HiddenTabPumpDriver, type HiddenTabPumpEnvironment, type HiddenTabPumpOptions } from "../../engine/net/internal/HiddenTabPumpDriver";
+
+/**
+ * Opções do plugin de rede. `backgroundPump` (G130): com a aba/janela
+ * oculta o game loop suspende tick/render; o plugin mantém a rede
+ * bombeando (heartbeat, handshake, recebimento) por um relógio em Worker.
+ * Padrão ligado; `false` desliga.
+ */
+export interface NetworkPluginOptions extends NetworkServiceOptions {
+  readonly backgroundPump?: HiddenTabPumpOptions | false;
+  /** Ambiente do pump em segundo plano (testes). */
+  readonly backgroundPumpEnvironment?: HiddenTabPumpEnvironment;
+}
 
 export const netManifest:
   Plugin["manifest"] = {
@@ -88,7 +101,7 @@ export const netManifest:
   };
 
 export function createNetworkPlugin(
-  serviceOptions: NetworkServiceOptions = {},
+  serviceOptions: NetworkPluginOptions = {},
 ):
   Plugin {
   let networkService:
@@ -209,6 +222,20 @@ export function createNetworkPlugin(
           },
         );
 
+      // G130: aba oculta não tem render/tick; um relógio em Worker mantém o pump.
+      const backgroundPump =
+        serviceOptions.backgroundPump === false
+          ? null
+          : new HiddenTabPumpDriver(
+              (): void => {
+                service.onRenderFrame();
+              },
+              serviceOptions.backgroundPump ?? {},
+              serviceOptions.backgroundPumpEnvironment ?? {},
+            );
+
+      backgroundPump?.start();
+
       // Steam P2P: host aceita sessões de clientes; falha derruba o par.
       const unbindSessionRequest =
         ctx.events.on<"game.steam.p2p-session-request", { remoteSteamId: string }>(
@@ -296,6 +323,7 @@ export function createNetworkPlugin(
         (): void => {
           unbindTick();
           unbindRender();
+          backgroundPump?.dispose();
           unbindSessionRequest();
           unbindSessionFailed();
           unbindBroadcastSnapshot();
