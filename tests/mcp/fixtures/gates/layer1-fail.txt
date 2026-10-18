@@ -1,0 +1,16 @@
+============================================================
+  PROJETO1 — LAYER 1 MIXED FAILURE SAMPLE (formatos reais das libs)
+============================================================
+[INFO] Audit version: 1.0.0
+[INFO] Stage72 public API: FAIL
+status: FAIL
+- [NET008] src/engine/net/internal/WebSocketTransport.ts: socket não é fechado no dispose
+[FAIL] TAURI_CMD_UNKNOWN src-tauri/src/lib.rs:42: comando nativo fora da allowlist
+[OK] previous.stage88
+[FAIL] references.resolve — 2 caminho(s) quebrado(s)
+[FAIL] render.dispose — src/engine/render/internal/ThreeRenderEngine.ts
+[FAIL] Violations: 3
+[DOC_REF_MISSING] docs/layer1/README.md — caminho citado não existe: src/engine/foo.ts
+[GL004] src/engine/game-loop/internal/GameLoop.ts:120 — allocation no hot path
+[FAIL] Violações Deterministic Game Loop: 1
+[OK] Layer 1 documentation audit: 3 violations

@@ -1,0 +1,29 @@
+============================================================
+  ETAPA 19 CONCLUÍDA COM SUCESSO
+============================================================
+O grafo ativo de plugins/capabilities está consistente com semver, priority e PluginKind do Kernel.
+vite v5.4.21 building for production...
+transforming...
+✓ 338 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/assets/streaming.worker-fRtEM76z.js      0.33 kB
+dist/index.html                               0.48 kB │ gzip:     0.32 kB
+dist/assets/terrain.worker-SFPYLX17.js        7.15 kB
+dist/assets/index-CxhZddqx.css                2.52 kB │ gzip:     0.92 kB
+dist/assets/index-BWtBUY0V.js             3,404.95 kB │ gzip: 1,113.31 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 4.50s
+
+===== RUNTIME SMOKE (Linux release) =====
+Error: Binário release ausente; rode o build Tauri release antes (npx tauri build --no-bundle --config src-tauri/tauri.stage88.conf.json)
+    at fail (file:///repo/scripts/architecture/stage90-validate-layer1-gate.mjs:18:9)
+    at runtimeSmoke (file:///repo/scripts/architecture/stage90-validate-layer1-gate.mjs:73:28)
+    at file:///repo/scripts/architecture/stage90-validate-layer1-gate.mjs:112:9
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)

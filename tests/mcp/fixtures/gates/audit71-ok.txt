@@ -1,0 +1,23 @@
+============================================================
+  PROJETO1 — LAYER 1 BASELINE & INVENTORY AUDIT
+============================================================
+
+[INFO] Audit version: 1.0.0
+[INFO] Baseline ID: layer1-v1-stage71
+[INFO] Canonical modules at capture: 23
+[INFO] Canonical modules atuais: 23
+[INFO] Functional modules atuais: 20
+[INFO] Runtime modules atuais: 3
+[INFO] Owned capabilities atuais: 24
+[INFO] Engine directories atuais: 23
+[INFO] Plugin directories atuais: 24
+[INFO] Contract areas atuais: 23
+[INFO] Token files atuais: 24
+[INFO] Baseline modules preservados: 23/23
+[INFO] Additional canonical modules: 0
+[INFO] Extensible baseline: YES
+[INFO] Capture count is permanent limit: NO
+
+[OK] Violações da baseline Layer 1: 0
+[OK] Module map permanece a fonte canônica de verdade.
+[OK] Baseline v1 preservada e arquitetura continua extensível.

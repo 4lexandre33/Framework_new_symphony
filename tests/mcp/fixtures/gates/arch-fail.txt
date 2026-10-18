@@ -1,0 +1,51 @@
+
+> projeto1@0.1.0 arch:check
+> node scripts/architecture/check-boundaries.mjs && node scripts/architecture/check-dependencies.mjs
+
+============================================================
+  PROJETO1 — ETAPA 18: FISCALIZAÇÃO DE BOUNDARIES
+============================================================
+
+[OK] Arquitetura: v20
+[OK] Módulos canônicos: 23
+[OK] TypeScript Compiler API: 5.6.3
+[OK] Arquivos de código analisados: 751
+[OK] Referências de módulo analisadas: 2894
+[OK] Referências de projeto: 2404
+[OK] Referências externas: 490
+
+=== REGRAS EXECUTÁVEIS ===
+[BND001] engine/X/internal -> engine/Y/internal: proibido
+[BND002] engine/X/public -> */internal: proibido
+[BND003] plugins/X -> engine/Y/internal (X != Y): proibido
+[ALLOW] plugins/X -> engine/X/internal: permitido
+[BND004/BND006] domain -> engine/stack técnica concreta: proibido
+[BND007/BND008] services -> internals/plugins concretos: proibido
+[BND010/BND011] app compõe plugins/APIs; app/flows não atravessa internals/plugins
+[ALLOW] tests/** -> internal: permitido explicitamente
+
+=== COBERTURA ===
+engine/*/internal: 149 arquivo(s)
+engine/*/public: 23 arquivo(s)
+plugins/*: 24 arquivo(s)
+domain: 130 arquivo(s) de código
+services: 3 arquivo(s) de código
+app: 5 arquivo(s) de código
+app/flows: 2 arquivo(s) de código
+tests: 1044 referência(s) analisada(s)
+tests -> internal permitidos: 250
+
+=== RESULTADO ===
+[ERRO] Violações de boundary: 1
+
+[BND001] src/engine/render/internal/ZzzGateFixture.ts:1:30
+  import: ../../physics/internal/PhysicsWorld
+  destino: src/engine/physics/internal/PhysicsWorld.ts
+  engine/render/internal não pode importar implementação internal de engine/physics.
+
+[OK] Prova read-only antes: 4504c5d7248833399c2f3e168effd71cbf2cae1abecc97325519ebb9b48a88c0
+[OK] Prova read-only depois: 4504c5d7248833399c2f3e168effd71cbf2cae1abecc97325519ebb9b48a88c0
+
+============================================================
+  ETAPA 18 — BOUNDARIES REPROVADOS
+============================================================
