@@ -336,4 +336,68 @@ describe("G102 seleção automática", () => {
     expect((await selection.resolved).kind).toBe("indexeddb");
     warn.mockRestore();
   });
+
+  it("Tauri: falha transitória da sonda é tentada de novo antes de cair para o IndexedDB", async () => {
+    vi.stubGlobal("indexedDB", new FakeIndexedDb());
+    const bridge = new FakeFileBridge();
+    let failures = 1;
+    const flaky: TauriFileStorageBridge = {
+      read: async (ns, key) => {
+        if (failures > 0) {
+          failures -= 1;
+          throw { code: "unavailable", message: "ipc ainda subindo" };
+        }
+        return await bridge.read(ns, key);
+      },
+      write: (ns, key, value) => bridge.write(ns, key, value),
+      remove: (ns, key) => bridge.remove(ns, key),
+      list: (ns) => bridge.list(ns),
+    };
+    const selection = selectDefaultKeyValueBackend({ tauri: true, localStorage: false, tauriBridge: flaky, probeRetryDelayMs: 0 });
+    await selection.backend.setItem("local_db_save_x", "1");
+    expect((await selection.resolved).kind).toBe("tauri-file");
+    expect(bridge.files.get("saves")!.get("local_db_save_x")).toBe("1");
+  });
+
+  it("Tauri: saves gravados no IndexedDB de fallback são importados para os arquivos quando eles voltam", async () => {
+    const idb = new FakeIndexedDb();
+    vi.stubGlobal("indexedDB", idb);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const bridge = new FakeFileBridge();
+    const record = (v: string, timestamp: number) => JSON.stringify({ metadata: { timestamp }, v });
+
+    // Já existia nos arquivos (mais novo que o do fallback, que deve perder).
+    await bridge.write("saves", "local_db_save_both_new", record("arquivo", 900));
+    await bridge.write("saves", "local_db_save_both_old", record("arquivo", 100));
+    await bridge.write("saves", "local_db_save_#index", "{}");
+
+    // Sessão 1: arquivos falham → IndexedDB (com marcador).
+    const down: TauriFileStorageBridge = {
+      read: async () => {
+        throw { code: "unavailable", message: "fora" };
+      },
+      write: async () => {
+        throw { code: "unavailable", message: "fora" };
+      },
+      remove: async () => false,
+      list: async () => [],
+    };
+    const first = selectDefaultKeyValueBackend({ tauri: true, localStorage: false, tauriBridge: down, probeRetryDelayMs: 0 });
+    await first.backend.setItem("local_db_save_only_idb", record("idb", 500));
+    await first.backend.setItem("local_db_save_both_new", record("idb", 500));
+    await first.backend.setItem("local_db_save_both_old", record("idb", 500));
+    expect((await first.resolved).kind).toBe("indexeddb");
+
+    // Sessão 2: arquivos OK → importa e limpa o fallback.
+    const second = selectDefaultKeyValueBackend({ tauri: true, localStorage: false, tauriBridge: bridge, probeRetryDelayMs: 0 });
+    expect(await second.backend.getItem("local_db_save_only_idb")).toBe(record("idb", 500));
+    expect((await second.resolved).kind).toBe("tauri-file");
+    const files = bridge.files.get("saves")!;
+    expect(files.get("local_db_save_both_new")).toBe(record("arquivo", 900));
+    expect(files.get("local_db_save_both_old")).toBe(record("idb", 500));
+    expect(files.has("local_db_save_#index")).toBe(false); // reconstruído pela varredura
+    const leftovers = [...idb.stores.values()].flatMap((store) => [...store.keys()]);
+    expect(leftovers.filter((key) => key.startsWith("local_db_save_") || key.includes("fallback_pending"))).toEqual([]);
+    warn.mockRestore();
+  });
 });

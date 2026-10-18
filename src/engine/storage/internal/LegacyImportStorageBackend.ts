@@ -153,3 +153,179 @@ export class LegacyImportStorageBackend
     this.target.dispose?.();
   }
 }
+
+/**
+ * Marcador gravado no backend de FALLBACK (ex.: IndexedDB no app Tauri)
+ * quando a sessão caiu para ele porque o preferido (arquivos) falhou na
+ * sonda: "há saves aqui que pertencem ao backend preferido".
+ */
+export const FALLBACK_PENDING_MARKER_KEY =
+  "__engine_storage_fallback_pending_v1";
+
+/** Índice do driver (`[ns:<x>:]local_db_save_#index`): otimização reconstruível. */
+const ENGINE_INDEX_KEY_PATTERN =
+  /^(?:ns:[^:]*:)?(?:local_db_save_|steam_cloud_save_)#index$/u;
+
+/** `metadata.timestamp` (ms) de um save gravado pela engine; null se ilegível. */
+function storedSaveTimestamp(raw: string): number | null {
+  try {
+    const parsed = JSON.parse(raw) as { metadata?: { timestamp?: unknown } } | null;
+    const timestamp = parsed?.metadata?.timestamp;
+    return typeof timestamp === "number" && Number.isFinite(timestamp) ? timestamp : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Resultado da importação de um fallback (diagnóstico). */
+export interface FallbackImportReport {
+  readonly imported: number;
+  /** Já existiam no destino e eram iguais/mais novos (cópia do fallback descartada). */
+  readonly kept: number;
+  readonly failedKeys: ReadonlyArray<string>;
+}
+
+/**
+ * Envolve o backend PREFERIDO (arquivos no Tauri) e, na primeira operação,
+ * traz para ele os saves que sessões anteriores gravaram no backend de
+ * fallback (IndexedDB) quando a sonda do preferido falhou — só se o
+ * fallback tem o marcador `FALLBACK_PENDING_MARKER_KEY`.
+ *
+ * - Chave ausente no destino → copiada. Presente nos dois → vence o save
+ *   mais novo (`metadata.timestamp`); sem horário legível, fica o destino.
+ * - Cópias resolvidas são APAGADAS do fallback (nada dividido entre os dois
+ *   nem "ressuscitado" depois); o índice do destino é removido para ser
+ *   reconstruído pela varredura.
+ * - Chave que falha fica no fallback e o marcador é mantido (nova tentativa
+ *   no próximo boot). Nada disso bloqueia o jogo.
+ */
+export class FallbackImportStorageBackend
+  implements AsyncKeyValueStorageBackend {
+  private importing: Promise<void> | null = null;
+  private report: FallbackImportReport | null = null;
+
+  public constructor(
+    private readonly target: AsyncKeyValueStorageBackend,
+    private readonly createFallback: () => AsyncKeyValueStorageBackend | null,
+  ) {}
+
+  public getImportReport(): FallbackImportReport | null {
+    return this.report;
+  }
+
+  private ensureImported(): Promise<void> {
+    if (this.importing === null) {
+      this.importing = this.importFallback().catch((error: unknown) => {
+        console.warn("[Storage] Importação dos saves do backend de fallback falhou:", error);
+      });
+    }
+
+    return this.importing;
+  }
+
+  private async importFallback(): Promise<void> {
+    let fallback: AsyncKeyValueStorageBackend | null = null;
+
+    try {
+      fallback = this.createFallback();
+    } catch {
+      fallback = null;
+    }
+
+    if (fallback === null) {
+      return;
+    }
+
+    try {
+      if ((await fallback.getItem(FALLBACK_PENDING_MARKER_KEY)) === null) {
+        return;
+      }
+
+      const keys = (await fallback.keys()).filter((key) => ENGINE_SAVE_KEY_PATTERN.test(key));
+      const existing = new Set(await this.target.keys());
+      let imported = 0;
+      let kept = 0;
+      const failedKeys: string[] = [];
+
+      for (const key of keys) {
+        try {
+          if (ENGINE_INDEX_KEY_PATTERN.test(key)) {
+            await fallback.removeItem(key);
+            continue;
+          }
+
+          const value = await fallback.getItem(key);
+
+          if (value === null) {
+            continue;
+          }
+
+          let copy = !existing.has(key);
+
+          if (!copy) {
+            const current = await this.target.getItem(key);
+            const fallbackTime = storedSaveTimestamp(value);
+            const currentTime = current === null ? null : storedSaveTimestamp(current);
+            copy = current === null || (fallbackTime !== null && currentTime !== null && fallbackTime > currentTime);
+          }
+
+          if (copy) {
+            await this.target.setItem(key, value);
+            imported += 1;
+          } else {
+            kept += 1;
+          }
+
+          await fallback.removeItem(key);
+        } catch (error: unknown) {
+          failedKeys.push(key);
+          console.warn(`[Storage] Save '${key}' do fallback não foi importado (fica no fallback):`, error);
+        }
+      }
+
+      if (imported > 0) {
+        for (const key of existing) {
+          if (ENGINE_INDEX_KEY_PATTERN.test(key)) {
+            try {
+              await this.target.removeItem(key);
+            } catch {
+              // índice é otimização
+            }
+          }
+        }
+      }
+
+      if (failedKeys.length === 0) {
+        await fallback.removeItem(FALLBACK_PENDING_MARKER_KEY);
+      }
+
+      this.report = { imported, kept, failedKeys };
+    } finally {
+      fallback.dispose?.();
+    }
+  }
+
+  public async getItem(key: string): Promise<string | null> {
+    await this.ensureImported();
+    return await this.target.getItem(key);
+  }
+
+  public async setItem(key: string, value: string): Promise<void> {
+    await this.ensureImported();
+    await this.target.setItem(key, value);
+  }
+
+  public async removeItem(key: string): Promise<void> {
+    await this.ensureImported();
+    await this.target.removeItem(key);
+  }
+
+  public async keys(): Promise<string[]> {
+    await this.ensureImported();
+    return await this.target.keys();
+  }
+
+  public dispose(): void {
+    this.target.dispose?.();
+  }
+}

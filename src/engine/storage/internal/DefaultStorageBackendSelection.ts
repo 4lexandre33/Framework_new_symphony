@@ -17,6 +17,8 @@ import {
 } from "./KeyValueStorageBackend";
 
 import {
+  FALLBACK_PENDING_MARKER_KEY,
+  FallbackImportStorageBackend,
   LEGACY_IMPORT_MARKER_KEY,
   LegacyImportStorageBackend,
 } from "./LegacyImportStorageBackend";
@@ -24,6 +26,7 @@ import {
 import {
   TauriFileStorageBackend,
   isTauriRuntime,
+  type TauriFileStorageBridge,
 } from "./TauriFileStorageBackend";
 
 export interface ResolvedBackendInfo {
@@ -43,6 +46,21 @@ export interface DefaultBackendSelection extends ResolvedBackendInfo {
 
 interface Candidate extends ResolvedBackendInfo {
   create(): AsyncKeyValueStorageBackend;
+  /** Tentativas da sonda (falha transitória, ex.: IPC do Tauri). Padrão 1. */
+  readonly probeAttempts?: number;
+  /**
+   * Escolhido depois que um candidato ANTERIOR falhou: grava
+   * `FALLBACK_PENDING_MARKER_KEY` para o preferido importar estes saves
+   * quando voltar a funcionar.
+   */
+  readonly markWhenFallback?: boolean;
+}
+
+/** Espera entre tentativas da sonda (padrão 250 ms; testes usam 0). */
+export const DEFAULT_PROBE_RETRY_DELAY_MS = 250;
+
+function delay(ms: number): Promise<void> {
+  return ms <= 0 ? Promise.resolve() : new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /** Envolve um backend síncrono na interface assíncrona. */
@@ -96,6 +114,7 @@ export class AutoSelectedStorageBackend implements AsyncKeyValueStorageBackend {
   public constructor(
     private readonly candidates: readonly Candidate[],
     private readonly lastResort: () => Candidate,
+    private readonly probeRetryDelayMs = DEFAULT_PROBE_RETRY_DELAY_MS,
   ) {
     const first = candidates[0] ?? lastResort();
     this.info = { kind: first.kind, persistent: first.persistent };
@@ -120,17 +139,44 @@ export class AutoSelectedStorageBackend implements AsyncKeyValueStorageBackend {
 
     if (this.selecting === null) {
       this.selecting = (async () => {
-        for (const candidate of this.candidates) {
-          let backend: AsyncKeyValueStorageBackend | null = null;
+        let earlierFailed = false;
 
-          try {
-            backend = candidate.create();
-            await backend.getItem(LEGACY_IMPORT_MARKER_KEY);
-            return this.commit(candidate, backend);
-          } catch (error) {
-            backend?.dispose?.();
-            console.warn(`[Storage] Backend '${candidate.kind}' indisponível; tentando o próximo.`, error);
+        for (const candidate of this.candidates) {
+          const attempts = Math.max(1, Math.trunc(candidate.probeAttempts ?? 1));
+
+          for (let attempt = 1; attempt <= attempts; attempt += 1) {
+            let backend: AsyncKeyValueStorageBackend | null = null;
+
+            try {
+              backend = candidate.create();
+              await backend.getItem(LEGACY_IMPORT_MARKER_KEY);
+
+              if (earlierFailed && candidate.markWhenFallback === true) {
+                try {
+                  await backend.setItem(
+                    FALLBACK_PENDING_MARKER_KEY,
+                    JSON.stringify({ since: Date.now() }),
+                  );
+                } catch {
+                  // sem marcador os saves ficam aqui; nada se perde
+                }
+              }
+
+              return this.commit(candidate, backend);
+            } catch (error) {
+              backend?.dispose?.();
+
+              if (attempt < attempts) {
+                // Falha transitória (ex.: IPC ainda subindo): tenta de novo.
+                await delay(this.probeRetryDelayMs);
+                continue;
+              }
+
+              console.warn(`[Storage] Backend '${candidate.kind}' indisponível; tentando o próximo.`, error);
+            }
           }
+
+          earlierFailed = true;
         }
 
         const fallback = this.lastResort();
@@ -200,6 +246,10 @@ export interface DefaultBackendEnvironment {
   readonly tauri?: boolean;
   readonly indexedDb?: boolean;
   readonly localStorage?: boolean;
+  /** Ponte nativa dos arquivos (testes). */
+  readonly tauriBridge?: TauriFileStorageBridge;
+  /** Espera entre as 2 tentativas da sonda do Tauri (testes usam 0). */
+  readonly probeRetryDelayMs?: number;
 }
 
 /**
@@ -212,6 +262,11 @@ export interface DefaultBackendEnvironment {
  *
  * 1 e 2 importam na 1ª operação os saves que versões anteriores deixaram no
  * `localStorage` (sem apagá-los) e caem para 3/4 se a sonda falhar.
+ *
+ * No Tauri a sonda dos arquivos é tentada 2 vezes (falha transitória do IPC)
+ * antes de cair para o IndexedDB. Se cair, o IndexedDB recebe um marcador e,
+ * no próximo boot em que os arquivos funcionarem, os saves gravados nele são
+ * importados para os arquivos (veja `FallbackImportStorageBackend`).
  */
 export function selectDefaultKeyValueBackend(
   environment: DefaultBackendEnvironment = {},
@@ -223,10 +278,20 @@ export function selectDefaultKeyValueBackend(
   const candidates: Candidate[] = [];
 
   if (tauri) {
+    const bridge = environment.tauriBridge;
     candidates.push({
       kind: "tauri-file",
       persistent: true,
-      create: () => new LegacyImportStorageBackend(new TauriFileStorageBackend(), legacySource()),
+      probeAttempts: 2,
+      create: () => {
+        const files = new LegacyImportStorageBackend(
+          new TauriFileStorageBackend(bridge !== undefined ? { bridge } : {}),
+          legacySource(),
+        );
+        return indexedDb
+          ? new FallbackImportStorageBackend(files, () => new IndexedDbStorageBackend())
+          : files;
+      },
     });
   }
 
@@ -234,12 +299,17 @@ export function selectDefaultKeyValueBackend(
     candidates.push({
       kind: "indexeddb",
       persistent: true,
+      markWhenFallback: tauri,
       create: () => new LegacyImportStorageBackend(new IndexedDbStorageBackend(), legacySource()),
     });
   }
 
   if (candidates.length > 0) {
-    const backend = new AutoSelectedStorageBackend(candidates, localStorageOrMemory);
+    const backend = new AutoSelectedStorageBackend(
+      candidates,
+      localStorageOrMemory,
+      environment.probeRetryDelayMs ?? DEFAULT_PROBE_RETRY_DELAY_MS,
+    );
     const first = backend.current;
 
     return {
