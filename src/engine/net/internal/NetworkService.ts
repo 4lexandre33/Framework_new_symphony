@@ -1078,6 +1078,16 @@ export class NetworkService
     );
 
     this.transportUnbinders.push(
+      transport.onPeerConnected(
+        (peerId): void => {
+          if (this.activeTransport === transport) {
+            this.session.handleLinkConnected(peerId);
+          }
+        },
+      ),
+    );
+
+    this.transportUnbinders.push(
       transport.onPeerDisconnected(
         (peerId, reason): void => {
           if (this.activeTransport === transport) {

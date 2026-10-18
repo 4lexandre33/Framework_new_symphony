@@ -7,8 +7,13 @@
 //! exatamente como nos outros transportes; os clientes usam o
 //! `WebSocketTransport` comum (`ws://ip:porta`).
 //!
-//! - Limites: `maxClients` (1..250) conexões, mensagem ≤ 1 MiB + folga,
-//!   handshake WS em 5 s, fila de saída por par ≤ 2 MiB (backpressure: o
+//! - Limites: `maxClients` (1..250) + folga de `HANDSHAKE_HEADROOM`
+//!   conexões (a folga deixa a sessão TS responder `REJECT server_full` em
+//!   vez de o TCP ser cortado sem explicação), mensagem ≤ 1 MiB + folga,
+//!   handshake WS em 5 s, primeiro frame em 10 s e leitura ociosa em 90 s
+//!   (acima do maior heartbeat da sessão, 60 s: sessão viva nunca cai por
+//!   isso; socket mudo não ocupa vaga para sempre mesmo com o TS parado),
+//!   fila de saída por par ≤ 2 MiB (backpressure: o
 //!   envio devolve `false`), fila de eventos de entrada ≤ 16 MiB (estouro
 //!   desconecta o par com `overflow` — o WebSocket é confiável, nada é
 //!   descartado em silêncio).
@@ -38,6 +43,13 @@ pub const MAX_QUEUED_EVENTS: usize = 65_536;
 /// Máximo devolvido por um `poll` (o resto fica para o próximo).
 pub const MAX_POLL_BYTES: usize = 4 * 1024 * 1024;
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(5);
+/// Conexões aceitas além de `maxClients` (a sessão TS manda `server_full`).
+pub const HANDSHAKE_HEADROOM: usize = 4;
+/// Prazo para o PRIMEIRO frame (o cliente manda HELLO logo ao abrir).
+pub const FIRST_FRAME_TIMEOUT: Duration = Duration::from_secs(10);
+/// Sem nenhum frame recebido (dados, ping/pong WS) por este tempo → fecha.
+/// Maior que o heartbeat máximo da sessão (`heartbeatIntervalMs` ≤ 60 s).
+pub const READ_IDLE_TIMEOUT: Duration = Duration::from_secs(90);
 const PEER_CHANNEL_CAPACITY: usize = 1024;
 
 pub const EVENT_CONNECTED: u8 = 1;
@@ -157,12 +169,28 @@ struct EventQueue {
     bytes: usize,
 }
 
+/// Limites por conexão (constantes em produção; menores nos testes).
+#[derive(Clone, Copy, Debug)]
+pub struct HostLimits {
+    pub first_frame_timeout: Duration,
+    pub read_idle_timeout: Duration,
+}
+
+impl Default for HostLimits {
+    fn default() -> Self {
+        Self { first_frame_timeout: FIRST_FRAME_TIMEOUT, read_idle_timeout: READ_IDLE_TIMEOUT }
+    }
+}
+
 struct Shared {
     peers: Mutex<HashMap<String, PeerHandle>>,
     events: Mutex<EventQueue>,
     /// Conexões aceitas + handshakes em curso (reserva vaga antes do WS).
     slots: AtomicUsize,
     max_clients: usize,
+    /// `max_clients + HANDSHAKE_HEADROOM`: limite real de sockets.
+    max_connections: usize,
+    limits: HostLimits,
     next_id: AtomicU64,
 }
 
@@ -224,6 +252,15 @@ pub struct WsHost {
 impl WsHost {
     /// Precisa rodar dentro de um runtime tokio (comandos async do Tauri).
     pub async fn start(port: u16, bind: &str, max_clients: u32) -> Result<WsHost, NetHostError> {
+        Self::start_with_limits(port, bind, max_clients, HostLimits::default()).await
+    }
+
+    pub async fn start_with_limits(
+        port: u16,
+        bind: &str,
+        max_clients: u32,
+        limits: HostLimits,
+    ) -> Result<WsHost, NetHostError> {
         let ip = validate_bind(bind)?;
         let max_clients = validate_max_clients(max_clients)?;
         let listener = TcpListener::bind(SocketAddr::new(ip, port))
@@ -239,6 +276,8 @@ impl WsHost {
             events: Mutex::new(EventQueue::default()),
             slots: AtomicUsize::new(0),
             max_clients,
+            max_connections: max_clients + HANDSHAKE_HEADROOM,
+            limits,
             next_id: AtomicU64::new(1),
         });
         let (shutdown, shutdown_rx) = watch::channel(false);
@@ -341,7 +380,7 @@ async fn accept_loop(listener: TcpListener, shared: Arc<Shared>, mut shutdown: w
                 let Ok((stream, _addr)) = accepted else { continue };
                 // Reserva a vaga ANTES do handshake (limite real de conexões).
                 let reserved = shared.slots.fetch_add(1, Ordering::AcqRel);
-                if reserved >= shared.max_clients {
+                if reserved >= shared.max_connections {
                     shared.slots.fetch_sub(1, Ordering::AcqRel);
                     drop(stream);
                     continue;
@@ -392,8 +431,14 @@ async fn handle_connection(
     shared.push(HostEvent::Connected(peer_id.clone()));
 
     let (mut sink, mut source) = socket.split();
+    let mut got_frame = false;
+    let idle = tokio::time::sleep(shared.limits.first_frame_timeout);
+    tokio::pin!(idle);
     let reason: String = loop {
         tokio::select! {
+            () = &mut idle => {
+                break if got_frame { "idle_timeout" } else { "handshake_timeout" }.to_string();
+            }
             changed = shutdown.changed() => {
                 if changed.is_err() || *shutdown.borrow() {
                     break "host_stopped".to_string();
@@ -418,6 +463,10 @@ async fn handle_connection(
                 }
             }
             incoming = source.next() => {
+                if matches!(incoming, Some(Ok(_))) {
+                    got_frame = true;
+                    idle.as_mut().reset(tokio::time::Instant::now() + shared.limits.read_idle_timeout);
+                }
                 match incoming {
                     Some(Ok(Message::Binary(data))) => {
                         if data.is_empty() {
@@ -631,7 +680,13 @@ mod tests {
         let events = wait_events(&host, 1).await;
         let HostEvent::Connected(peer) = &events[0] else { panic!() };
 
-        // A segunda conexão passa do limite: o TCP é fechado sem handshake.
+        // maxClients + HANDSHAKE_HEADROOM sockets; o próximo tem o TCP
+        // fechado sem handshake.
+        let mut extra = Vec::new();
+        for _ in 0..HANDSHAKE_HEADROOM {
+            extra.push(connect_async(url.as_str()).await.unwrap().0);
+        }
+        assert_eq!(wait_events(&host, HANDSHAKE_HEADROOM).await.len(), HANDSHAKE_HEADROOM);
         assert!(connect_async(url.as_str()).await.is_err());
 
         assert!(host.close_peer(peer));
@@ -669,6 +724,65 @@ mod tests {
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
         assert!(reopened.is_some());
+    }
+
+    #[tokio::test]
+    async fn headroom_lets_the_session_reject_and_silent_sockets_time_out() {
+        let limits = HostLimits {
+            first_frame_timeout: Duration::from_millis(150),
+            read_idle_timeout: Duration::from_millis(400),
+        };
+        let host = WsHost::start_with_limits(0, "loopback", 1, limits).await.unwrap();
+        let url = format!("ws://127.0.0.1:{}", host.info().port);
+        assert_eq!(host.info().max_clients, 1); // a folga não aparece no DTO
+
+        // maxClients = 1, mas a folga aceita mais sockets (a sessão manda REJECT).
+        let (mut talker, _) = connect_async(url.as_str()).await.unwrap();
+        let (_mute, _) = connect_async(url.as_str()).await.unwrap();
+        let events = wait_events(&host, 2).await;
+        assert_eq!(events.iter().filter(|e| matches!(e, HostEvent::Connected(_))).count(), 2);
+
+        // Até maxClients + HANDSHAKE_HEADROOM; além disso o TCP é fechado.
+        let mut extra = Vec::new();
+        for _ in 0..(HANDSHAKE_HEADROOM - 1) {
+            extra.push(connect_async(url.as_str()).await.unwrap().0);
+        }
+        assert!(connect_async(url.as_str()).await.is_err());
+
+        // O "talker" manda frames periódicos; os mudos caem por handshake_timeout.
+        let mut dropped = Vec::new();
+        for _ in 0..60 {
+            talker.send(Message::Binary(Bytes::from_static(&[1]))).await.unwrap();
+            for event in host.poll(MAX_POLL_BYTES) {
+                if let HostEvent::Disconnected(_, reason) = event {
+                    dropped.push(reason);
+                }
+            }
+            if dropped.len() >= HANDSHAKE_HEADROOM {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        assert_eq!(dropped.len(), HANDSHAKE_HEADROOM, "{dropped:?}");
+        assert!(dropped.iter().all(|r| r == "handshake_timeout"), "{dropped:?}");
+        assert_eq!(host.info().peers, 1);
+
+        // Depois do primeiro frame vale a leitura ociosa.
+        let mut idle_reason = None;
+        for _ in 0..100 {
+            for event in host.poll(MAX_POLL_BYTES) {
+                if let HostEvent::Disconnected(_, reason) = event {
+                    idle_reason = Some(reason);
+                }
+            }
+            if idle_reason.is_some() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        assert_eq!(idle_reason.as_deref(), Some("idle_timeout"));
+        assert_eq!(host.info().peers, 0);
+        host.stop();
     }
 
     #[tokio::test]

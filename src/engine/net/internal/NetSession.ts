@@ -53,6 +53,11 @@ export const HELLO_RESEND_INTERVAL_MS = 500;
 export const MAX_REASSEMBLIES_PER_PEER = 8;
 export const MAX_REASSEMBLY_BYTES_PER_PEER = 32 * 1024 * 1024;
 export const REASSEMBLY_TIMEOUT_MS = 15_000;
+/**
+ * Links do transporte ainda sem HELLO acompanhados pelo host. Acima disto,
+ * links novos são fechados na hora (o transporte nativo já limita conexões).
+ */
+export const MAX_PENDING_LINKS = 1024;
 const PING_HISTORY = 32;
 const RTT_SMOOTHING = 0.125;
 /** Canal do transporte usado para frames de controle. */
@@ -144,6 +149,13 @@ function positiveInt(value: number | undefined, fallback: number, min: number, m
 export class NetSession {
   private role: "host" | "client" | null = null;
   private readonly peers = new Map<string, SessionPeer>();
+  /**
+   * Host: links abertos no transporte que ainda não mandaram HELLO
+   * (linkId → instante da conexão, no relógio da sessão). Quem não completar
+   * o handshake em `handshakeTimeoutMs` é fechado (`closePeer`) no `update()`
+   * — sem timers: o prazo usa o mesmo `now()` do heartbeat.
+   */
+  private readonly pendingLinks = new Map<string, number>();
   private maxClients = DEFAULT_MAX_CLIENTS;
   private heartbeatIntervalMs = DEFAULT_HEARTBEAT_INTERVAL_MS;
   private peerTimeoutMs = DEFAULT_PEER_TIMEOUT_MS;
@@ -195,6 +207,25 @@ export class NetSession {
   public startHost(maxClients: number): void {
     this.role = "host";
     this.maxClients = maxClients;
+    this.pendingLinks.clear();
+  }
+
+  /**
+   * Link novo no transporte (ex.: socket aceito pelo host nativo). No host,
+   * começa o prazo de handshake; HELLO dentro do prazo vira par (ou REJECT).
+   */
+  public handleLinkConnected(linkId: string): void {
+    if (this.role !== "host" || this.peers.has(linkId) || this.pendingLinks.has(linkId)) return;
+    if (this.pendingLinks.size >= MAX_PENDING_LINKS) {
+      this.transport.closePeer(linkId);
+      return;
+    }
+    this.pendingLinks.set(linkId, this.now());
+  }
+
+  /** Links abertos aguardando HELLO (diagnóstico/testes). */
+  public get pendingLinkCount(): number {
+    return this.pendingLinks.size;
   }
 
   /** Handshake de cliente: HELLO até WELCOME, REJECT ou timeout. */
@@ -443,6 +474,7 @@ export class NetSession {
   }
 
   private handleHello(linkId: string, now: number): void {
+    this.pendingLinks.delete(linkId);
     const existing = this.peers.get(linkId);
     if (existing) {
       existing.lastHeardMs = now;
@@ -547,6 +579,7 @@ export class NetSession {
 
   /** Queda do link reportada pelo transporte. */
   public handleLinkDisconnected(linkId: string, reason: string): void {
+    this.pendingLinks.delete(linkId);
     if (this.pendingHandshake && this.pendingHandshake.linkId === linkId) {
       const pending = this.pendingHandshake;
       this.pendingHandshake = null;
@@ -570,6 +603,16 @@ export class NetSession {
       } else if (now - pending.lastHelloMs >= HELLO_RESEND_INTERVAL_MS) {
         pending.lastHelloMs = now;
         void this.sendRaw(pending.linkId, encodeHelloFrame(), CONTROL_CHANNEL, true);
+      }
+    }
+
+    if (this.role === "host" && this.pendingLinks.size > 0) {
+      for (const [linkId, connectedAt] of this.pendingLinks) {
+        if (now - connectedAt >= this.handshakeTimeoutMs) {
+          // Link ocioso sem HELLO: libera a vaga no transporte.
+          this.pendingLinks.delete(linkId);
+          this.transport.closePeer(linkId);
+        }
       }
     }
 
@@ -624,6 +667,7 @@ export class NetSession {
       pending.resolve(false);
     }
 
+    this.pendingLinks.clear();
     const removed = Array.from(this.peers.keys());
     for (const peerId of removed) {
       await this.sendRaw(peerId, encodeByeFrame(reason), CONTROL_CHANNEL, true);

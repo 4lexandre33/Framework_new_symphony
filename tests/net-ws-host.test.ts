@@ -102,7 +102,8 @@ class FakeNativeServer implements NativeWsHostBridge {
   /** Conexão chegando de um cliente. */
   public accept(socket: FakeClientSocket): string | null {
     if (!this.running || !socket.url.endsWith(`:${String(this.running.port)}`)) return null;
-    if (this.sockets.size >= this.running.maxClients) return null;
+    // Como o Rust: folga acima de maxClients para a sessão mandar REJECT server_full.
+    if (this.sockets.size >= this.running.maxClients + 4) return null;
     const id = `ws_${String(this.nextId++)}`;
     this.sockets.set(id, socket);
     this.queue.push(encode(NATIVE_WS_EVENT_CONNECTED, id));
@@ -293,8 +294,10 @@ describe("G8 host WebSocket nativo", () => {
     first.configure({ handshakeTimeoutMs: 100 });
     const b = first.connect("ws://127.0.0.1:7777");
     await pump([host, first]);
-    expect(await b).toBe(false); // recusado pelo limite do link
+    expect(await b).toBe(false); // REJECT server_full da sessão (o link tem folga)
     expect(host.getPeers()).toHaveLength(1);
+    await pump([host]);
+    expect(server.sockets.size).toBe(1); // link recusado foi fechado pelo host
 
     await host.disconnect();
     await pump([firstWithEvents]);
@@ -390,5 +393,36 @@ describe("G8 host WebSocket nativo", () => {
     expect(await third.listen()).toBe(false);
     expect(server.startCalls).toHaveLength(1);
     third.dispose();
+  });
+
+  it("prazo de handshake: link sem HELLO é fechado pelo host no relógio da sessão (sem timers)", async () => {
+    install();
+    const host = makeHost();
+    host.configure({ handshakeTimeoutMs: 5000, peerTimeoutMs: 600_000 });
+    expect(await host.startHost({ transport: "websocket", maxClients: 2 })).toBe(true);
+
+    // Socket "mudo": conecta no servidor nativo e nunca manda HELLO.
+    const mute = Object.create(FakeClientSocket.prototype) as FakeClientSocket;
+    Object.assign(mute, { url: "ws://127.0.0.1:7777", onclose: null });
+    const muteId = server.accept(mute)!;
+    await pump([host], 2);
+    expect(server.sockets.has(muteId)).toBe(true);
+
+    // Cliente de verdade conecta no meio do prazo.
+    clock = 2000;
+    const client = makeClient();
+    const ok = client.connect("ws://127.0.0.1:7777");
+    await pump([host, client]);
+    expect(await ok).toBe(true);
+
+    clock = 4999;
+    await pump([host], 2);
+    expect(server.sockets.has(muteId)).toBe(true);
+
+    clock = 5000;
+    await pump([host], 2);
+    expect(server.sockets.has(muteId)).toBe(false); // vaga liberada
+    expect(host.getPeers()).toHaveLength(1); // o par que fez HELLO continua
+    expect(server.sockets.size).toBe(1);
   });
 });
