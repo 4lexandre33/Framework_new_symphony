@@ -1,0 +1,18 @@
+// Fixture do steam_achievements_check (copiada como .ts para um repo temporário).
+import type { SteamApi } from "../../../tokens/steam";
+
+const ACH_FIRST_JUMP = "ACH_FIRST_JUMP";
+
+export async function onJump(steam: SteamApi): Promise<void> {
+  await steam.unlockAchievement(ACH_FIRST_JUMP);
+  await steam.unlockAchievement("ACH_SECRET_ROOM");
+  await steam.setStat("distancia_total", 10);
+  await steam.setStat("velocidade_max", 1.5, { type: "float" });
+  await steam.getStat?.("tempo_jogo", "float");
+}
+
+export function dynamic(steam: SteamApi, name: string): Promise<boolean> {
+  return steam.unlockAchievement(`ACH_${name}`);
+}
+
+export const viaCommand = { achievementId: "ACH_BY_COMMAND" };

@@ -1,0 +1,13 @@
+"AppBuild"
+{
+	"AppID"	"1234560"
+	"Desc"	"Build \"teste\" \\ v1"
+	"BuildOutput"	"{{ROOT}}/src-tauri/gen/steam/demo/output/"
+	"ContentRoot"	"{{ROOT}}/src-tauri/gen/steam/demo/"
+	"SetLive"	"beta"
+	"Depots"
+	{
+		"1234561"	"depot_build_1234561.vdf"
+		"1234562"	"depot_build_1234562.vdf"
+	}
+}

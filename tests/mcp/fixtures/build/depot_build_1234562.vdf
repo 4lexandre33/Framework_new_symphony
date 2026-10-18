@@ -1,0 +1,12 @@
+"DepotBuild"
+{
+	"DepotID"	"1234562"
+	"ContentRoot"	"{{ROOT}}/src-tauri/target/release/bundle/appimage/"
+	"FileMapping"
+	{
+		"LocalPath"	"*"
+		"DepotPath"	"."
+		"recursive"	"1"
+	}
+	"FileExclusion"	"*.pdb"
+}

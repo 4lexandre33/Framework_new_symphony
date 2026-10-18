@@ -1,0 +1,12 @@
+"DepotBuild"
+{
+	"DepotID"	"1234561"
+	"ContentRoot"	"{{ROOT}}/src-tauri/target/release/bundle/nsis/"
+	"FileMapping"
+	{
+		"LocalPath"	"*"
+		"DepotPath"	"."
+		"recursive"	"1"
+	}
+	"FileExclusion"	"*.pdb"
+}
