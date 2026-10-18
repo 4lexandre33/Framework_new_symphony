@@ -51,6 +51,52 @@ interface MutableVector3AI {
   z: number;
 }
 
+/** Colisão física resolvida do agente (G73). */
+interface ResolvedAgentCollision {
+  readonly radius: number;
+  readonly halfHeight: number;
+  readonly centerHeight: number;
+  readonly skin: number;
+  readonly maxIterations: number;
+  readonly collisionGroups: { readonly memberships: number; readonly filter: number } | undefined;
+}
+
+/** Pedido de shape-cast reutilizado (sem alocação do lado da IA). */
+interface MutableShapeCast {
+  shape: { shapeType: "capsule"; radius: number; halfHeight: number };
+  position: MutableVector3AI;
+  direction: MutableVector3AI;
+  maxDistance: number;
+  excludeEntityId: string | undefined;
+  excludeSensors: boolean;
+  collisionGroups: { readonly memberships: number; readonly filter: number } | undefined;
+}
+
+function resolveAgentCollision(config: AIAgentConfig): ResolvedAgentCollision | null {
+  const value = config.physicsCollision;
+
+  if (value === undefined || value === false) {
+    return null;
+  }
+
+  const options = value === true ? {} : value;
+  const positive = (input: number | undefined, fallback: number): number =>
+    typeof input === "number" && Number.isFinite(input) && input > 0 ? input : fallback;
+  const radius = positive(options.radius, positive(config.navAgentRadius, 0.25));
+  const halfHeight = typeof options.halfHeight === "number" && Number.isFinite(options.halfHeight) && options.halfHeight >= 0 ? options.halfHeight : 0.5;
+  const centerHeight =
+    typeof options.centerHeight === "number" && Number.isFinite(options.centerHeight) ? options.centerHeight : radius + halfHeight + 0.05;
+
+  return {
+    radius,
+    halfHeight,
+    centerHeight,
+    skin: positive(options.skin, 0.02),
+    maxIterations: Math.max(1, Math.min(8, Math.floor(positive(options.maxIterations, 3)))),
+    collisionGroups: options.collisionGroups,
+  };
+}
+
 export interface AIAgentManagerHooks {
   onPathCalculated?(agentId: string, result: NavMeshPathResult): void;
   onBehaviorStateChanged?(agentId: string, previousState: string, newState: string): void;
@@ -94,6 +140,8 @@ class ActiveAIAgent {
   public positionPending: boolean;
   public polygonHint = -1;
   public navMeshId: string;
+  /** G73: cápsula de colisão física (null = desligado). */
+  public readonly collision: ResolvedAgentCollision | null;
 
   public constructor(
     public readonly config: AIAgentConfig,
@@ -107,6 +155,7 @@ class ActiveAIAgent {
     this.worldPatch = { position: this.position };
     this.kinematicTarget = { position: this.position };
     this.navMeshId = config.navMeshId ?? NavMeshQuery.DEFAULT_ID;
+    this.collision = resolveAgentCollision(config);
     this.context = new AgentBehaviorContext(manager, this);
     this.behaviorTree = new BehaviorTree(defaultRoot(this));
   }
@@ -184,6 +233,15 @@ export class AIAgentManager implements BehaviorRegistry {
   private readonly actions = new Map<string, BehaviorActionFn>();
   private readonly conditions = new Map<string, BehaviorConditionFn>();
   private readonly scratchForce: MutableVector3AI = { x: 0, y: 0, z: 0 };
+  private readonly shapeCast: MutableShapeCast = {
+    shape: { shapeType: "capsule", radius: 0.25, halfHeight: 0.5 },
+    position: { x: 0, y: 0, z: 0 },
+    direction: { x: 0, y: 0, z: 1 },
+    maxDistance: 0,
+    excludeEntityId: undefined,
+    excludeSensors: true,
+    collisionGroups: undefined,
+  };
   private elapsedSeconds = 0;
 
   private readonly createDefaultRoot = (agent: ActiveAIAgent): BTNode =>
@@ -522,7 +580,7 @@ export class AIAgentManager implements BehaviorRegistry {
     this.refreshEntityTarget(agent, deltaSeconds, world);
     this.tickBehavior(agent, deltaSeconds);
     this.updatePerception(agent, physics);
-    this.updateLocomotion(agent, deltaSeconds);
+    this.updateLocomotion(agent, deltaSeconds, physics);
     this.syncTransforms(agent, physics, world);
   }
 
@@ -619,7 +677,7 @@ export class AIAgentManager implements BehaviorRegistry {
     agent.targetSpotted = result.targetSpotted;
   }
 
-  private updateLocomotion(agent: ActiveAIAgent, deltaSeconds: number): void {
+  private updateLocomotion(agent: ActiveAIAgent, deltaSeconds: number, physics: PhysicsApi | null = null): void {
     if (agent.positionPending) {
       return;
     }
@@ -630,9 +688,7 @@ export class AIAgentManager implements BehaviorRegistry {
     if (!agent.moving) {
       // Parado: só a separação empurra (sem inércia).
       if (separation.x !== 0 || separation.z !== 0 || separation.y !== 0) {
-        agent.position.x += separation.x * deltaSeconds;
-        agent.position.y += separation.y * deltaSeconds;
-        agent.position.z += separation.z * deltaSeconds;
+        this.displace(agent, separation.x * deltaSeconds, separation.y * deltaSeconds, separation.z * deltaSeconds, physics, false);
         this.constrain(agent);
       }
 
@@ -685,9 +741,7 @@ export class AIAgentManager implements BehaviorRegistry {
     agent.velocity.y += this.scratchForce.y * deltaSeconds;
     agent.velocity.z += this.scratchForce.z * deltaSeconds;
     this.clampVectorLength(agent.velocity, maxSpeed);
-    agent.position.x += agent.velocity.x * deltaSeconds;
-    agent.position.y += agent.velocity.y * deltaSeconds;
-    agent.position.z += agent.velocity.z * deltaSeconds;
+    this.displace(agent, agent.velocity.x * deltaSeconds, agent.velocity.y * deltaSeconds, agent.velocity.z * deltaSeconds, physics, true);
     this.constrain(agent);
 
     const speedSq = agent.velocity.x * agent.velocity.x + agent.velocity.z * agent.velocity.z;
@@ -697,6 +751,112 @@ export class AIAgentManager implements BehaviorRegistry {
       agent.forwardDir.x = agent.velocity.x * inverse;
       agent.forwardDir.y = agent.velocity.y * inverse;
       agent.forwardDir.z = agent.velocity.z * inverse;
+    }
+  }
+
+  /**
+   * Move o agente. Com `physicsCollision` (G73) faz collide-and-slide no
+   * plano XZ: shape-cast da cápsula, avança até o contato (menos a folga) e
+   * desliza o resto ao longo da parede; a velocidade perde a componente que
+   * entra na parede. Contatos com normal quase vertical (chão/teto) não
+   * bloqueiam. Y segue livre (a navmesh dá a altura).
+   */
+  private displace(
+    agent: ActiveAIAgent,
+    dx: number,
+    dy: number,
+    dz: number,
+    physics: PhysicsApi | null,
+    clipVelocity: boolean,
+  ): void {
+    const collision = agent.collision;
+    const position = agent.position;
+
+    if (collision === null || physics === null) {
+      position.x += dx;
+      position.y += dy;
+      position.z += dz;
+      return;
+    }
+
+    position.y += dy;
+    const request = this.shapeCast;
+    request.shape.radius = collision.radius;
+    request.shape.halfHeight = collision.halfHeight;
+    request.excludeEntityId = agent.config.entityId;
+    request.collisionGroups = collision.collisionGroups;
+    const skin = collision.skin;
+    let restX = dx;
+    let restZ = dz;
+
+    for (let iteration = 0; iteration < collision.maxIterations; iteration += 1) {
+      const length = Math.sqrt(restX * restX + restZ * restZ);
+
+      if (!(length > 1e-6)) {
+        return;
+      }
+
+      request.position.x = position.x;
+      request.position.y = position.y + collision.centerHeight;
+      request.position.z = position.z;
+      request.direction.x = restX;
+      request.direction.y = 0;
+      request.direction.z = restZ;
+      request.maxDistance = length + skin;
+
+      let hit: ReturnType<PhysicsApi["castShape"]>;
+
+      try {
+        hit = physics.castShape(request);
+      } catch {
+        position.x += restX;
+        position.z += restZ;
+        return;
+      }
+
+      // Normal horizontal da superfície; chão/teto não bloqueiam.
+      let nx = hit.normal.x;
+      let nz = hit.normal.z;
+      const horizontal = Math.sqrt(nx * nx + nz * nz);
+
+      if (!hit.hit || horizontal < 0.3) {
+        position.x += restX;
+        position.z += restZ;
+        return;
+      }
+
+      nx /= horizontal;
+      nz /= horizontal;
+      const into = restX * nx + restZ * nz;
+
+      // Afastando-se da superfície (ex.: começou encostado): livre.
+      if (into >= 0) {
+        position.x += restX;
+        position.z += restZ;
+        return;
+      }
+
+      const travel = Math.max(0, Math.min(length, hit.distance - skin));
+      const scale = travel / length;
+      position.x += restX * scale;
+      position.z += restZ * scale;
+
+      const remaining = 1 - scale;
+      restX *= remaining;
+      restZ *= remaining;
+      const intoRest = restX * nx + restZ * nz;
+      restX -= nx * intoRest;
+      restZ -= nz * intoRest;
+
+      if (clipVelocity) {
+        const velocity = agent.velocity;
+        const intoVelocity = velocity.x * nx + velocity.z * nz;
+
+        if (intoVelocity < 0) {
+          velocity.x -= nx * intoVelocity;
+          velocity.z -= nz * intoVelocity;
+        }
+      }
     }
   }
 

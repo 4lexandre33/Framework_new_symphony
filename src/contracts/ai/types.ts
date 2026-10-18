@@ -201,6 +201,33 @@ export interface AIAgentConfig {
   /** Comportamento próprio (G7). Ausente = árvore padrão (chasing/patrolling/arrived). */
   readonly behavior?:
     BehaviorNodeDefinition;
+
+  /**
+   * G73: colide com a geometria FÍSICA (colliders de `game.physics`) por
+   * collide-and-slide com uma cápsula (shape-cast) no plano XZ, além da
+   * navmesh. `true` = padrões. Padrão desligado (comportamento antigo).
+   */
+  readonly physicsCollision?:
+    boolean | AIAgentPhysicsCollisionConfig;
+}
+
+/** Cápsula de colisão do agente (G73). Ignora o próprio corpo e sensores. */
+export interface AIAgentPhysicsCollisionConfig {
+  /** Raio da cápsula. Padrão `navAgentRadius` (0.25). */
+  readonly radius?: number;
+  /** Meia-altura do trecho reto da cápsula. Padrão 0.5. */
+  readonly halfHeight?: number;
+  /**
+   * Altura do CENTRO da cápsula acima da posição do agente (pés). Padrão
+   * raio + meia-altura + 0.05 (a cápsula não raspa no chão).
+   */
+  readonly centerHeight?: number;
+  /** Folga mantida das superfícies. Padrão 0.02. */
+  readonly skin?: number;
+  /** Iterações de deslize por tick. Padrão 3. */
+  readonly maxIterations?: number;
+  /** Filtro de grupos da consulta (ex.: só paredes estáticas). */
+  readonly collisionGroups?: { readonly memberships: number; readonly filter: number };
 }
 
 /* ============================================================================

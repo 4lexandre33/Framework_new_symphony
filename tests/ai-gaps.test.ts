@@ -211,6 +211,60 @@ describe("ai gaps — G69 linha de visão com filtros", () => {
   });
 });
 
+describe("ai gaps — G73 colisão com a geometria física (opcional)", () => {
+  async function scenario(physicsCollision: boolean, target: Vector3AI): Promise<{ position: Vector3AI; casts: number }> {
+    const physics = new PhysicsService(ctxFor([]), new PhysicsWorld());
+    expect(await physics.initialize()).toBe(true);
+    physicsServices.push(physics);
+    let casts = 0;
+    const original = physics.castShape.bind(physics);
+    physics.castShape = (request) => {
+      casts += 1;
+      return original(request);
+    };
+    const service = new AIService(ctxFor([]));
+    service.bindDependencies(physics, null);
+    service.loadNavMesh({ polygons: [rect(0, -20, -20, 20, 20, [])] });
+    // Parede estática entre o agente e o alvo (a navmesh não tem buraco).
+    physics.createBody("wall", { bodyType: "fixed", position: { x: 0, y: 1, z: 5 } }, { shapeType: "box", halfExtents: { x: 3, y: 2, z: 0.2 } });
+    // O corpo do próprio agente é ignorado pela cápsula.
+    physics.createBody("bot_e", { bodyType: "kinematicPositionBased", position: { x: 0, y: 1, z: 0 } }, { shapeType: "capsule", radius: 0.3, halfHeight: 0.5 });
+    expect(
+      service.registerAgent({
+        agentId: "bot",
+        entityId: "bot_e",
+        initialPosition: { x: 0, y: 0, z: 0 },
+        navAgentRadius: 0.3,
+        maxSpeed: 4,
+        stoppingDistance: 0.3,
+        perceptionConfig: { hearingRadius: 0, visionDistance: 0 },
+        ...(physicsCollision ? { physicsCollision: { radius: 0.3 } } : {}),
+      }),
+    ).toBe(true);
+    expect(service.setAgentTarget("bot", target).found).toBe(true);
+    stepService(service, 8);
+    const position = service.getAgentPosition("bot")!;
+    return { position: { x: position.x, y: position.y, z: position.z }, casts };
+  }
+
+  it("padrão: atravessa a parede (só navmesh) e não consulta a física", async () => {
+    const result = await scenario(false, { x: 0, y: 0, z: 10 });
+    expect(result.position.z).toBeGreaterThan(9);
+    expect(result.casts).toBe(0);
+  });
+
+  it("physicsCollision: para na parede (sem atravessar) e desliza ao contorná-la", async () => {
+    const blocked = await scenario(true, { x: 0, y: 0, z: 10 });
+    expect(blocked.casts).toBeGreaterThan(0);
+    expect(blocked.position.z).toBeLessThan(4.8 - 0.3 + 0.01);
+    expect(blocked.position.z).toBeGreaterThan(4.2);
+
+    // Alvo além da ponta da parede: desliza ao longo dela e chega.
+    const slid = await scenario(true, { x: 4, y: 0, z: 8 });
+    expect(Math.hypot(slid.position.x - 4, slid.position.z - 8)).toBeLessThan(0.6);
+  });
+});
+
 describe("ai gaps — G70 audição real", () => {
   it("andar até um ponto não 'ouve' o destino; estímulo tem raio e não redireciona", () => {
     const emitted: Emitted[] = [];

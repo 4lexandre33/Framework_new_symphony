@@ -101,6 +101,15 @@ interface AIAgentConfig {
   readonly syncPhysicsBody?: boolean; // Move o corpo físico da entidade (kinematic: setNextKinematicTransform; outros: teleporte).
   readonly repathInterval?: number; // Intervalo mínimo (s) para refazer o caminho até uma entidade-alvo que se move.
   readonly behavior?: BehaviorNodeDefinition; // Comportamento próprio (G7).
+  readonly physicsCollision?: boolean | AIAgentPhysicsCollisionConfig; // G73: colide com a geometria FÍSICA (colliders de `game.physics`) por collide-and-slide com uma cápsula (shape…
+}
+interface AIAgentPhysicsCollisionConfig { // Cápsula de colisão do agente (G73).
+  readonly radius?: number; // Raio da cápsula.
+  readonly halfHeight?: number; // Meia-altura do trecho reto da cápsula.
+  readonly centerHeight?: number; // Altura do CENTRO da cápsula acima da posição do agente (pés).
+  readonly skin?: number; // Folga mantida das superfícies.
+  readonly maxIterations?: number; // Iterações de deslize por tick.
+  readonly collisionGroups?: { readonly memberships: number; readonly filter: number }; // Filtro de grupos da consulta (ex.: só paredes estáticas).
 }
 interface BehaviorActionContext { // Contexto passado às ações/condições registradas (reutilizado: não guarde).
   readonly agentId: string;
@@ -194,4 +203,4 @@ interface AIAgentState {
 - Chegada: `game.ai.agent-arrived` UMA vez; `getAgentState().arrived` fica true até novo destino.
 - Comportamento: árvore padrão (blackboard `status` = chasing/patrolling/arrived) ou `setAgentBehavior(id, árvore)` declarativa (sequence/selector/parallel/wait/move-to/blackboard/action/condition) com `registerBehaviorAction/Condition`. FSM no jogo chamando `setAgentTarget` também serve.
 - Percepção (só do alvo-entidade): visão 20 u / 90°, linha de visão por raio que ignora o agente e conta o alvo; audição = alvo a ≤ `hearingRadius` (padrão 10) — `hearingRadius: 0` desliga. `triggerAudioStimulus(pos, raio)` ⇒ `stimulus-heard` (e investigação só com `investigateStimuli`).
-- Agentes NÃO colidem com a física (GAPS G73): a navmesh é a única barreira.
+- Colisão com a física é OPCIONAL (G73; padrão desligado = a navmesh é a única barreira): `physicsCollision: true | { radius, halfHeight, centerHeight, skin, maxIterations, collisionGroups }` faz collide-and-slide da cápsula (shape-cast em XZ via `game.physics`, ignora o próprio corpo e sensores) contra os colliders; a altura continua da navmesh. Não refaz o caminho: obstáculo grande que bloqueia a rota ainda deve virar buraco/área da navmesh.
