@@ -2,7 +2,8 @@ import { defineEvent, defineCommand } from "@core";
 
 /**
  * - `steam_p2p`: Steam (Tauri + Steam ativa);
- * - `websocket`: cliente de um servidor/relay que fala o protocolo do game.net (não hospeda);
+ * - `websocket`: cliente (`ws://ip:porta`) de um host/relay que fala o protocolo do game.net; HOSPEDA só
+ *   no app nativo (servidor WebSocket no Rust, `startHost({ transport: "websocket", port, bind, maxClients })`);
  * - `mock`: loopback em memória (mesmo runtime: multiplayer local e testes) — `loopback://<sala>`;
  * - `broadcast_channel`: abas/janelas da mesma origem — `bc://<sala>`;
  * - `webrtc`: reservado (não implementado; selecioná-lo falha).
@@ -109,6 +110,23 @@ export interface NetHostOptions {
   readonly transport?: TransportType;
   /** Nome da sala (loopback/BroadcastChannel): `[A-Za-z0-9_.-]{1,64}`. */
   readonly room?: string;
+  /**
+   * Host WebSocket nativo (G8): `loopback` (padrão; só esta máquina) ou `lan`
+   * (0.0.0.0; outros PCs da rede local — o firewall do SO pode perguntar).
+   * `port` é a porta TCP (padrão 7777).
+   */
+  readonly bind?: "loopback" | "lan";
+}
+
+/** Endereço do host WebSocket nativo ativo (G8). */
+export interface NetHostEndpoint {
+  readonly transport: "websocket";
+  readonly port: number;
+  readonly bind: "loopback" | "lan";
+  /** `ws://127.0.0.1:<porta>` (mesma máquina). */
+  readonly localUrl: string;
+  /** `ws://<ip-lan>:<porta>` com `bind: "lan"` (IP provável; null se não descoberto). */
+  readonly lanUrl: string | null;
 }
 
 export interface NetSessionOptions {

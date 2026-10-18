@@ -5,6 +5,7 @@ import {
 import type {
   AutoSnapshotOptions,
   EntitySnapshot,
+  NetHostEndpoint,
   NetHostOptions,
   NetMode,
   NetPeerInfo,
@@ -28,7 +29,8 @@ export interface NetworkApi {
    * (`setPreferredTransport`) ou Steam se disponível, senão `mock`
    * (loopback em memória, `loopback://<room|port>`). `maxClients` é imposto
    * no handshake; `port`/`room` nomeiam a sala do loopback/BroadcastChannel
-   * (Steam não usa portas). WebSocket não hospeda: resolve `false`.
+   * (Steam não usa portas). WebSocket hospeda só no app nativo (servidor
+   * Rust: `port` TCP, `bind` loopback/lan, `maxClients`); no navegador resolve `false`.
    */
   startHost(
     options?: NetHostOptions,
@@ -96,6 +98,12 @@ export interface NetworkApi {
     entityId: string,
     renderAlpha: number,
   ): EntitySnapshot | null;
+
+  /**
+   * G8: endereço do host WebSocket nativo ativo (para mostrar aos jogadores);
+   * null se não está hospedando por WebSocket.
+   */
+  getHostEndpoint(): NetHostEndpoint | null;
 
   /** Transportes utilizáveis neste runtime. */
   getAvailableTransports():

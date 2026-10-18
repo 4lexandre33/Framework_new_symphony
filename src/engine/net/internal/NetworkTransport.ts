@@ -32,6 +32,10 @@ export interface PeerDisconnectionHandler {
 export interface TransportListenOptions {
   readonly port?: number;
   readonly room?: string;
+  /** Limite de conexões no nível do link (host WebSocket nativo). */
+  readonly maxClients?: number;
+  /** Interface do host WebSocket nativo: `loopback` (padrão) ou `lan`. */
+  readonly bind?: "loopback" | "lan";
 }
 
 export abstract class NetworkTransport {
