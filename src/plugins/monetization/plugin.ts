@@ -4,8 +4,7 @@ import { SteamToken } from "../../tokens/steam";
 import { StorageToken } from "../../tokens/storage";
 import { UIToken } from "../../tokens/ui";
 import { PurchaseInitiatedEvent, PurchaseCompletedEvent, PurchaseFailedEvent, WalletUpdatedEvent, InventoryRefreshedEvent, ItemGrantedEvent, InitPurchaseCommand, FinalizePurchaseCommand, ConsumeItemCommand, FetchInventoryCommand } from "../../contracts/monetization/types";
-import type { PersistedWalletState, WalletPersistence } from "../../contracts/monetization/types";
-import type { StorageDriverType } from "../../contracts/storage/types";
+import type { PersistedWalletState, WalletPersistence, WalletPersistenceConfig } from "../../contracts/monetization/types";
 import { MonetizationService, type MonetizationServiceOptions } from "../../engine/monetization/internal/MonetizationService";
 
 export const monetizationManifest: Plugin["manifest"] = {
@@ -48,18 +47,15 @@ export const monetizationManifest: Plugin["manifest"] = {
   },
 };
 
-export interface WalletPersistenceConfig {
-  /** Slot do `game.storage` (padrão `monetization-wallet`; aparece em `listSaves`). */
-  readonly slotName?: string;
-  /** Driver de save (padrão: o ativo do storage). */
-  readonly driver?: StorageDriverType;
-}
+export type { WalletPersistenceConfig };
 
 export interface MonetizationPluginOptions extends MonetizationServiceOptions {
   /**
    * Salva/restaura a carteira (saldos + entitlements) num slot do
    * `game.storage` (G135). Opcional: sem `game.storage` fica só em memória.
    * Fica no CLIENTE (editável pelo jogador): dinheiro real → servidor.
+   * Jogos (que não controlam estas opções) usam, em runtime,
+   * `MonetizationApi.enableWalletPersistence()`.
    */
   readonly persistWallet?: boolean | WalletPersistenceConfig;
 }
@@ -103,6 +99,17 @@ export function createMonetizationPlugin(options: MonetizationPluginOptions = {}
         ...options,
         walletPersistence:
           options.walletPersistence ?? (persistConfig !== null ? storageWalletPersistence(ctx, persistConfig) : undefined),
+        walletPersistenceFactory:
+          options.walletPersistenceFactory ??
+          ((config) => {
+            // Só liga se o game.storage existe (senão o método resolve false).
+            try {
+              if (!ctx.caps.get(StorageToken)) return null;
+            } catch {
+              return null;
+            }
+            return storageWalletPersistence(ctx, config);
+          }),
       });
 
       // SteamID do jogador só para o PurchaseProvider (resolvido na hora da compra).

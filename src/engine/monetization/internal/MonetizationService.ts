@@ -11,6 +11,7 @@ import {
   type TransactionReceiptDTO,
   type VirtualWalletDTO,
   type WalletPersistence,
+  type WalletPersistenceConfig,
 } from "../../../contracts/monetization/types";
 import { StoreCatalogRegistry, validateCatalogItem } from "./StoreCatalogRegistry";
 import { InventoryReceiptValidator } from "./InventoryReceiptValidator";
@@ -33,6 +34,11 @@ export interface MonetizationServiceOptions {
    * restaurada no boot e salva a cada mudança (depois da restauração).
    */
   readonly walletPersistence?: WalletPersistence;
+  /**
+   * Fábrica usada por `enableWalletPersistence(config)` em runtime (o plugin
+   * passa uma sobre o `game.storage`). Sem fábrica, o método resolve `false`.
+   */
+  readonly walletPersistenceFactory?: (config: WalletPersistenceConfig) => WalletPersistence | null;
 }
 
 function errorMessage(error: unknown): string {
@@ -55,12 +61,14 @@ export class MonetizationService implements MonetizationApi {
   private restored = false;
   private dirty = false;
   private saving: Promise<boolean> | null = null;
+  private readonly persistenceFactory: ((config: WalletPersistenceConfig) => WalletPersistence | null) | null;
 
   public constructor(private readonly ctx: PluginContext, options: MonetizationServiceOptions = {}) {
     this.tauriDriver = options.tauriDriver ?? new TauriMonetizationDriver();
     if (options.seedDefaultCatalog === true) {
       this.seedDefaultCatalog();
     }
+    this.persistenceFactory = options.walletPersistenceFactory ?? null;
     this.persistence = options.walletPersistence ?? null;
     if (this.persistence !== null) {
       void this.restoreWallet();
@@ -71,6 +79,34 @@ export class MonetizationService implements MonetizationApi {
 
   public isWalletPersistent(): boolean {
     return this.persistence !== null;
+  }
+
+  public async enableWalletPersistence(config: WalletPersistenceConfig = {}): Promise<boolean> {
+    if (this.persistence !== null) return await this.restoreWallet();
+    if (config === null || typeof config !== "object") return false;
+    if (config.slotName !== undefined && (typeof config.slotName !== "string" || config.slotName.trim() === "")) {
+      return false;
+    }
+    let created: WalletPersistence | null = null;
+    try {
+      created = this.persistenceFactory !== null ? this.persistenceFactory(config) : null;
+    } catch (error: unknown) {
+      console.warn("[Monetization] Não foi possível criar a persistência da carteira.", error);
+      created = null;
+    }
+    if (created === null) return false;
+    this.persistence = created;
+    this.restorePromise = null;
+    this.restored = false;
+    // O que já está em memória (antes de ligar) entra no save depois da restauração.
+    const snapshot = this.wallet.getSnapshot();
+    this.dirty = Object.keys(snapshot.currencies).length > 0 || this.entitlements.size > 0;
+    return await this.restoreWallet();
+  }
+
+  public seedSampleCatalog(): ReadonlyArray<string> {
+    this.seedDefaultCatalog();
+    return ["gold_pack_small", "gold_pack_large"];
   }
 
   public restoreWallet(): Promise<boolean> {

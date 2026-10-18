@@ -89,6 +89,17 @@ export interface WalletPersistence {
   save(state: PersistedWalletState): Promise<void>;
 }
 
+/**
+ * Persistência da carteira sobre o `game.storage` (plugin `persistWallet` ou,
+ * em runtime, `MonetizationApi.enableWalletPersistence(config)`).
+ */
+export interface WalletPersistenceConfig {
+  /** Slot do `game.storage` (padrão `monetization-wallet`; aparece em `listSaves`). */
+  readonly slotName?: string;
+  /** Driver de save (padrão: o ativo do storage). Mesmo conjunto de `StorageDriverType`. */
+  readonly driver?: "steam_cloud" | "sqlite_local" | "cloud_database";
+}
+
 export interface TransactionReceiptDTO {
   readonly orderId: string;
   readonly transId: string;

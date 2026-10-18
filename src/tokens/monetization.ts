@@ -6,6 +6,7 @@ import type {
   TransactionReceiptDTO,
   SteamInventoryItemDTO,
   VirtualWalletDTO,
+  WalletPersistenceConfig,
 } from "../contracts/monetization/types";
 
 export interface MonetizationApi {
@@ -57,8 +58,27 @@ export interface MonetizationApi {
   /** Itens (não moeda) concedidos por compras verificadas: sku → quantidade. */
   getEntitlements(): Readonly<Record<string, number>>;
 
-  /** `true` se a carteira tem persistência (plugin `persistWallet` ou `walletPersistence`). */
+  /**
+   * `true` se a carteira tem persistência (plugin `persistWallet`,
+   * `walletPersistence` ou `enableWalletPersistence()` em runtime).
+   */
   isWalletPersistent(): boolean;
+  /**
+   * Liga, EM RUNTIME, a persistência da carteira num slot do `game.storage`
+   * (para jogos que não controlam as opções do plugin, que é criado pelo
+   * `src/app`). Restaura o save (somando ao que já está em memória) e depois
+   * salva a cada mudança. Resolve como `restoreWallet()`: `false` se a
+   * leitura falhou (autosave desligado) ou se não há `game.storage`.
+   * Idempotente: se já há persistência, só aguarda a restauração existente
+   * (o `config` novo é ignorado).
+   */
+  enableWalletPersistence(config?: WalletPersistenceConfig): Promise<boolean>;
+  /**
+   * Registra (sem apagar o resto do catálogo) os 2 SKUs de EXEMPLO
+   * (`gold_pack_small`, `gold_pack_large`) para demos/protótipos.
+   * Devolve os SKUs registrados. Equivale à opção `seedDefaultCatalog`.
+   */
+  seedSampleCatalog(): ReadonlyArray<string>;
   /**
    * Resolve quando a carteira salva foi restaurada (iniciada sozinha no boot;
    * idempotente). O restaurado é SOMADO ao que já mudou em memória antes.
