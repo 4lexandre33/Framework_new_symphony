@@ -14,9 +14,9 @@ versão 1.0.0 · GERADO por `npm run ai-manual:generate` (não edite à mão; `n
 |---|---|---|---|---|
 | Steamworks & P2P | steam | game.steam | - | 3500 |
 | Input Manager | input | game.input | - | 2260 |
-| Asset Pipeline & VRAM Cache | assets | game.assets | - | 1674 |
+| Asset Pipeline & VRAM Cache | assets | game.assets | - | 1777 |
 | Motor de Física (Rapier WASM) | physics | game.physics | - | 4170 |
-| Persistência & Banco de Dados | storage | game.storage | - | 2580 |
+| Persistência & Banco de Dados | storage | game.storage | - | 2996 |
 | Gerenciador de Mundo, Cenas & ECS | world | game.world | - | 2475 |
 | Interface de Usuário & HUD | ui | game.ui | - | 2122 |
 | Pipeline de Animações & State Machines | anim | game.anim | game.loop | 2249 |
@@ -31,12 +31,12 @@ versão 1.0.0 · GERADO por `npm run ai-manual:generate` (não edite à mão; `n
 | Desktop Overlay & Raycast Click Passthrough | overlay | game.overlay | game.loop, game.render | 1705 |
 | Profiler, Anti-cheat & Crash Dumper | security | game.security | game.loop, game.world, game.render | 2250 |
 | Steam Workshop, Dynamic Loading & Asset Override | modding | game.modding | - | 2364 |
-| Microtransações Steam & Steam Inventory Service | monetization | game.monetization | - | 2467 |
+| Microtransações Steam & Steam Inventory Service | monetization | game.monetization | - | 2839 |
 | Deterministic Game Loop | game-loop | game.loop | - | 1177 |
-| Render Runtime | render | game.render | - | 3000 |
-| Multiplayer Network & State Replication | net | game.net | game.loop | 2549 |
+| Render Runtime | render | game.render | - | 3067 |
+| Multiplayer Network & State Replication | net | game.net | game.loop | 2809 |
 
-Tamanho: RULES ≈ 2224, CORE ≈ 3010, RECIPES ≈ 7129, todos os módulos ≈ 58226 tokens (estimativa: caracteres/3,6).
+Tamanho: RULES ≈ 2224, CORE ≈ 3010, RECIPES ≈ 7134, todos os módulos ≈ 59444 tokens (estimativa: caracteres/3,6).
 
 ## Atalhos por tipo de jogo
 - 3D com física: render, camera, physics, input, assets, audio, ui, game-loop.

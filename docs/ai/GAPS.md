@@ -25,7 +25,7 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 - anim: reinício (`restart`), exit time, `clip-finished`, ordem livre, sprites pela FSM, relógio único (G74–G78).
 - scripting: keyframes executam (câmera/áudio/anim/vfx/diálogo) + evento por keyframe, zonas automáticas (`trackEntity`), variáveis de diálogo, árvores validadas, ciclo de quest completo, exits de zona, varredura e rotação (G10, G123–G128; G129 parcial).
 - storage: memória automática em node, perfil online honesto/plugável, backups + HMAC + `loadGameDetailed`, namespace, slots seguros, índice, cota, migrações, backends IndexedDB (navegador) e arquivo (Tauri) automáticos com importação do localStorage antigo; `steam_cloud` usa o Steam Remote Storage com fallback local explícito (`getSteamCloudStatus`) (G12, G100–G103, G131).
-- net: host sem Steam (loopback `mock`, `broadcast_channel`), handshake, heartbeat, fragmentação, snapshot automático, RTT/perda reais, canais 0..255 (G8 parcial, G104–G108).
+- net: host sem Steam (loopback `mock`, `broadcast_channel`, e host WebSocket NATIVO no app: `startHost({ transport: "websocket", port, bind, maxClients })` + `getHostEndpoint()`), handshake, heartbeat, fragmentação, snapshot automático, RTT/perda reais, canais 0..255 (G8 parcial: WebRTC, G104–G108).
 - steam: `game.steam.net` FORNECIDO (lobbies, busca, membros, convites, P2P), eventos nativos, stats float, `checkAvailability` no boot (G26, G109–G112).
 - security: captura automática de erros, FPS real em janela móvel, heurísticas de speedhack, dump com resultado real e limite por sessão (G16, G113–G115).
 - modding: sandbox de scripts em Worker, mods do jogo offline (`installMod`), lista de instalados, lista de ativos persistida, `clear` seguro, fluxo real do Workshop (G14, G116–G118; publicar só nativo).
@@ -37,7 +37,7 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 |---|---|---|---|---|
 | G31 | B | DESIGN | Objetos reutilizados de propósito (sem alocação): payloads de `game.loop.tick`/`render`, `getInterpolatedState`, `getViewportDimensions`, getters de input (`getMouseDelta`, `getWheelDelta`, `getPointerPosition`…), contexto das ações de IA | Leia na hora; para guardar use `copyTickPayload`/`copyRenderPayload` (contracts/game-loop), `copyEntitySnapshot` (contracts/net), `copyViewportDimensions` (contracts/render). Em DEV, mutar o payload do tick é detectado e revertido |
 | G130 | M | RISCO | Aba/janela oculta suspende o loop E o pump da rede (que roda no `game.loop.render`): um HOST oculto para a simulação e os clientes caem por timeout (5 s) | Em multiplayer avise o host para não minimizar; se preciso `net.configure({ peerTimeoutMs })` maior; em solo trate `visibilitychange` (menu de pausa) |
-| NV | M | NV | Steam real (conquistas, stats, lobbies, P2P), transporte `steam_p2p`, Workshop (download/publicação UGC), Steam Inventory/MicroTxn, Steam Remote Storage (`steam_cloud`), backend de arquivos do app (`storage_file_*`), flags nativas do overlay, merge do `desktop.json` e gravação de crash dump em disco: implementados e testados com bridges falsas/Chromium, NÃO com cliente Steam nem janela Tauri reais | O jogo deve funcionar sem nada disso (tudo resolve `false`/`null`/`[]` e não lança); valide no app nativo antes de prometer o recurso; registre o observado no ENGINE_REPORT |
+| NV | M | NV | Steam real (conquistas, stats, lobbies, P2P), transporte `steam_p2p`, Workshop (download/publicação UGC), Steam Inventory/MicroTxn, Steam Remote Storage (`steam_cloud`), backend de arquivos do app (`storage_file_*`), host WebSocket nativo (`net_ws_host_*`), flags nativas do overlay, merge do `desktop.json` e gravação de crash dump em disco: implementados e testados com bridges falsas/Chromium, NÃO com cliente Steam nem janela Tauri reais | O jogo deve funcionar sem nada disso (tudo resolve `false`/`null`/`[]` e não lança); valide no app nativo antes de prometer o recurso; registre o observado no ENGINE_REPORT |
 
 ## physics
 | # | G | Tipo | Problema | Contorno |
@@ -78,7 +78,7 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 ## net
 | # | G | Tipo | Problema | Contorno |
 |---|---|---|---|---|
-| G8 | M | LACUNA | Não há HOST WebSocket: o navegador não abre servidor e o app nativo não tem servidor WS; `websocket` é só CLIENTE de um servidor/relay externo que fale o protocolo do `game.net`. `webrtc` é reservado (selecionar falha) | Host real por Steam (`steam_p2p`); local: `loopback://sala` (mesmo runtime) ou `bc://sala` (abas da mesma origem); servidor dedicado é projeto à parte |
+| G8 | M | LACUNA | Host WebSocket só no app NATIVO (servidor Rust, sem TLS; `bind: "lan"` expõe à rede local). No NAVEGADOR não há host WebSocket nem WebRTC: `webrtc` continua reservado (selecionar falha). Host nativo não verificado numa janela Tauri real (NV) | Navegador: `loopback://sala` / `bc://sala`; jogador hospeda pelo app (`startHost({ transport: "websocket", bind: "lan" })` e mostra `getHostEndpoint().lanUrl`) ou por Steam (`steam_p2p`); internet aberta: servidor dedicado à parte |
 
 ## modding
 | # | G | Tipo | Problema | Contorno |

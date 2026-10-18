@@ -22,6 +22,7 @@ interface NetworkApi {
   unregisterEntity( entityId: string, ): void;
   updateEntityState( entityId: string, state: Partial<EntitySnapshot>, ): void;
   getInterpolatedState( entityId: string, renderAlpha: number, ): EntitySnapshot | null; // Estado interpolado.
+  getHostEndpoint(): NetHostEndpoint | null; // G8: endereço do host WebSocket nativo ativo (para mostrar aos jogadores); null se não está hospedando por Web…
   getAvailableTransports(): ReadonlyArray<TransportType>; // Transportes utilizáveis neste runtime.
   setPreferredTransport( type: TransportType | null, ): boolean; // Transporte padrão do `startHost()` (só offline; `false` se indisponível).
   configure( options: NetSessionOptions, ): void; // Heartbeat/timeouts da sessão.
@@ -33,7 +34,7 @@ capability NetworkToken = "game.net"@1.0.0 api NetworkApi
 ```
 ## contract src/contracts/net/types.ts
 ```ts
-export type TransportType = "steam_p2p" | "websocket" | "webrtc" | "mock" | "broadcast_channel"; // - `steam_p2p`: Steam (Tauri + Steam ativa); - `websocket`: cliente de um servidor/relay que fala o protocolo …
+export type TransportType = "steam_p2p" | "websocket" | "webrtc" | "mock" | "broadcast_channel"; // - `steam_p2p`: Steam (Tauri + Steam ativa); - `websocket`: cliente (`ws://ip:porta`) de um host/relay que fal…
 export type NetMode = "host" | "client" | "offline";
 interface NetVector3 {
   x: number;
@@ -97,6 +98,14 @@ interface NetHostOptions {
   readonly maxClients?: number; // Limite de clientes aceitos no handshake (1..250, padrão 16).
   readonly transport?: TransportType; // Transporte explícito; padrão: Steam se disponível, senão `mock` (loopback).
   readonly room?: string; // Nome da sala (loopback/BroadcastChannel): `[A-Za-z0-9_.-]{1,64}`.
+  readonly bind?: "loopback" | "lan"; // Host WebSocket nativo (G8): `loopback` (padrão; só esta máquina) ou `lan` (0.0.0.0; outros PCs da rede local …
+}
+interface NetHostEndpoint { // Endereço do host WebSocket nativo ativo (G8).
+  readonly transport: "websocket";
+  readonly port: number;
+  readonly bind: "loopback" | "lan";
+  readonly localUrl: string; // `ws://127.0.0.1:<porta>` (mesma máquina).
+  readonly lanUrl: string | null; // `ws://<ip-lan>:<porta>` com `bind: "lan"` (IP provável; null se não descoberto).
 }
 interface NetSessionOptions {
   readonly heartbeatIntervalMs?: number; // Intervalo de ping (padrão 1000 ms).
@@ -156,7 +165,7 @@ interface BroadcastSnapshotRequest {
 command BroadcastSnapshotCommand = "game.net.broadcast-snapshot" request BroadcastSnapshotRequest
 ```
 ## notas verificadas (comportamento)
-- Transportes (`getAvailableTransports()`): `steam_p2p` (Tauri + Steam), `mock` = loopback no mesmo runtime (`loopback://sala`), `broadcast_channel` = abas da mesma origem (`bc://sala`), `websocket` = só CLIENTE de um servidor que fale o protocolo do `game.net` (sem host WS: GAPS G8). `webrtc` não existe.
+- Transportes (`getAvailableTransports()`): `steam_p2p` (Tauri + Steam), `mock` = loopback no mesmo runtime (`loopback://sala`), `broadcast_channel` = abas da mesma origem (`bc://sala`), `websocket` = CLIENTE (`ws://ip:porta`) e, só no app nativo, HOST (servidor WebSocket no Rust): `startHost({ transport: "websocket", port: 7777, bind: "loopback" | "lan", maxClients })`; `getHostEndpoint()` dá `localUrl`/`lanUrl` para mostrar aos jogadores (sem TLS; `lan` expõe à rede local; no navegador `startHost` websocket resolve `false`). `webrtc` não existe (GAPS G8).
 - Host: `startHost({ transport?, room?, maxClients? })` (padrão: Steam se disponível, senão `mock`). Cliente: `connect(alvo)` resolve `true` só após o handshake (WELCOME); `false` sem host/sem resposta (`handshakeTimeoutMs` 5 s).
 - Sessão: heartbeat (1 s) e timeout de par (5 s) automáticos (`configure`); `game.net.peer-connected`/`peer-disconnected` (`reason`: timeout, remote_bye, link_closed…). `getPeers()` e `getStats()` (RTT/perda reais, não destrutivo).
 - Envio: `sendTo`/`broadcast` com canal 0..255 preservado; confiável grande é fragmentado (até 16 MiB); NÃO confiável acima do MTU resolve `false`. Offline resolve `false`. Recebimento: `game.net.packet-received`.

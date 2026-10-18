@@ -1,6 +1,6 @@
 # monetization — Microtransações Steam & Steam Inventory Service
 capability: game.monetization@1.0.0 | category: functional | engine plugin id: game.monetization
-consumes: SteamToken
+consumes: SteamToken, StorageToken
 use (from src/projects/<jogo>/**):
   import { MonetizationToken } from "../../tokens/monetization";
   // acesso: const api = ctx.caps.require(Token)  (declare o token em capabilities.consumes + permissions.capabilities)
@@ -29,6 +29,9 @@ interface MonetizationApi {
   verifyReceipt(receipt: TransactionReceiptDTO): Promise<boolean>; // Verificação de recibo pelo provedor (`false` sem provedor).
   startInventoryPurchase(sku: string, quantity?: number): Promise<boolean>; // Abre o checkout da Steam para um item com `steamItemDefId` (Steam Inventory).
   getEntitlements(): Readonly<Record<string, number>>; // Itens (não moeda) concedidos por compras verificadas: sku → quantidade.
+  isWalletPersistent(): boolean; // `true` se a carteira tem persistência (plugin `persistWallet` ou `walletPersistence`).
+  restoreWallet(): Promise<boolean>; // Resolve quando a carteira salva foi restaurada (iniciada sozinha no boot; idempotente).
+  saveWallet(): Promise<boolean>; // Salva agora (mesmo se a restauração falhou).
 }
 capability MonetizationToken = "game.monetization"@1.0.0 api MonetizationApi
 ```
@@ -78,7 +81,16 @@ interface PurchaseProvider { // Provedor de compra com dinheiro real.
   verifyReceipt?(receipt: TransactionReceiptDTO): Promise<boolean>; // Verificação server-side de um recibo (opcional).
 }
 interface RegisterCatalogOptions {
-  readonly replace?: boolean; // Remove o catálogo atual (inclusive os SKUs de exemplo) antes.
+  readonly replace?: boolean; // Remove o catálogo atual (inclusive os SKUs de exemplo, se semeados) antes.
+}
+interface PersistedWalletState { // Estado persistido da carteira (G135).
+  readonly version: 1;
+  readonly currencies: Readonly<Record<string, number>>;
+  readonly entitlements: Readonly<Record<string, number>>;
+}
+interface WalletPersistence { // Onde a carteira é salva/restaurada (o plugin cria uma sobre o `game.storage`).
+  load(): Promise<unknown>; // null = nada salvo ainda.
+  save(state: PersistedWalletState): Promise<void>;
 }
 interface TransactionReceiptDTO {
   readonly orderId: string;
@@ -161,8 +173,8 @@ interface FetchInventoryPayload {
 command FetchInventoryCommand = "game.monetization.fetch-inventory" request FetchInventoryPayload
 ```
 ## notas verificadas (comportamento)
-- Catálogo: começa com 2 SKUs de exemplo; registre o do jogo com `registerCatalog(itens, { replace: true })` ou `registerCatalogItem` (valida; lança se inválido).
-- Carteira (`creditCurrency`/`debitCurrency`/`getWalletBalance`) em memória, funciona offline. Valores precisam ser inteiros seguros > 0 (inválido: `debitCurrency` false, crédito ignorado); `debitCurrency` false sem saldo. NÃO persiste: salve o saldo no `game.storage` e recredite no boot.
+- Catálogo: começa VAZIO (os 2 SKUs de exemplo só com `createMonetizationPlugin({ seedDefaultCatalog: true })`, para demos); registre o do jogo com `registerCatalog(itens)` ou `registerCatalogItem` (valida; lança se inválido).
+- Carteira (`creditCurrency`/`debitCurrency`/`getWalletBalance`) em memória, funciona offline. Valores precisam ser inteiros seguros > 0 (inválido: `debitCurrency` false, crédito ignorado); `debitCurrency` false sem saldo. Por padrão só em memória. Persistência opcional: `createMonetizationPlugin({ persistWallet: true | { slotName?, driver? } })` salva saldos + entitlements no slot `monetization-wallet` do `game.storage` (aparece em `listSaves`: filtre no menu de saves), restaura sozinho no boot (`await restoreWallet()` antes de mostrar saldo; o restaurado SOMA ao que mudou antes) e grava a cada mudança; `saveWallet()` força. Falha de leitura desliga o autosave (não sobrescreve). Fica no cliente (editável): moeda de dinheiro real tem o servidor como verdade.
 - Dinheiro real só com um `PurchaseProvider` do SERVIDOR do jogo (`setPurchaseProvider`): sem ele `isPurchaseSupported()` é false, `initPurchase` resolve `null` (+ `purchase-failed` "unsupported") e nada é creditado. Com ele, só o que o recibo verificado concede é entregue (`wallet-updated`, `item-granted`, `getEntitlements()`); `validateReceipt` só aceita recibos aprovados nesta sessão.
 - Steam Inventory: itens com `steamItemDefId`; `fetchSteamInventory`, `consumeInventoryItem`, `startInventoryPurchase` (checkout da Steam). Sem Steam: `[]`/`false`. Não verificado com Steam real (GAPS NV).
 - `clear()` zera carteira/ordens/inventário em cache (o catálogo fica).

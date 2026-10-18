@@ -18,6 +18,8 @@ interface StorageApi {
   getSaveConfiguration(): SaveConfiguration; // Configuração atual (a chave HMAC nunca é devolvida).
   registerMigration(fromVersion: number, migrate: SaveMigration): void; // Migração `fromVersion` → `fromVersion + 1` aplicada no load.
   getBackendInfo(): StorageBackendInfo; // Backend em uso; `persistent: false` = memória (node/vitest/headless).
+  resolveBackendInfo(): Promise<StorageBackendInfo>; // Backend REALMENTE em uso depois da sonda da 1ª operação (IndexedDB/arquivo podem cair para `local-storage`/`m…
+  getSteamCloudStatus(): Promise<SteamCloudStorageStatus>; // Onde o driver `steam_cloud` grava de fato (G131): Steam Remote Storage quando o cliente Steam está ativo no a…
   syncOnlineProfile(profile: PlayerOnlineProfile): Promise<boolean>; // Envia o perfil ao backend remoto.
   fetchOnlineProfile(playerId: string): Promise<PlayerOnlineProfile | null>; // Busca o perfil remoto.
   isOnlineProfileSupported(): boolean; // true se há um backend remoto real configurado.
@@ -58,11 +60,19 @@ interface SaveConfiguration {
   readonly integrityKey?: string | null; // Chave para assinar saves com HMAC-SHA256 (detecta adulteração casual).
   readonly requireSignature?: boolean; // Com chave: rejeitar saves sem assinatura (padrão false: aceita e re-assina no próximo save).
 }
-export type StorageBackendKind = "local-storage" | "memory" | "custom";
+export type StorageBackendKind = "tauri-file" | "indexeddb" | "local-storage" | "memory" | "custom"; // Backend dos saves.
 interface StorageBackendInfo {
   readonly kind: StorageBackendKind;
   readonly persistent: boolean; // false = os dados somem ao fechar (backend em memória).
   readonly namespace: string | null;
+}
+interface SteamCloudStorageStatus { // Estado do driver `steam_cloud` (G131).
+  readonly mode: "unknown" | "remote-storage" | "local-fallback";
+  readonly synced: boolean;
+  readonly accountEnabled?: boolean;
+  readonly appEnabled?: boolean;
+  readonly reason?: string; // `not-native` | `steam-unavailable` | `custom-backend`.
+  readonly detail?: string;
 }
 export type LoadGameStatus = "ok" | "recovered" | "missing" | "corrupted";
 interface LoadGameResult<T> {
@@ -134,10 +144,10 @@ command SyncProfileCommand = "game.storage.sync-profile" request SyncProfileRequ
 ```
 ## notas verificadas (comportamento)
 - No boot do jogo: `configureSaves({ namespace: "<jogo>", schemaVersion, gameVersion, backupCount?, integrityKey? })` — sem namespace os slots são compartilhados entre jogos do mesmo app.
-- Backend: `localStorage` do navegador/WebView (driver padrão `sqlite_local`); sem Web Storage (node/vitest) cai em MEMÓRIA sozinho (`getBackendInfo().persistent === false`). `steam_cloud` é o mesmo localStorage (GAPS G131); `cloud_database` não guarda slots.
+- Backend (driver padrão `sqlite_local`) escolhido sozinho: app Tauri → arquivos em `<app_data_dir>/storage/saves/` (Rust, gravação atômica); navegador → IndexedDB (assíncrono, cota grande); senão `localStorage`; sem nada (node/vitest) → MEMÓRIA (`persistent: false`). Se IndexedDB/arquivo falhar na 1ª operação (ex.: origem opaca) cai para o próximo. `getBackendInfo().kind` = preferido; `await resolveBackendInfo()` = o realmente usado. Saves antigos do `localStorage` são importados na 1ª operação (o original não é apagado). Driver `steam_cloud`: no app nativo com cliente Steam grava no Steam Remote Storage (`synced` só com a nuvem ligada na conta e no app); sem Steam (navegador, Steam fechado, build sem feature) cai no backend local — confira `await getSteamCloudStatus()` (`mode`: `remote-storage` | `local-fallback`) antes de prometer nuvem; `cloud_database` não guarda slots.
 - Slots: qualquer nome não vazio (codificado com segurança; espaços/acentos não colidem). `saveGame(slot, data, driver?, { playTimeSeconds, gameVersion, schemaVersion, label })` resolve com os metadados; falha REJEITA (`code`, ex. `quota-exceeded`) e emite `save-completed` com `success: false`.
 - Carregar: `loadGameDetailed(slot)` NUNCA rejeita por corrupção (`status`: ok/recovered/missing/corrupted, usa backup se preciso + `save-recovered`); `loadGame` resolve `null` sem slot e REJEITA se corrompido sem backup. Migrações: `registerMigration(de, fn)` (de → de+1) rodam no load.
 - `listSaves` lê um índice (barato). `deleteSave` apaga também os backups.
-- Só dados serializáveis em JSON; saves pequenos (cota ~5 MB, escrita síncrona: GAPS G102).
+- Só dados serializáveis em JSON. A serialização (JSON + checksum/HMAC) ainda é síncrona na thread principal; o I/O é assíncrono (IndexedDB / Rust). Saves de vários MB funcionam, mas evite salvar a cada frame.
 - Perfil online: sem backend `syncOnlineProfile` resolve `false` (`error: "unsupported"`); plugue com `configureOnlineProfile({ endpoint })` ou `setOnlineProfileBackend`.
 - Testes do jogo: mock/fake parcial de `StorageApi`.
