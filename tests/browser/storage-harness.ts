@@ -4,6 +4,7 @@
 import type { PluginContext } from "@core";
 
 import { StorageService } from "../../src/engine/storage/internal/StorageService";
+import { GlobalLocalStorageBackend } from "../../src/engine/storage/internal/KeyValueStorageBackend";
 
 const emitted: Array<[string, unknown]> = [];
 const ctx = {
@@ -14,8 +15,14 @@ const ctx = {
   },
 } as unknown as PluginContext;
 
+/** Seleção automática (G102: IndexedDB no navegador). */
 function make(): StorageService {
   return new StorageService(ctx);
+}
+
+/** Web Storage explícito (cenários que manipulam o localStorage). */
+function makeLocal(): StorageService {
+  return new StorageService(ctx, { backend: new GlobalLocalStorageBackend() });
 }
 
 async function errorOf(promise: Promise<unknown>): Promise<Record<string, unknown> | null> {
@@ -38,12 +45,49 @@ async function errorOf(promise: Promise<unknown>): Promise<Record<string, unknow
     }
     const svc = make();
     await svc.saveGame("slot", { a: 1 });
-    return { webStorageThrows, info: svc.getBackendInfo(), loaded: await svc.loadGame("slot") };
+    return { webStorageThrows, info: await svc.resolveBackendInfo(), loaded: await svc.loadGame("slot") };
+  },
+
+  // G102: saves antigos no localStorage são importados para o IndexedDB.
+  async legacyImport(): Promise<Record<string, unknown>> {
+    window.localStorage.clear();
+    const legacy = makeLocal();
+    legacy.configureSaves({ namespace: "legado" });
+    await legacy.saveGame("antigo", { gold: 7 });
+    const svc = make();
+    svc.configureSaves({ namespace: "legado" });
+    const loaded = await svc.loadGame("antigo");
+    const info = await svc.resolveBackendInfo();
+    const list = (await svc.listSaves()).map((m) => m.slotName);
+    await svc.saveGame("novo", { gold: 8 });
+    const localKeys = Object.keys(window.localStorage);
+    svc.dispose();
+    return { loaded, info, list, localKeys };
+  },
+
+  async idbWrite(): Promise<Record<string, unknown>> {
+    const svc = make();
+    svc.configureSaves({ namespace: "idb-jogo", backupCount: 1 });
+    await svc.saveGame("grande", { blob: "q".repeat(8 * 1024 * 1024) });
+    await svc.saveGame("grande", { blob: "r".repeat(8 * 1024 * 1024) });
+    const info = await svc.resolveBackendInfo();
+    svc.dispose();
+    return { info, localKeys: Object.keys(window.localStorage).filter((k) => k.includes("idb-jogo")) };
+  },
+
+  async idbRead(): Promise<Record<string, unknown>> {
+    const svc = make();
+    svc.configureSaves({ namespace: "idb-jogo", backupCount: 1 });
+    const loaded = await svc.loadGame<{ blob: string }>("grande");
+    const list = (await svc.listSaves()).map((m) => m.slotName);
+    const deleted = await svc.deleteSave("grande");
+    const after = await svc.loadGame("grande");
+    return { info: await svc.resolveBackendInfo(), first: loaded?.blob.slice(0, 1), size: loaded?.blob.length, list, deleted, after };
   },
 
   async persistWrite(): Promise<Record<string, unknown>> {
     window.localStorage.clear();
-    const svc = make();
+    const svc = makeLocal();
     svc.configureSaves({ namespace: "meu-jogo", integrityKey: "k", backupCount: 2 });
     await svc.saveGame("Slot Um/ç%", { gold: 1 }, undefined, { playTimeSeconds: 12 });
     await svc.saveGame("Slot Um/ç%", { gold: 2 }, undefined, { playTimeSeconds: 30 });
@@ -51,9 +95,9 @@ async function errorOf(promise: Promise<unknown>): Promise<Record<string, unknow
   },
 
   async persistRead(): Promise<Record<string, unknown>> {
-    const svc = make();
+    const svc = makeLocal();
     svc.configureSaves({ namespace: "meu-jogo", integrityKey: "k", backupCount: 2 });
-    const other = make();
+    const other = makeLocal();
     other.configureSaves({ namespace: "outro-jogo" });
     const key = Object.keys(window.localStorage).find((k) => k.startsWith("ns:meu-jogo:local_db_save_S")) ?? "";
     const before = await svc.loadGame("Slot Um/ç%");
@@ -85,7 +129,7 @@ async function errorOf(promise: Promise<unknown>): Promise<Record<string, unknow
         break;
       }
     }
-    const svc = make();
+    const svc = makeLocal();
     const big = { blob: "y".repeat(512 * 1024) };
     const failure = await errorOf(svc.saveGame("big", big));
     const failedEvent = emitted.filter(([t]) => t === "game.storage.save-completed").pop();

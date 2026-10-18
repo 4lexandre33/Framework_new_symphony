@@ -85,46 +85,6 @@ export function isGlobalLocalStorageAvailable(): boolean {
   }
 }
 
-export interface DefaultBackendSelection {
-  readonly backend:
-    KeyValueStorageBackend;
-
-  readonly kind:
-    "local-storage" | "memory";
-
-  readonly persistent:
-    boolean;
-}
-
-/**
- * Seleção automática (G12): Web Storage quando existe; senão um backend em
- * memória (node/vitest/headless), sinalizado como NÃO persistente para quem
- * consulta (`StorageApi.getBackendInfo`).
- */
-export function selectDefaultKeyValueBackend(): DefaultBackendSelection {
-  if (
-    isGlobalLocalStorageAvailable()
-  ) {
-    return {
-      backend:
-        new GlobalLocalStorageBackend(),
-      kind:
-        "local-storage",
-      persistent:
-        true,
-    };
-  }
-
-  return {
-    backend:
-      new MemoryKeyValueStorageBackend(),
-    kind:
-      "memory",
-    persistent:
-      false,
-  };
-}
-
 function resolveGlobalLocalStorage(
   operation:
     "save"

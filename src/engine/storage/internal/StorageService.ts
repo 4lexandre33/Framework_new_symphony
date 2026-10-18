@@ -30,10 +30,14 @@ import {
   type SaveDriverConfig,
 } from "./KeyValueSaveDriver";
 
+import type {
+  AnyKeyValueStorageBackend,
+} from "./KeyValueStorageBackend";
+
 import {
   selectDefaultKeyValueBackend,
-  type AnyKeyValueStorageBackend,
-} from "./KeyValueStorageBackend";
+  type ResolvedBackendInfo,
+} from "./DefaultStorageBackendSelection";
 
 import {
   LocalDatabaseDriver,
@@ -71,7 +75,8 @@ export interface StorageServiceDependencies {
 
   /**
    * Backend key-value dos drivers padrão (local e steam). Sem isto a engine
-   * escolhe sozinha: Web Storage quando existe, senão memória (G12).
+   * escolhe sozinha (G12/G102): Tauri → arquivo; navegador → IndexedDB;
+   * senão Web Storage; senão memória.
    */
   readonly backend?:
     AnyKeyValueStorageBackend;
@@ -104,11 +109,18 @@ export class StorageService
   private readonly now:
     () => number;
 
-  private readonly backendKind:
+  private backendKind:
     StorageBackendKind;
 
-  private readonly backendPersistent:
+  private backendPersistent:
     boolean;
+
+  private readonly backendResolved:
+    Promise<ResolvedBackendInfo> | null;
+
+  /** Backend escolhido pela engine (fecha conexões no dispose). */
+  private readonly ownedBackend:
+    AnyKeyValueStorageBackend | null;
 
   private readonly profileTransport:
     ProfileHttpTransport | undefined;
@@ -144,6 +156,10 @@ export class StorageService
     let persistent =
       true;
 
+    let resolved:
+      Promise<ResolvedBackendInfo> | null =
+        null;
+
     if (
       backend ===
         undefined &&
@@ -164,8 +180,22 @@ export class StorageService
       persistent =
         selection.persistent;
 
+      resolved =
+        selection.resolved;
+
+      void resolved.then(
+        (info) => {
+          this.backendKind =
+            info.kind;
+          this.backendPersistent =
+            info.persistent;
+        },
+      );
+
       if (
-        !persistent
+        !persistent &&
+        kind ===
+          "memory"
       ) {
         console.warn(
           "[Storage] Armazenamento persistente indisponível neste runtime: saves ficam SÓ em memória (somem ao fechar). Veja StorageApi.getBackendInfo().",
@@ -178,6 +208,16 @@ export class StorageService
 
     this.backendPersistent =
       persistent;
+
+    this.backendResolved =
+      resolved;
+
+    this.ownedBackend =
+      resolved !==
+        null
+        ? backend ??
+          null
+        : null;
 
     this.localDriver =
       dependencies.localDriver ??
@@ -457,6 +497,25 @@ export class StorageService
       namespace:
         this.config.namespace,
     };
+  }
+
+  public async resolveBackendInfo():
+    Promise<StorageBackendInfo> {
+    if (
+      this.backendResolved !==
+        null
+    ) {
+      // Força a sonda (uma leitura) se nenhuma operação aconteceu ainda.
+      await this.localDriver
+        .listSaves()
+        .catch(
+          () => undefined,
+        );
+
+      await this.backendResolved;
+    }
+
+    return this.getBackendInfo();
   }
 
   /* ──────────────────────────────── saves ───────────────────────────── */
@@ -827,6 +886,8 @@ export class StorageService
 
     this.cloudDbDriver
       .dispose();
+
+    this.ownedBackend?.dispose?.();
   }
 
   private applyConfig():

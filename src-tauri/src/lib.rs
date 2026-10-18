@@ -8,6 +8,7 @@ mod steam;
 #[path = "steam_offline.rs"]
 mod steam;
 mod steam_support;
+mod storage;
 
 use steam::SteamState;
 use tauri::Manager;
@@ -75,7 +76,11 @@ pub fn run() {
             monetization::monetization_finalize_purchase,
             monetization::monetization_fetch_inventory,
             monetization::monetization_consume_item,
-            monetization::monetization_start_inventory_purchase
+            monetization::monetization_start_inventory_purchase,
+            storage::storage_file_read,
+            storage::storage_file_write,
+            storage::storage_file_delete,
+            storage::storage_file_list
         ])
         .build(tauri::generate_context!())
         .expect("Erro ao construir o aplicativo Tauri");

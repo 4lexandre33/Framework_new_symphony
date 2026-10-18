@@ -65,7 +65,12 @@ export interface SaveConfiguration {
   readonly requireSignature?: boolean;
 }
 
-export type StorageBackendKind = "local-storage" | "memory" | "custom";
+/**
+ * Backend dos saves. Seleção automática: app Tauri → `tauri-file`
+ * (`<app_data_dir>/storage/saves/`); navegador → `indexeddb`; senão
+ * `local-storage`; senão `memory` (não persistente).
+ */
+export type StorageBackendKind = "tauri-file" | "indexeddb" | "local-storage" | "memory" | "custom";
 
 export interface StorageBackendInfo {
   readonly kind: StorageBackendKind;

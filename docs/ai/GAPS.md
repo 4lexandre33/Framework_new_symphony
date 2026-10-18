@@ -24,7 +24,7 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 - ai: árvores por agente, várias navmeshes/áreas, teleporte, linha de visão filtrada, estímulo sonoro real, clamp 3D, portais tolerantes com raio, funnel, separação, chegada única, `requestAgentPath` puro (G7, G25, G69–G73; G73 parcial).
 - anim: reinício (`restart`), exit time, `clip-finished`, ordem livre, sprites pela FSM, relógio único (G74–G78).
 - scripting: keyframes executam (câmera/áudio/anim/vfx/diálogo) + evento por keyframe, zonas automáticas (`trackEntity`), variáveis de diálogo, árvores validadas, ciclo de quest completo, exits de zona, varredura e rotação (G10, G123–G128; G129 parcial).
-- storage: memória automática em node, perfil online honesto/plugável, backups + HMAC + `loadGameDetailed`, namespace, slots seguros, índice, cota, migrações (G12, G100–G103; G102 parcial).
+- storage: memória automática em node, perfil online honesto/plugável, backups + HMAC + `loadGameDetailed`, namespace, slots seguros, índice, cota, migrações, backends IndexedDB (navegador) e arquivo (Tauri) automáticos com importação do localStorage antigo (G12, G100–G103).
 - net: host sem Steam (loopback `mock`, `broadcast_channel`), handshake, heartbeat, fragmentação, snapshot automático, RTT/perda reais, canais 0..255 (G8 parcial, G104–G108).
 - steam: `game.steam.net` FORNECIDO (lobbies, busca, membros, convites, P2P), eventos nativos, stats float, `checkAvailability` no boot (G26, G109–G112).
 - security: captura automática de erros, FPS real em janela móvel, heurísticas de speedhack, dump com resultado real e limite por sessão (G16, G113–G115).
@@ -83,7 +83,6 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 ## storage
 | # | G | Tipo | Problema | Contorno |
 |---|---|---|---|---|
-| G102 | M | LACUNA | No app o backend é o `localStorage` do WebView (síncrono, cota ~5 MB); serialização JSON síncrona; não há backend IndexedDB/arquivo | Saves pequenos (sem blobs); autosave em momentos parados; capture `quota-exceeded` |
 | G131 | M | LACUNA | Driver `steam_cloud` NÃO usa o Steam Remote Storage: é o mesmo `localStorage` com prefixo `steam_cloud_save_` | Trate como local; não prometa sincronização na nuvem |
 
 ## net

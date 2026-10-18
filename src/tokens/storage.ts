@@ -78,6 +78,13 @@ export interface StorageApi {
   getBackendInfo(): StorageBackendInfo;
 
   /**
+   * Backend REALMENTE em uso depois da sonda da 1ª operação (IndexedDB/arquivo
+   * podem cair para `local-storage`/`memory`, ex.: origem opaca).
+   * `getBackendInfo()` antes disso devolve o preferido.
+   */
+  resolveBackendInfo(): Promise<StorageBackendInfo>;
+
+  /**
    * Envia o perfil ao backend remoto. Sem backend configurado retorna false
    * e emite `profile-synced` com `error: "unsupported"` (não há online falso).
    */
