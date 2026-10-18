@@ -1,7 +1,10 @@
 ## notas verificadas (comportamento)
-- `update()` é NO-OP (a engine chama no tick, mas não carrega nada). O jogo decide quais chunks existem: `requestChunk(coord)` e `unloadChunk(coord)`.
-- Chunk = 16×128×16 voxels; a malha fica em (coord.x×16, coord.y×128, coord.z×16). Use `coord.y = 0`.
-- Geração assíncrona (worker): espere `game.terrain.chunk-generated` antes de consultar voxels daquele chunk. A malha é adicionada à cena automaticamente; `unloadChunk`/`clear` remove.
-- Biomas (por `getBiomeAt`): `desert` (bloco 4, alt. 10–40), `forest` (bloco 3/1, 20–80), `tundra` (5/2, 60–120), `mountains` (2, 80–200). Mesma seed → mesmo terreno.
-- LACUNA: todos os blocos usam a MESMA cor (verde) e não há colisores de terreno. Altura da superfície: varra `getVoxelBlock` de y=127 para baixo até `id !== 0` (faça na geração, não por tick).
-- CUSTO: cada `modifyVoxelBlock` que muda o bloco remonta a malha do chunk inteiro (síncrono). Limite a poucas modificações por tick (≤ 8) e nunca escave corredores longos.
+- Chunk = 16×256×16 voxels (`TERRAIN_CHUNK_SIZE_*`); malha em (x·16, y·256, z·16). Use `coord.y = 0` (0..255 cobre todos os biomas).
+- A engine chama `update` no tick (e monta malhas em frames pausados): streaming automático (se ligado), colliders e montagem de malhas dentro do orçamento (`meshing: { maxMeshesPerUpdate: 2, budgetMs: 4 }`).
+- Quem carrega chunks: (a) streaming da engine — `configure({ streaming: { enabled: true, radiusChunks, centerSource: "camera" | "explicit" } })` + `setStreamingCenter(pos)`; ou (b) o jogo — `requestChunk` (idempotente; chunk pedido à mão fica FIXO) / `unloadChunk`. Espere `game.terrain.chunk-generated` (ou `isChunkReady`) antes de ler voxels.
+- `getSurfaceHeight(x, z)` = Y do bloco sólido mais alto; funciona também para colunas NÃO carregadas (amostra o gerador, síncrono, determinístico pela seed; edições só contam se carregado).
+- Colliders trimesh por chunk são criados por padrão (`colliders: { enabled }`); água/blocos `solid: false` ficam fora. Terreno só visual: desligue (GAPS G133).
+- Padrão de geração: água até `seaLevel` 16 (desligue com `-1`), sem cavernas. Biomas (`getBiomeAt`): desert 10–40, forest 20–80, tundra 60–120, mountains 80–200, com transição suave. Mesma seed ⇒ mesmo terreno.
+- Cores: paleta por id (`TerrainBlockIds`, `setBlockDefinition`, `configure({ palette, biomeTints })`).
+- Edições: `modifyVoxelBlock` remonta o chunk na hora; para muitas use `modifyVoxelBlocks` (uma remontagem por chunk). Edições PERSISTEM após unload; salve com `exportEdits`/`importEdits`.
+- `setSeed` com chunks/edições descarta tudo e emite `game.terrain.reset`; `clear()` também emite (as edições ficam, use `clearEdits`).

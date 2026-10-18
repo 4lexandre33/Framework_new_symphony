@@ -1,5 +1,6 @@
 ## notas verificadas (comportamento)
-- `getCatalog()` devolve 2 SKUs fixos (`gold_pack_small`, `gold_pack_large`); não há API pública para registrar itens. Itens/cosméticos do jogo: mantenha o catálogo no jogo.
-- Carteira (`creditCurrency`/`debitCurrency`/`getWalletBalance`) é em memória e funciona offline; `debitCurrency` retorna false sem saldo. Não persiste sozinha: salve o saldo via `game.storage`.
-- `initPurchase` offline cria recibo falso pendente (não é compra real); inventário Steam devolve `[]`/false sem Tauri. Não use compra real em testes.
-- A compra é falsa também no app nativo e dá ouro sem cobrança (G119). Valide valores antes de `creditCurrency`/`debitCurrency` (G120).
+- Catálogo: começa com 2 SKUs de exemplo; registre o do jogo com `registerCatalog(itens, { replace: true })` ou `registerCatalogItem` (valida; lança se inválido).
+- Carteira (`creditCurrency`/`debitCurrency`/`getWalletBalance`) em memória, funciona offline. Valores precisam ser inteiros seguros > 0 (inválido: `debitCurrency` false, crédito ignorado); `debitCurrency` false sem saldo. NÃO persiste: salve o saldo no `game.storage` e recredite no boot.
+- Dinheiro real só com um `PurchaseProvider` do SERVIDOR do jogo (`setPurchaseProvider`): sem ele `isPurchaseSupported()` é false, `initPurchase` resolve `null` (+ `purchase-failed` "unsupported") e nada é creditado. Com ele, só o que o recibo verificado concede é entregue (`wallet-updated`, `item-granted`, `getEntitlements()`); `validateReceipt` só aceita recibos aprovados nesta sessão.
+- Steam Inventory: itens com `steamItemDefId`; `fetchSteamInventory`, `consumeInventoryItem`, `startInventoryPurchase` (checkout da Steam). Sem Steam: `[]`/`false`. Não verificado com Steam real (GAPS NV).
+- `clear()` zera carteira/ordens/inventário em cache (o catálogo fica).

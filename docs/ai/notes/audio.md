@@ -1,6 +1,9 @@
 ## notas verificadas (comportamento)
-- Tocar um som que NÃO foi carregado/cacheado apenas emite warn silencioso (não lança). Carregue antes (assets) e só então toque.
-- Caminhos de assets do jogo: `/projects/<jogo>/...` (pasta `public/projects/<jogo>/`).
-- LACUNA: `playSound`/`playPositionalSound` não devolvem handle: não dá para parar um som específico nem mover um som posicional. Só `stopAllSounds()` e volume por canal. Contorno: prefira one-shots curtos repetidos (ex.: "clac" do trilho a cada N s na posição atual); para um loop ambiente (chuva) reserve um canal (ex.: `voice`) e use `setChannelVolume` para ligar/desligar; música só por `crossfadeMusic`.
-- Ouvinte: chame `updateListenerPosition` no `game.loop.render` com a posição da câmera (`camera.getCurrentCameraSnapshot()`).
-- `loadAudio` fica PENDENTE até o primeiro gesto do usuário (G80): mostre "clique para começar" antes de carregar sons. `setChannelVolume(c, v)` sem o 3º argumento desmuta (G84). `crossfade-completed` sai no início (G84).
+- Toque só sons já carregados (`assets.loadAudio`); som não carregado não toca (handle 0 + warn).
+- `playSound`/`playPositionalSound` devolvem `SoundHandle`: `stopSound(h, fade?)`, `setSoundVolume`, `setSoundPosition`, `setSoundOrientation`, `setSoundPlaybackRate`, `isSoundPlaying`. Loop ambiente = `playSound(url, canal, vol, true)` + `stopSound(h, fade)`.
+- Desbloqueio: a engine chama `resume()` sozinha no 1º gesto (clique/tecla/toque). One-shots pedidos antes só tocam se o gesto vier em ~250 ms; loops começam ao desbloquear. `state` informa o contexto ("unavailable" = sem Web Audio: tudo mudo, sem lançar).
+- Posicional: `options.channel` (padrão "sfx"), `refDistance`, `maxDistance` (+ `maxDistanceMode` "silence"/"clamp"), `distanceModel`, cones apontados por `orientation`.
+- Canais: `setChannelVolume(c, v)` mantém o mudo; `setChannelMuted`; `stopChannel(c, fade?)` (não afeta a música).
+- Música: `crossfadeMusic(url, { durationSeconds, loop })` resolve e emite `crossfade-completed` só no FIM do fade; mesma faixa = no-op (salvo `restart`). `stopMusic(fade?)` + `music-stopped`; `getCurrentMusicTrack()`.
+- Ouvinte: `updateListenerPosition(pos, forward?, up?)` no `game.loop.render`.
+- Vozes: limite padrão 32 (rouba o one-shot mais antigo); `setVoiceLimit(max, maxHrtf?)`. `stopAllSounds(fade?)` para tudo.

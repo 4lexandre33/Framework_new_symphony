@@ -1,5 +1,7 @@
 ## notas verificadas (comportamento)
-- Sem Tauri: `setPassthrough`/`setAlwaysOnTop` resolvem e só guardam estado; `dockToTaskbar` resolve `true` com limites simulados.
-- `performHitTest` só detecta DOM (o raycast 3D não está ligado).
-- SUSPEITA DE BUG (verificar no Tauri): a engine chama `update(0,0,dt)` a cada tick, o que reavalia o passthrough pelo elemento no pixel (0,0). Não ative modos de overlay no jogo sem testar no app nativo.
-- Confirmado (G15): a janela só passa a ignorar o mouse se o pixel (0,0) não tiver elemento interativo; o passthrough do jogo é desfeito a cada tick. A janela do template nasce sempre-no-topo e sem bordas (G32): chame `setAlwaysOnTop(false)` no boot.
+- A janela do app nasce como janela comum (bordas, não sempre-no-topo, opaca). Cada jogo pode ter `src/projects/<jogo>/desktop.json` (`productName`, `identifier`, `window: { title, width, height, resizable, fullscreen, decorations, alwaysOnTop, transparent }`); janela transparente/sem bordas é opt-in ali (transparência só na criação).
+- Passthrough: política `manual` (padrão) — `setPassthrough(true)` vale até você desligar; `auto` (`setPassthroughPolicy("auto")`) segue o cursor real e só ignora cliques onde não há DOM interativo nem malha 3D (raycast do render já ligado; `setRaycastProvider` troca).
+- `setOverlayMode("window" | "desktop_pet" | "taskbar_dock" | "always_on_top_hud")` aplica as flags nativas e devolve `{ applied, state, errors }`. `setPassthrough`/`setAlwaysOnTop` REJEITAM com o erro nativo (o estado não muda): use try/catch. Getters (`isAlwaysOnTop`, `isPassthroughActive`) refletem o estado real; `lastError` explica falhas.
+- Sem Tauri: tudo simulado com `state.native === false` (não mente sobre a janela); `dockToTaskbar` resolve `false` com `lastError` "unsupported".
+- No dispose: `restoreWindow()` (ou `clear()`) reverte a janela ao estado do boot.
+- Flags nativas não verificadas numa janela Tauri real (GAPS NV).

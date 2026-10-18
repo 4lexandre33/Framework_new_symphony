@@ -1,9 +1,9 @@
 ## notas verificadas (comportamento)
-- O DOM do UI é montado no `setup` do plugin de UI: declare `dependsOn: game.ui` no jogo.
-- `screen-hud` está ativa por padrão; o container `#hud-overlay` começa vazio.
-- O HUD genérico usa `data-bind="chave"` e `data-hud-fill="chave"` (max em `data-hud-max` ou `max<Chave>`); o binder varre o DOM no update, não no mount.
-- As telas embutidas (`main_menu`, `game_over`, `pause_menu`…) são placeholders (só título; o menu diz "Projeto 1"). `openScreen` só alterna visibilidade. Menus do jogo: monte o seu DOM num adapter ou use `pushModal({contentHtml})`.
-- `contentHtml` vai direto para `innerHTML` SEM sanitização: escape qualquer texto vindo de jogador/rede (nomes Steam, chat).
-- LACUNA: `ModalConfig.templateId` é ignorado (templates registrados nunca são instanciados).
-- A engine reage a `[data-action]` dentro de `#ui-root` (ex.: `start-game` carrega `level_01`) e captura ESC (abre `pause_menu` e esconde o HUD) (G96): use atributo próprio (`data-<jogo>-action`) e trate `screen-changed`.
-- `setLocale` reescreve `[data-i18n]` em todo o DOM (G97): não use esse atributo no jogo. Comando `pop-modal` fecha sempre o do topo (G98). Registre listeners em `document`, não no canvas (G99).
+- O DOM da UI é montado no `setup` do plugin de UI: declare `dependsOn: game.ui`. Sem DOM (node) ele sobe em modo headless (`hasDOM: false`).
+- `screen-hud` começa ativa; o contêiner `#hud-overlay` começa vazio e NÃO captura o ponteiro (cliques passam ao canvas). Telas/modais marcam `data-input-ignore`.
+- HUD: `data-bind="chave"` (texto) e `data-hud-fill="chave"` (barra = chave / `data-hud-max` ou `max<Chave>`; máximos < 1 aceitos); valores por `bindHUDData`/`updateHUD`. Bindings reindexados por MutationObserver (`refreshHUDBindings` para DOM fora de `#ui-root`).
+- A engine NÃO captura ESC nem `[data-action]`. Botões do jogo: `data-ui-action="x"` (+ `data-ui-value`) dentro de `#ui-root` ⇒ evento `game.ui.action`; a engine só trata `close-modal` e `open-screen`. DOM próprio com listener próprio também serve.
+- Modais: `pushModal({ id, title, contentText | contentHtml | templateId+templateData, closable, depth })`. `contentHtml` é SANITIZADO (sem script/on*/javascript:); `trustedHtml: true` só para HTML 100% do jogo; nomes de jogador → `contentText`. Mesmo id substitui. `popModal(id)`, `closeAllModals`, evento `game.ui.modal-closed` (`reason`). ESC fecha o modal do topo se `closable !== false` (GAPS G134).
+- Telas embutidas (`main_menu`, `pause_menu`…) são placeholders: preencha com `setScreenContent(tela, { templateId | html | text })` ou use DOM próprio. `openScreen` alterna a visível (`game.ui.screen-changed`).
+- Templates: `registerTemplate(id, html)` com `{{chave}}`; `renderTemplate` escapa os valores.
+- i18n: `registerDictionary(locale, dict)`, `translate`, `setLocale` (fallback pt-BR; reescreve só `[data-i18n]` cujas chaves existem).

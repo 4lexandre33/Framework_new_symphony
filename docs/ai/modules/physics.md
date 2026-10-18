@@ -233,14 +233,14 @@ interface CastRayRequest {
 command CastRayCommand = "game.physics.cast-ray" request CastRayRequest
 ```
 ## notas verificadas (comportamento)
-- A engine já avança a física no `game.loop.tick` (`stepForGameLoop`). NÃO chame `step()` no jogo. A ordem entre o seu listener de tick e o step não é garantida: não dependa dela.
-- Gravidade padrão: (0, −9,81, 0). `applyImpulse` acorda o corpo.
-- Só corpos `dynamic` recebem `applyImpulse`/`applyForce`; nos outros retorna false.
-- `applyForce` é persistente (não há reset automático): aplique a cada tick só enquanto quiser a força.
-- LACUNA: não há como MOVER um corpo `fixed`/`kinematic*` depois de criado (sem setTranslation/setNextKinematic*) nem ler/definir velocidade. Para plataformas móveis, simule num referencial local parado (ver `docs/ai/GAPS.md`). Velocidade: estime pela diferença de `getBodyTransform` entre ticks.
-- LACUNA: não há trava de rotação. Personagem como cápsula/caixa `dynamic` tomba. Use esfera `dynamic` e desenhe o modelo em pé usando só a posição.
-- Eventos de colisão trazem o par `entityIdA`/`entityIdB` (ordem não garantida); `isTrigger` true apenas com collider `isSensor`.
-- `castRay` parte de `origin`: se o raio nascer dentro do próprio corpo ele o acerta. Comece abaixo/além da base do corpo.
-- `syncMeshTransform(id, mesh)` MUTA `mesh.position` e `mesh.quaternion` (copia do corpo para a malha).
-- O terreno voxel (`game.terrain`) NÃO cria colisores: o chão físico é responsabilidade do jogo.
-- `getBodyTransform` devolve SEMPRE o mesmo objeto (G33): copie os números na hora. Remover corpo não emite `collision-exit`/`trigger-exit` (G34). `restitution` > 1 lança (G37).
+- A engine chama `step` no `game.loop.tick` (nada roda pausado). NÃO chame `step()`; a ordem entre o seu handler de tick e o step não é garantida.
+- Gravidade padrão (0, −9,81, 0); `setGravity` acorda todos. `applyForce` é PERSISTENTE (use `resetForces` ou aplique só enquanto quiser); para empurrões por tick prefira `applyImpulse`.
+- Mover: `setBodyTranslation/Rotation/Transform` teleporta qualquer tipo (inclusive `fixed`). Plataforma que EMPURRA corpos: `kinematicPositionBased` + `setNextKinematicTransform` a cada tick (receita 15). Velocidade: `get/setLinearVelocity`, `get/setAngularVelocity`.
+- Personagem em pé: `lockRotations: true` (ou `enabledRotations: {x:false,y:true,z:false}`) no descritor ou em runtime. `getBodyMass` lê a massa real.
+- Vários colliders por corpo: `addCollider(id, { ..., offset, rotationOffset })`. Formas: box, sphere, capsule, cylinder, cone, convexHull, trimesh (use em `fixed`), heightfield.
+- Consultas (`castRay`, `castShape`, `queryOverlap`) enxergam corpos criados/movidos antes do próximo step. Use `excludeEntityId` (o próprio corpo) e `excludeSensors: true`; `collisionGroups` (16 bits `memberships`/`filter`) filtram contatos e consultas.
+- Joints: `createJoint(id, { type, entityIdA, entityIdB, anchorA/B, axis, limits })`; motores em revolute/prismatic com `setJointMotor`. Remover um corpo remove seus joints.
+- Eventos: `collision-enter/exit` e `trigger-enter/exit` (par em ordem não garantida; trigger = collider `isSensor`); remover/recriar corpo emite os exits com `removed: true`. Impacto: `contactForceThreshold` no collider ⇒ `game.physics.contact-force`.
+- `getBodyTransform` devolve objeto NOVO; no tick prefira `getBodyTransformInto(id, out)` (sem alocar). `syncMeshTransform(id, mesh)` copia corpo → malha.
+- `restitution` ≥ 0 (pode passar de 1). `step()` manual fora de [1/240, 1] s lança (GAPS G37).
+- Terreno: `game.terrain` cria colliders trimesh por chunk (padrão ligado); o chão de cenas sem terreno é do jogo.

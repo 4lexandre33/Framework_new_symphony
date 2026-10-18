@@ -245,8 +245,9 @@ interface StartQuestPayload {
 command StartQuestCommand = "game.scripting.start-quest" request StartQuestPayload
 ```
 ## notas verificadas (comportamento)
-- A engine chama `update(dt)` no tick (avança a timeline de cutscene). Não chame `update` no jogo.
-- Zonas de gatilho NÃO são verificadas sozinhas: chame `checkEntityInZones(entityId, pos)` no tick para cada entidade que importa; aí saem `game.scripting.trigger-entered/exited`.
-- LACUNA: os keyframes de cutscene não executam nada nem emitem evento por keyframe; só `cutscene-started` e `cutscene-finished`. A câmera/áudio da cutscene é feita pelo jogo reagindo a esses dois eventos.
-- Quests e diálogos funcionam em memória: `startQuest`, `advanceQuestProgress`, `startDialogue`/`advanceDialogue` (emitem `quest-updated` e `dialogue-changed`).
-- Diálogos, quests e zonas têm vários comportamentos frágeis (G123–G129): leia a seção scripting de `docs/ai/GAPS.md` antes de usar.
+- A engine chama `update(dt)` no tick (cutscenes e zonas rastreadas). Não chame `update`.
+- Cutscene: `registerCutscene` + `playCutscene` (do começo). Keyframes EXECUTAM ações das trilhas quando a capability existe (camera `set-active`/`shake`/`look-at`/`follow`; audio `play`/`music`/`stop-music`; animation `play`/`set-param`; vfx `preset`/`bloom`; dialogue `start`/`advance`) e sempre emitem `game.scripting.cutscene-keyframe` (`handled`). Trilha `event` = só evento para o jogo. `pause/resume/stop/skipCutscene`; `cutscene-finished` traz `reason` (completed/stopped/skipped/replaced).
+- Zonas: `registerTriggerZone({ zoneId, shape, position, dimensions, radius?, height?, rotation?, triggerOnce, triggerOnceScope?, targetTags?, sweep? })`. Verificação automática para entidades do world com tags que casam `targetTags` ou rastreadas com `trackEntity`; manual com `checkEntityInZones(id, pos)` (posição no tick). Exits saem ao sair, ao remover a zona e ao remover a entidade (`removeEntityFromZones`; automático no despawn do world). Varredura amostrada (GAPS G129).
+- Diálogos: `registerDialogueTree` valida (false se inválida; `validateDialogueTree` lista erros). `startDialogue(tree, node?, { ifActive: "replace" | "queue" | "reject" })`, `queueDialogue`, `advanceDialogue(i)` só aceita escolhas liberadas (`getAvailableChoices`; condições por `setVariable`). `dialogue-ended` com `reason`. `audioClipUrl`/`animationState` do nó tocam via audio/anim.
+- Quests: `registerQuest` preserva estado (salvo `resetState`); `startQuest` é idempotente (`restart`/`restartQuest` reinicia); `advanceQuestProgress` passa a sobra adiante; `completeQuest`/`failQuest`; `reportQuestTarget(entityId)`. Eventos `quest-updated`, `quest-completed` (recompensas declaradas; aplicar é do jogo), `quest-failed`.
+- `clear()` encerra tudo emitindo os eventos de fim.

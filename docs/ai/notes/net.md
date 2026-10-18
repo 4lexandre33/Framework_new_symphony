@@ -1,8 +1,9 @@
 ## notas verificadas (comportamento)
-- Sem Steam o transporte é WebSocket CLIENTE: `startHost()` resolve `false`; `connect("ws://…")` só conecta a um servidor/relay externo. Não há transporte mock/loopback nem host no navegador. Host P2P real só com Steam (Tauri).
-- `sendTo`/`broadcast` resolvem `false` em modo `offline`. Nada lança.
-- No tick a engine só faz `pollPackets()`. Snapshots NÃO são enviados sozinhos: o jogo gera (`getStateReplicator().generateWorldSnapshot`), serializa em `Uint8Array` e chama `broadcast`. Recebimento: evento `game.net.packet-received`.
-- `registerEntity`/`updateEntityState`/`getInterpolatedState` funcionam em memória, sem conexão.
-- Para testar multiplayer no jogo: isole a rede atrás de uma porta do jogo e use um transporte loopback de TESTE (dois "peers" em memória).
-- `StateReplicator`: `pushEntitySnapshot` ignora snapshot com `sequence` não mais novo que o último; cria a entidade se não existir (`registerEntity` é opcional). `getInterpolatedState(id, alpha)` interpola entre os DOIS ÚLTIMOS snapshots com `alpha` 0..1 (com 1 snapshot devolve ele). Logo `alpha` deve ser "tempo desde a chegada do último snapshot ÷ intervalo entre snapshots", não o alpha do render. O objeto devolvido é reutilizado: copie os números.
-- Steam: só canais 0 e 1 funcionam; pacote não confiável ≤ 1.200 B (G104). Queda de par não é detectada: faça heartbeat (G105). `rttMs` sempre 0 (G108).
+- Transportes (`getAvailableTransports()`): `steam_p2p` (Tauri + Steam), `mock` = loopback no mesmo runtime (`loopback://sala`), `broadcast_channel` = abas da mesma origem (`bc://sala`), `websocket` = só CLIENTE de um servidor que fale o protocolo do `game.net` (sem host WS: GAPS G8). `webrtc` não existe.
+- Host: `startHost({ transport?, room?, maxClients? })` (padrão: Steam se disponível, senão `mock`). Cliente: `connect(alvo)` resolve `true` só após o handshake (WELCOME); `false` sem host/sem resposta (`handshakeTimeoutMs` 5 s).
+- Sessão: heartbeat (1 s) e timeout de par (5 s) automáticos (`configure`); `game.net.peer-connected`/`peer-disconnected` (`reason`: timeout, remote_bye, link_closed…). `getPeers()` e `getStats()` (RTT/perda reais, não destrutivo).
+- Envio: `sendTo`/`broadcast` com canal 0..255 preservado; confiável grande é fragmentado (até 16 MiB); NÃO confiável acima do MTU resolve `false`. Offline resolve `false`. Recebimento: `game.net.packet-received`.
+- O pump da rede roda no tick/render da engine: com a aba oculta ele para (GAPS G130).
+- Replicação: `registerEntity`/`updateEntityState` (entidades LOCAIS, nunca sobrescritas por remotos); `broadcastSnapshot()` ou `setAutoSnapshot({ enabled, intervalTicks: 3 })` no host; no cliente o snapshot é aplicado ao replicador (cria/atualiza/remove as entidades daquela origem) e sai `game.net.snapshot`.
+- `getInterpolatedState(id, alpha)` interpola entre os DOIS ÚLTIMOS snapshots (quatérnio com sinal corrigido); `alpha` = tempo desde a chegada do último ÷ intervalo entre snapshots (não o alpha do render). Objeto reutilizado: `copyEntitySnapshot`.
+- Com Steam, `game.net` aceita as sessões P2P (host aceita clientes; cliente só o seu host) e drena os pacotes: não leia P2P direto pelo `game.steam.net` ao mesmo tempo.

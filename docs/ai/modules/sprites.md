@@ -135,7 +135,9 @@ interface SetParallaxSpeedRequest {
 command SetParallaxSpeedCommand = "game.sprites.set-parallax-speed" request SetParallaxSpeedRequest
 ```
 ## notas verificadas (comportamento)
-- BUG GRAVE (G92): o plugin não declara acesso ao render/assets. `spawnSprite2D`, `despawnSprite2D`, `renderTilemap`, `createParallaxBackground`, `clear`, `dispose` e os comandos LANÇAM erro. Funcionam só `parseAtlas`, `getFrameUV`, `updateParallax`, `setPixelPerfectScaling`.
-- BUG (G93): mesmo corrigido o acesso, o shader do tilemap mostraria o atlas inteiro em cada tile.
-- Uso recomendado hoje: `await assets.loadTexture(url)` → `parseAtlas(url, json, texture)` → `getFrameUV(url, nome)` para obter UVs; desenhe sprites/tilemaps com malhas do PRÓPRIO jogo (`PlaneGeometry`/`InstancedMesh` + `MeshBasicMaterial`, `addMeshToScene`).
-- Convenção do tilemap da engine (para quando for corrigido): o número N em `tiles` usa o frame `tile_N`; −1 = vazio; mesmo `layerId` substitui.
+- Fluxo: `tex = await assets.loadTexture(url)` + `json = await assets.loadJSON(urlDoJson)` → `parseAtlas(chave, json, tex)` (a chave costuma ser a URL da textura e é o `atlasUrl` dos demais métodos). O atlas usa um CLONE próprio da textura (`getAtlasTexture`; não descarte); aceita frames `rotated`/`trimmed`.
+- Sprite: `spawnSprite2D({ spriteId, atlasUrl, frameName, position, pixelsPerUnit?, flipX?, renderOrder? })` devolve um `THREE.Mesh` (quad no plano XY) já na cena; mova/gire por `getSprite(id)` (não descarte). Sem `pixelsPerUnit` o quad tem altura 1 e largura pela proporção do frame. Billboard: copie o quaternion da câmera a cada frame.
+- Animação: `playSpriteAnimation(id, { name, frames, frameRate, loop })` → `game.sprites.animation-ended`; `setSpriteFrame` fixa um frame. A engine chama `update` no `game.loop.render` (delta 0 pausado).
+- Tilemap: `renderTilemap({ layerId, atlasUrl, tileMatrix: { width, height, tileSize, tiles }, position })` = uma `InstancedMesh` (1 draw call). N em `tiles` usa o frame `tile_N`; −1 = vazio; tile sem frame fica invisível; mesmo `layerId` substitui; `removeTilemap`.
+- Parallax: `createParallaxBackground([{ layerId, textureUrl, factorX, factorY, width?, height?, repeatX? }])` + `updateParallax(camX, camY)` quando a câmera mover.
+- `despawnSprite2D`/`removeTilemap`/`removeParallaxLayer` no dispose (`clear()` remove tudo do módulo).

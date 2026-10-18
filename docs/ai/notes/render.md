@@ -1,6 +1,9 @@
 ## notas verificadas (comportamento)
-- A câmera do render é sobrescrita por `game.camera` a cada frame (ver `modules/camera.md`). Use `getScene()`/`addMeshToScene` para conteúdo e `game.camera` para enquadramento.
-- Three.js é permitido nos adapters do jogo: crie geometrias/materiais e adicione com `addMeshToScene(chaveÚnica, obj)`; no dispose basta `removeMeshFromScene` — ele JÁ faz dispose de geometria/material/texturas dos `Mesh` (G42; não remova objetos cuja geometria está em cache compartilhado; `Points`/`Line` você libera).
-- Voxel: prefira `THREE.InstancedMesh` (um por cor/material) ou geometria mesclada; evite milhares de `Mesh` separados.
-- A luz direcional da engine é UMA só e seu alvo fica na origem: longe de (0,0,0) a direção muda e a sombra some. Para mundos grandes, desligue a da engine (`setDirectionalLight({...intensity:0, castShadow:false})`) e adicione a SUA `THREE.DirectionalLight` via `addMeshToScene`, movendo luz e `light.target` junto com o foco da câmera (e adicionando o target também).
-- O desenho ocorre ANTES dos seus handlers de `game.loop.render` (G41): mova malhas no `game.loop.tick` para não atrasar 1 frame. Far plane 1000 e sem API de câmera (G43). Nunca chame `dispose()` (G44).
+- O desenho acontece DEPOIS dos handlers síncronos de `game.loop.render`: posicionar malhas no render aparece no mesmo frame.
+- Interpolação opcional: mova o objeto no tick e marque `setInterpolated(chave, true)`; a engine desenha entre o tick anterior e o atual e restaura o valor real. Após teleporte: `snapInterpolation(chave)`.
+- Conteúdo: Three.js nos adapters do jogo + `addMeshToScene(chaveÚnica, obj)`. `removeMeshFromScene` libera geometria/material/texturas de Mesh/InstancedMesh/Points/Line/Sprite, EXCETO recursos usados por outro objeto registrado, marcados `userData.renderRetain = true` ou com `{ disposeResources: false }` (instâncias de GLTF: GAPS G81). Para esconder use `visible = false`.
+- Câmera: com câmera virtual registrada, `game.camera` escreve posição/rotação/fov a cada frame (enquadre por ela; `setCameraMode`/`updateCameraTarget` só valem sem câmera virtual). near/far/tamanho ortográfico: `configurePerspectiveCamera`/`configureOrthographicCamera` (persistem em resize); leitura em `getCameraSettings()`.
+- Viewport: `setViewportOptions({ autoResize, maxPixelRatio, rect })`; `game.render.resize` sai no boot e a cada mudança; `getViewportDimensions()` é objeto reutilizado (`copyViewportDimensions`).
+- Luzes: `setAmbientLight`; a direcional da engine aceita `target`/`shadowAreaSize`/`shadowMapSize`; `setShadowFocus(centro)` move luz e alvo juntos (mundos grandes: chame seguindo o foco). Extras: `addLight(id, { type: "point" | "spot" | "hemisphere" | … })` / `removeLight`.
+- Muitos objetos (voxel): `THREE.InstancedMesh` ou geometria mesclada; evite milhares de `Mesh`.
+- `dispose()` do token é no-op para jogos. Perda de contexto WebGL: eventos `game.render.context-lost/restored` (`isContextLost()`).

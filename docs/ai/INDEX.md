@@ -12,31 +12,31 @@ versão 1.0.0 · GERADO por `npm run ai-manual:generate` (não edite à mão; `n
 ## Preciso de … → módulo
 | preciso de | módulo (chave) | capability / id do plugin (use em dependsOn) | plugin depende de | ~tokens |
 |---|---|---|---|---|
-| Steamworks & P2P | steam | game.steam | - | 3182 |
-| Input Manager | input | game.input | - | 2212 |
-| Asset Pipeline & VRAM Cache | assets | game.assets | - | 1320 |
-| Motor de Física (Rapier WASM) | physics | game.physics | - | 4040 |
-| Persistência & Banco de Dados | storage | game.storage | - | 2380 |
-| Gerenciador de Mundo, Cenas & ECS | world | game.world | - | 2303 |
-| Interface de Usuário & HUD | ui | game.ui | - | 1990 |
-| Pipeline de Animações & State Machines | anim | game.anim | game.loop | 1998 |
-| Motor 2D, Tilemaps & Pixel Art | sprites | game.sprites | game.render, game.assets | 1827 |
-| Mixer de Áudio Espacial 3D | audio | game.audio | - | 2110 |
-| Câmera Dinâmica & SpringArm | camera | game.camera | game.loop, game.physics, game.render | 1887 |
-| Inteligência Artificial & NavMesh | ai | game.ai | game.loop, game.physics, game.world | 3501 |
-| Partículas GPU, Decals & Pós-Processamento | vfx | game.vfx | - | 2123 |
-| Terreno Procedural, Biomas & Voxels | terrain | game.terrain | game.loop, game.render, game.physics, game.camera | 2788 |
-| Cutscenes, Diálogos & Quests | scripting | game.scripting | game.loop | 3651 |
-| Streaming Espacial, LOD & HLOD | streaming | game.streaming | game.loop, game.camera, game.render, game.assets | 2369 |
-| Desktop Overlay & Raycast Click Passthrough | overlay | game.overlay | game.loop, game.render | 1540 |
-| Profiler, Anti-cheat & Crash Dumper | security | game.security | game.loop, game.world, game.render | 2095 |
-| Steam Workshop, Dynamic Loading & Asset Override | modding | game.modding | - | 2077 |
-| Microtransações Steam & Steam Inventory Service | monetization | game.monetization | - | 2338 |
-| Deterministic Game Loop | game-loop | game.loop | - | 1047 |
-| Render Runtime | render | game.render | - | 2848 |
-| Multiplayer Network & State Replication | net | game.net | game.loop | 2433 |
+| Steamworks & P2P | steam | game.steam | - | 3500 |
+| Input Manager | input | game.input | - | 2260 |
+| Asset Pipeline & VRAM Cache | assets | game.assets | - | 1674 |
+| Motor de Física (Rapier WASM) | physics | game.physics | - | 4170 |
+| Persistência & Banco de Dados | storage | game.storage | - | 2580 |
+| Gerenciador de Mundo, Cenas & ECS | world | game.world | - | 2475 |
+| Interface de Usuário & HUD | ui | game.ui | - | 2122 |
+| Pipeline de Animações & State Machines | anim | game.anim | game.loop | 2249 |
+| Motor 2D, Tilemaps & Pixel Art | sprites | game.sprites | game.render, game.assets | 1995 |
+| Mixer de Áudio Espacial 3D | audio | game.audio | - | 2207 |
+| Câmera Dinâmica & SpringArm | camera | game.camera | game.loop, game.physics, game.render | 1881 |
+| Inteligência Artificial & NavMesh | ai | game.ai | game.loop, game.physics, game.world | 3740 |
+| Partículas GPU, Decals & Pós-Processamento | vfx | game.vfx | - | 2399 |
+| Terreno Procedural, Biomas & Voxels | terrain | game.terrain | game.loop, game.render, game.physics, game.camera | 2985 |
+| Cutscenes, Diálogos & Quests | scripting | game.scripting | game.loop | 3948 |
+| Streaming Espacial, LOD & HLOD | streaming | game.streaming | game.loop, game.camera, game.render, game.assets | 2529 |
+| Desktop Overlay & Raycast Click Passthrough | overlay | game.overlay | game.loop, game.render | 1705 |
+| Profiler, Anti-cheat & Crash Dumper | security | game.security | game.loop, game.world, game.render | 2250 |
+| Steam Workshop, Dynamic Loading & Asset Override | modding | game.modding | - | 2364 |
+| Microtransações Steam & Steam Inventory Service | monetization | game.monetization | - | 2467 |
+| Deterministic Game Loop | game-loop | game.loop | - | 1177 |
+| Render Runtime | render | game.render | - | 3000 |
+| Multiplayer Network & State Replication | net | game.net | game.loop | 2549 |
 
-Tamanho: RULES ≈ 1751, CORE ≈ 3010, RECIPES ≈ 4810, todos os módulos ≈ 54059 tokens (estimativa: caracteres/3,6).
+Tamanho: RULES ≈ 1751, CORE ≈ 3010, RECIPES ≈ 4810, todos os módulos ≈ 58226 tokens (estimativa: caracteres/3,6).
 
 ## Atalhos por tipo de jogo
 - 3D com física: render, camera, physics, input, assets, audio, ui, game-loop.

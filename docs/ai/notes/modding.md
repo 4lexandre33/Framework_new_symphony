@@ -1,4 +1,7 @@
 ## notas verificadas (comportamento)
-- Offline/sem Tauri: `getLoadedMods()` = `[]`, `enableMod`/`downloadWorkshopMod` resolvem `false`, `publishWorkshopMod` REJEITA.
-- `registerAssetOverride`/`getAssetOverride` funcionam em memória (descritor inválido lança). Padrão: resolva toda URL de asset do jogo por `getAssetOverride(caminho) ?? caminho`.
-- Mods não executam código, Workshop não instala e publicar falha mesmo no app nativo (G116–G118).
+- Resolva toda URL de asset do jogo por `getAssetOverride(caminho) ?? caminho` (síncrono; caminhos normalizados). Para mods em disco use `await resolveAssetUrl(caminho)` (gera URL utilizável).
+- Mods do JOGO (funcionam offline): `installMod(manifesto, { baseUrl?, scriptSource?, replace? })` devolve `InstalledModInfo` (`error` preenchido se inválido; não lança) → `enableMod(modId)` (dependências primeiro, overrides registrados, script executado) / `disableMod(modId)` (remove os overrides do mod). A lista de ativos persiste e é reativada no boot.
+- Manifesto: `modId`, `name`, `version`, `author`, `description`, `minEngineVersion` (compare com `MODDING_API_VERSION` = "1.0.0"), `overrides`, `dependencies`, `entryScript`.
+- Scripts rodam num Worker isolado (sem rede/carregamento de código) com capacidades `log` e `messages` por padrão (`setScriptCapabilities`; `assets` opcional). Conversa: `postToModScript` ↔ evento `game.modding.script-message`; falhas em `game.modding.mod-error`.
+- `registerAssetOverride` manual continua valendo (descritor inválido lança). `getInstalledMods()` lista também os inválidos; `getLoadedMods()` só os ativos. `clear()` desativa tudo sem esquecer os instalados.
+- Tauri: mods em `<app_data>/mods` e itens do Workshop (`refreshInstalledMods`, `downloadWorkshopMod`, `getWorkshopItemState`). Publicar exige Tauri + Steam (rejeita fora disso). Workshop não verificado com Steam real (GAPS G14/G116, NV).

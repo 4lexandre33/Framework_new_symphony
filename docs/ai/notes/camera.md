@@ -1,11 +1,10 @@
 ## notas verificadas (comportamento)
-- IMPORTANTE: `game.camera` escreve posição/rotação (e fov se perspectiva) na câmera ativa do render A CADA FRAME. Sem câmera virtual registrada, ela força posição (0,5,10) e rotação identidade. Logo `RenderApi.setCameraMode`/`updateCameraTarget` não têm efeito visível: controle a câmera SÓ por `game.camera`.
-- `registerVirtualCamera` com um id existente SUBSTITUI a câmera e zera o shake (trauma). Use re-registro só para mudanças raras (ex.: girar 90°). Para seguir/zoom use spring-arm.
-- `setFollowTarget(cameraId, pos)` só guarda o alvo; chame a cada tick com a posição atual.
-- Câmera SEM `springArmConfig`: posição é sempre `descriptor.position` (fixa); `followTarget` não a move.
-- COM `springArmConfig` + `setFollowTarget`: posição = alvo + `targetOffset` + (0,0,1) girado pela `rotation` da câmera × comprimento do braço (a câmera fica "atrás" e olha para o alvo). `fov` inválido cai para 60.
-- Campos obrigatórios do spring-arm: `targetArmLength`, `probeRadius`, `socketOffset`, `targetOffset`. `configureSpringArm(id, {targetArmLength})` muda o zoom SEM zerar o shake.
-- `addTrauma(0..1)` sacode a câmera ativa (decai sozinho).
-- Isométrica: `rotation` = quaternion de yaw 45° e pitch −35°; spring-arm com braço 25–60; zoom = `configureSpringArm`. Receita: `docs/ai/RECIPES.md` (10-camera).
-- Spring-arm com colisão LIGADA por padrão (G45): sempre `enableCollision: false` salvo se o socket estiver fora de qualquer collider.
-- `priority` é ignorada (G46): chame `setActiveCamera(id, 0)` logo após registrar e `setFollowTarget` logo em seguida. `setFollowTarget` guarda a referência do objeto: passe um objeto dedicado (G48).
+- Sem câmera virtual (ou com `setEnabled(false)`) a câmera do render NÃO é tocada. Com câmera registrada, `game.camera` escreve posição/rotação/fov da câmera ativa no `game.loop.render`.
+- Ativa = maior `priority` (no registro ou em `setCameraPriority`), com `game.camera.state-changed`; `setActiveCamera(id, blend?)` força outra (sem blend usa `descriptor.blendDurationSeconds`, padrão 0,5 s; `0` corta).
+- Seguir: `followTargetId`/`lookAtTargetId` = ids de corpos físicos (posição lida a cada frame) ou `setFollowTarget(id, pos)`/`setLookAtTarget(id, pos | null)` com números COPIADOS (chame quando o alvo mudar; `clearFollowTarget` volta ao id).
+- Sem spring-arm: `position` é fixa; com alvo vira o OFFSET em relação ao alvo. Com `springArmConfig`: câmera atrás do alvo pela `rotation`, a `targetArmLength` (obrigatórios: `targetArmLength`, `probeRadius`, `socketOffset`, `targetOffset`); zoom = `configureSpringArm(id, { targetArmLength })`.
+- Colisão do braço: padrão ligada só quando há entidade a ignorar (`followTargetId` ou `collisionIgnoreEntityId`); o raio ignora o alvo e sensores. `enableCollision: false` para câmera isométrica estável.
+- Re-registrar o mesmo id substitui o descritor e PRESERVA trauma, alvos e status de ativa (girar 90° = re-registro com nova `rotation`).
+- Shake: `addTrauma(0..1)` é GLOBAL (sobrevive a troca/re-registro; usa o `shakeConfig` da ativa); blend e shake congelam com o jogo pausado.
+- `detectOcclusion: true` emite `game.camera.occlusion-changed`; o fade é do jogo (GAPS G47).
+- Isométrica: `rotation` = yaw 45° + pitch −35°, braço 25–60, fov ~35 (receita 10-camera).
