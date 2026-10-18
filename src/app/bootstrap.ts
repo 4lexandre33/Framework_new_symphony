@@ -106,9 +106,23 @@ export async function bootstrap(): Promise<void> {
       console.warn(`[Bootstrap] ${describeProjectSelection(selection)}`);
       mountProjectPicker(selection);
     }
+    // Ferramenta de desenvolvimento (MCP): só em DEV e só com URL + token
+    // explícitos. O import() dentro do if some do bundle de produção.
+    let devTools: { start(): void } | null = null;
+    if (import.meta.env.DEV) {
+      try {
+        const { setupDevBridge } = await import("../debug/devbridge");
+        devTools = setupDevBridge({ kernel, services });
+      } catch (error: unknown) {
+        console.warn("[Bootstrap] DevBridge indisponível:", error);
+      }
+    }
+
     hud.appendLog("⏳ Executando Kernel.boot()...");
 
     await kernel.boot();
+
+    devTools?.start();
 
     console.log("[Bootstrap] Kernel inicializado com sucesso.", {
       status: kernel.status,
