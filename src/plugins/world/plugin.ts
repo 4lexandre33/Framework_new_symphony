@@ -2,7 +2,7 @@ import type { Plugin, PluginContext } from "@core";
 import { WorldToken } from "../../tokens/world";
 import { AssetsToken } from "../../tokens/assets";
 import { GameLoopToken } from "../../tokens/game-loop";
-import { SceneLoadingEvent, SceneLoadedEvent, SceneUnloadedEvent, WorldStateRestoredEvent, EntitySpawnedEvent, EntityDespawnedEvent, LoadSceneCommand, UnloadSceneCommand, SpawnEntityCommand, DespawnEntityCommand, UpdateEntityTransformCommand, type SceneDescriptor, type SceneLoadOptions, type EntitySpawnInput, type UpdateEntityTransformRequest } from "../../contracts/world/types";
+import { SceneLoadingEvent, SceneLoadedEvent, SceneUnloadedEvent, WorldStateRestoredEvent, SceneDocumentErrorEvent, EntitySpawnedEvent, EntityDespawnedEvent, LoadSceneCommand, UnloadSceneCommand, SpawnEntityCommand, DespawnEntityCommand, UpdateEntityTransformCommand, type SceneDescriptor, type SceneLoadOptions, type EntitySpawnInput, type UpdateEntityTransformRequest } from "../../contracts/world/types";
 import { WorldService } from "../../engine/world/internal/WorldService";
 
 export const worldManifest:
@@ -34,6 +34,7 @@ export const worldManifest:
         "game.world.scene-loaded",
         "game.world.scene-unloaded",
         "game.world.state-restored",
+        "game.world.scene-document-error",
         "game.world.entity-spawned",
         "game.world.entity-despawned",
         "game.loop.tick",
@@ -113,6 +114,10 @@ export function createWorldPlugin():
 
       ctx.events.define(
         WorldStateRestoredEvent,
+      );
+
+      ctx.events.define(
+        SceneDocumentErrorEvent,
       );
 
       ctx.commands.define(
