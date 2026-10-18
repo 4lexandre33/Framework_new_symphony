@@ -165,7 +165,7 @@
       "contracts": [
         {
           "path": "src/contracts/storage/types.ts",
-          "fingerprint": "603206561f76a84d431d0eb4ebe8c33cd184ee7dc746cd63d6cde3449fd67309"
+          "fingerprint": "66f59e52ec9dfa209d2ab9e03865bccc0d411f539f8990e7fdb306e297e9b865"
         }
       ],
       "tokens": [
@@ -585,7 +585,7 @@
       "contracts": [
         {
           "path": "src/contracts/monetization/types.ts",
-          "fingerprint": "6f569ba01cbbec611210e92636445efff3b050ea5167ab52f2ae04abdc23537f"
+          "fingerprint": "d7e5b1c8fe81086b412186d033634d2d9bf1d70685cd68234487642f7b82eec5"
         }
       ],
       "tokens": [
@@ -594,7 +594,7 @@
           "capabilityId": "game.monetization",
           "version": "1.0.0",
           "primary": true,
-          "fingerprint": "93f903b01d92352d3046e61cebe33e6520e63eaf313888e2dbeeb99057aa04f8"
+          "fingerprint": "ef71645cc26472ed0a1c9e9b87e1122966a8e35aa32cff245dd46b3b221436e0"
         }
       ]
     },

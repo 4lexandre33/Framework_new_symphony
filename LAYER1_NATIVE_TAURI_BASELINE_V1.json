@@ -7,10 +7,10 @@
   "auditVersion": "1.0.0",
   "referenceSnapshot": "post-stage84-native-hardening",
   "ownedFileSha256": {
-    "src-tauri/Cargo.toml": "f96575993b03501cbd03057fd0c166b496b83cdd8995a2f9593473be7cef5e1a",
-    "src-tauri/tauri.conf.json": "d1db3bd844f86caf7377fd0c2447c9339f83f76cea7e7a4222b72e1cf0fdfae5",
+    "src-tauri/Cargo.toml": "9134e9599f6a955ca13982a788ca4ee52076d4c8af4fa4d7a21505a27f4cce4d",
+    "src-tauri/tauri.conf.json": "4ec34282931d0f0d8f398336ef9240feb7ea2f534894b062a3d892b6c7067de5",
     "src-tauri/capabilities/default.json": "be7b3668ed23d4a8bae5405000f42ae0f045795711273e06dcc4d84caa50e15d",
-    "src-tauri/src/lib.rs": "4303f4d098ce9dc53963034974b936eaa4c0cd7f33906b56e3d553cccbbf36e4",
+    "src-tauri/src/lib.rs": "dffb1dca96d00a8da889922fbe28f324c0e35f8779197af1ce5ee2f242a1857c",
     "src-tauri/src/steam.rs": "747269887d036e98e081704d74eeb81a71ef15e3d40bb2a296e4e98c435b87d4",
     "src-tauri/src/security.rs": "5d514837f2e6f385674aecb86b1fa3367c0629ac4062a83a224972256ea63afa",
     "src-tauri/src/overlay.rs": "4afc85c326c59ca58bfb541f3a0b2c4e8a591abcc5d9aa9423b8a3af346106b2",
@@ -21,8 +21,8 @@
     "src/engine/overlay/internal/TauriOverlayDriver.ts": "1831b9ff7935ccdc04a26a73954e4fb9d2028d00c2efd00fa21e13d8dcc695e0",
     "src/engine/modding/internal/TauriModdingDriver.ts": "44a7dbc825a6e57c1352100fcaa936ac5694f395fb435c09cd566a4331475b5e",
     "src/engine/monetization/internal/TauriMonetizationDriver.ts": "1bf2efab3046620e80be88706b1d760f18be059b8d0bb1683f8cf31300adbf7e",
-    "src-tauri/src/storage.rs": "ac151926f1fa34de42d02488260f41260c89fb59ac6f2de75938ae082518d9c0",
-    "src-tauri/src/net_ws_host.rs": "18958e80912bb32dad1e32436b4df8596324d61b4d50a8f205085b42e2bdede2"
+    "src-tauri/src/storage.rs": "fdb974954352158b426a4d2ced3203ffebf923fac3f88d63113ca27f4c6c74b3",
+    "src-tauri/src/net_ws_host.rs": "200b6d5c49044bd21478c79976fc26d527655e4432dc042f0d129bc68048e34b"
   },
   "nativeCommands": [
     "modding_download_workshop_item",

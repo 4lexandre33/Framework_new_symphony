@@ -37,9 +37,9 @@
     "steam_workshop_download_item"
   ],
   "ownedFileSha256": {
-    "src-tauri/Cargo.toml": "f96575993b03501cbd03057fd0c166b496b83cdd8995a2f9593473be7cef5e1a",
+    "src-tauri/Cargo.toml": "9134e9599f6a955ca13982a788ca4ee52076d4c8af4fa4d7a21505a27f4cce4d",
     "src-tauri/src/steam.rs": "747269887d036e98e081704d74eeb81a71ef15e3d40bb2a296e4e98c435b87d4",
-    "src-tauri/src/lib.rs": "4303f4d098ce9dc53963034974b936eaa4c0cd7f33906b56e3d553cccbbf36e4",
+    "src-tauri/src/lib.rs": "dffb1dca96d00a8da889922fbe28f324c0e35f8779197af1ce5ee2f242a1857c",
     "src/engine/steam/internal/SteamBridgeService.ts": "990ef756c2a0a44f89d5b3f2b1e3b800dc0043821c4ad2976f97f57fd1091e90",
     "src/plugins/net/plugin.ts": "97c7809182ebdf5fd820ee93f35e5a4d247bae3f5733370e4e75cdf9417d7e5d"
   },
