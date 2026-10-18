@@ -8,11 +8,12 @@ export function buildScene(render: Render3DApi): () => void {
 
   const cube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x3399ff }));
   render.addMeshToScene("meu-jogo:cube", cube);
+  render.setInterpolated("meu-jogo:cube", true); // mova no tick; a engine suaviza entre ticks
 
   return (): void => {
+    // Libera geometria/material/texturas que nenhum outro objeto registrado usa.
+    // Instâncias de GLTF do cache: removeMeshFromScene(chave, { disposeResources: false }) + assets.releaseAsset(url).
     render.removeMeshFromScene("meu-jogo:cube");
-    cube.geometry.dispose();
-    cube.material.dispose(); // GPU não é coletada pelo GC
   };
 }
-// Sincronize mesh↔corpo: physics.syncMeshTransform(id, mesh) a cada tick (ver 03-physics-body.ts).
+// Sincronize mesh↔corpo no tick: physics.syncMeshTransform(id, mesh) (ver 03-physics-body.ts).

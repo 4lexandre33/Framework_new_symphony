@@ -1,6 +1,7 @@
-// Câmera: `game.camera` controla a câmera do render a cada frame (RenderApi.setCameraMode não tem efeito).
-// Isométrica que segue um alvo: spring-arm + setFollowTarget a cada tick; zoom = configureSpringArm (mantém o shake).
+// Câmera: com uma câmera virtual registrada, `game.camera` controla a câmera do render a cada frame.
+// Isométrica que segue um alvo: spring-arm + alvo; zoom pela roda = configureSpringArm (mantém o shake).
 import type { CameraApi } from "../../../tokens/camera";
+import type { InputApi } from "../../../tokens/input";
 
 const ID = "main";
 
@@ -13,39 +14,48 @@ export function yawPitchQuaternion(yawDeg: number, pitchDeg: number): { x: numbe
   return { x: cy * sp, y: sy * cp, z: -sy * sp, w: cy * cp };
 }
 
-export function setupIsometricCamera(camera: CameraApi, yawDeg = 45, armLength = 40): () => void {
+/**
+ * `followBodyId`: id de um corpo físico para seguir sozinho (lido a cada frame).
+ * Sem ele, chame `follow()` quando o alvo mudar (os números são copiados).
+ */
+export function setupIsometricCamera(camera: CameraApi, yawDeg = 45, armLength = 40, followBodyId?: string): () => void {
   camera.registerVirtualCamera({
     id: ID,
-    priority: 10,
+    priority: 10, // a de maior prioridade fica ativa sozinha
     fov: 35,
     position: { x: 0, y: 30, z: 30 },
     rotation: yawPitchQuaternion(yawDeg, -35),
+    ...(followBodyId !== undefined ? { followTargetId: followBodyId } : {}),
     springArmConfig: {
       targetArmLength: armLength,
       probeRadius: 0.2,
       socketOffset: { x: 0, y: 0, z: 0 },
       targetOffset: { x: 0, y: 1, z: 0 },
-      enableCollision: false,
+      enableCollision: false, // isométrica estável (sem encurtar o braço em paredes)
     },
     shakeConfig: { maxTrauma: 1, traumaDecayRate: 1.5 },
+    blendDurationSeconds: 0,
   });
-  camera.setActiveCamera(ID, 0);
   return (): void => {
     camera.unregisterVirtualCamera(ID);
   };
 }
 
-/** Chame no tick com a posição atual do alvo. */
+/** Alvo manual (ex.: posição calculada pelo jogo). */
 export function follow(camera: CameraApi, x: number, y: number, z: number): void {
   camera.setFollowTarget(ID, { x, y, z });
 }
 
-/** Zoom contínuo (ex.: roda do mouse via listener DOM no adapter). */
-export function zoom(camera: CameraApi, armLength: number): void {
-  camera.configureSpringArm(ID, { targetArmLength: Math.min(80, Math.max(15, armLength)) });
+/** No tick: roda do mouse acumulada desde o tick anterior → comprimento do braço. Devolve o novo comprimento. */
+export function zoomByWheel(camera: CameraApi, input: InputApi, armLength: number): number {
+  const wheelY = input.getTickWheelDelta().y; // > 0 = afastar
+  if (wheelY === 0) return armLength;
+  const next = Math.min(80, Math.max(15, armLength + wheelY * 0.02));
+  camera.configureSpringArm(ID, { targetArmLength: next });
+  return next;
 }
 
-/** Girar 90°: re-registra (zera o shake, por isso só em giros discretos). */
-export function rotateTo(camera: CameraApi, yawDeg: number, armLength: number): () => void {
-  return setupIsometricCamera(camera, yawDeg, armLength);
+/** Girar 90°: re-registrar o mesmo id troca a rotação e PRESERVA trauma, alvo manual e status de ativa. */
+export function rotateTo(camera: CameraApi, yawDeg: number, armLength: number, followBodyId?: string): () => void {
+  return setupIsometricCamera(camera, yawDeg, armLength, followBodyId);
 }

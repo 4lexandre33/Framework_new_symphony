@@ -9,4 +9,4 @@ export function onFixedTick(ctx: PluginContext, update: (dt: number, total: numb
     update(env.payload.deltaSeconds, env.payload.totalTimeSeconds);
   });
 }
-// Não aloque objetos por tick. Pause/retome com ctx.commands.send("game.loop.pause" | "game.loop.resume", {}).
+// Não aloque objetos por tick. Pausa: GameLoopApi.pause() para os ticks (o render continua com isPaused=true); resume() retoma.
