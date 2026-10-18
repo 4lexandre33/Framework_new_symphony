@@ -11,6 +11,8 @@ export const GAME_LOOP_MAX_TICK_RATE = 240;
 export const GAME_LOOP_MAX_FRAME_DELTA_SECONDS = 0.25;
 export const GAME_LOOP_MAX_FIXED_STEPS_PER_FRAME = 60;
 export const GAME_LOOP_MAX_TARGET_FPS = 1000;
+/** Limite de ticks por chamada de stepTicks. */
+export const GAME_LOOP_MAX_MANUAL_STEPS = 600;
 
 const GAME_LOOP_INITIAL_FPS_ESTIMATE = 60;
 const GAME_LOOP_ACCUMULATOR_EPSILON_SECONDS = 1e-10;
@@ -168,6 +170,12 @@ implements GameLoopApi {
   private freezeRenderWhilePaused = false;
   private hidden = false;
   private frameInFlight = false;
+  /** Frame do RAF em andamento (stepTicks espera ele terminar). */
+  private currentFrame:
+    Promise<void> | null = null;
+  /** Serializa chamadas concorrentes de stepTicks. */
+  private stepChain:
+    Promise<unknown> = Promise.resolve();
   /** Incrementa em start/stop: frames de uma geração antiga não continuam. */
   private generation = 0;
   private unsubscribeVisibility:
@@ -468,6 +476,102 @@ implements GameLoopApi {
     return true;
   }
 
+  /**
+   * Avanço manual (depuração) enquanto pausado. Ver GameLoopApi.stepTicks.
+   */
+  public stepTicks(
+    n: number,
+  ): Promise<number> {
+    const run =
+      this.stepChain.then(
+        () => this.runStepTicks(
+          n,
+        ),
+      );
+
+    this.stepChain =
+      run.catch(
+        () => undefined,
+      );
+
+    return run;
+  }
+
+  private async runStepTicks(
+    n: number,
+  ): Promise<number> {
+    if (
+      typeof n !==
+        "number" ||
+      !Number.isFinite(
+        n,
+      ) ||
+      !this.paused
+    ) {
+      return 0;
+    }
+
+    const count =
+      Math.min(
+        GAME_LOOP_MAX_MANUAL_STEPS,
+        Math.max(
+          1,
+          Math.floor(
+            n,
+          ),
+        ),
+      );
+
+    while (
+      this.currentFrame !==
+      null
+    ) {
+      try {
+        await this.currentFrame;
+      } catch {
+        // o erro do frame já foi tratado em onAnimationFrame
+      }
+    }
+
+    if (
+      !this.paused
+    ) {
+      return 0;
+    }
+
+    this.frameInFlight = true;
+
+    let executed = 0;
+
+    try {
+      while (
+        executed <
+          count &&
+        this.paused
+      ) {
+        await this.runFixedStep(
+          this.fixedDeltaTimeSeconds,
+        );
+        executed += 1;
+      }
+
+      // Mostra o estado mais recente (o tick anterior não interpola).
+      this.renderPayload.alphaInterpolation =
+        1 -
+        Number.EPSILON;
+
+      await this.emitRender(
+        0,
+        0,
+        true,
+      );
+    } finally {
+      this.frameInFlight = false;
+    }
+
+    return executed;
+  }
+
   public getStats():
     GameLoopStats {
     return {
@@ -542,14 +646,21 @@ implements GameLoopApi {
 
       this.frameInFlight = true;
 
-      try {
-        await this.processFrame(
+      const frame =
+        this.processFrame(
           currentTimeMs,
         );
+
+      this.currentFrame =
+        frame;
+
+      try {
+        await frame;
       } catch (
         error
       ) {
         this.frameInFlight = false;
+        this.currentFrame = null;
 
         this.ctx.log.error(
           "game loop frame falhou; loop será interrompido",
@@ -572,6 +683,7 @@ implements GameLoopApi {
       }
 
       this.frameInFlight = false;
+      this.currentFrame = null;
 
       if (
         this.running
@@ -627,46 +739,11 @@ implements GameLoopApi {
       const stepDeltaSeconds =
         this.fixedDeltaTimeSeconds;
 
-      this.totalRunningTimeSeconds +=
-        stepDeltaSeconds;
-      this.tickCount +=
-        1;
-
-      this.tickPayload.deltaSeconds =
-        stepDeltaSeconds;
-      this.tickPayload.totalTimeSeconds =
-        this.totalRunningTimeSeconds;
-      this.tickPayload.tickCount =
-        this.tickCount;
-
       // Determinism rule: the next fixed step cannot begin before every
       // handler of the current step has completed.
-      await this.ctx.events.emitAsync(
-        "game.loop.tick",
-        this.tickPayload,
+      await this.runFixedStep(
+        stepDeltaSeconds,
       );
-
-      if (
-        this.payloadGuard &&
-        (
-          this.tickPayload.deltaSeconds !==
-            stepDeltaSeconds ||
-          this.tickPayload.totalTimeSeconds !==
-            this.totalRunningTimeSeconds ||
-          this.tickPayload.tickCount !==
-            this.tickCount
-        )
-      ) {
-        this.tickPayload.deltaSeconds =
-          stepDeltaSeconds;
-        this.tickPayload.totalTimeSeconds =
-          this.totalRunningTimeSeconds;
-        this.tickPayload.tickCount =
-          this.tickCount;
-        this.reportPayloadMutation(
-          "game.loop.tick",
-        );
-      }
 
       this.accumulatorSeconds -=
         stepDeltaSeconds;
@@ -728,16 +805,76 @@ implements GameLoopApi {
 
     // Pausado: a cena continua sendo desenhada, mas sistemas que usam o
     // delta (animação, partículas, câmera) ficam parados.
-    this.renderPayload.deltaSeconds =
+    await this.emitRender(
       this.paused
         ? 0
-        : frameDeltaSeconds;
+        : frameDeltaSeconds,
+      frameDeltaSeconds,
+      this.paused,
+    );
+  }
+
+  /**
+   * Um tick fixo: avança tempo/contador, emite `game.loop.tick` com o
+   * payload reutilizado e aguarda todos os handlers (regra de determinismo).
+   */
+  private async runFixedStep(
+    stepDeltaSeconds: number,
+  ): Promise<void> {
+    this.totalRunningTimeSeconds +=
+      stepDeltaSeconds;
+    this.tickCount +=
+      1;
+
+    this.tickPayload.deltaSeconds =
+      stepDeltaSeconds;
+    this.tickPayload.totalTimeSeconds =
+      this.totalRunningTimeSeconds;
+    this.tickPayload.tickCount =
+      this.tickCount;
+
+    await this.ctx.events.emitAsync(
+      "game.loop.tick",
+      this.tickPayload,
+    );
+
+    if (
+      this.payloadGuard &&
+      (
+        this.tickPayload.deltaSeconds !==
+          stepDeltaSeconds ||
+        this.tickPayload.totalTimeSeconds !==
+          this.totalRunningTimeSeconds ||
+        this.tickPayload.tickCount !==
+          this.tickCount
+      )
+    ) {
+      this.tickPayload.deltaSeconds =
+        stepDeltaSeconds;
+      this.tickPayload.totalTimeSeconds =
+        this.totalRunningTimeSeconds;
+      this.tickPayload.tickCount =
+        this.tickCount;
+      this.reportPayloadMutation(
+        "game.loop.tick",
+      );
+    }
+  }
+
+  /** Emite `game.loop.render` com o payload reutilizado (+ guarda G31). */
+  private async emitRender(
+    deltaSeconds: number,
+    realDeltaSeconds: number,
+    isPaused: boolean,
+  ): Promise<void> {
+    this.renderPayload.deltaSeconds =
+      deltaSeconds;
 
     this.renderPayload.realDeltaSeconds =
-      frameDeltaSeconds;
+      realDeltaSeconds;
 
     this.renderPayload.isPaused =
-      this.paused;
+      isPaused;
 
     if (!this.payloadGuard) {
       await this.ctx.events.emitAsync(
@@ -749,10 +886,6 @@ implements GameLoopApi {
 
     const alpha =
       this.renderPayload.alphaInterpolation;
-    const delta =
-      this.renderPayload.deltaSeconds;
-    const paused =
-      this.renderPayload.isPaused;
 
     await this.ctx.events.emitAsync(
       "game.loop.render",
@@ -763,20 +896,20 @@ implements GameLoopApi {
       this.renderPayload.alphaInterpolation !==
         alpha ||
       this.renderPayload.deltaSeconds !==
-        delta ||
+        deltaSeconds ||
       this.renderPayload.realDeltaSeconds !==
-        frameDeltaSeconds ||
+        realDeltaSeconds ||
       this.renderPayload.isPaused !==
-        paused
+        isPaused
     ) {
       this.renderPayload.alphaInterpolation =
         alpha;
       this.renderPayload.deltaSeconds =
-        delta;
+        deltaSeconds;
       this.renderPayload.realDeltaSeconds =
-        frameDeltaSeconds;
+        realDeltaSeconds;
       this.renderPayload.isPaused =
-        paused;
+        isPaused;
       this.reportPayloadMutation(
         "game.loop.render",
       );
