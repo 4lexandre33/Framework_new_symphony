@@ -203,8 +203,28 @@ describe("G102 TauriFileStorageBackend", () => {
     const backend = new TauriFileStorageBackend({ bridge });
     await expect(backend.getItem("")).rejects.toMatchObject({ reason: "invalid-input" });
     await expect(backend.setItem("a\0b", "x")).rejects.toMatchObject({ reason: "invalid-input" });
-    await expect(backend.setItem("ç".repeat(300), "x")).rejects.toMatchObject({ reason: "invalid-input" });
+    await expect(backend.setItem("ç".repeat(5000), "x")).rejects.toMatchObject({ reason: "invalid-input" });
     expect(bridge.calls).toEqual([]);
+  });
+
+  it("qualquer slot válido (256 caracteres não-ASCII, com backups e namespace) cabe no backend de arquivos", async () => {
+    // Ponte que aplica o MESMO limite do Rust (8 KiB por chave).
+    class LimitedBridge extends FakeFileBridge {
+      public override async write(namespace: string, key: string, value: string): Promise<boolean> {
+        if (new TextEncoder().encode(key).length > 8 * 1024) throw { code: "invalid-input", message: "chave" };
+        return await super.write(namespace, key, value);
+      }
+    }
+    const bridge = new LimitedBridge();
+    const svc = new StorageService(ctx, { backend: new TauriFileStorageBackend({ bridge }) });
+    svc.configureSaves({ namespace: "Meu Jogo ☃", backupCount: 3 });
+    const slot = "☃".repeat(256);
+    await svc.saveGame(slot, { v: 1 });
+    await svc.saveGame(slot, { v: 2 });
+    expect(await svc.loadGame(slot)).toEqual({ v: 2 });
+    expect((await svc.listSaves()).map((meta) => meta.slotName)).toEqual([slot]);
+    const longest = Math.max(...[...bridge.files.get("saves")!.keys()].map((k) => new TextEncoder().encode(k).length));
+    expect(longest).toBeGreaterThan(240); // o Rust usa o nome por hash nesses casos
   });
 });
 
@@ -240,6 +260,30 @@ describe("G102 importação do localStorage legado", () => {
     await backend.removeItem("local_db_save_a");
     const again = new LegacyImportStorageBackend(asyncTarget, legacy);
     expect(await again.getItem("local_db_save_a")).toBeNull();
+  });
+
+  it("uma chave que falha não impede as outras e o marcador é gravado listando-a", async () => {
+    const legacy = new MemoryKeyValueStorageBackend();
+    legacy.setItem("local_db_save_a", "A");
+    legacy.setItem("local_db_save_ruim", "X");
+    legacy.setItem("local_db_save_b", "B");
+    const target = new Map<string, string>();
+    const asyncTarget = {
+      getItem: async (k: string) => target.get(k) ?? null,
+      setItem: async (k: string, v: string) => {
+        if (k.endsWith("ruim")) throw new Error("chave inválida para o destino");
+        target.set(k, v);
+      },
+      removeItem: async (k: string) => void target.delete(k),
+      keys: async () => [...target.keys()],
+    };
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const backend = new LegacyImportStorageBackend(asyncTarget, legacy);
+    expect((await backend.keys()).sort()).toEqual(["local_db_save_a", "local_db_save_b"]);
+    expect(backend.getImportReport()).toEqual({ found: 3, imported: 2, skipped: 0, failedKeys: ["local_db_save_ruim"] });
+    expect(JSON.parse(target.get(LEGACY_IMPORT_MARKER_KEY)!)).toMatchObject({ failedKeys: ["local_db_save_ruim"] });
+    expect(legacy.getItem("local_db_save_ruim")).toBe("X"); // fica na origem
+    warn.mockRestore();
   });
 });
 

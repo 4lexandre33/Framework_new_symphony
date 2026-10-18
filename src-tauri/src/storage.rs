@@ -1,27 +1,38 @@
 //! Backend de persistência em arquivos (G102): `<app_data_dir>/storage/<namespace>/k_<chave codificada>.kv`.
 //!
 //! - O WebView só informa `namespace` (validado: `[A-Za-z0-9_-]{1,64}`) e a
-//!   chave lógica (texto opaco até 512 bytes). O nome do arquivo é DERIVADO
+//!   chave lógica (texto opaco até 8 KiB). O nome do arquivo é DERIVADO
 //!   aqui por uma codificação injetiva que só produz `[a-z0-9_.%^~-]`: não há
 //!   separador, `..`, nome reservado do Windows nem colisão em sistemas de
 //!   arquivos que ignoram maiúsculas.
+//! - Chave cujo nome codificado passaria de 240 bytes (ex.: slot de 256
+//!   caracteres não-ASCII depois do `encodeURIComponent` do TS) vira
+//!   `h_<sha256 hex da chave>.kv`, determinístico; a chave original fica no
+//!   cabeçalho do próprio arquivo (`kvkey1:<len>:<chave>\n<valor>`), então
+//!   `list` devolve a chave exata (round-trip) e `read` confere que o
+//!   cabeçalho é da chave pedida.
 //! - Gravação atômica: arquivo temporário na MESMA pasta + `sync_all` + `rename`.
 //! - Erros serializáveis `{ code, message }`.
 //! - Os comandos são `async`: o I/O roda fora da thread principal.
 
 use serde::Serialize;
+use sha2::{Digest, Sha256};
 use std::fs;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use tauri::Manager;
 
 const STORAGE_DIR: &str = "storage";
 const FILE_PREFIX: &str = "k_";
+/// Nome por hash (chave longa): `h_<64 hex>.kv`.
+const HASHED_PREFIX: &str = "h_";
+/// Cabeçalho dos arquivos `h_`: `kvkey1:<len bytes da chave>:<chave>\n`.
+const HASHED_HEADER_MAGIC: &str = "kvkey1:";
 const FILE_SUFFIX: &str = ".kv";
 const TEMP_MARKER: &str = ".tmp-";
 const MAX_NAMESPACE_LEN: usize = 64;
-const MAX_KEY_BYTES: usize = 512;
+const MAX_KEY_BYTES: usize = 8 * 1024;
 /// Limite de nome de arquivo (a maioria dos FS aceita 255 bytes).
 const MAX_FILE_NAME_LEN: usize = 240;
 /// 64 MiB por valor.
@@ -68,13 +79,18 @@ pub(crate) fn validate_namespace(namespace: &str) -> Result<(), StorageFileError
     Ok(())
 }
 
+fn validate_key(key: &str) -> Result<(), StorageFileError> {
+    if key.is_empty() || key.len() > MAX_KEY_BYTES || key.contains('\0') {
+        return Err(StorageFileError::invalid("chave inválida (1..8192 bytes, sem NUL)"));
+    }
+    Ok(())
+}
+
 /// Codificação injetiva chave → nome de arquivo seguro.
 /// `a-z 0-9 _ - . %` passam; `A-Z` vira `^` + minúscula; o resto vira `~hh`
-/// por byte UTF-8.
+/// por byte UTF-8. Erro se o nome passaria de 240 bytes (veja `file_name_for`).
 pub(crate) fn encode_key(key: &str) -> Result<String, StorageFileError> {
-    if key.is_empty() || key.len() > MAX_KEY_BYTES || key.contains('\0') {
-        return Err(StorageFileError::invalid("chave inválida (1..512 bytes, sem NUL)"));
-    }
+    validate_key(key)?;
 
     let mut out = String::with_capacity(FILE_PREFIX.len() + key.len() + FILE_SUFFIX.len());
     out.push_str(FILE_PREFIX);
@@ -99,6 +115,59 @@ pub(crate) fn encode_key(key: &str) -> Result<String, StorageFileError> {
         ));
     }
     Ok(out)
+}
+
+fn hashed_file_name(key: &str) -> String {
+    let digest = Sha256::digest(key.as_bytes());
+    let mut out = String::with_capacity(HASHED_PREFIX.len() + 64 + FILE_SUFFIX.len());
+    out.push_str(HASHED_PREFIX);
+    for byte in digest {
+        out.push_str(&format!("{byte:02x}"));
+    }
+    out.push_str(FILE_SUFFIX);
+    out
+}
+
+/// Nome do arquivo de uma chave: codificação reversível se couber, senão hash.
+/// `true` = nome por hash (o arquivo carrega a chave no cabeçalho).
+pub(crate) fn file_name_for(key: &str) -> Result<(String, bool), StorageFileError> {
+    validate_key(key)?;
+    match encode_key(key) {
+        Ok(name) => Ok((name, false)),
+        Err(_) => Ok((hashed_file_name(key), true)),
+    }
+}
+
+fn hashed_header(key: &str) -> String {
+    format!("{HASHED_HEADER_MAGIC}{}:{key}\n", key.len())
+}
+
+/// Separa `kvkey1:<len>:<chave>\n<resto>`; `None` se malformado.
+fn split_hashed_header(bytes: &[u8]) -> Option<(String, usize)> {
+    let rest = bytes.strip_prefix(HASHED_HEADER_MAGIC.as_bytes())?;
+    let colon = rest.iter().take(6).position(|b| *b == b':')?;
+    let len: usize = std::str::from_utf8(&rest[..colon]).ok()?.parse().ok()?;
+    if len == 0 || len > MAX_KEY_BYTES {
+        return None;
+    }
+    let key_start = HASHED_HEADER_MAGIC.len() + colon + 1;
+    let key_end = key_start.checked_add(len)?;
+    if bytes.len() <= key_end || bytes[key_end] != b'\n' {
+        return None;
+    }
+    let key = String::from_utf8(bytes[key_start..key_end].to_vec()).ok()?;
+    Some((key, key_end + 1))
+}
+
+/// Chave guardada no cabeçalho de um arquivo `h_` (lê só o começo do arquivo).
+fn read_hashed_key(path: &Path, name: &str) -> Option<String> {
+    let mut file = fs::File::open(path).ok()?;
+    let limit = HASHED_HEADER_MAGIC.len() + 6 + MAX_KEY_BYTES + 1;
+    let mut head = Vec::with_capacity(256);
+    (&mut file).take(limit as u64).read_to_end(&mut head).ok()?;
+    let (key, _) = split_hashed_header(&head)?;
+    // O nome precisa ser o hash da chave do cabeçalho (arquivo íntegro/nosso).
+    (hashed_file_name(&key) == name).then_some(key)
 }
 
 pub(crate) fn decode_file_name(name: &str) -> Option<String> {
@@ -175,19 +244,31 @@ fn regular_file_or_missing(path: &Path) -> Result<bool, StorageFileError> {
 }
 
 pub(crate) fn read_value(dir: &Path, key: &str) -> Result<Option<String>, StorageFileError> {
-    let path = dir.join(encode_key(key)?);
+    let (name, hashed) = file_name_for(key)?;
+    let path = dir.join(name);
     if !regular_file_or_missing(&path)? {
         return Ok(None);
     }
     let meta = fs::metadata(&path)
         .map_err(|error| StorageFileError::io("Falha ao ler metadados", &error))?;
-    if meta.len() as usize > MAX_VALUE_BYTES {
+    let header_allowance = if hashed { hashed_header(key).len() } else { 0 };
+    if meta.len() as usize > MAX_VALUE_BYTES + header_allowance {
         return Err(StorageFileError::invalid("valor armazenado excede o limite"));
     }
-    match fs::read_to_string(&path) {
-        Ok(text) => Ok(Some(text)),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
-        Err(error) => Err(StorageFileError::io("Falha ao ler valor", &error)),
+    let text = match fs::read_to_string(&path) {
+        Ok(text) => text,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(StorageFileError::io("Falha ao ler valor", &error)),
+    };
+    if !hashed {
+        return Ok(Some(text));
+    }
+    match split_hashed_header(text.as_bytes()) {
+        Some((stored_key, offset)) if stored_key == key => Ok(Some(text[offset..].to_string())),
+        _ => Err(StorageFileError {
+            code: "io",
+            message: "arquivo de chave longa com cabeçalho inválido".to_string(),
+        }),
     }
 }
 
@@ -195,7 +276,7 @@ pub(crate) fn write_value(dir: &Path, key: &str, value: &str) -> Result<(), Stor
     if value.len() > MAX_VALUE_BYTES {
         return Err(StorageFileError::invalid("valor excede 64 MiB"));
     }
-    let name = encode_key(key)?;
+    let (name, hashed) = file_name_for(key)?;
     let target = dir.join(&name);
     regular_file_or_missing(&target)?;
 
@@ -208,6 +289,10 @@ pub(crate) fn write_value(dir: &Path, key: &str, value: &str) -> Result<(), Stor
             .create_new(true)
             .open(&temp)
             .map_err(|error| StorageFileError::io("Falha ao criar temporário", &error))?;
+        if hashed {
+            file.write_all(hashed_header(key).as_bytes())
+                .map_err(|error| StorageFileError::io("Falha ao gravar temporário", &error))?;
+        }
         file.write_all(value.as_bytes())
             .map_err(|error| StorageFileError::io("Falha ao gravar temporário", &error))?;
         file.sync_all()
@@ -224,7 +309,7 @@ pub(crate) fn write_value(dir: &Path, key: &str, value: &str) -> Result<(), Stor
 }
 
 pub(crate) fn delete_value(dir: &Path, key: &str) -> Result<bool, StorageFileError> {
-    let path = dir.join(encode_key(key)?);
+    let path = dir.join(file_name_for(key)?.0);
     if !regular_file_or_missing(&path)? {
         return Ok(false);
     }
@@ -249,7 +334,12 @@ pub(crate) fn list_keys(dir: &Path) -> Result<Vec<String>, StorageFileError> {
         if name.contains(TEMP_MARKER) {
             continue;
         }
-        if let Some(key) = decode_file_name(name) {
+        let key = if name.starts_with(HASHED_PREFIX) {
+            read_hashed_key(&entry.path(), name)
+        } else {
+            decode_file_name(name)
+        };
+        if let Some(key) = key {
             keys.push(key);
             if keys.len() >= MAX_LIST_ENTRIES {
                 break;
@@ -353,6 +443,8 @@ mod tests {
         assert!(encode_key("a\0b").is_err());
         assert!(encode_key(&"x".repeat(600)).is_err());
         assert!(encode_key(&"#".repeat(100)).is_err()); // nome codificado longo demais
+        assert!(file_name_for(&"x".repeat(MAX_KEY_BYTES + 1)).is_err());
+        assert!(file_name_for("").is_err());
         for ns in ["", "../x", "a/b", "a b", &"n".repeat(65)] {
             assert_eq!(validate_namespace(ns).unwrap_err().code, "invalid-input");
         }
@@ -383,6 +475,45 @@ mod tests {
         // Namespaces isolados.
         let other = namespace_dir(&base, "outro").unwrap();
         assert!(list_keys(&other).unwrap().is_empty());
+        fs::remove_dir_all(&base).unwrap();
+    }
+
+    #[test]
+    fn long_keys_use_a_deterministic_hashed_name_and_round_trip_through_list() {
+        let base = temp_base("longkeys");
+        let dir = namespace_dir(&base, "saves").unwrap();
+        // Slot de 256 caracteres não-ASCII depois do encodeURIComponent do TS
+        // (9 bytes por caractere) + prefixos internos.
+        let slot: String = std::iter::repeat("%E2%98%83").take(256).collect();
+        let long_key = format!("ns:meu-jogo:local_db_save_#bak1:{slot}");
+        let short_key = "local_db_save_curto";
+        let (name, hashed) = file_name_for(&long_key).unwrap();
+        assert!(hashed);
+        assert!(name.len() <= MAX_FILE_NAME_LEN && name.starts_with(HASHED_PREFIX));
+        assert_eq!(file_name_for(&long_key).unwrap().0, name); // determinístico
+        assert!(!file_name_for(short_key).unwrap().1); // chave curta: formato antigo
+
+        write_value(&dir, &long_key, "{\"v\":1}").unwrap();
+        write_value(&dir, &long_key, "{\"v\":2}").unwrap();
+        write_value(&dir, short_key, "c").unwrap();
+        assert_eq!(read_value(&dir, &long_key).unwrap().as_deref(), Some("{\"v\":2}"));
+        let mut expected = vec![long_key.clone(), short_key.to_string()];
+        expected.sort();
+        assert_eq!(list_keys(&dir).unwrap(), expected);
+
+        // Valor com quebras de linha/cabeçalho falso continua intacto.
+        let tricky = "kvkey1:3:abc\nresto\n";
+        write_value(&dir, &long_key, tricky).unwrap();
+        assert_eq!(read_value(&dir, &long_key).unwrap().as_deref(), Some(tricky));
+
+        // Arquivo h_ adulterado (cabeçalho de outra chave) não entra na lista
+        // e a leitura falha em vez de devolver o valor errado.
+        fs::write(dir.join(&name), format!("{}x", hashed_header("outra"))).unwrap();
+        assert_eq!(list_keys(&dir).unwrap(), vec![short_key.to_string()]);
+        assert_eq!(read_value(&dir, &long_key).unwrap_err().code, "io");
+
+        assert!(delete_value(&dir, &long_key).unwrap());
+        assert_eq!(read_value(&dir, &long_key).unwrap(), None);
         fs::remove_dir_all(&base).unwrap();
     }
 

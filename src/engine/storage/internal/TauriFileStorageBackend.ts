@@ -35,8 +35,14 @@ export interface TauriFileStorageBackendOptions {
 const NAMESPACE_PATTERN =
   /^[A-Za-z0-9_-]{1,64}$/u;
 
+/**
+ * Igual ao `MAX_KEY_BYTES` do Rust. Qualquer chave que o `StorageService`
+ * monta (slot de até 256 caracteres → `encodeURIComponent` + prefixos) cabe;
+ * chaves cujo nome de arquivo passaria de 240 bytes viram `h_<sha256>.kv` no
+ * Rust, com a chave original no cabeçalho do arquivo (list() devolve a exata).
+ */
 const MAX_KEY_BYTES =
-  512;
+  8 * 1024;
 
 export const DEFAULT_TAURI_FILE_NAMESPACE =
   "saves";
@@ -142,7 +148,7 @@ export class TauriFileStorageBackend
       const error = new StorageInfrastructureError(
         "operation-failed",
         operation,
-        "Chave inválida para o backend de arquivos (1..512 bytes, sem NUL).",
+        "Chave inválida para o backend de arquivos (1..8192 bytes, sem NUL).",
         false,
       );
       error.reason = "invalid-input";
