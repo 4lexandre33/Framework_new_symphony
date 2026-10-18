@@ -5,7 +5,7 @@
 // NetworkService (WebSocketTransport em modo host) a clientes
 // NetworkService comuns (WebSocketTransport cliente), passando pelo
 // protocolo de sessão real (HELLO/WELCOME, dados por canal, BYE).
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PluginContext } from "@core";
 
 import { NetworkService } from "../src/engine/net/internal/NetworkService";
@@ -424,5 +424,41 @@ describe("G8 host WebSocket nativo", () => {
     expect(server.sockets.has(muteId)).toBe(false); // vaga liberada
     expect(host.getPeers()).toHaveLength(1); // o par que fez HELLO continua
     expect(server.sockets.size).toBe(1);
+  });
+
+  it("pump do loop (tick/render) não deixa rejeição solta: conta e reporta", async () => {
+    install();
+    class ThrowingTransport extends WebSocketTransport {
+      public override async pollPackets(): Promise<void> {
+        throw new Error("transporte quebrou");
+      }
+    }
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown): void => {
+      unhandled.push(reason);
+    };
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      const service = new NetworkService(ctxWith([]), {
+        now,
+        createTransport: { websocket: () => new ThrowingTransport({ hostBridge: server }) },
+      });
+      services.push(service);
+      expect(await service.startHost({ transport: "websocket" })).toBe(true);
+      for (let i = 0; i < 3; i += 1) {
+        service.onTick(i);
+        await new Promise((resolve) => setImmediate(resolve));
+        service.onRenderFrame();
+        await new Promise((resolve) => setImmediate(resolve));
+      }
+      expect(service.pollErrorCount).toBe(6);
+      expect((service.lastPollError as Error).message).toBe("transporte quebrou");
+      expect(warn).toHaveBeenCalledTimes(1); // 1ª falha; depois só a cada 100
+      expect(unhandled).toEqual([]);
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+      warn.mockRestore();
+    }
   });
 });

@@ -813,7 +813,7 @@ export class NetworkService
       this.lastTick = tickCount;
     }
 
-    void this.pollPackets();
+    this.pumpFromLoop();
 
     if (
       this.autoSnapshot.enabled &&
@@ -965,9 +965,51 @@ export class NetworkService
   /** Chamado a cada `game.loop.render`: só bombeia com sessão/handshake ativos. */
   public onRenderFrame(): void {
     if (this.pumpActive && !this.disposed) {
-      void this.pollPackets();
+      this.pumpFromLoop();
     }
   }
+
+  private pollFailures =
+    0;
+
+  private lastPollErrorValue:
+    unknown =
+      null;
+
+  /** Falhas do pump (transporte/sessão lançaram) — diagnóstico. */
+  public get pollErrorCount(): number {
+    return this.pollFailures;
+  }
+
+  public get lastPollError(): unknown {
+    return this.lastPollErrorValue;
+  }
+
+  /**
+   * Bombeamento disparado pelo loop (tick/render): nunca deixa rejeição
+   * solta. A falha é contada e reportada (aviso na 1ª e depois a cada 100,
+   * para não inundar o console a 60 Hz); o próximo frame tenta de novo.
+   */
+  private pumpFromLoop(): void {
+    this.pollPackets().catch(this.onPollError);
+  }
+
+  private readonly onPollError = (
+    error: unknown,
+  ): void => {
+    this.pollFailures += 1;
+    this.lastPollErrorValue = error;
+
+    if (
+      this.pollFailures === 1 ||
+      this.pollFailures % 100 === 0
+    ) {
+      console.warn(
+        `[Net] Falha ao bombear a rede (${String(this.pollFailures)}x):`,
+        error,
+      );
+    }
+  };
 
   public dispose(): void {
     if (this.disposed) {
