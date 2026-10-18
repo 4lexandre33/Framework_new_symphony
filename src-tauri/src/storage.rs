@@ -12,6 +12,10 @@
 //!   `list` devolve a chave exata (round-trip) e `read` confere que o
 //!   cabeçalho é da chave pedida.
 //! - Gravação atômica: arquivo temporário na MESMA pasta + `sync_all` + `rename`.
+//!   Temporários órfãos (`*.tmp-<pid>-<n>` de um processo que caiu no meio
+//!   da gravação) são apagados no primeiro acesso ao namespace e a cada
+//!   `list`: os de outro pid ou com mais de 10 min (nunca um temporário em
+//!   uso por este processo).
 //! - Erros serializáveis `{ code, message }`.
 //! - Os comandos são `async`: o I/O roda fora da thread principal.
 
@@ -20,7 +24,10 @@ use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Mutex;
+use std::time::{Duration, SystemTime};
 use tauri::Manager;
 
 const STORAGE_DIR: &str = "storage";
@@ -41,6 +48,55 @@ const MAX_VALUE_BYTES: usize = 64 * 1024 * 1024;
 const MAX_LIST_ENTRIES: usize = 100_000;
 
 static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+/// Temporário deste processo mais velho que isto também é órfão.
+const ORPHAN_TEMP_AGE: Duration = Duration::from_secs(10 * 60);
+/// Namespaces já limpos nesta execução (limpeza "de startup").
+static CLEANED_DIRS: Mutex<Option<HashSet<PathBuf>>> = Mutex::new(None);
+
+/// Pid dono de um temporário `<nome>.kv.tmp-<pid>-<n>`; `None` se não é
+/// temporário (um arquivo de chave sempre termina em `.kv`, mesmo que a
+/// chave contenha `.tmp-`).
+fn temp_owner_pid(name: &str) -> Option<&str> {
+    if !(name.starts_with(FILE_PREFIX) || name.starts_with(HASHED_PREFIX)) {
+        return None;
+    }
+    let marker = format!("{FILE_SUFFIX}{TEMP_MARKER}");
+    let index = name.rfind(&marker)?;
+    let (pid, counter) = name[index + marker.len()..].split_once('-')?;
+    let digits = |text: &str| !text.is_empty() && text.bytes().all(|b| b.is_ascii_digit());
+    (digits(pid) && digits(counter)).then_some(pid)
+}
+
+/// `true` se o temporário não pode estar em uso por uma gravação deste processo.
+fn is_orphan_temp(name: &str, modified: Option<SystemTime>) -> bool {
+    let Some(owner) = temp_owner_pid(name) else { return false };
+    if owner != std::process::id().to_string() {
+        return true;
+    }
+    modified
+        .and_then(|time| SystemTime::now().duration_since(time).ok())
+        .map(|age| age >= ORPHAN_TEMP_AGE)
+        .unwrap_or(false)
+}
+
+/// Apaga temporários órfãos da pasta; devolve quantos removeu.
+pub(crate) fn clean_orphan_temps(dir: &Path) -> usize {
+    let Ok(entries) = fs::read_dir(dir) else { return 0 };
+    let mut removed = 0;
+    for entry in entries.flatten() {
+        let Ok(file_type) = entry.file_type() else { continue };
+        if !file_type.is_file() {
+            continue;
+        }
+        let name = entry.file_name();
+        let Some(name) = name.to_str() else { continue };
+        let modified = entry.metadata().ok().and_then(|meta| meta.modified().ok());
+        if is_orphan_temp(name, modified) && fs::remove_file(entry.path()).is_ok() {
+            removed += 1;
+        }
+    }
+    removed
+}
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -321,6 +377,7 @@ pub(crate) fn delete_value(dir: &Path, key: &str) -> Result<bool, StorageFileErr
 }
 
 pub(crate) fn list_keys(dir: &Path) -> Result<Vec<String>, StorageFileError> {
+    clean_orphan_temps(dir);
     let entries = fs::read_dir(dir)
         .map_err(|error| StorageFileError::io("Falha ao listar storage", &error))?;
     let mut keys = Vec::new();
@@ -331,7 +388,7 @@ pub(crate) fn list_keys(dir: &Path) -> Result<Vec<String>, StorageFileError> {
         }
         let name = entry.file_name();
         let Some(name) = name.to_str() else { continue };
-        if name.contains(TEMP_MARKER) {
+        if temp_owner_pid(name).is_some() {
             continue;
         }
         let key = if name.starts_with(HASHED_PREFIX) {
@@ -356,7 +413,15 @@ fn resolve_dir(app: &tauri::AppHandle, namespace: &str) -> Result<PathBuf, Stora
         code: "unavailable",
         message: format!("Falha ao resolver app_data_dir: {error}"),
     })?;
-    namespace_dir(&base, namespace)
+    let dir = namespace_dir(&base, namespace)?;
+    let first_use = CLEANED_DIRS
+        .lock()
+        .map(|mut cleaned| cleaned.get_or_insert_with(HashSet::new).insert(dir.clone()))
+        .unwrap_or(false);
+    if first_use {
+        clean_orphan_temps(&dir);
+    }
+    Ok(dir)
 }
 
 #[tauri::command]
@@ -525,6 +590,35 @@ mod tests {
         fs::write(dir.join("README.txt"), "x").unwrap();
         write_value(&dir, "a", "1").unwrap();
         assert_eq!(list_keys(&dir).unwrap(), vec!["a".to_string()]);
+        fs::remove_dir_all(&base).unwrap();
+    }
+
+    #[test]
+    fn orphan_temp_files_are_cleaned_but_live_ones_are_kept() {
+        let base = temp_base("orphans");
+        let dir = namespace_dir(&base, "saves").unwrap();
+        let other_pid = std::process::id().wrapping_add(1);
+        let orphan = format!("k_a.kv{TEMP_MARKER}{other_pid}-7");
+        let live = format!("k_b.kv{TEMP_MARKER}{}-8", std::process::id());
+        fs::write(dir.join(&orphan), "meio gravado").unwrap();
+        fs::write(dir.join(&live), "gravando agora").unwrap();
+        fs::write(dir.join("README.txt"), "x").unwrap();
+        write_value(&dir, "a", "1").unwrap();
+
+        assert_eq!(list_keys(&dir).unwrap(), vec!["a".to_string()]);
+        assert!(!dir.join(&orphan).exists()); // outro processo: órfão
+        assert!(dir.join(&live).exists()); // deste processo e recente: em uso
+        assert!(dir.join("README.txt").exists()); // arquivo alheio não é tocado
+
+        // Deste processo mas velho: órfão também.
+        let old = SystemTime::now() - ORPHAN_TEMP_AGE - Duration::from_secs(1);
+        assert!(is_orphan_temp(&live, Some(old)));
+        assert!(!is_orphan_temp(&live, Some(SystemTime::now())));
+        assert!(!is_orphan_temp("k_a.kv", None));
+        // Chave cujo nome contém `.tmp-` não é temporário (termina em `.kv`).
+        write_value(&dir, "x.kv.tmp-1-2", "chave legítima").unwrap();
+        assert!(list_keys(&dir).unwrap().contains(&"x.kv.tmp-1-2".to_string()));
+        assert_eq!(read_value(&dir, "x.kv.tmp-1-2").unwrap().as_deref(), Some("chave legítima"));
         fs::remove_dir_all(&base).unwrap();
     }
 
