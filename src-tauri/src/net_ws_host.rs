@@ -459,7 +459,20 @@ impl Drop for SlotGuard {
     }
 }
 
+/// Espera depois de um `accept()` com erro (ex.: EMFILE sem descritores):
+/// dobra a cada erro seguido, até `ACCEPT_BACKOFF_MAX`; zera ao aceitar.
+pub const ACCEPT_BACKOFF_MIN: Duration = Duration::from_millis(10);
+pub const ACCEPT_BACKOFF_MAX: Duration = Duration::from_secs(1);
+
+pub(crate) fn next_accept_backoff(current: Option<Duration>) -> Duration {
+    match current {
+        None => ACCEPT_BACKOFF_MIN,
+        Some(previous) => (previous * 2).min(ACCEPT_BACKOFF_MAX),
+    }
+}
+
 async fn accept_loop(listener: TcpListener, shared: Arc<Shared>, mut shutdown: watch::Receiver<bool>) {
+    let mut backoff: Option<Duration> = None;
     loop {
         tokio::select! {
             changed = shutdown.changed() => {
@@ -468,7 +481,27 @@ async fn accept_loop(listener: TcpListener, shared: Arc<Shared>, mut shutdown: w
                 }
             }
             accepted = listener.accept() => {
-                let Ok((stream, _addr)) = accepted else { continue };
+                let (stream, _addr) = match accepted {
+                    Ok(pair) => {
+                        backoff = None;
+                        pair
+                    }
+                    Err(_) => {
+                        // Erro persistente (sem descritores etc.) não pode virar
+                        // laço quente: espera com backoff, atento ao shutdown.
+                        let wait = next_accept_backoff(backoff);
+                        backoff = Some(wait);
+                        tokio::select! {
+                            changed = shutdown.changed() => {
+                                if changed.is_err() || *shutdown.borrow() {
+                                    break;
+                                }
+                            }
+                            () = tokio::time::sleep(wait) => {}
+                        }
+                        continue;
+                    }
+                };
                 // Reserva a vaga ANTES do handshake (limite real de conexões).
                 let reserved = shared.slots.fetch_add(1, Ordering::AcqRel);
                 if reserved >= shared.max_connections {
@@ -716,6 +749,21 @@ mod tests {
         for bad in ["", "ws_", "ws_x", "dedicated_server", "ws_1/..", &format!("ws_{}", "9".repeat(21))] {
             assert!(validate_peer_id(bad).is_err(), "{bad}");
         }
+    }
+
+    #[test]
+    fn accept_errors_back_off_exponentially_up_to_a_cap() {
+        let mut current = None;
+        let mut seen = Vec::new();
+        for _ in 0..10 {
+            let next = next_accept_backoff(current);
+            seen.push(next);
+            current = Some(next);
+        }
+        assert_eq!(seen[0], ACCEPT_BACKOFF_MIN);
+        assert_eq!(seen[1], ACCEPT_BACKOFF_MIN * 2);
+        assert!(seen.windows(2).all(|w| w[1] >= w[0]));
+        assert_eq!(*seen.last().unwrap(), ACCEPT_BACKOFF_MAX);
     }
 
     #[test]
