@@ -65,9 +65,9 @@ export function prepareSceneDocument(
     const validation =
       validateSceneDocument(
         doc,
-        prefabs === undefined
-          ? {}
-          : { prefabs },
+        // Sempre com prefabs (vazio se ausente): `entity.prefab` sem o
+        // prefab correspondente vira UNKNOWN_PREFAB em vez de exceção.
+        { prefabs: prefabs ?? [] },
       );
 
     if (!validation.ok) {
