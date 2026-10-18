@@ -14,9 +14,13 @@
 //!   (acima do maior heartbeat da sessão, 60 s: sessão viva nunca cai por
 //!   isso; socket mudo não ocupa vaga para sempre mesmo com o TS parado),
 //!   fila de saída por par ≤ 2 MiB (backpressure: o
-//!   envio devolve `false`), fila de eventos de entrada ≤ 16 MiB (estouro
-//!   desconecta o par com `overflow` — o WebSocket é confiável, nada é
-//!   descartado em silêncio).
+//!   envio devolve `false`), fila de eventos de entrada ≤ 32 MiB no total
+//!   e ≤ 4 MiB POR PAR. Quem passa da própria cota é desconectado com
+//!   `overflow`; se a fila global encher, cai o par com mais bytes na fila
+//!   (o inundador), não quem por acaso empurrou o último frame — as
+//!   mensagens pendentes do par derrubado são descartadas com ele. O
+//!   WebSocket é confiável: nada de um par que continua conectado é
+//!   descartado em silêncio.
 //! - Eventos são DRENADOS pelo TS (`net_ws_host_poll`, binário), no pump da
 //!   rede: nenhuma chamada do Rust para o WebView.
 //! - Erros serializáveis `{ code, message }`.
@@ -38,7 +42,9 @@ pub const MAX_CLIENTS_LIMIT: u32 = 250;
 pub const MAX_MESSAGE_BYTES: usize = 1024 * 1024 + 64;
 /// Igual a `NETWORK_BACKPRESSURE_HIGH_WATER_BYTES` do TS.
 pub const PEER_SEND_HIGH_WATER_BYTES: usize = 2 * 1024 * 1024;
-pub const MAX_QUEUED_EVENT_BYTES: usize = 16 * 1024 * 1024;
+pub const MAX_QUEUED_EVENT_BYTES: usize = 32 * 1024 * 1024;
+/// Cota de bytes de entrada AINDA NÃO DRENADOS por par (≥ 1 mensagem máxima).
+pub const PEER_INBOUND_QUOTA_BYTES: usize = 4 * 1024 * 1024;
 pub const MAX_QUEUED_EVENTS: usize = 65_536;
 /// Máximo devolvido por um `poll` (o resto fica para o próximo).
 pub const MAX_POLL_BYTES: usize = 4 * 1024 * 1024;
@@ -167,6 +173,50 @@ struct PeerHandle {
 struct EventQueue {
     events: VecDeque<HostEvent>,
     bytes: usize,
+    /// Bytes de `Message` na fila por par (só pares com algo na fila).
+    per_peer: HashMap<String, usize>,
+}
+
+impl EventQueue {
+    fn release(&mut self, event: &HostEvent) {
+        let size = event.byte_len();
+        self.bytes = self.bytes.saturating_sub(size);
+        if let HostEvent::Message(id, _) = event {
+            if let Some(used) = self.per_peer.get_mut(id) {
+                *used = used.saturating_sub(size);
+                if *used == 0 {
+                    self.per_peer.remove(id);
+                }
+            }
+        }
+    }
+
+    /// Descarta as mensagens pendentes de um par (que está sendo derrubado).
+    fn purge_messages_of(&mut self, peer_id: &str) {
+        let mut freed = 0;
+        self.events.retain(|event| match event {
+            HostEvent::Message(id, _) if id == peer_id => {
+                freed += event.byte_len();
+                false
+            }
+            _ => true,
+        });
+        self.bytes = self.bytes.saturating_sub(freed);
+        self.per_peer.remove(peer_id);
+    }
+
+    /// Par com mais bytes na fila (o candidato a inundador).
+    fn heaviest_peer(&self) -> Option<(String, usize)> {
+        self.per_peer.iter().max_by_key(|(_, used)| **used).map(|(id, used)| (id.clone(), *used))
+    }
+}
+
+/// Resultado de enfileirar uma mensagem.
+#[derive(Debug, PartialEq, Eq)]
+enum PushOutcome {
+    Queued,
+    /// O próprio par passou da cota (ou é o maior da fila cheia): feche-o.
+    Overflow,
 }
 
 /// Limites por conexão (constantes em produção; menores nos testes).
@@ -174,11 +224,18 @@ struct EventQueue {
 pub struct HostLimits {
     pub first_frame_timeout: Duration,
     pub read_idle_timeout: Duration,
+    pub peer_inbound_quota: usize,
+    pub queued_event_bytes: usize,
 }
 
 impl Default for HostLimits {
     fn default() -> Self {
-        Self { first_frame_timeout: FIRST_FRAME_TIMEOUT, read_idle_timeout: READ_IDLE_TIMEOUT }
+        Self {
+            first_frame_timeout: FIRST_FRAME_TIMEOUT,
+            read_idle_timeout: READ_IDLE_TIMEOUT,
+            peer_inbound_quota: PEER_INBOUND_QUOTA_BYTES,
+            queued_event_bytes: MAX_QUEUED_EVENT_BYTES,
+        }
     }
 }
 
@@ -195,19 +252,53 @@ struct Shared {
 }
 
 impl Shared {
-    /// Enfileira um evento; `false` se a fila estourou (o chamador fecha o par).
-    fn push(&self, event: HostEvent) -> bool {
-        let Ok(mut queue) = self.events.lock() else { return false };
-        let size = event.byte_len();
-        let is_message = matches!(event, HostEvent::Message(..));
-        if is_message
-            && (queue.bytes + size > MAX_QUEUED_EVENT_BYTES || queue.events.len() >= MAX_QUEUED_EVENTS)
-        {
-            return false;
+    /// Eventos de controle (conectou/caiu): sempre entram (pequenos, ≤ 2 por par).
+    fn push_control(&self, event: HostEvent) {
+        if let Ok(mut queue) = self.events.lock() {
+            queue.bytes += event.byte_len();
+            queue.events.push_back(event);
         }
-        queue.bytes += size;
-        queue.events.push_back(event);
-        true
+    }
+
+    /// Enfileira uma mensagem de `peer_id`, aplicando a cota por par e, com a
+    /// fila global cheia, derrubando o par mais pesado (pode ser o próprio).
+    fn push_message(&self, peer_id: &str, data: Vec<u8>) -> PushOutcome {
+        let event = HostEvent::Message(peer_id.to_string(), data);
+        let size = event.byte_len();
+        let mut evicted: Vec<String> = Vec::new();
+        let outcome = {
+            let Ok(mut queue) = self.events.lock() else { return PushOutcome::Overflow };
+            let used = queue.per_peer.get(peer_id).copied().unwrap_or(0);
+            if used + size > self.limits.peer_inbound_quota {
+                PushOutcome::Overflow
+            } else {
+                let mut outcome = PushOutcome::Queued;
+                while queue.bytes + size > self.limits.queued_event_bytes || queue.events.len() >= MAX_QUEUED_EVENTS {
+                    match queue.heaviest_peer() {
+                        // Outro par pesa mais que este (contando o frame novo): ele é o inundador.
+                        Some((heaviest, weight)) if heaviest != peer_id && weight >= used + size => {
+                            queue.purge_messages_of(&heaviest);
+                            evicted.push(heaviest);
+                        }
+                        _ => {
+                            outcome = PushOutcome::Overflow;
+                            break;
+                        }
+                    }
+                }
+                if outcome == PushOutcome::Queued {
+                    queue.bytes += size;
+                    *queue.per_peer.entry(peer_id.to_string()).or_insert(0) += size;
+                    queue.events.push_back(event);
+                }
+                outcome
+            }
+        };
+        // Fora do lock da fila (close_peer trava o mapa de pares).
+        for heaviest in evicted {
+            self.close_peer(&heaviest, "overflow");
+        }
+        outcome
     }
 
     fn drain(&self, max_bytes: usize) -> Vec<HostEvent> {
@@ -220,8 +311,8 @@ impl Shared {
                 break;
             }
             taken += size;
-            queue.bytes = queue.bytes.saturating_sub(size);
             if let Some(event) = queue.events.pop_front() {
+                queue.release(&event);
                 out.push(event);
             }
         }
@@ -428,7 +519,7 @@ async fn handle_connection(
     } else {
         return;
     }
-    shared.push(HostEvent::Connected(peer_id.clone()));
+    shared.push_control(HostEvent::Connected(peer_id.clone()));
 
     let (mut sink, mut source) = socket.split();
     let mut got_frame = false;
@@ -472,7 +563,7 @@ async fn handle_connection(
                         if data.is_empty() {
                             continue;
                         }
-                        if !shared.push(HostEvent::Message(peer_id.clone(), data.to_vec())) {
+                        if shared.push_message(&peer_id, data.to_vec()) == PushOutcome::Overflow {
                             break "overflow".to_string();
                         }
                     }
@@ -489,7 +580,7 @@ async fn handle_connection(
     }
     let _ = sink.send(Message::Close(None)).await;
     let _ = sink.close().await;
-    shared.push(HostEvent::Disconnected(peer_id, reason));
+    shared.push_control(HostEvent::Disconnected(peer_id, reason));
 }
 
 /// Estado gerenciado pelo Tauri: no máximo UM host por app.
@@ -731,6 +822,7 @@ mod tests {
         let limits = HostLimits {
             first_frame_timeout: Duration::from_millis(150),
             read_idle_timeout: Duration::from_millis(400),
+            ..HostLimits::default()
         };
         let host = WsHost::start_with_limits(0, "loopback", 1, limits).await.unwrap();
         let url = format!("ws://127.0.0.1:{}", host.info().port);
@@ -782,6 +874,112 @@ mod tests {
         }
         assert_eq!(idle_reason.as_deref(), Some("idle_timeout"));
         assert_eq!(host.info().peers, 0);
+        host.stop();
+    }
+
+    fn test_shared(limits: HostLimits) -> Shared {
+        Shared {
+            peers: Mutex::new(HashMap::new()),
+            events: Mutex::new(EventQueue::default()),
+            slots: AtomicUsize::new(0),
+            max_clients: 4,
+            max_connections: 4 + HANDSHAKE_HEADROOM,
+            limits,
+            next_id: AtomicU64::new(1),
+        }
+    }
+
+    #[test]
+    fn inbound_quota_is_per_peer_and_full_queue_evicts_the_heaviest_peer() {
+        let limits = HostLimits { peer_inbound_quota: 100, queued_event_bytes: 150, ..HostLimits::default() };
+        let shared = test_shared(limits);
+        let (close_tx, close_rx) = watch::channel::<Option<String>>(None);
+        let (tx, _rx) = mpsc::channel::<Message>(1);
+        shared.peers.lock().unwrap().insert(
+            "ws_1".into(),
+            PeerHandle { tx, queued_bytes: Arc::new(AtomicUsize::new(0)), close: close_tx },
+        );
+        // Cada mensagem: 4 (id) + 6 (cabeçalho) + 20 = 30 bytes.
+        let msg = || vec![0u8; 20];
+
+        // Cota por par: o 4º frame do ws_1 (120 > 100) derruba o próprio ws_1.
+        for _ in 0..3 {
+            assert_eq!(shared.push_message("ws_1", msg()), PushOutcome::Queued);
+        }
+        assert_eq!(shared.push_message("ws_1", msg()), PushOutcome::Overflow);
+
+        // Fila global (150): com 90 do ws_1 + 60 do ws_2, o 3º frame do ws_2
+        // estoura; quem cai é o ws_1 (o mais pesado), não o ws_2, e as
+        // mensagens do ws_1 saem da fila.
+        assert_eq!(shared.push_message("ws_2", msg()), PushOutcome::Queued);
+        assert_eq!(shared.push_message("ws_2", msg()), PushOutcome::Queued);
+        assert_eq!(close_rx.borrow().as_deref(), None);
+        assert_eq!(shared.push_message("ws_2", msg()), PushOutcome::Queued);
+        assert_eq!(close_rx.borrow().as_deref(), Some("overflow"));
+        let drained = shared.drain(usize::MAX);
+        assert_eq!(drained.len(), 3);
+        assert!(drained.iter().all(|e| matches!(e, HostEvent::Message(id, _) if id == "ws_2")));
+
+        // Fila drenada: as cotas voltam a zero.
+        let queue = shared.events.lock().unwrap();
+        assert_eq!(queue.bytes, 0);
+        assert!(queue.per_peer.is_empty());
+    }
+
+    #[test]
+    fn full_queue_drops_the_pusher_when_it_is_the_heaviest() {
+        let limits = HostLimits { peer_inbound_quota: 100, queued_event_bytes: 100, ..HostLimits::default() };
+        let shared = test_shared(limits);
+        assert_eq!(shared.push_message("ws_2", vec![0u8; 20]), PushOutcome::Queued); // 30
+        for _ in 0..2 {
+            assert_eq!(shared.push_message("ws_1", vec![0u8; 20]), PushOutcome::Queued);
+        } // 90
+        assert_eq!(shared.push_message("ws_1", vec![0u8; 20]), PushOutcome::Overflow);
+        assert_eq!(shared.drain(usize::MAX).len(), 3); // nada do ws_2 foi descartado
+    }
+
+    #[tokio::test]
+    async fn flooding_peer_is_disconnected_while_quiet_peer_stays() {
+        let limits = HostLimits { peer_inbound_quota: 64 * 1024, ..HostLimits::default() };
+        let host = WsHost::start_with_limits(0, "loopback", 4, limits).await.unwrap();
+        let url = format!("ws://127.0.0.1:{}", host.info().port);
+        let (mut quiet, _) = connect_async(url.as_str()).await.unwrap();
+        let first = wait_events(&host, 1).await;
+        let HostEvent::Connected(quiet_id) = first[0].clone() else { panic!("{first:?}") };
+        let (mut flooder, _) = connect_async(url.as_str()).await.unwrap();
+        let second = wait_events(&host, 1).await;
+        let HostEvent::Connected(flooder_id) = second[0].clone() else { panic!("{second:?}") };
+
+        quiet.send(Message::Binary(Bytes::from_static(&[7]))).await.unwrap();
+        // Sem drenar (TS parado): o inundador passa da cota de 64 KiB.
+        for _ in 0..40 {
+            if flooder.send(Message::Binary(Bytes::from(vec![1u8; 4096]))).await.is_err() {
+                break;
+            }
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        let mut reason = None;
+        let mut quiet_msgs = 0;
+        for _ in 0..200 {
+            for event in host.poll(MAX_POLL_BYTES) {
+                match event {
+                    HostEvent::Disconnected(id, r) => {
+                        assert_eq!(id, flooder_id, "só o inundador cai");
+                        reason = Some(r);
+                    }
+                    HostEvent::Message(id, _) if id == quiet_id => quiet_msgs += 1,
+                    _ => {}
+                }
+            }
+            if reason.is_some() && quiet_msgs > 0 {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+        assert_eq!(reason.as_deref(), Some("overflow"));
+        assert_eq!(quiet_msgs, 1);
+        assert_eq!(host.info().peers, 1);
+        assert!(host.send(&quiet_id, &[1]));
         host.stop();
     }
 
