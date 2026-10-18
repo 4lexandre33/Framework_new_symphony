@@ -1,6 +1,6 @@
 # Lacunas e riscos da engine que AINDA valem, com contornos
 
-Escrito à mão. Revisado em 2026-10-18 contra o código (tokens, contratos, plugins e `tests/*-gaps.test.ts`) depois das correções dos commits `e21d2ff..4f940f3` (e, em seguida, G47, G67, G73, G129, G130, G132, G133, G134). A auditoria de 2026-10-09 listava ~130 itens (G1…G129); quase todos foram CORRIGIDOS. Este arquivo lista só o que continua aberto, parcial ou sem verificação.
+Escrito à mão. Revisado em 2026-10-18 contra o código (tokens, contratos, plugins e `tests/*-gaps.test.ts`) com as correções até o commit atual (inclusive G47, G67, G73, G129, G130, G132, G133, G134 e a revisão do host WebSocket nativo, storage e monetização). A auditoria de 2026-10-09 listava ~130 itens (G1…G129); quase todos foram CORRIGIDOS. Este arquivo lista só o que continua aberto, parcial ou sem verificação.
 
 Regra: um jogo NÃO altera a engine. Use o contorno e registre o que observar em `src/projects/<jogo>/ENGINE_REPORT.md`.
 
@@ -24,12 +24,12 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 - ai: árvores por agente, várias navmeshes/áreas, teleporte, linha de visão filtrada, estímulo sonoro real, clamp 3D, portais tolerantes com raio, funnel, separação, chegada única, `requestAgentPath` puro, colisão opcional com a física (`physicsCollision`: collide-and-slide de cápsula) (G7, G25, G69–G73).
 - anim: reinício (`restart`), exit time, `clip-finished`, ordem livre, sprites pela FSM, relógio único (G74–G78).
 - scripting: keyframes executam (câmera/áudio/anim/vfx/diálogo) + evento por keyframe, zonas automáticas (`trackEntity`), variáveis de diálogo, árvores validadas, ciclo de quest completo, exits de zona, varredura e rotação (G10, G123–G128; G129 parcial).
-- storage: memória automática em node, perfil online honesto/plugável, backups + HMAC + `loadGameDetailed`, namespace, slots seguros, índice, cota, migrações, backends IndexedDB (navegador) e arquivo (Tauri) automáticos com importação do localStorage antigo; `steam_cloud` usa o Steam Remote Storage com fallback local explícito (`getSteamCloudStatus`) (G12, G100–G103, G131).
-- net: host sem Steam (loopback `mock`, `broadcast_channel`, e host WebSocket NATIVO no app: `startHost({ transport: "websocket", port, bind, maxClients })` + `getHostEndpoint()`), handshake, heartbeat, fragmentação, snapshot automático, RTT/perda reais, canais 0..255, pump em Worker com a aba oculta (host não derruba clientes; a simulação continua parada) (G8 parcial: WebRTC, G104–G108, G130).
+- storage: memória automática em node, perfil online honesto/plugável, backups + HMAC + `loadGameDetailed`, namespace, slots seguros, índice, cota, migrações, backends IndexedDB (navegador) e arquivo (Tauri) automáticos com importação do localStorage antigo (por chave; falhas listadas, o resto importa); qualquer slot válido cabe no backend de arquivos (chave longa → `h_<sha256>.kv` com a chave no cabeçalho); sonda do Tauri tenta 2× e, se cair para o IndexedDB, os saves voltam para os arquivos no boot seguinte; temporários órfãos são limpos; `steam_cloud` usa o Steam Remote Storage com fallback local explícito, ressonda a cada 30 s/após falha e leva os saves do fallback para a nuvem quando o Steam volta (`getSteamCloudStatus`) (G12, G100–G103, G131).
+- net: host sem Steam (loopback `mock`, `broadcast_channel`, e host WebSocket NATIVO no app: `startHost({ transport: "websocket", port, bind, maxClients })` + `getHostEndpoint()`; a CSP do app libera `ws:`/`wss:`; reload do WebView não deixa host órfão; link sem HELLO cai no prazo do handshake; cota de entrada por par derruba só o inundador; folga acima de `maxClients` para `REJECT server_full`), handshake, heartbeat, fragmentação, snapshot automático, RTT/perda reais, canais 0..255, pump em Worker com a aba oculta (host não derruba clientes; a simulação continua parada) (G8 parcial, G104–G108, G130).
 - steam: `game.steam.net` FORNECIDO (lobbies, busca, membros, convites, P2P), eventos nativos, stats float, `checkAvailability` no boot (G26, G109–G112).
 - security: captura automática de erros, FPS real em janela móvel, heurísticas de speedhack, dump com resultado real e limite por sessão (G16, G113–G115).
 - modding: sandbox de scripts em Worker, mods do jogo offline (`installMod`), lista de instalados, lista de ativos persistida, `clear` seguro, fluxo real do Workshop (G14, G116–G118; publicar só nativo).
-- monetization: catálogo registrável, compra só por `PurchaseProvider` do servidor (nada de ouro falso), carteira validada, checkout do Steam Inventory, carteira persistente opcional (`persistWallet`), catálogo de exemplo só por opt-in (G13, G119, G120; G135 parcial: servidor obrigatório por design).
+- monetization: catálogo registrável, compra só por `PurchaseProvider` do servidor (nada de ouro falso), carteira validada, checkout do Steam Inventory, carteira persistente opcional ligada PELO JOGO em runtime (`enableWalletPersistence()`; ou `persistWallet` do plugin), catálogo de exemplo só por opt-in (`seedSampleCatalog()`) (G13, G119, G120; G135 parcial: servidor obrigatório por design).
 - overlay: passthrough manual/automático real com raycast 3D, modos aplicam flags nativas, erros expostos, `restoreWindow` (G15, G121).
 
 ## Transversais
@@ -51,7 +51,7 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 ## net
 | # | G | Tipo | Problema | Contorno |
 |---|---|---|---|---|
-| G8 | M | LACUNA | Host WebSocket só no app NATIVO (servidor Rust, sem TLS; `bind: "lan"` expõe à rede local). No NAVEGADOR não há host WebSocket nem WebRTC: `webrtc` continua reservado (selecionar falha). Host nativo não verificado numa janela Tauri real (NV) | Navegador: `loopback://sala` / `bc://sala`; jogador hospeda pelo app (`startHost({ transport: "websocket", bind: "lan" })` e mostra `getHostEndpoint().lanUrl`) ou por Steam (`steam_p2p`); internet aberta: servidor dedicado à parte |
+| G8 | M | LACUNA | Limites que restam do host WebSocket: só existe no app NATIVO (no NAVEGADOR não há host WebSocket nem WebRTC; `webrtc` continua reservado e selecioná-lo falha); sem TLS (o host é `ws://`; `wss://` só como cliente de um servidor externo); `bind: "lan"` expõe a porta a toda a rede local (sem autenticação além do protocolo de sessão); sem travessia de NAT. Host nativo não verificado numa janela Tauri real (NV) | Navegador: `loopback://sala` / `bc://sala`; jogador hospeda pelo app (`startHost({ transport: "websocket", bind: "lan" })` e mostra `getHostEndpoint().lanUrl`) ou por Steam (`steam_p2p`); internet aberta: servidor dedicado à parte (com TLS) |
 
 ## modding
 | # | G | Tipo | Problema | Contorno |
@@ -61,4 +61,4 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 ## monetization
 | # | G | Tipo | Problema | Contorno |
 |---|---|---|---|---|
-| G135 | B | DESIGN | Compra com dinheiro real exige um `PurchaseProvider` do SERVIDOR do jogo (sem ele `initPurchase` resolve `null` + `purchase-failed` "unsupported"). A carteira persistida (`persistWallet`) fica no cliente e é editável | Sem servidor, nada de dinheiro real; para moeda paga, o servidor é a fonte da verdade e reconcilia o saldo |
+| G135 | B | DESIGN | Compra com dinheiro real exige um `PurchaseProvider` do SERVIDOR do jogo (sem ele `initPurchase` resolve `null` + `purchase-failed` "unsupported"). A carteira persistida (`enableWalletPersistence()` / `persistWallet`) fica no cliente e é editável | Sem servidor, nada de dinheiro real; para moeda paga, o servidor é a fonte da verdade e reconcilia o saldo |

@@ -201,7 +201,8 @@ export function damage(ui: UIApi, hp: number): void {
 
 ## 08-save-load.ts
 ```ts
-// Saves por slot (localStorage; em node/vitest cai em memória). Só dados serializáveis.
+// Saves por slot. Backend automático: app Tauri → arquivos; navegador → IndexedDB (senão localStorage);
+// node/vitest → memória (veja storage.resolveBackendInfo()). Só dados serializáveis.
 import type { StorageApi } from "../../../tokens/storage";
 
 interface SaveData extends Record<string, unknown> {

@@ -60,7 +60,7 @@ Testes do jogo ficam DENTRO da pasta do jogo (`src/projects/<jogo>/*.test.ts`), 
 | security | captura automática de erros e frames | métricas dos seus sistemas |
 
 ## Limitações conhecidas
-Antes de planejar, leia `docs/ai/GAPS.md`: lista curta do que ainda falta (sem host WebSocket, Workshop só nativo, saves em localStorage, agentes não colidem com física…) e o que não foi verificado com Steam/Tauri reais.
+Antes de planejar, leia `docs/ai/GAPS.md`: lista curta do que ainda falta (host WebSocket só no app nativo e sem TLS, sem WebRTC, publicar no Workshop só nativo, compra real só com servidor do jogo…) e o que não foi verificado com Steam/Tauri reais.
 
 ## Mapa do manual
 - `docs/ai/INDEX.md` — qual módulo para qual necessidade, com tamanhos.

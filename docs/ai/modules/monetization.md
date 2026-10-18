@@ -29,7 +29,9 @@ interface MonetizationApi {
   verifyReceipt(receipt: TransactionReceiptDTO): Promise<boolean>; // Verificação de recibo pelo provedor (`false` sem provedor).
   startInventoryPurchase(sku: string, quantity?: number): Promise<boolean>; // Abre o checkout da Steam para um item com `steamItemDefId` (Steam Inventory).
   getEntitlements(): Readonly<Record<string, number>>; // Itens (não moeda) concedidos por compras verificadas: sku → quantidade.
-  isWalletPersistent(): boolean; // `true` se a carteira tem persistência (plugin `persistWallet` ou `walletPersistence`).
+  isWalletPersistent(): boolean; // `true` se a carteira tem persistência (plugin `persistWallet`, `walletPersistence` ou `enableWalletPersistenc…
+  enableWalletPersistence(config?: WalletPersistenceConfig): Promise<boolean>; // Liga, EM RUNTIME, a persistência da carteira num slot do `game.storage` (para jogos que não controlam as opçõ…
+  seedSampleCatalog(): ReadonlyArray<string>; // Registra (sem apagar o resto do catálogo) os 2 SKUs de EXEMPLO (`gold_pack_small`, `gold_pack_large`) para de…
   restoreWallet(): Promise<boolean>; // Resolve quando a carteira salva foi restaurada (iniciada sozinha no boot; idempotente).
   saveWallet(): Promise<boolean>; // Salva agora (mesmo se a restauração falhou).
 }
@@ -91,6 +93,10 @@ interface PersistedWalletState { // Estado persistido da carteira (G135).
 interface WalletPersistence { // Onde a carteira é salva/restaurada (o plugin cria uma sobre o `game.storage`).
   load(): Promise<unknown>; // null = nada salvo ainda.
   save(state: PersistedWalletState): Promise<void>;
+}
+interface WalletPersistenceConfig { // Persistência da carteira sobre o `game.storage` (plugin `persistWallet` ou, em runtime, `MonetizationApi.enab…
+  readonly slotName?: string; // Slot do `game.storage` (padrão `monetization-wallet`; aparece em `listSaves`).
+  readonly driver?: "steam_cloud" | "sqlite_local" | "cloud_database"; // Driver de save (padrão: o ativo do storage).
 }
 interface TransactionReceiptDTO {
   readonly orderId: string;
@@ -173,8 +179,9 @@ interface FetchInventoryPayload {
 command FetchInventoryCommand = "game.monetization.fetch-inventory" request FetchInventoryPayload
 ```
 ## notas verificadas (comportamento)
-- Catálogo: começa VAZIO (os 2 SKUs de exemplo só com `createMonetizationPlugin({ seedDefaultCatalog: true })`, para demos); registre o do jogo com `registerCatalog(itens)` ou `registerCatalogItem` (valida; lança se inválido).
-- Carteira (`creditCurrency`/`debitCurrency`/`getWalletBalance`) em memória, funciona offline. Valores precisam ser inteiros seguros > 0 (inválido: `debitCurrency` false, crédito ignorado); `debitCurrency` false sem saldo. Por padrão só em memória. Persistência opcional: `createMonetizationPlugin({ persistWallet: true | { slotName?, driver? } })` salva saldos + entitlements no slot `monetization-wallet` do `game.storage` (aparece em `listSaves`: filtre no menu de saves), restaura sozinho no boot (`await restoreWallet()` antes de mostrar saldo; o restaurado SOMA ao que mudou antes) e grava a cada mudança; `saveWallet()` força. Falha de leitura desliga o autosave (não sobrescreve). Fica no cliente (editável): moeda de dinheiro real tem o servidor como verdade.
+- Catálogo: começa VAZIO; registre o do jogo com `registerCatalog(itens)` ou `registerCatalogItem` (valida; lança se inválido). Os 2 SKUs de exemplo (demos) entram com `seedSampleCatalog()` (sem apagar o resto).
+- O plugin é criado pelo `src/app` SEM opções: o jogo liga tudo em runtime pelo token, não por opções do plugin (`persistWallet`/`seedDefaultCatalog` continuam existindo para quem compõe o host).
+- Carteira (`creditCurrency`/`debitCurrency`/`getWalletBalance`) em memória, funciona offline. Valores precisam ser inteiros seguros > 0 (inválido: `debitCurrency` false, crédito ignorado); `debitCurrency` false sem saldo. Por padrão só em memória. Persistência opcional: no boot do jogo, `await monetization.enableWalletPersistence({ slotName?, driver? })` salva saldos + entitlements no slot `monetization-wallet` (ou `slotName`) do `game.storage` (aparece em `listSaves`: filtre no menu de saves), restaura antes de resolver (o restaurado SOMA ao que já estava em memória) e grava a cada mudança; `saveWallet()` força. Resolve `false` sem `game.storage` ou se a leitura falhar; chamar de novo não troca de slot. Falha de leitura desliga o autosave (não sobrescreve). Fica no cliente (editável): moeda de dinheiro real tem o servidor como verdade.
 - Dinheiro real só com um `PurchaseProvider` do SERVIDOR do jogo (`setPurchaseProvider`): sem ele `isPurchaseSupported()` é false, `initPurchase` resolve `null` (+ `purchase-failed` "unsupported") e nada é creditado. Com ele, só o que o recibo verificado concede é entregue (`wallet-updated`, `item-granted`, `getEntitlements()`); `validateReceipt` só aceita recibos aprovados nesta sessão.
 - Steam Inventory: itens com `steamItemDefId`; `fetchSteamInventory`, `consumeInventoryItem`, `startInventoryPurchase` (checkout da Steam). Sem Steam: `[]`/`false`. Não verificado com Steam real (GAPS NV).
 - `clear()` zera carteira/ordens/inventário em cache (o catálogo fica).
