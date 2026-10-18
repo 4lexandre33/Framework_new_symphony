@@ -11,7 +11,7 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 - physics: mover/teleportar qualquer corpo, `setNextKinematicTransform`, velocidades, travas de rotação, massa/sono, colliders compostos com offset, grupos, novas formas, joints + motores, `castShape`/`queryOverlap`, filtros de consulta, `contact-force`, exits ao remover corpo, `getBodyTransform` devolve objeto novo (G1, G2, G33–G36; G37 parcial, ver abaixo).
 - game-loop: pausa mantém o render (`isPaused`, delta 0) salvo `freezeRender`; aba oculta suspende e ressincroniza; `setTickRate`/`setTargetFps` com retorno (G23, G38, G39).
 - render: interpolação opcional, desenho DEPOIS dos handlers de render, dispose com contagem de referências (`renderRetain`, `disposeResources:false`), API de câmera/viewport, `dispose()` do token é no-op, eventos de perda de contexto, luzes extras e foco de sombra (G22, G40–G44).
-- camera: sem câmera virtual o render não é sobrescrito; colisão do braço ignora o alvo; `priority` decide a ativa (com evento); `followTargetId`/`lookAtTargetId`; blend do descritor; trauma global; alvo copiado (G4, G45–G48; oclusão só como evento, G47).
+- camera: sem câmera virtual o render não é sobrescrito; colisão do braço ignora o alvo; `priority` decide a ativa (com evento); `followTargetId`/`lookAtTargetId`; blend do descritor; trauma global; alvo copiado; oclusão por evento + fade automático opcional (`occlusionFade`) (G4, G45–G48).
 - input: bordas por tick (`isActionPressedInTick`), roda (`getWheelDelta`/`WheelUp`), vários gamepads/analógicos, filtros de foco, `preventDefault` das teclas mapeadas, eventos de pointer lock (G5, G49–G53).
 - assets: `loadGLTF` clona por instância, `loadAudio` não espera gesto, `clearCache` respeita refcount, `loadJSON`/`loadBinary`/`preloadManifest`, URL normalizada, `colorSpace` (G79–G83; G81 parcial).
 - audio: handles por som, canal posicional, crossfade termina no fim, `stopMusic`, mudo sem Web Audio, limite de vozes, desbloqueio automático no 1º gesto (G20, G27, G84–G87).
@@ -48,10 +48,6 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 |---|---|---|---|---|
 | G81 | M | RISCO | Clones de `loadGLTF` compartilham geometria/material/textura com o modelo do cache, que não está na cena: `removeMeshFromScene(chave)` de um clone LIBERA esses recursos ainda usados pelo cache/outros clones (o three os reenvia à GPU, com custo) | Para instâncias de GLTF: `removeMeshFromScene(chave, { disposeResources: false })` + `assets.releaseAsset(url)` por instância |
 
-## camera
-| # | G | Tipo | Problema | Contorno |
-|---|---|---|---|---|
-| G47 | B | LACUNA | `detectOcclusion` só emite `game.camera.occlusion-changed` (ids físicos entre câmera e alvo); não há fade automático | O jogo deixa transparentes/oculta as malhas dessas entidades |
 
 
 ## ai

@@ -53,6 +53,8 @@ export interface CameraShakeConfig {
  *   (padrão 0,5 s quando omitido).
  * - `detectOcclusion`: emite `game.camera.occlusion-changed` com as
  *   entidades entre a câmera e o alvo (o jogo decide o fade).
+ * - `occlusionFade` (G47): fade AUTOMÁTICO das malhas dessas entidades
+ *   (implica `detectOcclusion`; o evento continua saindo). Padrão desligado.
  */
 export interface VirtualCameraDescriptor {
   readonly id: string;
@@ -66,6 +68,23 @@ export interface VirtualCameraDescriptor {
   readonly shakeConfig?: CameraShakeConfig;
   readonly blendDurationSeconds?: number;
   readonly detectOcclusion?: boolean;
+  /** G47: `true` (padrões) ou configuração do fade automático. */
+  readonly occlusionFade?: boolean | CameraOcclusionFadeConfig;
+}
+
+/**
+ * Fade automático de oclusão (G47). A malha de cada entidade ocluída é
+ * `render.getMeshFromScene(meshKeyPrefix + entityId)`; seus materiais são
+ * trocados por clones transparentes (o original não é alterado) e voltam
+ * ao desocluir, ao trocar de câmera ou no dispose.
+ */
+export interface CameraOcclusionFadeConfig {
+  /** Opacidade alvo 0..1. Padrão 0.3. */
+  readonly opacity?: number;
+  /** Duração do fade (s). Padrão 0.2; 0 = instantâneo. */
+  readonly fadeSeconds?: number;
+  /** Prefixo da chave do render. Padrão "" (chave = id da entidade). */
+  readonly meshKeyPrefix?: string;
 }
 
 export interface CameraTransformSnapshot {

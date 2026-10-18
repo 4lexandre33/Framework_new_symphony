@@ -22,7 +22,7 @@ versão 1.0.0 · GERADO por `npm run ai-manual:generate` (não edite à mão; `n
 | Pipeline de Animações & State Machines | anim | game.anim | game.loop | 2249 |
 | Motor 2D, Tilemaps & Pixel Art | sprites | game.sprites | game.render, game.assets | 1995 |
 | Mixer de Áudio Espacial 3D | audio | game.audio | - | 2207 |
-| Câmera Dinâmica & SpringArm | camera | game.camera | game.loop, game.physics, game.render | 1881 |
+| Câmera Dinâmica & SpringArm | camera | game.camera | game.loop, game.physics, game.render | 2076 |
 | Inteligência Artificial & NavMesh | ai | game.ai | game.loop, game.physics, game.world | 3740 |
 | Partículas GPU, Decals & Pós-Processamento | vfx | game.vfx | - | 2399 |
 | Terreno Procedural, Biomas & Voxels | terrain | game.terrain | game.loop, game.render, game.physics, game.camera | 3038 |
@@ -36,7 +36,7 @@ versão 1.0.0 · GERADO por `npm run ai-manual:generate` (não edite à mão; `n
 | Render Runtime | render | game.render | - | 3000 |
 | Multiplayer Network & State Replication | net | game.net | game.loop | 2637 |
 
-Tamanho: RULES ≈ 2224, CORE ≈ 3010, RECIPES ≈ 7140, todos os módulos ≈ 58722 tokens (estimativa: caracteres/3,6).
+Tamanho: RULES ≈ 2224, CORE ≈ 3010, RECIPES ≈ 7140, todos os módulos ≈ 58917 tokens (estimativa: caracteres/3,6).
 
 ## Atalhos por tipo de jogo
 - 3D com física: render, camera, physics, input, assets, audio, ui, game-loop.

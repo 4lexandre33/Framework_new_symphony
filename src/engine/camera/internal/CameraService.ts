@@ -37,6 +37,11 @@ import {
 import {
   CameraOcclusionDetector,
 } from "./CameraOcclusionDetector";
+import {
+  CameraOcclusionFader,
+  resolveOcclusionFade,
+  type ResolvedOcclusionFade,
+} from "./CameraOcclusionFader";
 
 export class CameraService
   implements CameraApi {
@@ -67,6 +72,18 @@ export class CameraService
 
   private readonly occlusionDetector =
     new CameraOcclusionDetector();
+
+  /** G47: fade automático das malhas que tapam o alvo. */
+  private readonly occlusionFader =
+    new CameraOcclusionFader();
+
+  private fadeSource:
+    unknown =
+      undefined;
+
+  private resolvedFade:
+    ResolvedOcclusionFade | null =
+      null;
 
   private readonly lastOccluded =
     new Set<string>();
@@ -536,6 +553,12 @@ export class CameraService
     const renderApi =
       this.renderApi;
 
+    this.occlusionFader.update(
+      this.sanitizeDelta(
+        deltaSeconds,
+      ),
+    );
+
     // G4: sem câmera virtual (ou desabilitado) a câmera do render é do jogo.
     if (
       renderApi ===
@@ -615,6 +638,9 @@ export class CameraService
     this.lastOcclusionCameraId =
       null;
 
+    this.occlusionFader
+      .clear();
+
     this.physics =
       null;
 
@@ -684,16 +710,39 @@ export class CameraService
     const physics =
       this.physics;
 
+    const fade =
+      active ===
+        null
+        ? null
+        : this.getResolvedFade(
+            active.descriptor
+              .occlusionFade,
+          );
+
     if (
       active ===
         null ||
-      active.descriptor
-        .detectOcclusion !==
-        true ||
+      (
+        active.descriptor
+          .detectOcclusion !==
+          true &&
+        fade ===
+          null
+      ) ||
       physics ===
         null
     ) {
+      this.occlusionFader
+        .releaseAll();
       return;
+    }
+
+    if (
+      fade ===
+      null
+    ) {
+      this.occlusionFader
+        .releaseAll();
     }
 
     const target =
@@ -710,6 +759,8 @@ export class CameraService
       target ===
       null
     ) {
+      this.occlusionFader
+        .releaseAll();
       return;
     }
 
@@ -759,6 +810,20 @@ export class CameraService
       return;
     }
 
+    if (
+      fade !==
+        null &&
+      this.renderApi !==
+        null
+    ) {
+      this.occlusionFader
+        .sync(
+          occluded,
+          fade,
+          this.renderApi,
+        );
+    }
+
     this.lastOcclusionCameraId =
       cameraId;
 
@@ -784,6 +849,27 @@ export class CameraService
           ),
       },
     );
+  }
+
+  /** Cache da configuração resolvida (sem alocar por frame). */
+  private getResolvedFade(
+    source:
+      unknown,
+  ): ResolvedOcclusionFade | null {
+    if (
+      source !==
+      this.fadeSource
+    ) {
+      this.fadeSource =
+        source;
+
+      this.resolvedFade =
+        resolveOcclusionFade(
+          source as Parameters<typeof resolveOcclusionFade>[0],
+        );
+    }
+
+    return this.resolvedFade;
   }
 
   private emitCollisionChangeIfNeeded():

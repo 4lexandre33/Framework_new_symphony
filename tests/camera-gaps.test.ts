@@ -220,3 +220,79 @@ describe("camera gaps (G4, G45–G48)", () => {
     expect(camera.position.x).toBe(10);
   });
 });
+
+describe("G47 — fade automático de oclusão", () => {
+  it("malha que tapa o alvo some com clone transparente e volta ao desocluir; o material original não muda", () => {
+    let blocking = true;
+    const { service, bodies, emitted } = setup({
+      castRay: (request: RaycastRequest): RaycastHit =>
+        (blocking && request.maxDistance > 1 ? { hit: true, distance: 1, entityId: "wall" } : { hit: false, distance: 0 }) as RaycastHit,
+    });
+    const scene = new THREE.Scene();
+    const shared = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+    const wall = new THREE.Group();
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), shared);
+    const multi = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), [shared, new THREE.MeshBasicMaterial({ opacity: 0.8, transparent: true })]);
+    wall.add(mesh, multi);
+    scene.add(wall);
+    const other = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), shared); // outra instância com o mesmo material
+    scene.add(other);
+    // render fake: getActiveCamera + getMeshFromScene com prefixo
+    const camera = new THREE.PerspectiveCamera();
+    (service as unknown as { renderApi: Render3DApi }).renderApi = {
+      getActiveCamera: (): THREE.Camera => camera,
+      getMeshFromScene: (key: string): THREE.Object3D | null => (key === "mesh:wall" ? wall : null),
+    } as unknown as Render3DApi;
+
+    bodies.set("hero", { x: 0, y: 0, z: 0 });
+    service.registerVirtualCamera(
+      cam("tp", { followTargetId: "hero", position: { x: 0, y: 2, z: 6 }, occlusionFade: { opacity: 0.25, fadeSeconds: 0.2, meshKeyPrefix: "mesh:" } }),
+    );
+    service.render(0.1);
+    // o evento continua saindo (occlusionFade implica detecção)
+    expect(emitted.filter((e) => e.type === "game.camera.occlusion-changed")).toHaveLength(1);
+    expect(mesh.material).not.toBe(shared);
+    const faded = mesh.material as THREE.Material;
+    expect(faded.transparent).toBe(true);
+    expect(other.material).toBe(shared);
+    expect(shared.transparent).toBe(false);
+    expect(shared.opacity).toBe(1);
+
+    for (let i = 0; i < 5; i += 1) service.render(0.1);
+    expect(faded.opacity).toBeCloseTo(0.25, 6);
+    const multiFaded = (multi.material as THREE.Material[])[1]!;
+    expect(multiFaded.opacity).toBeCloseTo(0.8 * 0.25, 6);
+
+    blocking = false;
+    for (let i = 0; i < 12; i += 1) service.render(0.1);
+    expect(mesh.material).toBe(shared);
+    expect((multi.material as THREE.Material[])[0]).toBe(shared);
+    expect(((multi.material as THREE.Material[])[1] as THREE.MeshBasicMaterial).opacity).toBe(0.8);
+
+    // dispose devolve na hora
+    blocking = true;
+    service.render(0.1);
+    service.render(0.1);
+    expect(mesh.material).not.toBe(shared);
+    service.dispose();
+    expect(mesh.material).toBe(shared);
+  });
+
+  it("sem occlusionFade nada é trocado (padrão)", () => {
+    const { service, bodies } = setup({
+      castRay: (request: RaycastRequest): RaycastHit => ({ hit: request.maxDistance > 1, distance: 1, entityId: "wall" }) as RaycastHit,
+    });
+    const shared = new THREE.MeshBasicMaterial();
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(), shared);
+    new THREE.Scene().add(wall);
+    const camera = new THREE.PerspectiveCamera();
+    (service as unknown as { renderApi: Render3DApi }).renderApi = {
+      getActiveCamera: (): THREE.Camera => camera,
+      getMeshFromScene: (): THREE.Object3D => wall,
+    } as unknown as Render3DApi;
+    bodies.set("hero", { x: 0, y: 0, z: 0 });
+    service.registerVirtualCamera(cam("tp", { followTargetId: "hero", position: { x: 0, y: 2, z: 6 }, detectOcclusion: true }));
+    service.render(0.1);
+    expect(wall.material).toBe(shared);
+  });
+});
