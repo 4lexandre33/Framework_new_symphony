@@ -198,7 +198,7 @@ describe("docs_search", () => {
     const line = read(first.path).split(/\r?\n/)[first.line - 1]!;
     expect(line.toLowerCase()).toContain("setnextkinematictransform");
     expect(first.snippet.length).toBeLessThanOrEqual(242);
-    const roots = new Set(out.results.map((r: { path: string }) => r.path.split("/").slice(0, 2).join("/")));
+    const roots = new Set<string>(out.results.map((r: { path: string }) => r.path.split("/").slice(0, 2).join("/")));
     expect([...roots].every((r) => ["docs/ai", "docs/layer1", "docs/mcp", "src/projects"].includes(r))).toBe(true);
   });
 
