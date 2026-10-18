@@ -29,7 +29,7 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 - steam: `game.steam.net` FORNECIDO (lobbies, busca, membros, convites, P2P), eventos nativos, stats float, `checkAvailability` no boot (G26, G109–G112).
 - security: captura automática de erros, FPS real em janela móvel, heurísticas de speedhack, dump com resultado real e limite por sessão (G16, G113–G115).
 - modding: sandbox de scripts em Worker, mods do jogo offline (`installMod`), lista de instalados, lista de ativos persistida, `clear` seguro, fluxo real do Workshop (G14, G116–G118; publicar só nativo).
-- monetization: catálogo registrável, compra só por `PurchaseProvider` do servidor (nada de ouro falso), carteira validada, checkout do Steam Inventory (G13, G119, G120).
+- monetization: catálogo registrável, compra só por `PurchaseProvider` do servidor (nada de ouro falso), carteira validada, checkout do Steam Inventory, carteira persistente opcional (`persistWallet`), catálogo de exemplo só por opt-in (G13, G119, G120; G135 parcial: servidor obrigatório por design).
 - overlay: passthrough manual/automático real com raycast 3D, modos aplicam flags nativas, erros expostos, `restoreWindow` (G15, G121).
 
 ## Transversais
@@ -93,7 +93,7 @@ Gravidade: **A** = bloqueia; **M** = surpresa séria; **B** = detalhe. Tipo: LAC
 ## monetization
 | # | G | Tipo | Problema | Contorno |
 |---|---|---|---|---|
-| G135 | B | LACUNA | Carteira só em memória (não persiste); catálogo começa com 2 SKUs de exemplo; compra real exige um `PurchaseProvider` do SERVIDOR do jogo (sem ele `initPurchase` resolve `null`) | Salve o saldo via `game.storage` e recredite no boot; `registerCatalog(itens, { replace: true })`; sem servidor, nada de dinheiro real |
+| G135 | B | DESIGN | Compra com dinheiro real exige um `PurchaseProvider` do SERVIDOR do jogo (sem ele `initPurchase` resolve `null` + `purchase-failed` "unsupported"). A carteira persistida (`persistWallet`) fica no cliente e é editável | Sem servidor, nada de dinheiro real; para moeda paga, o servidor é a fonte da verdade e reconcilia o saldo |
 
 ## scripting
 | # | G | Tipo | Problema | Contorno |

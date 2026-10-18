@@ -67,8 +67,26 @@ export interface PurchaseProvider {
 }
 
 export interface RegisterCatalogOptions {
-  /** Remove o catálogo atual (inclusive os SKUs de exemplo) antes. */
+  /** Remove o catálogo atual (inclusive os SKUs de exemplo, se semeados) antes. */
   readonly replace?: boolean;
+}
+
+/**
+ * Estado persistido da carteira (G135). ATENÇÃO: fica no cliente e pode ser
+ * editado pelo jogador; moeda comprada com dinheiro real deve ter o SERVIDOR
+ * como fonte da verdade (o `PurchaseProvider` reconcilia).
+ */
+export interface PersistedWalletState {
+  readonly version: 1;
+  readonly currencies: Readonly<Record<string, number>>;
+  readonly entitlements: Readonly<Record<string, number>>;
+}
+
+/** Onde a carteira é salva/restaurada (o plugin cria uma sobre o `game.storage`). */
+export interface WalletPersistence {
+  /** null = nada salvo ainda. Rejeitar = falha de leitura (autosave fica desligado). */
+  load(): Promise<unknown>;
+  save(state: PersistedWalletState): Promise<void>;
 }
 
 export interface TransactionReceiptDTO {

@@ -61,7 +61,9 @@ class FakeProvider implements PurchaseProvider {
 
 describe("monetization gaps", () => {
   it("G13: catálogo registrável pelo jogo (validado, tudo ou nada, replace)", () => {
-    const service = new MonetizationService(ctxWith([]));
+    // G135: catálogo de exemplo só por opt-in (padrão vazio).
+    expect(new MonetizationService(ctxWith([])).getCatalog()).toEqual([]);
+    const service = new MonetizationService(ctxWith([]), { seedDefaultCatalog: true });
     expect(service.getCatalog().map((item) => item.sku)).toEqual(["gold_pack_small", "gold_pack_large"]);
 
     service.registerCatalog(
@@ -89,7 +91,7 @@ describe("monetization gaps", () => {
 
   it("G119: sem provedor NÃO há compra (nenhum ouro fabricado)", async () => {
     const emitted: Emitted = [];
-    const service = new MonetizationService(ctxWith(emitted));
+    const service = new MonetizationService(ctxWith(emitted), { seedDefaultCatalog: true });
     expect(service.isPurchaseSupported()).toBe(false);
     expect(await service.initPurchase("gold_pack_small")).toBeNull();
     expect(emitted.find((e) => e.type === "game.monetization.purchase-failed")?.payload).toMatchObject({ reason: "unsupported" });
@@ -155,7 +157,7 @@ describe("monetization gaps", () => {
 
   it("G120: carteira valida entradas, suprime no-op e clear() é seguro", () => {
     const emitted: Emitted = [];
-    const service = new MonetizationService(ctxWith(emitted));
+    const service = new MonetizationService(ctxWith(emitted), { seedDefaultCatalog: true });
     for (const bad of [Number.NaN, Number.POSITIVE_INFINITY, -5, 0, 1.5, Number.MAX_SAFE_INTEGER + 2]) {
       expect(service.creditCurrency("gold", bad)).toBe(0);
       expect(service.debitCurrency("gold", bad)).toBe(false);

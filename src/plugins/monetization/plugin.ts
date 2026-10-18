@@ -4,6 +4,8 @@ import { SteamToken } from "../../tokens/steam";
 import { StorageToken } from "../../tokens/storage";
 import { UIToken } from "../../tokens/ui";
 import { PurchaseInitiatedEvent, PurchaseCompletedEvent, PurchaseFailedEvent, WalletUpdatedEvent, InventoryRefreshedEvent, ItemGrantedEvent, InitPurchaseCommand, FinalizePurchaseCommand, ConsumeItemCommand, FetchInventoryCommand } from "../../contracts/monetization/types";
+import type { PersistedWalletState, WalletPersistence } from "../../contracts/monetization/types";
+import type { StorageDriverType } from "../../contracts/storage/types";
 import { MonetizationService, type MonetizationServiceOptions } from "../../engine/monetization/internal/MonetizationService";
 
 export const monetizationManifest: Plugin["manifest"] = {
@@ -36,17 +38,72 @@ export const monetizationManifest: Plugin["manifest"] = {
         range: "^1.0.0",
         optional: true,
       },
+      {
+        id: StorageToken.id,
+        range: "^1.0.0",
+        optional: true,
+      },
     ],
     conflicts: [],
   },
 };
 
-export function createMonetizationPlugin(options: MonetizationServiceOptions = {}): Plugin {
+export interface WalletPersistenceConfig {
+  /** Slot do `game.storage` (padrão `monetization-wallet`; aparece em `listSaves`). */
+  readonly slotName?: string;
+  /** Driver de save (padrão: o ativo do storage). */
+  readonly driver?: StorageDriverType;
+}
+
+export interface MonetizationPluginOptions extends MonetizationServiceOptions {
+  /**
+   * Salva/restaura a carteira (saldos + entitlements) num slot do
+   * `game.storage` (G135). Opcional: sem `game.storage` fica só em memória.
+   * Fica no CLIENTE (editável pelo jogador): dinheiro real → servidor.
+   */
+  readonly persistWallet?: boolean | WalletPersistenceConfig;
+}
+
+export const DEFAULT_WALLET_SLOT = "monetization-wallet";
+
+function storageWalletPersistence(ctx: PluginContext, config: WalletPersistenceConfig): WalletPersistence {
+  const slotName = config.slotName ?? DEFAULT_WALLET_SLOT;
+  const storage = () => {
+    try {
+      return ctx.caps.get(StorageToken) ?? null;
+    } catch {
+      return null;
+    }
+  };
+  return {
+    async load(): Promise<unknown> {
+      const api = storage();
+      if (!api) return null;
+      const result = await api.loadGameDetailed<PersistedWalletState>(slotName, config.driver);
+      if (result.status === "missing") return null;
+      if (result.status === "corrupted") throw new Error(`Carteira salva corrompida (slot '${slotName}').`);
+      return result.data;
+    },
+    async save(state: PersistedWalletState): Promise<void> {
+      const api = storage();
+      if (!api) throw new Error("game.storage indisponível: carteira não persistida.");
+      await api.saveGame(slotName, state as unknown as Record<string, unknown>, config.driver, { label: "wallet" });
+    },
+  };
+}
+
+export function createMonetizationPlugin(options: MonetizationPluginOptions = {}): Plugin {
   return {
     manifest: monetizationManifest,
 
     setup(ctx: PluginContext) {
-      const service = new MonetizationService(ctx, options);
+      const persistConfig =
+        options.persistWallet === true ? {} : options.persistWallet === false || options.persistWallet === undefined ? null : options.persistWallet;
+      const service = new MonetizationService(ctx, {
+        ...options,
+        walletPersistence:
+          options.walletPersistence ?? (persistConfig !== null ? storageWalletPersistence(ctx, persistConfig) : undefined),
+      });
 
       // SteamID do jogador só para o PurchaseProvider (resolvido na hora da compra).
       service.setSteamIdResolver(async () => {
@@ -101,6 +158,7 @@ export function createMonetizationPlugin(options: MonetizationServiceOptions = {
         unbindConsume();
         unbindFetch();
         unbindAuthorization();
+        service.detachWalletPersistence();
         service.clear();
       });
 
