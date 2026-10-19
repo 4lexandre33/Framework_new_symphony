@@ -132,7 +132,7 @@ Integrador: merge das ondas, e2e completo (SPEC 5.3), `docs/mcp/README.md`,
 menção em `docs/ai/RULES.md`, regenerar manual, recertificar baselines Layer-1
 (world/game-loop/public API mudaram), gates completos, push.
 
-### T11 — Revisão independente · depende de T10
+### T11 — Revisão independente · depende de T10 · status: FEITO
 Agente revisor sem contexto: segurança (paths, exec, bridge), aderência à SPEC,
 testes que não testam nada, docs. Correções e push final.
 
