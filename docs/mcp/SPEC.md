@@ -13,18 +13,39 @@ prepara builds/Steam. O plano de execução (grafo de tarefas) está em
    ligado só em build de desenvolvimento e só com URL + token explícitos.
 2. **Seguro por padrão.**
    - Todo caminho é resolvido dentro da raiz do repositório (sem `..`, sem link
-     simbólico para fora). Escrita só em `src/projects/<id>/`, `docs/games/<id>/`
-     e `src-tauri/gen/` (nunca na engine).
+     simbólico para fora). Escrita só em `src/projects/<id>/`, `docs/games/<id>/`,
+     `src-tauri/gen/` e `dist/` (saída de `build_web`) — nunca na engine.
+   - `ENGINE_MCP_READONLY=1`: além de recusar toda escrita de arquivo, o
+     registry recusa (`READONLY`, antes de executar) as tools que rodam
+     processos capazes de gravar: `gate_run` exceto `tsc`/`arch`/`agents`/
+     `ai-manual`/`diff-check`, `test_run` (o vitest grava cache em
+     `node_modules/.vite`), `audit_run { stage: 90 }`, `project_check` com
+     `isolation`/`tests`, `build_web`, `build_desktop` e `runtime_launch`.
+     Cada tool declara `readonlyPolicy` (padrão: permitida só com
+     `readOnlyHint: true`). Tools de jogo rodando mudam só a memória do jogo e
+     continuam permitidas.
    - Comandos externos só de uma lista fixa (npm/npx/node/cargo/git leitura);
      nunca shell livre, nunca `eval` no jogo.
    - O DevBridge só aceita `ws://127.0.0.1` / `ws://localhost`, exige token,
      tem lista fechada de métodos e não existe no bundle de produção.
+   - git só leitura: subcomandos fixos, sem `--no-index`/`--output`/`--ext-diff`/
+     `-c`/`-C`, sem caminhos absolutos ou com `..`, `git branch` sem opções que
+     alteram refs (inclusive agrupadas, ex.: `-df`).
 3. **Respostas estruturadas.** Toda tool devolve JSON (`structuredContent`) +
    resumo curto em texto. Erros: `isError: true` + `{ code, message, hint? }`.
 4. **Tarefas longas viram jobs** (build, testes, tauri build): a tool devolve
    `jobId` na hora; `job_status`/`job_log`/`job_cancel` acompanham.
 5. **Sem rede obrigatória.** Nada depende de internet; Steam/upload só gera
    arquivos e comandos para o usuário rodar.
+   - `commands_send` recusa por padrão (`COMMAND_NOT_ALLOWED`) commands com
+     efeito fora do jogo — prefixos `game.monetization.` (dinheiro real),
+     `game.steam.`, `game.net.`, `game.modding.publish-`/`download-`/`subscribe`,
+     `game.storage.sync-` e `game.overlay.` (janela nativa). Lista única em
+     `src/debug/devbridge/protocol.ts` (`DEVBRIDGE_SIDE_EFFECT_COMMAND_PREFIXES`),
+     checada nos DOIS lados: liberar exige `ENGINE_MCP_ALLOW_SIDE_EFFECT_COMMANDS=1`
+     no MCP (que envia `allowSideEffects: true`) **e** o opt-in do próprio jogo
+     (`?devbridgeUnsafe=1` ou `VITE_DEVBRIDGE_UNSAFE=1`; `runtime_launch` e
+     `runtime_connect_info` só o incluem quando o MCP libera).
 
 ## 2. Arquitetura
 
@@ -59,7 +80,7 @@ cliente MCP (Claude Code…) ──stdio──▶ tools/mcp/src/server.ts
 | `core/exec.ts` | `runAllowed(cmd, args, { cwd, timeoutMs, env })` com allowlist, captura stdout/stderr com limite (2 MiB) |
 | `core/jobs.ts` | `JobManager`: start/status/log(offset)/cancel, até 4 jobs simultâneos, log em anel 4 MiB, expira 1 h |
 | `core/errors.ts` | `McpToolError(code, message, hint)` |
-| `core/config.ts` | variáveis: `ENGINE_MCP_ROOT`, `ENGINE_MCP_BRIDGE_PORT` (padrão 47100), `ENGINE_MCP_READONLY=1` (desliga escrita) |
+| `core/config.ts` | variáveis: `ENGINE_MCP_ROOT`, `ENGINE_MCP_BRIDGE_PORT` (padrão 47100), `ENGINE_MCP_READONLY=1` (desliga escrita e processos que gravam, §1.2), `ENGINE_MCP_ALLOW_SIDE_EFFECT_COMMANDS=1` (§1.5) |
 
 ## 3. Catálogo de tools
 
@@ -106,7 +127,11 @@ fluxo de recertificação continua manual: `docs/ai/RULES.md`).
 Conexão: o servidor MCP abre um WebSocket em `127.0.0.1:<porta>` com token
 aleatório por sessão. O jogo (dev) conecta como cliente:
 `http://localhost:1420/?project=<id>&devbridge=ws://127.0.0.1:47100&devtoken=<token>`
-(ou `VITE_DEVBRIDGE_URL`/`VITE_DEVBRIDGE_TOKEN` no `tauri dev`).
+(ou `VITE_DEVBRIDGE_URL`/`VITE_DEVBRIDGE_TOKEN` no `tauri dev`). Depois de lidos,
+`devbridge`/`devtoken`/`devbridgeUnsafe` saem da barra de endereço
+(`history.replaceState`) e ficam no `sessionStorage` da aba (reload reconecta).
+O servidor aceita no máximo 8 conexões sem `hello` e 64 KiB por conexão antes
+do `hello`; o limite de 8 MiB por mensagem só vale para sessões aceitas.
 
 | Tool | Entrada | Saída |
 |---|---|---|
@@ -126,7 +151,7 @@ aleatório por sessão. O jogo (dev) conecta como cliente:
 | `input_send` | `{ keys?:[{code,down}], pointer?:{x,y,buttons}, wheel? }` | eventos DOM sintéticos |
 | `events_subscribe` | `{ patterns: string[] }` (ex.: `game.world.*`) | ok; eventos vão para um buffer |
 | `events_tail` | `{ since?, limit? }` | eventos capturados (payload truncado 8 KiB) |
-| `commands_send` | `{ command, payload }` | só comandos `game.*` registrados (`commands.request`) |
+| `commands_send` | `{ command, payload }` | só comandos `game.*` registrados (`commands.request`); efeito externo bloqueado por padrão (§1.5) |
 | `logs_tail` | `{ level?, since?, limit? }` | console capturado (log/warn/error + erros não tratados) |
 | `screenshot` | `{ maxWidth? }` | imagem PNG (MCP `image` content) do canvas/página |
 | `perf_stats` | — | fps, frame time, draw calls, memória (`performance.memory` se houver) |
@@ -137,9 +162,12 @@ DevBridge (`src/debug/devbridge/`): `DevBridge.ts` (cliente ws, handshake
 `{type:"hello", token, project, kernelApiVersion}`), `methods.ts` (tabela fechada
 método → função sobre `EngineServices` + `Kernel`), `capture.ts` (console/erros/eventos
 em anel), `protocol.ts` (tipos compartilhados com `tools/mcp/src/runtime/protocol.ts`
-— mesmo arquivo importado pelos dois lados). Ligado em `src/app/bootstrap.ts`
-por `import.meta.env.DEV && devbridge-url-presente` via `import()` dinâmico,
-para não entrar no bundle de produção (teste confere `dist/`).
+— mesmo arquivo importado pelos dois lados). Em `src/app/bootstrap.ts`, só
+dentro de `if (import.meta.env.DEV)` o módulo é carregado por `import()`
+dinâmico (fora do bundle de produção; teste confere `dist/`) e
+`setupDevBridge` só liga a ponte se houver URL loopback + token válidos
+(URL, `sessionStorage` da aba ou `VITE_DEVBRIDGE_*`); sem isso devolve `null`
+e nada é registrado.
 
 Engine (pequeno, aditivo): `GameLoopApi.stepTicks(n)` quando pausado (para
 `loop_control step`). Nada mais muda na engine para o runtime.

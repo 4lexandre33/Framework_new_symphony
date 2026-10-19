@@ -62,6 +62,11 @@ export const tools: ToolDef[] = [
 - **Escrita**: sempre por `ctx.paths.writeFileAtomic(rel, data)` / `mkdirp` /
   `remove` (ou `ctx.paths.assertWritable(rel)` antes de escrever). Leitura: resolva com
   `ctx.paths.resolve(rel)`. Nunca use caminhos crus do cliente.
+- **Modo somente leitura** (`ENGINE_MCP_READONLY=1`): o registry decide antes de `run`
+  por `readonlyPolicy` — `"allow"`, `"deny"` ou `(args, ctx) => motivo | null`.
+  Padrão: permitida só se `annotations.readOnlyHint === true`. Tool que roda processo
+  capaz de gravar (vitest, build, vite, cargo…) NÃO é `readOnlyHint: true`;
+  `tests/mcp/readonly.test.ts` exige classificar toda tool nova.
 - **Comandos**: `await ctx.exec.runAllowed("npm", ["run", "arch:check"], { timeoutMs })`
   → `{ code, stdout, stderr, durationMs, timedOut, aborted, … }`; `ensureSuccess(r, label)`
   converte em `TIMEOUT`/`COMMAND_FAILED`. Passe `signal: call.signal` para cancelar

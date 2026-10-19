@@ -40,7 +40,7 @@
     "project:isolation": "node scripts/architecture/check-project-isolation.mjs",
     "stage90:validate": "node scripts/architecture/stage90-validate-layer1-gate.mjs",
     "stage90:finalize": "node scripts/architecture/stage90-finalize-layer1-gate.mjs",
-    "mcp:e2e": "ENGINE_MCP_E2E=1 vitest run tests/mcp/e2e"
+    "mcp:e2e": "node tools/mcp/scripts/run-e2e.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.12.0",

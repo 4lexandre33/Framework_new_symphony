@@ -33,8 +33,9 @@ aprovar o servidor `engine`.
 }
 ```
 Variáveis opcionais: `ENGINE_MCP_ROOT` (raiz do repo), `ENGINE_MCP_READONLY=1`
-(nenhuma escrita), `ENGINE_MCP_BRIDGE_PORT` (padrão 47100),
-`ENGINE_MCP_IMPORT_DIR` (pasta extra de onde `asset_import` pode copiar).
+(somente leitura — veja [Segurança](#segurança)), `ENGINE_MCP_BRIDGE_PORT` (padrão 47100),
+`ENGINE_MCP_IMPORT_DIR` (pasta extra de onde `asset_import` pode copiar),
+`ENGINE_MCP_ALLOW_SIDE_EFFECT_COMMANDS=1` (veja [Comandos com efeito externo](#comandos-com-efeito-externo)).
 
 ## O que dá para fazer
 | Área | Ferramentas |
@@ -62,15 +63,46 @@ o build de produção não contém a ponte (há teste para isso).
   para o `tauri dev` (`node scripts/tauri-project-config.mjs <id> --dev` com as
   variáveis indicadas).
 
+Depois de lidos, `devbridge`/`devtoken` saem da barra de endereço (o token não
+fica no histórico); a aba guarda a config e reconecta sozinha após um reload.
+
 WebGL headless usa SwiftShader (≈ 8 fps): ótimo para inspecionar e testar, não
 para medir desempenho.
+
+### Comandos com efeito externo
+`commands_send` recusa por padrão (`COMMAND_NOT_ALLOWED`) commands que saem do
+jogo: compras com dinheiro real (`game.monetization.*`), Steamworks
+(`game.steam.*`), rede (`game.net.*`), Steam Workshop
+(`game.modding.publish-*`/`download-*`), perfil online
+(`game.storage.sync-*`) e flags da janela nativa (`game.overlay.*`). Commands
+locais (world, física, câmera, UI, save/load local, ativar/desativar mod…)
+continuam livres. Para liberar de propósito são precisos os **dois** opt-ins:
+1. MCP com `ENGINE_MCP_ALLOW_SIDE_EFFECT_COMMANDS=1` (no `env` do `.mcp.json`);
+2. jogo aberto com `?devbridgeUnsafe=1` (navegador) ou `VITE_DEVBRIDGE_UNSAFE=1`
+   (`tauri dev`). Com o item 1 ligado, `runtime_launch` e `runtime_connect_info`
+   já incluem isso na URL/variáveis que devolvem.
+
+Sem o opt-in do jogo, ele mesmo recusa — mesmo que o MCP peça.
 
 ## Segurança
 - Caminhos sempre dentro do repositório (sem `..`, sem link simbólico para fora).
 - Escrita só em `src/projects/<jogo>/`, `docs/games/<jogo>/`, `src-tauri/gen/` e `dist/`;
-  nunca na engine nem nas baselines. `ENGINE_MCP_READONLY=1` bloqueia tudo.
-- Comandos externos por lista fixa (node/npm/npx/cargo e git só leitura), sem shell.
-- A ponte aceita só loopback, exige token, tem lista fechada de métodos e não tem `eval`.
+  nunca na engine nem nas baselines.
+- `ENGINE_MCP_READONLY=1` (somente leitura) recusa com `READONLY`:
+  - toda escrita de arquivo (`project_create/write_file/report_append/delete`,
+    `scene_*`/`prefab_*` de escrita, `asset_import`, `desktop_config_set`,
+    `steam_config_set`, `steam_pipeline_prepare`);
+  - tools que rodam processos que podem gravar: `gate_run` com `test`,
+    `isolation`, `stage90`, `build`, `cargo-check`, `cargo-test` ou `all`;
+    `test_run` (vitest grava cache em `node_modules/.vite`); `audit_run { stage: 90 }`;
+    `project_check` com `isolation`/`tests` (use `steps: ["tsc"]`); `build_web`;
+    `build_desktop`; `runtime_launch` (use `runtime_connect_info` e abra o jogo à mão).
+  - Continuam: leituras, `gate_run` com `tsc`/`arch`/`agents`/`ai-manual`/`diff-check`,
+    `audit_run` 71..89, jobs e as tools de jogo rodando (mudam só a memória do jogo).
+- Comandos externos por lista fixa (node/npm/npx/cargo e git só leitura, sem
+  `--no-index` nem caminhos fora do repo), sem shell.
+- A ponte aceita só loopback, exige token, tem lista fechada de métodos e não tem `eval`;
+  no máximo 8 conexões sem `hello` e 64 KiB antes do `hello`.
 - Steam: o MCP gera arquivos e o comando `steamcmd`; nunca pede nem guarda senha.
 
 ## Limites
@@ -80,4 +112,5 @@ para medir desempenho.
 
 ## Testes
 `npx vitest run tests/mcp` (cliente MCP real em memória contra o servidor real) ·
-e2e com Chromium: `ENGINE_MCP_E2E=1 npx vitest run tests/mcp/e2e`.
+e2e com Chromium: `npm run mcp:e2e` (liga `ENGINE_MCP_E2E=1` sozinho; funciona no
+Windows sem cross-env).

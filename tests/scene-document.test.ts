@@ -281,7 +281,7 @@ describe("resolveSceneEntities / collectSceneAssets", () => {
 
   it("é re-exportado por contracts/world/types (fachada pública)", () => {
     expect(worldContracts.validateSceneDocument).toBe(validateSceneDocument);
-    expect(worldContracts.SceneDocumentErrorEvent.id ?? worldContracts.SceneDocumentErrorEvent).toBeTruthy();
+    expect(worldContracts.SceneDocumentErrorEvent.type).toBe("game.world.scene-document-error");
   });
 });
 
