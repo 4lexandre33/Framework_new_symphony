@@ -242,6 +242,12 @@ export const tools: ToolDef[] = [
         throw new McpToolError("INVALID_INPUT", `o job ${jobId} não é de gate_run (${info.label})`, "Use job_log para jobs de outras tools.");
       }
       if (info.state === "running") return { jobId, state: info.state, done: false };
+      // Cancelado: o runner pode ter gravado "cancelado" ao receber SIGTERM;
+      // não é falha do gate, é o pedido do usuário.
+      if (info.state === "cancelled") {
+        const last = ctx.jobs.readLog(jobId, Math.max(info.logStart, info.logBytes - 4000), 4000);
+        return { jobId, state: info.state, done: true, tail: stripAnsi(last.text) };
+      }
       const window = 1024 * 1024;
       const chunk = ctx.jobs.readLog(jobId, Math.max(info.logStart, info.logBytes - window), window);
       const parsed = extractGateResult(chunk.text);
