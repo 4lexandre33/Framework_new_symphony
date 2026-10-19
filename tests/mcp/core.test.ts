@@ -11,7 +11,7 @@ import { loadConfig } from "../../tools/mcp/src/core/config.ts";
 import { McpToolError } from "../../tools/mcp/src/core/errors.ts";
 import { assertCommandAllowed, ensureSuccess, Executor, resolveCommand } from "../../tools/mcp/src/core/exec.ts";
 import { JobManager, RingLog } from "../../tools/mcp/src/core/jobs.ts";
-import { createRepoPaths, detectRepoRoot, validateProjectId } from "../../tools/mcp/src/core/paths.ts";
+import { createRepoPaths, detectRepoRoot, samePathPrefix, validateProjectId } from "../../tools/mcp/src/core/paths.ts";
 import { defineResource, definePrompt, defineTool, toolResult } from "../../tools/mcp/src/core/registry.ts";
 import { allTools } from "../../tools/mcp/src/tools/index.ts";
 import {
@@ -298,6 +298,22 @@ describe("paths", () => {
     expect(p.relative(path.join(repo.root, "src", "projects"))).toBe("src/projects");
   });
 
+  it("pasta chamada '..foo' dentro da raiz é válida; '..' como segmento não", async () => {
+    await mkdir(path.join(repo.root, "..foo", "sub"), { recursive: true });
+    await writeFile(path.join(repo.root, "..foo", "sub", "a.txt"), "x");
+    const p = createRepoPaths(repo.root);
+    expect(p.resolve("..foo/sub/a.txt")).toBe(path.join(repo.root, "..foo", "sub", "a.txt"));
+    expect(p.resolve("..foo")).toBe(path.join(repo.root, "..foo"));
+    expect(p.relative(p.resolve("..foo/sub"))).toBe("..foo/sub");
+    expectToolError(() => p.resolve(".."), "PATH_OUTSIDE_REPO");
+    expectToolError(() => p.resolve("../..foo"), "PATH_OUTSIDE_REPO");
+    expect(samePathPrefix(path.join(repo.root, "..foo"), repo.root)).toBe(true);
+    expect(samePathPrefix(repo.root, repo.root)).toBe(true);
+    expect(samePathPrefix(path.dirname(repo.root), repo.root)).toBe(false);
+    expect(samePathPrefix(path.join(path.dirname(repo.root), "irmao"), repo.root)).toBe(false);
+    expect(samePathPrefix(`${repo.root}..foo`, repo.root)).toBe(false); // pasta irmã com prefixo igual
+  });
+
   it.skipIf(isWindows)("resolve recusa link simbólico que aponta para fora (arquivo existente ou não)", () => {
     const p = createRepoPaths(repo.root);
     expectToolError(() => p.resolve("link-fora/segredo.txt"), "PATH_OUTSIDE_REPO");
@@ -410,6 +426,54 @@ describe("exec (allowlist)", () => {
       const head = await exec.runAllowed("git", ["rev-parse", "--is-inside-work-tree"]);
       expect(head.code).toBe(0);
       expect(head.stdout.trim()).toBe("true");
+    }
+  });
+
+  it("git branch: opções curtas agrupadas que alteram refs são recusadas", () => {
+    for (const args of [
+      ["branch", "-df", "x"],
+      ["branch", "-Df", "x"],
+      ["branch", "-vd", "x"],
+      ["branch", "-mf", "a", "b"],
+      ["branch", "-Mv", "a"],
+      ["branch", "-cf", "a", "b"],
+      ["branch", "-vC", "a"],
+      ["branch", "-fv", "x"],
+      ["branch", "-vu", "origin/x"],
+      ["branch", "-vt", "x"],
+    ]) {
+      expectToolError(() => assertCommandAllowed("git", args), "COMMAND_NOT_ALLOWED");
+    }
+    for (const args of [["branch", "-a"], ["branch", "-vv"], ["branch", "-ra"], ["branch", "-av", "--list", "main*"], ["branch", "-l", "x*"]]) {
+      expect(() => assertCommandAllowed("git", args), args.join(" ")).not.toThrow();
+    }
+  });
+
+  it("git: --no-index e caminhos fora do repositório (absolutos, '..') são recusados; ranges de revisão passam", () => {
+    for (const args of [
+      ["diff", "--no-index", "a", "b"],
+      ["diff", "/etc/passwd", "/etc/hosts"],
+      ["diff", "--", "/etc/passwd"],
+      ["diff", "--", "../fora.txt"],
+      ["log", "--", "src/../../fora"],
+      ["show", "HEAD", "--", "..\\fora"],
+      ["diff", "C:\\Windows\\win.ini", "x"],
+      ["log", "--textconv"],
+      ["log", "--super-prefix=x"],
+      ["diff", "--relative=../x"],
+    ]) {
+      expectToolError(() => assertCommandAllowed("git", args), "COMMAND_NOT_ALLOWED");
+    }
+    for (const args of [
+      ["log", "HEAD~3..HEAD", "--oneline"],
+      ["diff", "main...HEAD", "--stat"],
+      ["log", "..main"],
+      ["diff", "--", "src/core/index.ts"],
+      ["diff", "--", "--no-index"],
+      ["show", "HEAD:src/..foo/x.ts"],
+      ["log", "-p", "-1"],
+    ]) {
+      expect(() => assertCommandAllowed("git", args), args.join(" ")).not.toThrow();
     }
   });
 

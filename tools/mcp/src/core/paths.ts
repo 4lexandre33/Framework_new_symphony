@@ -82,9 +82,16 @@ function toPosix(p: string): string {
   return p.split(path.sep).join("/");
 }
 
-function samePathPrefix(child: string, parent: string): boolean {
+/**
+ * `child` está dentro de `parent` (ou é ele)? Só `..` como SEGMENTO conta
+ * como saída: uma pasta chamada `..foo` dentro da raiz é válida.
+ * Exportado para testes.
+ */
+export function samePathPrefix(child: string, parent: string): boolean {
   const rel = path.relative(parent, child);
-  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+  if (rel === "") return true;
+  if (path.isAbsolute(rel)) return false; // outra unidade no Windows
+  return rel !== ".." && !rel.startsWith(`..${path.sep}`);
 }
 
 /** realpath do ancestral existente mais próximo + o resto do caminho. */

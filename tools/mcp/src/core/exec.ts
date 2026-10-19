@@ -23,8 +23,14 @@ export type AllowedCommand = (typeof ALLOWED_COMMANDS)[number];
 
 export const GIT_READ_SUBCOMMANDS = ["status", "log", "diff", "rev-parse", "branch", "show"] as const;
 
-/** Opções de git que escrevem arquivos, executam programas ou trocam o repo. */
-const GIT_FORBIDDEN_OPTION = /^(--output|--ext-diff|--exec-path|--upload-pack|--git-dir|--work-tree|--namespace|--config-env|-c$|-C$|--open-files-in-pager|-O)/;
+/**
+ * Opções de git que escrevem arquivos, executam programas, trocam o repo ou
+ * leem fora dele (`--no-index` compara arquivos arbitrários do disco).
+ */
+const GIT_FORBIDDEN_OPTION =
+  /^(--output|--ext-diff|--textconv|--exec-path|--upload-pack|--receive-pack|--git-dir|--work-tree|--namespace|--super-prefix|--config-env|--no-index|--open-files-in-pager|-c$|-C$|-O)/;
+/** Letras de opções curtas de `git branch` que alteram refs (também agrupadas: `-df`, `-vD`). */
+const GIT_BRANCH_MUTATING_SHORT = /[dDmMcCfut]/;
 /** Opções de `git branch` que alteram refs. */
 const GIT_BRANCH_MUTATING = /^(-d|-D|-m|-M|-c|-C|-f|-u|-t|--delete|--move|--copy|--force|--set-upstream|--set-upstream-to|--unset-upstream|--edit-description|--track|--no-track|--create-reflog|--recurse-submodules)/;
 /** Opções de `git branch` que tornam os argumentos posicionais filtros (leitura). */
@@ -53,19 +59,35 @@ export function assertCommandAllowed(cmd: string, args: readonly string[]): asse
   if (sub === undefined || !(GIT_READ_SUBCOMMANDS as readonly string[]).includes(sub)) {
     throw notAllowed(`git ${sub ?? ""}: só subcomandos de leitura são permitidos`.trim(), `Use: ${GIT_READ_SUBCOMMANDS.join(", ")} (como primeiro argumento).`);
   }
+  let afterDashDash = false;
   for (const arg of args.slice(1)) {
-    if (arg === "--") break;
-    if (GIT_FORBIDDEN_OPTION.test(arg)) throw notAllowed(`git ${sub}: opção não permitida: ${arg}`);
+    if (!afterDashDash && arg === "--") {
+      afterDashDash = true;
+      continue;
+    }
+    if (!afterDashDash && GIT_FORBIDDEN_OPTION.test(arg)) throw notAllowed(`git ${sub}: opção não permitida: ${arg}`);
+    // Caminho absoluto ou com `..` faz o git ler fora do repositório
+    // (`git diff /a /b` vira --no-index implícito).
+    if (escapesRepo(arg)) throw notAllowed(`git ${sub}: caminho fora do repositório não permitido: ${arg}`, "Use caminhos relativos à raiz, sem '..'.");
   }
   if (sub === "branch") {
     const opts = args.slice(1).filter((a) => a.startsWith("-"));
     const positional = args.slice(1).filter((a) => !a.startsWith("-"));
-    const mutating = opts.find((o) => GIT_BRANCH_MUTATING.test(o));
+    const mutating = opts.find(
+      (o) => GIT_BRANCH_MUTATING.test(o) || (/^-[A-Za-z]{2,}$/.test(o) && GIT_BRANCH_MUTATING_SHORT.test(o.slice(1))),
+    );
     if (mutating) throw notAllowed(`git branch: opção que altera refs não permitida: ${mutating}`);
     if (positional.length > 0 && !opts.some((o) => GIT_BRANCH_LISTING.test(o))) {
       throw notAllowed("git branch com nome cria um branch; só listagem é permitida", "Use git branch --list <padrão>.");
     }
   }
+}
+
+/** Argumento (ou valor de `--opção=valor`) que é caminho absoluto ou sobe com `..`. */
+function escapesRepo(arg: string): boolean {
+  const value = arg.startsWith("-") ? (arg.includes("=") ? arg.slice(arg.indexOf("=") + 1) : "") : arg;
+  // Revisões (`HEAD..main`, `a...b`) não casam: o `..` precisa estar entre separadores.
+  return /^[\\/]/.test(value) || /^[A-Za-z]:[\\/]/.test(value) || /(^|[\\/])\.\.([\\/]|$)/.test(value);
 }
 
 interface ResolvedCommand {
