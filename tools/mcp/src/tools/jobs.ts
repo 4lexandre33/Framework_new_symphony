@@ -92,6 +92,8 @@ export const tools: ToolDef[] = [
     input: { jobId: jobIdInput },
     output: jobInfoSchema,
     annotations: { destructiveHint: true, idempotentHint: true, openWorldHint: false },
+    // Cancelar não grava nada (só mata processos já iniciados).
+    readonlyPolicy: "allow",
     run: ({ jobId }, ctx) => ctx.jobs.cancel(jobId),
     summarize: (job) => describe(job as JobInfo),
   }),

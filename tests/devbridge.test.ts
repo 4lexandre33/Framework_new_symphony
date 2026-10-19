@@ -17,8 +17,12 @@ import {
   devBridgeGlobToRegExp,
   isLoopbackDevBridgeUrl,
   parseDevBridgeMessage,
+  DEVBRIDGE_SESSION_KEY,
+  DEVBRIDGE_SIDE_EFFECT_COMMAND_PREFIXES,
+  isSideEffectDevBridgeCommand,
   resolveDevBridgeConfig,
   setupDevBridge,
+  stripDevBridgeParams,
   type DevBridgeHandle,
   type DevBridgeSocketFactory,
   type DevBridgeState,
@@ -211,7 +215,7 @@ const originalCaf = globalThis.cancelAnimationFrame;
 let game: Game | null = null;
 let server: FakeServer | null = null;
 
-async function bootGame(port: number, extra: { token?: string; reconnectMinMs?: number } = {}): Promise<Game> {
+async function bootGame(port: number, extra: { token?: string; reconnectMinMs?: number; unsafe?: boolean } = {}): Promise<Game> {
   const canvas = document.createElement("canvas");
   canvas.width = 640;
   canvas.height = 360;
@@ -228,7 +232,7 @@ async function bootGame(port: number, extra: { token?: string; reconnectMinMs?: 
   const handle = setupDevBridge({
     kernel,
     services,
-    search: `?devbridge=ws://127.0.0.1:${port}&devtoken=${extra.token ?? TOKEN}&project=demo`,
+    search: `?devbridge=ws://127.0.0.1:${port}&devtoken=${extra.token ?? TOKEN}&project=demo${extra.unsafe ? "&devbridgeUnsafe=1" : ""}`,
     env: {},
     WebSocketImpl: WS,
     reconnectMinMs: extra.reconnectMinMs ?? 20,
@@ -295,10 +299,99 @@ describe("DevBridge — protocolo e configuração", () => {
       url: "ws://127.0.0.1:9",
       token: TOKEN,
       project: "p1",
+      unsafe: false,
     });
     expect(
       resolveDevBridgeConfig({ env: { VITE_DEVBRIDGE_URL: "ws://localhost:5", VITE_DEVBRIDGE_TOKEN: TOKEN, VITE_PROJECT: "x" } }),
-    ).toEqual({ url: "ws://localhost:5", token: TOKEN, project: "x" });
+    ).toEqual({ url: "ws://localhost:5", token: TOKEN, project: "x", unsafe: false });
+  });
+
+  it("resolveDevBridgeConfig: opt-in devbridgeUnsafe / VITE_DEVBRIDGE_UNSAFE e config da aba", () => {
+    const base = `?devbridge=ws://127.0.0.1:9&devtoken=${TOKEN}`;
+    expect(resolveDevBridgeConfig({ search: `${base}&devbridgeUnsafe=1` })?.unsafe).toBe(true);
+    expect(resolveDevBridgeConfig({ search: `${base}&devbridgeUnsafe=0` })?.unsafe).toBe(false);
+    expect(resolveDevBridgeConfig({ search: base, env: { VITE_DEVBRIDGE_UNSAFE: "1" } })?.unsafe).toBe(true);
+    expect(
+      resolveDevBridgeConfig({ env: { VITE_DEVBRIDGE_URL: "ws://localhost:5", VITE_DEVBRIDGE_TOKEN: TOKEN, VITE_DEVBRIDGE_UNSAFE: "true" } })?.unsafe,
+    ).toBe(true);
+    // Sem devbridge na URL: usa a config guardada na aba (reload do Vite).
+    const session = { url: "ws://127.0.0.1:7", token: TOKEN, project: "p2", unsafe: true };
+    expect(resolveDevBridgeConfig({ search: "?project=p2", session })).toEqual(session);
+    // URL explícita vence a aba; token da aba nunca é misturado com URL nova.
+    expect(resolveDevBridgeConfig({ search: base, session })).toEqual({ url: "ws://127.0.0.1:9", token: TOKEN, project: null, unsafe: false });
+    expect(resolveDevBridgeConfig({ search: "?devbridge=ws://127.0.0.1:9", session, warn: () => {} })).toBeNull();
+  });
+
+  it("stripDevBridgeParams remove só devbridge/devtoken/devbridgeUnsafe", () => {
+    expect(stripDevBridgeParams(`http://localhost:1420/?project=demo&devbridge=ws%3A%2F%2F127.0.0.1%3A1&devtoken=${TOKEN}&devbridgeUnsafe=1&x=2#frag`)).toBe(
+      "http://localhost:1420/?project=demo&x=2#frag",
+    );
+    expect(stripDevBridgeParams("http://localhost:1420/")).toBe("http://localhost:1420/");
+  });
+
+  it("setupDevBridge tira devbridge/devtoken da barra de endereço (replaceState) e reconecta da aba após reload", () => {
+    const original = location.href;
+    sessionStorage.removeItem(DEVBRIDGE_SESSION_KEY);
+    const register = vi.fn();
+    const kernel = { status: "idle", inspect: () => ({}), register };
+    const handles: DevBridgeHandle[] = [];
+    try {
+      history.replaceState(null, "", `/jogo?project=demo&devbridge=${encodeURIComponent("ws://127.0.0.1:9")}&devtoken=${TOKEN}&x=1#h`);
+      const first = setupDevBridge({ kernel, services: createEngineServices(), env: {}, captureConsole: false, WebSocketImpl: WS });
+      expect(first).not.toBeNull();
+      handles.push(first!);
+      expect(first!.config).toEqual({ url: "ws://127.0.0.1:9", token: TOKEN, project: "demo", unsafe: false });
+      expect(location.pathname).toBe("/jogo");
+      expect(location.search).toBe("?project=demo&x=1");
+      expect(location.hash).toBe("#h");
+      expect(location.href).not.toContain(TOKEN);
+      expect(JSON.parse(sessionStorage.getItem(DEVBRIDGE_SESSION_KEY) ?? "null")).toMatchObject({ url: "ws://127.0.0.1:9", token: TOKEN });
+
+      // "Reload": a URL limpa ainda liga a ponte pela config da aba.
+      const second = setupDevBridge({ kernel, services: createEngineServices(), env: {}, captureConsole: false, WebSocketImpl: WS });
+      expect(second?.config).toEqual(first!.config);
+      handles.push(second!);
+      expect(location.search).toBe("?project=demo&x=1");
+    } finally {
+      for (const h of handles) h.stop();
+      sessionStorage.removeItem(DEVBRIDGE_SESSION_KEY);
+      history.replaceState(null, "", original);
+    }
+  });
+
+  it("lista de comandos com efeito externo (compartilhada com o MCP)", () => {
+    expect(sharedProtocol.DEVBRIDGE_SIDE_EFFECT_COMMAND_PREFIXES).toBe(DEVBRIDGE_SIDE_EFFECT_COMMAND_PREFIXES);
+    const blocked = [
+      "game.monetization.init-purchase",
+      "game.monetization.finalize-purchase",
+      "game.monetization.consume-item",
+      "game.monetization.fetch-inventory",
+      "game.steam.unlock-achievement",
+      "game.steam.create-lobby",
+      "game.steam.send-p2p-packet",
+      "game.net.connect",
+      "game.net.send",
+      "game.net.broadcast-snapshot",
+      "game.modding.publish-workshop",
+      "game.modding.download-workshop",
+      "game.storage.sync-profile",
+      "game.overlay.set-passthrough",
+      "game.overlay.set-always-on-top",
+      "game.Steam.Unlock-Achievement",
+    ];
+    const allowed = [
+      "game.world.spawn-entity",
+      "game.storage.save-game",
+      "game.storage.load-game",
+      "game.modding.enable-mod",
+      "game.modding.disable-mod",
+      "game.security.dump-crash",
+      "game.ui.open-screen",
+      "game.physics.apply-impulse",
+      "game.network-ish.local",
+    ];
+    for (const c of blocked) expect(isSideEffectDevBridgeCommand(c), c).toBe(true);
+    for (const c of allowed) expect(isSideEffectDevBridgeCommand(c), c).toBe(false);
   });
 
   it("setupDevBridge sem configuração não registra nada", () => {
@@ -549,6 +642,42 @@ describe("DevBridge — métodos com kernel real", () => {
     expect(g.services.world?.hasEntity("cmd1")).toBe(true);
     expect(await s.request("commands.send", { command: "kernel.stop" })).toMatchObject({ ok: false, error: { code: "COMMAND_NOT_ALLOWED" } });
     expect(await s.request("commands.send", { command: "game.nao.existe" })).toMatchObject({ ok: false, error: { code: "NOT_FOUND" } });
+  });
+
+  it("commands.send: comandos com efeito externo recusados por padrão, mesmo com allowSideEffects", async () => {
+    const { s } = await ready();
+    for (const command of ["game.monetization.init-purchase", "game.steam.unlock-achievement", "game.net.connect", "game.modding.publish-workshop"]) {
+      const plain = await s.request("commands.send", { command, payload: {} });
+      expect(plain, command).toMatchObject({ ok: false, error: { code: "COMMAND_NOT_ALLOWED" } });
+      expect(plain.error?.message).toMatch(/devbridgeUnsafe=1/);
+      // O pedido do MCP sozinho não basta: o jogo precisa do próprio opt-in.
+      expect(await s.request("commands.send", { command, payload: {}, allowSideEffects: true }), command).toMatchObject({
+        ok: false,
+        error: { code: "COMMAND_NOT_ALLOWED" },
+      });
+    }
+    expect(await s.request("commands.send", { command: "game.world.spawn-entity", allowSideEffects: "sim" })).toMatchObject({
+      ok: false,
+      error: { code: "INVALID_PARAMS" },
+    });
+  });
+
+  it("commands.send: com devbridgeUnsafe=1 o comando passa só se o MCP mandar allowSideEffects=true", async () => {
+    server = await startFakeServer();
+    const g = await bootGame(server.port, { unsafe: true });
+    await server.waitReady();
+    await waitUntil(() => g.handle.bridge?.state === "ready");
+    expect(g.handle.config.unsafe).toBe(true);
+    const s = server;
+    expect(await s.request("commands.send", { command: "game.net.connect", payload: {} })).toMatchObject({
+      ok: false,
+      error: { code: "COMMAND_NOT_ALLOWED", message: expect.stringMatching(/allowSideEffects/) },
+    });
+    // Passou do bloqueio: sem plugin de rede no kernel de teste → NOT_FOUND (nenhum handler).
+    expect(await s.request("commands.send", { command: "game.net.connect", payload: {}, allowSideEffects: true })).toMatchObject({
+      ok: false,
+      error: { code: "NOT_FOUND" },
+    });
   });
 
   it("logs.tail captura console e erros não tratados, filtra por nível", async () => {

@@ -301,7 +301,9 @@ export async function launchRuntime(ctx: ToolContext, bridge: BridgeServer, opti
     // 2) Chromium.
     const url =
       `http://127.0.0.1:${vitePort}/?project=${encodeURIComponent(id)}` +
-      `&devbridge=${encodeURIComponent(listen.url)}&devtoken=${encodeURIComponent(token)}`;
+      `&devbridge=${encodeURIComponent(listen.url)}&devtoken=${encodeURIComponent(token)}` +
+      // Opt-in do jogo para comandos com efeito externo só quando o MCP também libera.
+      (ctx.config.allowSideEffectCommands ? "&devbridgeUnsafe=1" : "");
     options.progress?.(2, "abrindo Chromium");
     try {
       browser = await pw.module.chromium.launch({

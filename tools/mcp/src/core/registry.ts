@@ -31,9 +31,10 @@ import { McpToolError, type ToolErrorPayload } from "./errors.ts";
 export type ZodShape = z.ZodRawShape;
 /** Entrada: shape cru (`{ id: z.string() }`, vira objeto estrito) ou `z.object(...)`. */
 export type InputSpec = ZodShape | z.ZodObject<ZodShape>;
-export type OutputSpec = ZodShape | z.ZodObject<ZodShape>;
+/** Saída: shape cru (vira `z.object`) ou qualquer `z.object`/`z.looseObject` (campos extras permitidos). */
+export type OutputSpec = ZodShape | z.ZodObject<ZodShape, z.core.$ZodObjectConfig>;
 
-export type InferSpec<S> = S extends z.ZodObject<ZodShape>
+export type InferSpec<S> = S extends z.ZodObject<ZodShape, z.core.$ZodObjectConfig>
   ? z.output<S>
   : S extends ZodShape
     ? z.output<z.ZodObject<S>>
@@ -89,6 +90,16 @@ function isToolResult(value: unknown): value is ToolResult<unknown> {
 
 type MaybePromise<T> = T | Promise<T>;
 
+/**
+ * Comportamento da tool com `ENGINE_MCP_READONLY=1` (SPEC §1.2), checado no
+ * registry ANTES de `run` (depois da validação da entrada):
+ * - `"allow"`: não grava nada no disco nem roda processo que grave;
+ * - `"deny"`: recusada com `READONLY`;
+ * - função: `null` = permitido; texto = motivo da recusa (depende dos args).
+ * Padrão: `"allow"` se `annotations.readOnlyHint === true`, senão `"deny"`.
+ */
+export type ReadonlyPolicy<A = never> = "allow" | "deny" | ((args: A, ctx: ToolContext) => string | null);
+
 export interface ToolSpec<I extends InputSpec, O extends OutputSpec | undefined> {
   /** snake_case, único no servidor (ex.: `project_list`). */
   readonly name: string;
@@ -99,6 +110,8 @@ export interface ToolSpec<I extends InputSpec, O extends OutputSpec | undefined>
   /** Se presente vira `outputSchema` e a saída é validada. */
   readonly output?: O;
   readonly annotations?: ToolAnnotations;
+  /** Ver `ReadonlyPolicy`. Obrigatório (na prática) para tools sem `readOnlyHint: true` que são seguras em modo somente leitura. */
+  readonly readonlyPolicy?: ReadonlyPolicy<InferSpec<I>>;
   /** Resumo de uma linha para o `content` de texto. Padrão: `"<name>: ok"`. */
   readonly summarize?: (data: InferOutput<O>, args: InferSpec<I>) => string;
   readonly run: (
@@ -117,6 +130,7 @@ export interface ToolDef {
   readonly inputSchema: z.ZodObject<ZodShape>;
   readonly outputSchema?: z.ZodObject<ZodShape>;
   readonly annotations?: ToolAnnotations;
+  readonly readonlyPolicy?: ReadonlyPolicy;
   readonly summarize?: (data: never, args: never) => string;
   readonly run: (args: never, ctx: ToolContext, call: ToolCall) => unknown;
 }
@@ -125,7 +139,7 @@ export const TOOL_NAME_RE = /^[a-z][a-z0-9_]{1,63}$/;
 
 function toObjectSchema(spec: InputSpec | OutputSpec | undefined, strict: boolean): z.ZodObject<ZodShape> {
   if (spec === undefined) return strict ? z.strictObject({}) : z.object({});
-  if (spec instanceof z.ZodObject) return spec as z.ZodObject<ZodShape>;
+  if (spec instanceof z.ZodObject) return spec as unknown as z.ZodObject<ZodShape>;
   return strict ? z.strictObject(spec as ZodShape) : z.object(spec as ZodShape);
 }
 
@@ -142,9 +156,23 @@ export function defineTool<I extends InputSpec = {}, O extends OutputSpec | unde
     inputSchema: toObjectSchema(spec.input, true),
     ...(spec.output !== undefined ? { outputSchema: toObjectSchema(spec.output, false) } : {}),
     ...(spec.annotations !== undefined ? { annotations: spec.annotations } : {}),
+    ...(spec.readonlyPolicy !== undefined ? { readonlyPolicy: spec.readonlyPolicy as ReadonlyPolicy } : {}),
     ...(spec.summarize !== undefined ? { summarize: spec.summarize as ToolDef["summarize"] } : {}),
     run: spec.run as ToolDef["run"],
   };
+}
+
+/** Política efetiva em modo somente leitura (padrão derivado de `readOnlyHint`). */
+export function effectiveReadonlyPolicy(def: ToolDef): ReadonlyPolicy {
+  return def.readonlyPolicy ?? (def.annotations?.readOnlyHint === true ? "allow" : "deny");
+}
+
+/** Motivo da recusa em modo somente leitura, ou `null` se a chamada é permitida. Exportado para testes. */
+export function readonlyDenial(def: ToolDef, args: unknown, ctx: ToolContext): string | null {
+  const policy = effectiveReadonlyPolicy(def);
+  if (policy === "allow") return null;
+  if (policy === "deny") return "a tool grava arquivos ou roda processos que podem gravar";
+  return (policy as (a: unknown, c: ToolContext) => string | null)(args, ctx);
 }
 
 /* ============================================================================
@@ -228,6 +256,16 @@ export async function invokeTool(def: ToolDef, rawArgs: unknown, ctx: ToolContex
       throw new McpToolError("INVALID_INPUT", `entrada inválida para ${def.name}: ${formatIssues(parsed.error)}`, "Confira o inputSchema da tool em tools/list.", {
         issues: parsed.error.issues.slice(0, 50),
       });
+    }
+    if (ctx.config.readonly) {
+      const reason = readonlyDenial(def, parsed.data, ctx);
+      if (reason !== null) {
+        throw new McpToolError(
+          "READONLY",
+          `${def.name} recusada: servidor em modo somente leitura (ENGINE_MCP_READONLY=1) — ${reason}`,
+          "Rode o MCP sem ENGINE_MCP_READONLY para usar esta tool (ou escolha uma variante de leitura indicada na descrição).",
+        );
+      }
     }
     const out = await (def.run as (a: unknown, c: ToolContext, k: ToolCall) => unknown)(parsed.data, ctx, makeCall(extra));
     const rich = isToolResult(out) ? out : null;

@@ -5,7 +5,8 @@
  * |--------------------------|------------|------------------------------------------------|
  * | `ENGINE_MCP_ROOT`        | detectado  | raiz do repositório                            |
  * | `ENGINE_MCP_BRIDGE_PORT` | `47100`    | porta do WebSocket do DevBridge                 |
- * | `ENGINE_MCP_READONLY`    | desligado  | `1`/`true` recusa toda escrita                 |
+ * | `ENGINE_MCP_READONLY`    | desligado  | `1`/`true` recusa escrita e processos que gravam (gates/testes/build/launch) |
+ * | `ENGINE_MCP_ALLOW_SIDE_EFFECT_COMMANDS` | desligado | `1` libera em `commands_send` comandos com efeito externo (compra, Steam, rede…) |
  * | `ENGINE_MCP_IMPORT_DIR`  | nenhum     | pasta extra de onde `asset_import` pode copiar |
  * | `ENGINE_MCP_LOG`         | `info`     | `debug`/`info`/`warn`/`error`/`silent`         |
  */
@@ -23,6 +24,12 @@ export interface EngineMcpConfig {
   readonly root: string;
   readonly bridgePort: number;
   readonly readonly: boolean;
+  /**
+   * `commands_send` pode enviar comandos com efeito externo (dinheiro real,
+   * Steam, rede, workshop, janela nativa)? O jogo também precisa do opt-in
+   * próprio (`devbridgeUnsafe=1` / `VITE_DEVBRIDGE_UNSAFE=1`).
+   */
+  readonly allowSideEffectCommands: boolean;
   /** Pasta absoluta extra para importação de assets (ou `null`). */
   readonly importDir: string | null;
   readonly jobLimit: number;
@@ -60,6 +67,7 @@ export function loadConfig(
     root,
     bridgePort: overrides.bridgePort ?? parsePort(env.ENGINE_MCP_BRIDGE_PORT),
     readonly: overrides.readonly ?? parseBool(env.ENGINE_MCP_READONLY),
+    allowSideEffectCommands: overrides.allowSideEffectCommands ?? parseBool(env.ENGINE_MCP_ALLOW_SIDE_EFFECT_COMMANDS),
     importDir: overrides.importDir !== undefined ? overrides.importDir : importDir,
     jobLimit: overrides.jobLimit ?? DEFAULT_JOB_LIMIT,
     logLevel: overrides.logLevel ?? parseLogLevel(env.ENGINE_MCP_LOG),

@@ -65,6 +65,46 @@ export const ALL_ORDER: readonly SingleGate[] = [
   "cargo-test",
 ];
 
+/**
+ * Gates seguros com `ENGINE_MCP_READONLY=1` (não gravam no repositório):
+ * - `tsc`: `--noEmit`, sem `incremental`;
+ * - `arch`: check-boundaries + check-dependencies só leem;
+ * - `agents`: freeze-invariants + freeze-lock (verificação) + arch — só a
+ *   migração do lock legado (`tests/.freeze-lock.json` sem `/.freeze-lock.json`)
+ *   renomeia arquivo, e nesse caso o gate é recusado;
+ * - `ai-manual`: `--check` compara em memória;
+ * - `diff-check`: só lê o diff.
+ * Recusados: `test` (vitest grava cache em node_modules/.vite e os testes podem
+ * gravar), `isolation` (build/vitest com o node_modules real), `stage90`
+ * (grava ETAPA90_RUNTIME_SMOKE.log e .stage90-gate-results.json), `build`
+ * (dist/), `cargo-*` (src-tauri/target) e `all`.
+ */
+export const READONLY_SAFE_GATES: readonly SingleGate[] = ["tsc", "arch", "agents", "ai-manual", "diff-check"];
+
+const READONLY_GATE_REASONS: Partial<Record<GateName, string>> = {
+  test: "o vitest grava cache em node_modules/.vite e os testes podem gravar arquivos",
+  isolation: "o isolamento roda build/vitest usando o node_modules real (cache) e cópias temporárias",
+  stage90: "o stage90 grava ETAPA90_RUNTIME_SMOKE.log e .stage90-gate-results.json",
+  build: "o build grava dist/",
+  "cargo-check": "o cargo grava src-tauri/target",
+  "cargo-test": "o cargo grava src-tauri/target",
+  all: "o gate all inclui gates que gravam (test, build, stage90, cargo…)",
+};
+
+/** Motivo da recusa do gate em modo somente leitura, ou `null` se é seguro. */
+export function gateReadonlyDenial(gate: GateName, root: string): string | null {
+  if (!(READONLY_SAFE_GATES as readonly string[]).includes(gate)) {
+    return `gate ${gate}: ${READONLY_GATE_REASONS[gate] ?? "pode gravar arquivos"}; gates permitidos: ${READONLY_SAFE_GATES.join(", ")}`;
+  }
+  if (gate === "agents" && existsSync(path.join(root, "tests", ".freeze-lock.json")) && !existsSync(path.join(root, ".freeze-lock.json"))) {
+    return "gate agents: há um lock legado (tests/.freeze-lock.json) que o freeze-lock.mjs migraria (renomeia arquivo)";
+  }
+  return null;
+}
+
+/** Auditorias que gravam arquivos (recusadas em modo somente leitura). */
+export const AUDIT_STAGES_THAT_WRITE: readonly number[] = [90];
+
 export const RESULT_MARKER = "@@ENGINE_GATE_RESULT@@";
 export const MAX_FAILURES = 200;
 export const TAIL_CHARS = 4000;

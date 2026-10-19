@@ -26,6 +26,7 @@ import type { ToolContext } from "../core/context.ts";
 import { McpToolError } from "../core/errors.ts";
 import { PROJECT_ID_RE } from "../core/paths.ts";
 import { defineTool, toolResult, type ToolCall, type ToolDef } from "../core/registry.ts";
+import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import {
   BridgeRemoteError,
   BridgeServer,
@@ -35,10 +36,13 @@ import {
 } from "../runtime/bridge-server.ts";
 import { launchRuntime, type LaunchedRuntime } from "../runtime/launcher.ts";
 import {
+  DEVBRIDGE_COMMAND_RE,
   DEVBRIDGE_MAX_LIST_LIMIT,
   DEVBRIDGE_MAX_SCREENSHOT_WIDTH,
   DEVBRIDGE_MAX_STEP_TICKS,
   DEVBRIDGE_MAX_TAIL_LIMIT,
+  DEVBRIDGE_SIDE_EFFECT_COMMAND_PREFIXES,
+  isSideEffectDevBridgeCommand,
   type DevBridgeMethod,
   type ScreenshotResult,
 } from "../runtime/protocol.ts";
@@ -272,6 +276,26 @@ const sessionInfoSchema = z.object({
 });
 
 /* ============================================================================
+ * Anotações e saídas
+ * ========================================================================== */
+
+/** Jogo rodando: o "mundo externo" é o processo do jogo, não a internet. */
+const RO: ToolAnnotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
+/** Muda o estado do jogo em memória (não o repositório). */
+const GAME_MUTATION: ToolAnnotations = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false };
+
+const vec3Out = z.object({ x: z.number(), y: z.number(), z: z.number() });
+const quatOut = z.object({ x: z.number(), y: z.number(), z: z.number(), w: z.number() });
+const tailMeta = { lastSeq: z.number(), dropped: z.number() };
+const cameraOutShape = {
+  sessionId: z.string(),
+  available: z.boolean(),
+  activeCameraId: z.string().nullable(),
+  followTargetId: z.string().nullable(),
+  snapshot: z.looseObject({ position: vec3Out, rotation: quatOut, fov: z.number() }).nullable(),
+};
+
+/* ============================================================================
  * Tools de ciclo de vida
  * ========================================================================== */
 
@@ -300,6 +324,9 @@ const lifecycleTools: ToolDef[] = [
       headless: z.boolean(),
       browserVersion: z.string().nullable(),
     },
+    // Sobe processos (vite grava cache em node_modules/.vite) e abre um navegador local.
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    readonlyPolicy: () => "sobe o Vite (grava cache em node_modules/.vite) e um Chromium; use runtime_connect_info e abra o jogo à mão",
     summarize: (o) => `jogo rodando: sessão ${o.sessionId} (vite :${o.vitePort}, bridge :${o.bridgePort})`,
     run: async ({ id, headless, width, height, timeoutMs }, ctx, call) => {
       const st = state(ctx);
@@ -345,13 +372,19 @@ const lifecycleTools: ToolDef[] = [
       browser: z.object({ command: z.string(), env: z.record(z.string(), z.string()), url: z.string() }),
       tauri: z.object({ command: z.string(), env: z.record(z.string(), z.string()) }),
     },
+    // Só abre o WebSocket local (não grava nada); mesma URL/token a cada chamada.
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    readonlyPolicy: "allow",
     summarize: (o) => `bridge em ${o.bridgeUrl}${o.bridgePortFallback ? " (porta padrão ocupada)" : ""}; abra ${o.url.replace(o.token, "<token>")}`,
     run: async ({ id }, ctx) => {
       requireProjectDir(ctx, id);
       const bridge = bridgeOf(state(ctx));
       const listen = await bridge.start();
       const token = bridge.mainToken;
-      const url = `http://localhost:1420/?project=${encodeURIComponent(id)}&devbridge=${encodeURIComponent(listen.url)}&devtoken=${encodeURIComponent(token)}`;
+      const unsafe = ctx.config.allowSideEffectCommands;
+      const url =
+        `http://localhost:1420/?project=${encodeURIComponent(id)}&devbridge=${encodeURIComponent(listen.url)}&devtoken=${encodeURIComponent(token)}` +
+        (unsafe ? "&devbridgeUnsafe=1" : "");
       return {
         project: id,
         bridgeUrl: listen.url,
@@ -362,7 +395,7 @@ const lifecycleTools: ToolDef[] = [
         browser: { command: "npm run dev", env: { VITE_PROJECT: id }, url },
         tauri: {
           command: `node scripts/tauri-project-config.mjs ${id} --dev`,
-          env: { VITE_DEVBRIDGE_URL: listen.url, VITE_DEVBRIDGE_TOKEN: token },
+          env: { VITE_DEVBRIDGE_URL: listen.url, VITE_DEVBRIDGE_TOKEN: token, ...(unsafe ? { VITE_DEVBRIDGE_UNSAFE: "1" } : {}) },
         },
       };
     },
@@ -393,7 +426,7 @@ const lifecycleTools: ToolDef[] = [
         }),
       ),
     },
-    annotations: { readOnlyHint: true },
+    annotations: RO,
     summarize: (o) => `${o.sessions.length} sessão(ões), ${o.launches.length} lançamento(s)${o.bridge ? ` — bridge ${o.bridge.url}` : " — bridge parado"}`,
     run: async ({ refresh }, ctx) => {
       const st = state(ctx);
@@ -451,7 +484,9 @@ const lifecycleTools: ToolDef[] = [
       closedBrowser: z.boolean(),
       killedVite: z.boolean(),
     },
-    annotations: { destructiveHint: true },
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+    // Parar não grava nada (mata processos que o próprio MCP abriu).
+    readonlyPolicy: "allow",
     summarize: (o) => `parado: ${o.sessionId}${o.launched ? " (navegador e vite encerrados)" : ""}`,
     run: async ({ sessionId }, ctx) => {
       const st = state(ctx);
@@ -509,7 +544,11 @@ function gameTool<S extends z.ZodRawShape>(spec: {
   input: S;
   params?: (args: z.output<z.ZodObject<S>>) => unknown;
   wrap?: (result: unknown) => Record<string, unknown>;
+  /** Saída (já inclui `sessionId`); `z.looseObject` aceita campos extras do jogo. */
+  output: z.ZodObject<z.ZodRawShape, z.core.$ZodObjectConfig>;
   readOnly?: boolean;
+  /** Padrão: RO se `readOnly`, senão GAME_MUTATION. */
+  annotations?: ToolAnnotations;
   summarize?: (result: Record<string, unknown>) => string;
 }): ToolDef {
   return defineTool({
@@ -517,7 +556,10 @@ function gameTool<S extends z.ZodRawShape>(spec: {
     title: spec.title,
     description: spec.description,
     input: { sessionId: sessionIdInput, ...spec.input },
-    ...(spec.readOnly ? { annotations: { readOnlyHint: true } } : {}),
+    output: spec.output,
+    annotations: spec.annotations ?? (spec.readOnly ? RO : GAME_MUTATION),
+    // Tools de jogo mexem só no estado do jogo em memória, nunca no repositório.
+    readonlyPolicy: "allow",
     run: async (args, ctx, call) => {
       const { sessionId, ...rest } = args as { sessionId?: string } & Record<string, unknown>;
       const session = resolveSession(ctx, sessionId);
@@ -536,7 +578,15 @@ const gameTools: ToolDef[] = [
     title: "Kernel do jogo",
     description: "kernel.inspect() do jogo rodando: status (running…), apiVersion, plugins (estado, provides/consumes), capabilities, slots e bootOrder.",
     input: { sessionId: sessionIdInput },
-    annotations: { readOnlyHint: true },
+    output: z.looseObject({
+      sessionId: z.string(),
+      status: z.string().optional().describe("status do kernel (idle, booting, running…)"),
+      apiVersion: z.string().optional(),
+      plugins: z.array(z.unknown()).optional(),
+      capabilities: z.unknown().optional(),
+      bootOrder: z.array(z.unknown()).optional(),
+    }),
+    annotations: RO,
     run: async ({ sessionId }, ctx, call) => {
       const session = resolveSession(ctx, sessionId);
       const inspection = await callGame<Record<string, unknown>>(session, "kernel.inspect", undefined, call);
@@ -564,6 +614,8 @@ const gameTools: ToolDef[] = [
       freezeRender: z.boolean().optional().describe("só para pause: congela também o render"),
     },
     output: { sessionId: z.string(), action: z.string(), ticksRun: z.number().optional(), stats: loopStatsSchema },
+    annotations: GAME_MUTATION,
+    readonlyPolicy: "allow",
     summarize: (o) => `loop ${o.stats.isPaused ? "pausado" : "rodando"}${o.ticksRun !== undefined ? `, ${o.ticksRun} tick(s)` : ""} (fps ${o.stats.fps})`,
     run: async ({ sessionId, action, ticks, freezeRender }, ctx, call) => {
       if (ticks !== undefined && action !== "step") throw new McpToolError("INVALID_INPUT", "ticks só vale para action=step");
@@ -593,7 +645,7 @@ const gameTools: ToolDef[] = [
       limit: z.number().int().min(1).max(DEVBRIDGE_MAX_LIST_LIMIT).optional().describe("padrão 100"),
     },
     output: { sessionId: z.string(), total: z.number(), returned: z.number(), entities: z.array(entitySnapshotSchema) },
-    annotations: { readOnlyHint: true },
+    annotations: RO,
     summarize: (o) => `${o.returned} de ${o.total} entidade(s)`,
     run: async ({ sessionId, ...filters }, ctx, call) => {
       const session = resolveSession(ctx, sessionId);
@@ -613,6 +665,7 @@ const gameTools: ToolDef[] = [
     description: "Snapshot completo de uma entidade (posição, rotação, escala, tags, customData).",
     method: "world.get",
     input: { entityId: entityIdInput },
+    output: entitySnapshotSchema.extend({ sessionId: z.string() }),
     readOnly: true,
     summarize: (o) => `entidade ${String(o.entityId)} (${String(o.type)})`,
   }),
@@ -631,6 +684,9 @@ const gameTools: ToolDef[] = [
       tags: tags.optional(),
       customData: customData.optional(),
     },
+    output: z.looseObject({ sessionId: z.string(), spawned: z.boolean(), replaced: z.boolean(), entity: entitySnapshotSchema.nullable() }),
+    // Repetir o spawn com o mesmo entityId substitui a entidade (mesmo resultado final).
+    annotations: { ...GAME_MUTATION, idempotentHint: true },
     summarize: (o) => `entidade spawnada${o.replaced ? " (substituiu existente)" : ""}`,
   }),
 
@@ -640,6 +696,8 @@ const gameTools: ToolDef[] = [
     description: "Remove uma entidade do world (NOT_FOUND se não existir).",
     method: "world.despawn",
     input: { entityId: entityIdInput },
+    output: z.looseObject({ sessionId: z.string(), despawned: z.boolean() }),
+    annotations: { ...GAME_MUTATION, destructiveHint: true },
     summarize: (o) => (o.despawned ? "entidade removida" : "world recusou remover"),
   }),
 
@@ -663,6 +721,8 @@ const gameTools: ToolDef[] = [
         .describe("campos a mudar (vetores completos)"),
     },
     params: (a) => ({ entityId: a.entityId, patch: compact(a.patch as Record<string, unknown>) }),
+    output: z.looseObject({ sessionId: z.string(), patched: z.boolean(), entity: entitySnapshotSchema.nullable() }),
+    annotations: { ...GAME_MUTATION, idempotentHint: true },
     summarize: () => "entidade alterada",
   }),
 
@@ -672,6 +732,7 @@ const gameTools: ToolDef[] = [
     description: "serializeWorldState() do jogo (sceneId, entityCount e o estado completo). Pode ser grande.",
     method: "world.snapshot",
     input: {},
+    output: z.looseObject({ sessionId: z.string(), sceneId: z.string().nullable(), entityCount: z.number(), state: z.unknown() }),
     readOnly: true,
     summarize: (o) => `world: cena ${String(o.sceneId)}, ${String(o.entityCount)} entidade(s)`,
   }),
@@ -688,6 +749,7 @@ const gameTools: ToolDef[] = [
       excludeEntityId: entityIdInput.optional().describe("entidade a ignorar"),
     },
     wrap: (hit) => ({ hit: hit ?? null }),
+    output: z.looseObject({ sessionId: z.string(), hit: z.looseObject({}).nullable().describe("resultado do castRay (hit, distance, point, normal, entityId…) ou null") }),
     readOnly: true,
     summarize: (o) => (o.hit && (o.hit as { hit?: boolean }).hit !== false ? "raio acertou" : "nenhum hit"),
   }),
@@ -698,6 +760,7 @@ const gameTools: ToolDef[] = [
     description: "getStats() da física (corpos, colliders, tempo de step, wasm carregado).",
     method: "physics.stats",
     input: {},
+    output: z.looseObject({ sessionId: z.string() }).describe("getStats() da física: rigidBodyCount, colliderCount, stepTimeMs, isWasmLoaded…"),
     readOnly: true,
   }),
 
@@ -707,6 +770,7 @@ const gameTools: ToolDef[] = [
     description: "Câmera ativa, alvo seguido e snapshot (posição, rotação, fov).",
     method: "camera.get",
     input: {},
+    output: z.looseObject(cameraOutShape),
     readOnly: true,
     summarize: (o) => `câmera ${String(o.activeCameraId)}`,
   }),
@@ -716,6 +780,8 @@ const gameTools: ToolDef[] = [
     title: "Trocar/seguir com a câmera",
     description: "Troca a câmera ativa (cameraId) e/ou faz a câmera seguir uma entidade (followTargetId; null para parar).",
     method: "camera.set",
+    output: z.looseObject(cameraOutShape),
+    annotations: { ...GAME_MUTATION, idempotentHint: true },
     input: {
       cameraId: z.string().min(1).max(128).optional().describe("id de câmera registrada"),
       followTargetId: z.string().min(1).max(128).nullable().optional().describe("id de entidade a seguir; null para parar"),
@@ -736,6 +802,7 @@ const gameTools: ToolDef[] = [
       "Dispara eventos DOM sintéticos no jogo: teclas (KeyboardEvent code, ex. KeyW, Space; down true/false), ponteiro " +
       "(x,y em px CSS relativos ao canvas; buttons bitmask 1 esq/2 dir/4 meio) e roda do mouse.",
     method: "input.send",
+    output: z.looseObject({ sessionId: z.string(), dispatched: z.number() }),
     input: {
       keys: z
         .array(z.object({ code: z.string().min(1).max(32), down: z.boolean(), key: z.string().min(1).max(32).optional() }).strict())
@@ -761,6 +828,8 @@ const gameTools: ToolDef[] = [
       "Define os globs de eventos do kernel guardados no buffer do jogo (ex.: ['game.world.*']; '*' = todos, exceto tick/render). " +
       "Leia com events_tail.",
     method: "events.subscribe",
+    output: z.looseObject({ sessionId: z.string(), patterns: z.array(z.string()) }),
+    annotations: { ...GAME_MUTATION, idempotentHint: true },
     input: {
       patterns: z
         .array(z.string().min(1).max(128).regex(/^[A-Za-z0-9_.:*?-]+$/, "use letras, números, . _ - : * ?"))
@@ -777,20 +846,50 @@ const gameTools: ToolDef[] = [
     description: "Eventos do kernel capturados (payload truncado em 8 KiB). Use since=lastSeq para ler só os novos.",
     method: "events.tail",
     input: { since: tailSince, limit: tailLimit },
+    output: z.looseObject({
+      sessionId: z.string(),
+      patterns: z.array(z.string()),
+      ...tailMeta,
+      events: z.array(
+        z.looseObject({ seq: z.number(), ts: z.number(), type: z.string(), source: z.string(), payload: z.unknown(), truncated: z.boolean() }),
+      ),
+    }),
     readOnly: true,
     summarize: (o) => `${(o.events as unknown[]).length} evento(s), lastSeq ${String(o.lastSeq)}`,
   }),
 
-  gameTool({
+  defineTool({
     name: "commands_send",
     title: "Enviar command game.*",
-    description: "Envia um command registrado do jogo (só tipos game.*) via commands.request e devolve a resposta.",
-    method: "commands.send",
+    description:
+      "Envia um command registrado do jogo (só tipos game.*) via commands.request e devolve a resposta. " +
+      `Comandos com efeito externo (prefixos ${DEVBRIDGE_SIDE_EFFECT_COMMAND_PREFIXES.join(", ")}: compra com dinheiro real, Steam, rede, Workshop, janela nativa) ` +
+      "são recusados com COMMAND_NOT_ALLOWED, salvo se o MCP rodar com ENGINE_MCP_ALLOW_SIDE_EFFECT_COMMANDS=1 E o jogo tiver sido aberto com devbridgeUnsafe=1 (runtime_launch/runtime_connect_info já incluem quando o MCP libera).",
     input: {
-      command: z.string().regex(/^game\.[A-Za-z0-9_.-]+$/, "só comandos game.*").max(128).describe("tipo do command, ex.: game.world.reset"),
+      sessionId: sessionIdInput,
+      command: z.string().regex(DEVBRIDGE_COMMAND_RE, "só comandos game.*").max(128).describe("tipo do command, ex.: game.world.spawn-entity"),
       payload: z.unknown().optional().describe("payload JSON do command"),
     },
+    output: z.looseObject({ sessionId: z.string(), command: z.string(), result: z.unknown() }),
+    // Pode disparar qualquer handler do jogo (inclusive apagar estado).
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+    readonlyPolicy: "allow",
     summarize: (o) => `command ${String(o.command)} ok`,
+    run: async ({ sessionId, command, payload }, ctx, call) => {
+      const sideEffect = isSideEffectDevBridgeCommand(command);
+      if (sideEffect && !ctx.config.allowSideEffectCommands) {
+        throw new McpToolError(
+          "COMMAND_NOT_ALLOWED",
+          `${command}: comando com efeito externo (compra/Steam/rede/Workshop/janela nativa) bloqueado por padrão`,
+          "Para liberar conscientemente: rode o MCP com ENGINE_MCP_ALLOW_SIDE_EFFECT_COMMANDS=1 e abra o jogo com devbridgeUnsafe=1 (ou VITE_DEVBRIDGE_UNSAFE=1).",
+          { command, prefixes: DEVBRIDGE_SIDE_EFFECT_COMMAND_PREFIXES },
+        );
+      }
+      const session = resolveSession(ctx, sessionId);
+      const params = { command, ...(payload !== undefined ? { payload } : {}), ...(sideEffect ? { allowSideEffects: true } : {}) };
+      const r = await callGame<{ command?: unknown; result?: unknown } | null>(session, "commands.send", params, call);
+      return { sessionId: session.sessionId, command, result: r?.result ?? null };
+    },
   }),
 
   gameTool({
@@ -798,6 +897,11 @@ const gameTools: ToolDef[] = [
     title: "Console do jogo",
     description: "Console capturado do jogo (console.*, window.onerror, unhandledrejection). Filtro por nível mínimo; since=lastSeq para os novos.",
     method: "logs.tail",
+    output: z.looseObject({
+      sessionId: z.string(),
+      ...tailMeta,
+      logs: z.array(z.looseObject({ seq: z.number(), ts: z.number(), level: z.string(), message: z.string(), origin: z.string() })),
+    }),
     input: {
       level: z.enum(["debug", "log", "info", "warn", "error"]).optional().describe("nível mínimo (debug < log/info < warn < error)"),
       since: tailSince,
@@ -816,7 +920,7 @@ const gameTools: ToolDef[] = [
       maxWidth: z.number().int().min(1).max(DEVBRIDGE_MAX_SCREENSHOT_WIDTH).optional().describe("largura máxima em px (padrão 1280; mantém proporção)"),
     },
     output: { sessionId: z.string(), mimeType: z.string(), width: z.number(), height: z.number(), bytes: z.number() },
-    annotations: { readOnlyHint: true },
+    annotations: RO,
     run: async ({ sessionId, maxWidth }, ctx, call) => {
       const st = state(ctx);
       const session = resolveSession(ctx, sessionId);
@@ -845,6 +949,19 @@ const gameTools: ToolDef[] = [
     description: "fps, frame time, draw calls, triângulos, geometrias/texturas, memória JS (se houver), entidades e stats de física.",
     method: "perf.stats",
     input: {},
+    output: z.looseObject({
+      sessionId: z.string(),
+      fps: z.number().nullable(),
+      frameTimeMs: z.number().nullable(),
+      tickRate: z.number().nullable(),
+      drawCalls: z.number().nullable(),
+      triangles: z.number().nullable(),
+      geometries: z.number().nullable(),
+      textures: z.number().nullable(),
+      memory: z.looseObject({ usedJSHeapSize: z.number(), totalJSHeapSize: z.number(), jsHeapSizeLimit: z.number() }).nullable(),
+      entities: z.number().nullable(),
+      physics: z.unknown(),
+    }),
     readOnly: true,
     summarize: (o) => `fps ${String(o.fps)}, draw calls ${String(o.drawCalls)}`,
   }),
@@ -855,6 +972,7 @@ const gameTools: ToolDef[] = [
     description: "listSaves() do storage do jogo (slots de save).",
     method: "storage.slots",
     input: {},
+    output: z.looseObject({ sessionId: z.string(), slots: z.unknown().describe("listSaves(): [{ saveId, slotName, playTimeSeconds, timestamp, … }]") }),
     readOnly: true,
     summarize: (o) => `${Array.isArray(o.slots) ? o.slots.length : 0} save(s)`,
   }),
@@ -929,6 +1047,9 @@ const sceneLoadLive = defineTool({
     prefabsLoaded: z.number(),
     projectMismatch: z.boolean(),
   },
+  annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+  // Lê o repositório e muda só o jogo em memória.
+  readonlyPolicy: "allow",
   summarize: (o) => `cena ${String(o.sceneId)} carregada (${String(o.entityCount)} entidade(s))`,
   run: async ({ sessionId, id, scene }, ctx, call) => {
     const st = state(ctx);

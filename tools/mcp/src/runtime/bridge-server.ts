@@ -8,13 +8,18 @@
  *   Comparação em tempo constante (`devBridgeTokensEqual`).
  * - Handshake: o primeiro quadro tem de ser `hello` (protocolo 1) em até
  *   10 s; resposta `welcome {sessionId}` ou `reject {reason}` + close.
+ * - Antes do hello: no máximo `MAX_PENDING_SOCKETS` conexões sem autenticar
+ *   (as demais são recusadas no upgrade HTTP) e no máximo `PRE_HELLO_MAX_BYTES`
+ *   recebidos por conexão (contados no socket TCP, antes de o `ws` montar a
+ *   mensagem) — quem passa disso é derrubado. O limite grande de mensagem
+ *   (`DEVBRIDGE_MAX_MESSAGE_BYTES`, screenshots) só vale para sessões aceitas.
  * - Várias sessões simultâneas, `sessionId` = `<projeto>-<n>`.
  * - Requisições com id e timeout por requisição; `ping` → `pong`.
  * - `dispose()` fecha tudo (requisições pendentes falham com NO_RUNTIME).
  */
 
 import { randomBytes } from "node:crypto";
-import type { AddressInfo } from "node:net";
+import type { AddressInfo, Socket } from "node:net";
 import { McpToolError } from "../core/errors.ts";
 import type { Logger } from "../core/log.ts";
 import { silentLogger } from "../core/log.ts";
@@ -33,6 +38,10 @@ export const DEFAULT_BRIDGE_TIMEOUT_MS = 15_000;
 export const DEFAULT_SCREENSHOT_TIMEOUT_MS = 30_000;
 export const HELLO_TIMEOUT_MS = 10_000;
 export const MAX_SESSIONS = 32;
+/** Conexões abertas que ainda não mandaram um `hello` válido. */
+export const MAX_PENDING_SOCKETS = 8;
+/** Bytes aceitos de uma conexão antes do `hello` (o hello real tem < 1 KiB). */
+export const PRE_HELLO_MAX_BYTES = 64 * 1024;
 
 /** Token aceito pelo DevBridge: 16..256 de [A-Za-z0-9_-.~]; base64url de 24 bytes = 32. */
 export function newBridgeToken(): string {
@@ -305,6 +314,7 @@ export class BridgeServer {
   private readonly tokens: BridgeTokenInfo[] = [];
   private readonly listeners = new Set<SessionListener>();
   private counter = 0;
+  private pendingSockets = 0;
   private disposed = false;
   readonly mainToken: string;
   private readonly log: Logger;
@@ -319,6 +329,11 @@ export class BridgeServer {
 
   get listening(): BridgeListenInfo | null {
     return this.listenInfo;
+  }
+
+  /** Conexões ainda sem `hello` aceito (testes/diagnóstico). */
+  get pendingCount(): number {
+    return this.pendingSockets;
   }
 
   /** Inicia (uma vez) e devolve host/porta. */
@@ -350,7 +365,7 @@ export class BridgeServer {
       throw new McpToolError("INTERNAL", "servidor do bridge encerrado durante a inicialização");
     }
     this.wss = wss;
-    wss.on("connection", (socket, req) => this.onConnection(socket, req.socket.remoteAddress ?? "?"));
+    wss.on("connection", (socket, req) => this.onConnection(socket, req.socket.remoteAddress ?? "?", req.socket));
     wss.on("error", (error) => this.log.warn("erro no servidor do bridge", error));
     const port = (wss.address() as AddressInfo).port;
     this.listenInfo = { host, port, requestedPort: requested, fallback, url: `ws://${host}:${port}` };
@@ -366,7 +381,8 @@ export class BridgeServer {
         port,
         maxPayload: DEVBRIDGE_MAX_MESSAGE_BYTES + 64 * 1024,
         perMessageDeflate: false,
-        verifyClient: (info) => isAllowedOrigin(info.origin),
+        // Origin de loopback/tauri e limite de conexões pendentes (recusa no upgrade HTTP).
+        verifyClient: (info) => isAllowedOrigin(info.origin) && this.pendingSockets < MAX_PENDING_SOCKETS,
       });
       const onError = (error: NodeJS.ErrnoException): void => {
         wss.close();
@@ -401,8 +417,31 @@ export class BridgeServer {
     return found;
   }
 
-  private onConnection(socket: WsSocket, remote: string): void {
+  private onConnection(socket: WsSocket, remote: string, tcp?: Socket): void {
     let session: BridgeSession | null = null;
+    if (this.pendingSockets >= MAX_PENDING_SOCKETS) {
+      this.log.warn(`DevBridge recusado (${remote}): ${MAX_PENDING_SOCKETS} conexões aguardando hello`);
+      socket.terminate();
+      return;
+    }
+    this.pendingSockets += 1;
+    let pending = true;
+    let preHelloBytes = 0;
+    const onTcpData = (chunk: Buffer): void => {
+      preHelloBytes += chunk.length;
+      if (preHelloBytes > PRE_HELLO_MAX_BYTES) {
+        this.log.warn(`DevBridge recusado (${remote}): mais de ${PRE_HELLO_MAX_BYTES} bytes antes do hello`);
+        tcp?.off("data", onTcpData);
+        socket.terminate();
+      }
+    };
+    tcp?.on("data", onTcpData);
+    const leavePending = (): void => {
+      if (!pending) return;
+      pending = false;
+      this.pendingSockets -= 1;
+      tcp?.off("data", onTcpData);
+    };
     const rejectAndClose = (reason: string): void => {
       this.log.warn(`DevBridge recusado (${remote}): ${reason}`);
       try {
@@ -423,6 +462,7 @@ export class BridgeServer {
     socket.on("error", (error) => this.log.debug(`erro no socket do DevBridge: ${error.message}`));
     socket.on("close", () => {
       clearTimeout(helloTimer);
+      leavePending();
       if (session) {
         this.sessions.delete(session.sessionId);
         session.markClosed("socket fechado");
@@ -436,6 +476,10 @@ export class BridgeServer {
         return;
       }
       clearTimeout(helloTimer);
+      if (raw.length > PRE_HELLO_MAX_BYTES) {
+        rejectAndClose("hello grande demais");
+        return;
+      }
       const message = parseDevBridgeMessage(raw);
       if (message === null || message.type !== "hello") {
         rejectAndClose("a primeira mensagem deve ser hello");
@@ -460,6 +504,7 @@ export class BridgeServer {
       }
       this.counter += 1;
       const sessionId = `${message.project ?? "sem-projeto"}-${this.counter}`;
+      leavePending();
       session = new BridgeSession(socket, message, sessionId, token.launchId, this.requestTimeoutMs);
       this.sessions.set(sessionId, session);
       session.sendRaw({ type: "welcome", protocol: DEVBRIDGE_PROTOCOL_VERSION, sessionId });

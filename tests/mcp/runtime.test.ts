@@ -17,7 +17,13 @@ import { createWorldPlugin } from "../../src/plugins/world/plugin";
 import { RenderToken } from "../../src/tokens/render";
 import { WorldToken } from "../../src/tokens/world";
 import { setupDevBridge, type DevBridgeHandle, type DevBridgeSocketFactory, type DevBridgeState } from "../../src/debug/devbridge";
-import { BridgeRemoteError, isAllowedOrigin, newBridgeToken } from "../../tools/mcp/src/runtime/bridge-server.ts";
+import {
+  BridgeRemoteError,
+  isAllowedOrigin,
+  MAX_PENDING_SOCKETS,
+  newBridgeToken,
+  PRE_HELLO_MAX_BYTES,
+} from "../../tools/mcp/src/runtime/bridge-server.ts";
 import { findFreePort, loadPlaywright } from "../../tools/mcp/src/runtime/launcher.ts";
 import { isValidDevBridgeToken } from "../../tools/mcp/src/runtime/protocol.ts";
 import { loadWs, rawToString, type WsSocket } from "../../tools/mcp/src/runtime/ws.ts";
@@ -133,7 +139,7 @@ function fakeServices(services: EngineServices): void {
   } as never;
 }
 
-async function bootGame(bridgeUrl: string, token: string, project = "demo"): Promise<Game> {
+async function bootGame(bridgeUrl: string, token: string, project = "demo", extraSearch = ""): Promise<Game> {
   const canvas = document.createElement("canvas");
   canvas.width = 640;
   canvas.height = 360;
@@ -149,7 +155,7 @@ async function bootGame(bridgeUrl: string, token: string, project = "demo"): Pro
   const handle = setupDevBridge({
     kernel,
     services,
-    search: `?devbridge=${encodeURIComponent(bridgeUrl)}&devtoken=${token}&project=${project}`,
+    search: `?devbridge=${encodeURIComponent(bridgeUrl)}&devtoken=${token}&project=${project}${extraSearch}`,
     env: {},
     WebSocketImpl: WS,
     reconnectMinMs: 20,
@@ -303,6 +309,28 @@ describe("runtime: DevBridge real ↔ servidor MCP real", () => {
     for (const name of RUNTIME_TOOLS) expect(names, name).toContain(name);
   });
 
+  it("toda tool de runtime tem outputSchema e anotações completas", async () => {
+    const tools = (await t.listTools()).filter((tool) => RUNTIME_TOOLS.includes(tool.name));
+    expect(tools).toHaveLength(RUNTIME_TOOLS.length);
+    for (const tool of tools) {
+      expect(tool.outputSchema?.type, tool.name).toBe("object");
+      expect(tool.annotations, tool.name).toBeDefined();
+      for (const hint of ["readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"] as const) {
+        expect(typeof tool.annotations?.[hint], `${tool.name}.${hint}`).toBe("boolean");
+      }
+    }
+    const ann = (name: string) => tools.find((tool) => tool.name === name)!.annotations!;
+    expect(ann("commands_send")).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+    expect(ann("runtime_stop")).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+    expect(ann("world_despawn")).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+    expect(ann("runtime_launch")).toMatchObject({ readOnlyHint: false, destructiveHint: false, idempotentHint: false });
+    expect(ann("runtime_connect_info")).toMatchObject({ readOnlyHint: false, idempotentHint: true });
+    for (const name of ["loop_control", "world_spawn", "world_patch", "camera_set"]) expect(ann(name).readOnlyHint, name).toBe(false);
+    for (const name of ["kernel_inspect", "world_entities", "world_entity", "events_tail", "logs_tail", "perf_stats", "storage_slots"]) {
+      expect(ann(name).readOnlyHint, name).toBe(true);
+    }
+  });
+
   it("init não abre socket; sem jogo → NO_RUNTIME", async () => {
     expect(getBridgeServer(t.ctx)).toBeNull();
     await expect(t.callTool("kernel_inspect")).rejects.toMatchObject({ code: "NO_RUNTIME" });
@@ -438,6 +466,18 @@ describe("runtime: DevBridge real ↔ servidor MCP real", () => {
     expect(tail.events.every((e: { type: string }) => e.type.startsWith("game.world."))).toBe(true);
     await expect(t.callTool("events_subscribe", { patterns: ["a b"] })).rejects.toMatchObject({ code: "INVALID_INPUT" });
     await t.callTool("events_subscribe", { patterns: ["*"] });
+  });
+
+  it("commands_send: efeito externo bloqueado no MCP por padrão (sem chegar ao jogo)", async () => {
+    for (const command of ["game.monetization.init-purchase", "game.monetization.finalize-purchase", "game.steam.unlock-achievement", "game.net.send", "game.modding.publish-workshop", "game.overlay.set-passthrough"]) {
+      const err = await t.callTool("commands_send", { command, payload: {} }).catch((e: unknown) => e);
+      expect(err, command).toMatchObject({ code: "COMMAND_NOT_ALLOWED" });
+      expect((err as { hint: string }).hint).toMatch(/ENGINE_MCP_ALLOW_SIDE_EFFECT_COMMANDS=1/);
+    }
+    // Comando local continua livre e a saída segue o outputSchema.
+    const out = await t.callTool("commands_send", { command: "game.world.spawn-entity", payload: { state: { entityId: "cmd-local" } } });
+    expect(out).toMatchObject({ sessionId, command: "game.world.spawn-entity" });
+    expect("result" in out).toBe(true);
   });
 
   it("commands_send só game.*", async () => {
@@ -597,12 +637,98 @@ describe("runtime: DevBridge real ↔ servidor MCP real", () => {
     await expect(t.callTool("runtime_launch", { id: "demo", timeoutMs: 10 })).rejects.toMatchObject({ code: "INVALID_INPUT" });
   });
 
+  it(`antes do hello: no máximo ${MAX_PENDING_SOCKETS} conexões pendentes`, async () => {
+    const bridge = getBridgeServer(t.ctx)!;
+    await waitFor(() => bridge.pendingCount === 0, 3000, "sem conexões pendentes");
+    const pending: RawClient[] = [];
+    try {
+      for (let i = 0; i < MAX_PENDING_SOCKETS; i += 1) pending.push(await rawClient(bridgeUrl, undefined));
+      await waitFor(() => bridge.pendingCount === MAX_PENDING_SOCKETS, 3000, "conexões pendentes contadas");
+      await expect(rawClient(bridgeUrl, undefined)).rejects.toThrow(/401/);
+      // A sessão autenticada já existente não é afetada.
+      const live = (await t.callTool("runtime_status", { refresh: false })).sessions.find((s: { project: string }) => s.project === "demo");
+      expect((await t.callTool("kernel_inspect", { sessionId: live.sessionId })).status).toBe("running");
+    } finally {
+      for (const r of pending) r.socket.terminate();
+    }
+    await waitFor(() => bridge.pendingCount === 0, 3000, "pendentes liberadas");
+    const ok = await rawClient(bridgeUrl, hello(token, "depois"));
+    raws.push(ok);
+    expect(await ok.waitFor((m) => m.type === "welcome")).toMatchObject({ protocol: 1 });
+    ok.socket.close();
+  });
+
+  it(`antes do hello: mais de ${PRE_HELLO_MAX_BYTES} bytes derrubam a conexão (mesmo com token válido)`, async () => {
+    const bridge = getBridgeServer(t.ctx)!;
+    const huge = await rawClient(bridgeUrl, { ...hello(token, "grande"), userAgent: "x".repeat(PRE_HELLO_MAX_BYTES + 1024) });
+    raws.push(huge);
+    await huge.closed;
+    expect(huge.messages.some((m) => m.type === "welcome")).toBe(false);
+    const junk = await rawClient(bridgeUrl, "y".repeat(PRE_HELLO_MAX_BYTES * 2));
+    raws.push(junk);
+    await junk.closed;
+    const projects = (await t.callTool("runtime_status", { refresh: false })).sessions.map((x: { project: string }) => x.project);
+    expect(projects).not.toContain("grande");
+    await waitFor(() => bridge.pendingCount === 0, 3000, "pendentes liberadas");
+  });
+
   it("encerrar o servidor fecha o bridge e as sessões", async () => {
     const port = Number(new URL(bridgeUrl).port);
     await t.close();
     expect(getBridgeServer(t.ctx)).toBeNull();
     await waitFor(() => game!.handle.bridge?.state === "connecting", 3000, "DevBridge desconectado");
     await expect(rawClient(`ws://127.0.0.1:${port}`, undefined)).rejects.toThrow();
+  });
+});
+
+describe("runtime: ENGINE_MCP_ALLOW_SIDE_EFFECT_COMMANDS=1 (opt-in dos dois lados)", () => {
+  let repo: TempRepo;
+  let t: TestClient;
+  const games: Game[] = [];
+
+  beforeAll(async () => {
+    repo = await makeTempRepo();
+    await mkdir(path.join(repo.root, "src/projects/demo"), { recursive: true });
+    await writeFile(path.join(repo.root, "src/projects/demo/index.ts"), "export {};\n");
+    globalThis.requestAnimationFrame = (() => 1) as never;
+    globalThis.cancelAnimationFrame = (() => {}) as never;
+    t = await createTestClient({ root: repo.root, env: { ENGINE_MCP_ALLOW_SIDE_EFFECT_COMMANDS: "1" }, config: { bridgePort: 0 } });
+    configureRuntime(t.ctx, { requestTimeoutMs: 1500, playwrightDirs: [] });
+  });
+
+  afterAll(async () => {
+    for (const g of games) await stopGame(g);
+    await t?.close();
+    await repo?.cleanup();
+  });
+
+  it("runtime_connect_info inclui devbridgeUnsafe=1 e VITE_DEVBRIDGE_UNSAFE", async () => {
+    expect(t.ctx.config.allowSideEffectCommands).toBe(true);
+    const info = await t.callTool("runtime_connect_info", { id: "demo" });
+    expect(new URL(info.url).searchParams.get("devbridgeUnsafe")).toBe("1");
+    expect(info.tauri.env).toMatchObject({ VITE_DEVBRIDGE_UNSAFE: "1" });
+  });
+
+  it("jogo SEM opt-in próprio continua recusando; COM opt-in o comando chega ao kernel", async () => {
+    const info = await t.callTool("runtime_connect_info", { id: "demo" });
+    const safe = await bootGame(info.bridgeUrl, info.token, "seguro");
+    games.push(safe);
+    const unsafe = await bootGame(info.bridgeUrl, info.token, "inseguro", "&devbridgeUnsafe=1");
+    games.push(unsafe);
+    await waitFor(() => safe.handle.bridge?.state === "ready" && unsafe.handle.bridge?.state === "ready", 5000, "dois jogos prontos");
+    const sessions = (await t.callTool("runtime_status", { refresh: false })).sessions as Array<{ sessionId: string; project: string }>;
+    const idOf = (project: string) => sessions.find((s) => s.project === project)!.sessionId;
+
+    const refused = await t.callTool("commands_send", { sessionId: idOf("seguro"), command: "game.net.connect", payload: {} }).catch((e: unknown) => e);
+    expect(refused).toMatchObject({ code: "COMMAND_NOT_ALLOWED", details: { code: "COMMAND_NOT_ALLOWED" } });
+    expect((refused as Error).message).toMatch(/devbridgeUnsafe=1/);
+
+    // Passou dos dois bloqueios: o kernel de teste não tem plugin de rede → NOT_FOUND (sem handler).
+    await expect(t.callTool("commands_send", { sessionId: idOf("inseguro"), command: "game.net.connect", payload: {} })).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    const local = await t.callTool("commands_send", { sessionId: idOf("inseguro"), command: "game.world.spawn-entity", payload: { state: { entityId: "u1" } } });
+    expect(local.command).toBe("game.world.spawn-entity");
   });
 });
 

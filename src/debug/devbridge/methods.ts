@@ -8,7 +8,9 @@ import type { Render3DApi } from "../../tokens/render";
 import type { EntityComponentState, EntitySpawnInput, EntityStatePatch } from "../../contracts/world/types";
 import { toJsonSafe, isCapturedLogLevel, type EventCapture, type LogCapture } from "./capture";
 import {
+  DEVBRIDGE_COMMAND_RE,
   DEVBRIDGE_DEFAULT_SCREENSHOT_WIDTH,
+  isSideEffectDevBridgeCommand,
   DEVBRIDGE_MAX_LIST_LIMIT,
   DEVBRIDGE_MAX_SCREENSHOT_WIDTH,
   DEVBRIDGE_MAX_STEP_TICKS,
@@ -47,6 +49,11 @@ export interface DevBridgeRuntime {
   readonly events: EventCapture;
   /** Alvo de teclado/blur (padrão window). */
   readonly inputWindow: EventTarget | null;
+  /**
+   * Opt-in do JOGO para comandos com efeito externo em `commands.send`
+   * (`devbridgeUnsafe=1` / `VITE_DEVBRIDGE_UNSAFE=1`). Padrão false: recusa.
+   */
+  readonly allowSideEffectCommands?: boolean;
 }
 
 export type DevBridgeMethodHandler = (params: unknown) => unknown | Promise<unknown>;
@@ -527,10 +534,23 @@ export function createDevBridgeMethods(rt: DevBridgeRuntime): DevBridgeMethodTab
     },
 
     "commands.send": async (params) => {
-      const p = obj(params, ["command", "payload"]);
+      const p = obj(params, ["command", "payload", "allowSideEffects"]);
       const command = reqString(p, "command", 128);
-      if (!/^game\.[A-Za-z0-9_.-]+$/.test(command)) {
+      if (!DEVBRIDGE_COMMAND_RE.test(command)) {
         throw new DevBridgeMethodError("COMMAND_NOT_ALLOWED", `só comandos game.* são permitidos (recebido "${command}")`);
+      }
+      if (p.allowSideEffects !== undefined && typeof p.allowSideEffects !== "boolean") invalid("allowSideEffects deve ser booleano");
+      if (isSideEffectDevBridgeCommand(command)) {
+        // Defesa em profundidade: o jogo recusa por padrão, mesmo que o MCP peça.
+        if (rt.allowSideEffectCommands !== true) {
+          throw new DevBridgeMethodError(
+            "COMMAND_NOT_ALLOWED",
+            `"${command}" tem efeito externo (compra/Steam/rede/workshop/janela) e este jogo não foi aberto com devbridgeUnsafe=1 (ou VITE_DEVBRIDGE_UNSAFE=1)`,
+          );
+        }
+        if (p.allowSideEffects !== true) {
+          throw new DevBridgeMethodError("COMMAND_NOT_ALLOWED", `"${command}" tem efeito externo: exige allowSideEffects=true`);
+        }
       }
       try {
         const result = await rt.request(command, p.payload ?? {});

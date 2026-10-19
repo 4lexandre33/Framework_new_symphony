@@ -21,10 +21,13 @@ import { defineTool, type ToolCall, type ToolDef } from "../core/registry.ts";
 import {
   AUDIT_STAGE_MAX,
   AUDIT_STAGE_MIN,
+  AUDIT_STAGES_THAT_WRITE,
   extractGateResult,
   GATES,
   gateCommand,
+  gateReadonlyDenial,
   gateTimeoutMs,
+  READONLY_SAFE_GATES,
   runAudit,
   runGate,
   runTests,
@@ -163,6 +166,7 @@ export const tools: ToolDef[] = [
       "all (todos em sequência; para no primeiro reprovado, salvo continueOnFailure).",
       "Gates longos (test, isolation, build, stage90, cargo-*, all) devem rodar com async: true — devolve jobId; acompanhe com job_status/job_log",
       "e pegue o resultado estruturado com gate_result. Gate reprovado NÃO é erro da tool: vem ok=false com failures.",
+      `Com ENGINE_MCP_READONLY=1 só rodam os gates que não gravam: ${READONLY_SAFE_GATES.join(", ")} (os demais → READONLY).`,
     ].join(" "),
     input: {
       gate: gateEnum.describe("qual gate rodar"),
@@ -186,6 +190,7 @@ export const tools: ToolDef[] = [
       skipped: gateResultShape.skipped,
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    readonlyPolicy: ({ gate }, ctx) => gateReadonlyDenial(gate, ctx.root),
     summarize: (o) =>
       o.async ? `job ${o.jobId} iniciado: ${o.summary}` : `${o.summary}${o.durationMs !== undefined ? ` (${o.durationMs} ms)` : ""}`,
     run: async ({ gate, async: runAsync, continueOnFailure }, ctx, call) => {
@@ -294,6 +299,7 @@ export const tools: ToolDef[] = [
       tail: z.string(),
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    readonlyPolicy: () => "o vitest grava cache em node_modules/.vite e os testes podem gravar arquivos",
     summarize: (out) => `test_run ${out.summary} (${out.durationMs} ms)`,
     run: async ({ files, namePattern }, ctx, call) => {
       const filters: string[] = [];
@@ -329,7 +335,7 @@ export const tools: ToolDef[] = [
   defineTool({
     name: "audit_run",
     title: "Rodar auditoria Layer-1",
-    description: `Roda a auditoria Layer-1 de um stage (${AUDIT_STAGE_MIN}..${AUDIT_STAGE_MAX}) — scripts/architecture/stageNN-audit-*.mjs (stage 90: stage90-validate-layer1-gate.mjs, lento) — e devolve as violações estruturadas ({ file, line?, code, message }). Usa --json quando o script suporta. Somente leitura: não destrava nem recertifica baselines.`,
+    description: `Roda a auditoria Layer-1 de um stage (${AUDIT_STAGE_MIN}..${AUDIT_STAGE_MAX}) — scripts/architecture/stageNN-audit-*.mjs (stage 90: stage90-validate-layer1-gate.mjs, lento) — e devolve as violações estruturadas ({ file, line?, code, message }). Usa --json quando o script suporta. Não destrava nem recertifica baselines. Os stages ${AUDIT_STAGE_MIN}..89 só leem; o stage 90 grava ETAPA90_RUNTIME_SMOKE.log e .stage90-gate-results.json (recusado com ENGINE_MCP_READONLY=1).`,
     input: {
       stage: z.number().int().min(AUDIT_STAGE_MIN).max(AUDIT_STAGE_MAX).describe(`stage da auditoria (${AUDIT_STAGE_MIN}..${AUDIT_STAGE_MAX})`),
     },
@@ -345,7 +351,9 @@ export const tools: ToolDef[] = [
       violations: z.array(failureSchema),
       tail: z.string(),
     },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    readonlyPolicy: ({ stage }) =>
+      AUDIT_STAGES_THAT_WRITE.includes(stage) ? `a auditoria do stage ${stage} grava ETAPA90_RUNTIME_SMOKE.log e .stage90-gate-results.json` : null,
     summarize: (out) => `${out.summary} (${out.script}, ${out.durationMs} ms)`,
     run: async ({ stage }, ctx, call) => {
       const rep = progressReporter(call, `auditoria stage ${stage}`);

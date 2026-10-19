@@ -703,7 +703,7 @@ export const tools: ToolDef[] = [
     name: "project_check",
     title: "Verificar jogo",
     description:
-      "Verifica um jogo: 'tsc' (tsc --noEmit do repo inteiro, filtrado aos erros em src/projects/<id>/), 'isolation' (scripts/architecture/check-project-isolation.mjs: engine verde sem os jogos — lento, minutos) e 'tests' (vitest run src/projects/<id>/). Devolve resumo estruturado por etapa com failures[{file,line,message}]. Padrão: todas as etapas.",
+      "Verifica um jogo: 'tsc' (tsc --noEmit do repo inteiro, filtrado aos erros em src/projects/<id>/), 'isolation' (scripts/architecture/check-project-isolation.mjs: engine verde sem os jogos — lento, minutos) e 'tests' (vitest run src/projects/<id>/). Devolve resumo estruturado por etapa com failures[{file,line,message}]. Padrão: todas as etapas. Com ENGINE_MCP_READONLY=1 só steps: [\"tsc\"] é permitido.",
     input: {
       id: idInput,
       steps: z
@@ -713,7 +713,14 @@ export const tools: ToolDef[] = [
         .describe("etapas a rodar, na ordem (padrão: [\"tsc\", \"isolation\", \"tests\"]); omita 'isolation' para um ciclo rápido"),
     },
     output: { id: z.string(), ok: z.boolean(), durationMs: z.number(), steps: z.array(stepSchema) },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    // 'isolation' e 'tests' rodam vitest/build (cache em node_modules/.vite, dist em cópias): podem gravar.
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    readonlyPolicy: ({ steps }) => {
+      const writing = (steps ?? ["tsc", "isolation", "tests"]).filter((s) => s !== "tsc");
+      return writing.length === 0
+        ? null
+        : `as etapas ${[...new Set(writing)].join(", ")} rodam vitest/build e podem gravar arquivos; use steps: ["tsc"]`;
+    },
     run: async ({ id, steps }, ctx, call) => {
       requireProject(ctx, id);
       const started = Date.now();

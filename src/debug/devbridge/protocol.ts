@@ -267,6 +267,46 @@ export interface CommandsSendParams {
   /** Só `game.*`. */
   readonly command: string;
   readonly payload?: unknown;
+  /**
+   * Obrigatório (true) para comandos com efeito externo
+   * (`isSideEffectDevBridgeCommand`); o jogo ainda exige o próprio opt-in.
+   */
+  readonly allowSideEffects?: boolean;
+}
+
+// ── commands.send: forma e comandos com efeito externo ───────────────────
+
+/** Forma aceita em `commands.send` (só `game.*`). */
+export const DEVBRIDGE_COMMAND_RE = /^game\.[A-Za-z0-9_.-]+$/;
+
+/**
+ * Prefixos (minúsculos) de comandos com efeito FORA do jogo — dinheiro real,
+ * Steamworks, rede, Steam Workshop, perfil online e janela nativa. Recusados
+ * por padrão nos DOIS lados (MCP e jogo); liberar exige
+ * `ENGINE_MCP_ALLOW_SIDE_EFFECT_COMMANDS=1` no MCP (que manda
+ * `allowSideEffects: true`) E `devbridgeUnsafe=1` / `VITE_DEVBRIDGE_UNSAFE=1`
+ * no jogo. Lista única: o MCP importa este arquivo.
+ *
+ * Fonte: commands declarados em src/plugins/*\/plugin.ts. Comandos locais
+ * (world, physics, camera, ui, storage save/load, modding enable/disable,
+ * security…) continuam livres.
+ */
+export const DEVBRIDGE_SIDE_EFFECT_COMMAND_PREFIXES: readonly string[] = [
+  "game.monetization.", // init/finalize-purchase, consume-item, fetch-inventory (Steam Inventory/MicroTxn)
+  "game.steam.", // conquistas, lobbies, sessões/pacotes P2P
+  "game.net.", // connect, disconnect, send, broadcast-snapshot
+  "game.modding.publish-", // publish-workshop
+  "game.modding.download-", // download-workshop
+  "game.modding.subscribe", // reservado (inscrição no Workshop)
+  "game.storage.sync-", // sync-profile (backend online)
+  "game.overlay.", // set-passthrough, set-always-on-top, dock-to-taskbar (janela nativa)
+];
+
+/** true se o comando tem efeito externo (ver `DEVBRIDGE_SIDE_EFFECT_COMMAND_PREFIXES`). */
+export function isSideEffectDevBridgeCommand(command: string): boolean {
+  if (typeof command !== "string") return false;
+  const lower = command.toLowerCase();
+  return DEVBRIDGE_SIDE_EFFECT_COMMAND_PREFIXES.some((prefix) => lower.startsWith(prefix));
 }
 
 export interface ScreenshotParams {
